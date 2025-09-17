@@ -1,0 +1,39 @@
+[package]
+name = "hodu_core"
+version = "0.1.0"
+description = "hodu core"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/miniex/hodu"
+
+[features]
+std = [
+    "dep:dashmap",
+    "rand/std",
+    "rand_distr/std",
+    "num-traits/std",
+    "half/std",
+    "serde?/std",
+]
+serde = ["dep:flate2", "dep:bincode", "dep:serde"]
+
+cuda = []
+metal = []
+
+onnx = []
+xla = []
+
+[dependencies]
+half = { workspace = true, default-features = false }
+float8 = { workspace = true }
+rand = { workspace = true, default-features = false }
+rand_distr = { workspace = true, default-features = false }
+num-traits = { workspace = true, default-features = false }
+paste = { workspace = true }
+dashmap = { workspace = true, optional = true }
+flate2 = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+spin = { workspace = true }
