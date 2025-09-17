@@ -1,0 +1,54 @@
+[workspace]
+members = ["crates/*"]
+
+[package]
+name = "hodu"
+version = "0.1.0"
+description = "Rust ML Framework for Maiden Engine"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/miniex/hodu"
+documentation = "https://docs.rs/hodu"
+readme = "README.md"
+keywords = ["tensor", "machine-learning", "hodu"]
+categories = ["science"]
+
+[workspace.dependencies]
+half = { version = "2.6.0", default-features = false, features = [
+    "num-traits",
+    "rand_distr",
+] }
+float8 = { version = "0.4.2", default-features = false, features = [
+    "num-traits",
+    "rand_distr",
+] }
+rand = { version = "0.9.2", default-features = false }
+rand_distr = { version = "0.5.1", default-features = false }
+num-traits = { version = "0.2.19", default-features = false }
+paste = "1.0.15"
+rayon = "1.11"
+dashmap = "6.1.0"
+flate2 = "1.1.2"
+bincode = "2.0.1"
+serde = { version = "1.0.219", default-features = false, features = [
+    "derive",
+    "alloc",
+] }
+spin = "0.10"
+
+[features]
+default = ["std", "serde"]
+std = ["hodu_internal/std"]
+serde = ["hodu_internal/serde"]
+
+cuda = ["hodu_internal/cuda"]
+metal = ["hodu_internal/metal"]
+
+onnx = ["hodu_internal/onnx"]
+xla = ["hodu_internal/xla"]
+
+
+[dependencies]
+hodu_internal = { path = "crates/hodu_internal", version = "0.1.0" }
