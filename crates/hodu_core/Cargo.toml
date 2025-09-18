@@ -23,7 +23,6 @@ cuda = []
 # cuda = ["dep:hodu_cuda_kernels"]
 metal = []
 
-onnx = []
 xla = []
 
 [dependencies]
