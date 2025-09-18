@@ -16,22 +16,22 @@ keywords = ["tensor", "machine-learning", "hodu"]
 categories = ["science"]
 
 [workspace.dependencies]
-half = { version = "2.6.0", default-features = false, features = [
-    "num-traits",
-    "rand_distr",
-] }
+bincode = "2.0.1"
+dashmap = "6.1.0"
+flate2 = "1.1.2"
 float8 = { version = "0.4.2", default-features = false, features = [
     "num-traits",
     "rand_distr",
 ] }
-rand = { version = "0.9.2", default-features = false }
-rand_distr = { version = "0.5.1", default-features = false }
+half = { version = "2.6.0", default-features = false, features = [
+    "num-traits",
+    "rand_distr",
+] }
 num-traits = { version = "0.2.19", default-features = false }
 paste = "1.0.15"
+rand = { version = "0.9.2", default-features = false }
+rand_distr = { version = "0.5.1", default-features = false }
 rayon = "1.11"
-dashmap = "6.1.0"
-flate2 = "1.1.2"
-bincode = "2.0.1"
 serde = { version = "1.0.219", default-features = false, features = [
     "derive",
     "alloc",
