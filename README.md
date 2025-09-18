@@ -19,7 +19,7 @@
 
 While Hodu shares similarities with PyTorch and TensorFlow, it brings a unique approach to ML workflows that prioritizes ease of use without sacrificing performance.
 
-For static computation graphs, we leverage powerful backends like XLA to provide fast, optimized just-in-time compilation that keeps your models running at peak efficiency.
+For static computation graphs, we leverage powerful backends like [OpenXLA/PJRT](https://github.com/openxla/xla) to provide fast, optimized just-in-time compilation that keeps your models running at peak efficiency.
 
 > [!WARNING]
 >
