@@ -11,29 +11,31 @@ repository = "https://github.com/miniex/hodu"
 [features]
 std = [
     "dep:dashmap",
+    "half/std",
+    "num-traits/std",
     "rand/std",
     "rand_distr/std",
-    "num-traits/std",
-    "half/std",
     "serde?/std",
 ]
-serde = ["dep:flate2", "dep:bincode", "dep:serde"]
+serde = ["dep:bincode", "dep:flate2", "dep:serde"]
 
 cuda = []
+# cuda = ["dep:hodu_cuda_kernels"]
 metal = []
 
 onnx = []
 xla = []
 
 [dependencies]
-half = { workspace = true, default-features = false }
-float8 = { workspace = true }
-rand = { workspace = true, default-features = false }
-rand_distr = { workspace = true, default-features = false }
-num-traits = { workspace = true, default-features = false }
-paste = { workspace = true }
+bincode = { workspace = true, optional = true }
 dashmap = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
-bincode = { workspace = true, optional = true }
+float8 = { workspace = true }
+half = { workspace = true, default-features = false }
+# hodu_cuda_kernels = { path = "../hodu_cuda_kernels", version = "0.1.0", optional = true }
+num-traits = { workspace = true, default-features = false }
+paste = { workspace = true }
+rand = { workspace = true, default-features = false }
+rand_distr = { workspace = true, default-features = false }
 serde = { workspace = true, optional = true }
 spin = { workspace = true }
