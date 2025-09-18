@@ -15,7 +15,6 @@ serde = ["hodu_core/serde"]
 cuda = ["hodu_core/cuda"]
 metal = ["hodu_core/metal"]
 
-onnx = ["hodu_core/onnx"]
 xla = ["hodu_core/xla"]
 
 [dependencies]
