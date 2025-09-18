@@ -11,6 +11,8 @@
   [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/hodu-rs/hodu#license)
 </div>
 
+> **Hodu** (호두) is a Korean word meaning "walnut".
+
 ## About hodu
 
 `hodu` is a machine learning library built with user convenience at its core, designed for both rapid prototyping and seamless production deployment—including embedded environments.
