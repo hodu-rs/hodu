@@ -288,6 +288,16 @@ impl Builder {
                         default_value: None,
                     };
                     graph.metadata.inputs.push(input_node);
+
+                    use crate::backends::script::ir::TensorInfo;
+                    let tensor_info = TensorInfo {
+                        id: tensor.id(),
+                        shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
+                        dtype: Some(tensor.get_dtype()),
+                        layout: None,
+                        memory_layout: None,
+                    };
+                    graph.metadata.tensor_info.insert(tensor.id(), tensor_info);
                 }
 
                 for (name, tensor) in &b.graph_outputs {
@@ -297,6 +307,16 @@ impl Builder {
                         is_intermediate: false,
                     };
                     graph.metadata.outputs.push(output_node);
+
+                    use crate::backends::script::ir::TensorInfo;
+                    let tensor_info = TensorInfo {
+                        id: tensor.id(),
+                        shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
+                        dtype: Some(tensor.get_dtype()),
+                        layout: None,
+                        memory_layout: None,
+                    };
+                    graph.metadata.tensor_info.insert(tensor.id(), tensor_info);
                 }
 
                 for (node_counter, op) in b.operations.iter().enumerate() {
@@ -308,6 +328,40 @@ impl Builder {
 
                     let (input_layouts, output_layouts) =
                         b.operation_layouts.get(node_counter).cloned().unwrap_or_default();
+
+                    use crate::backends::script::ir::TensorInfo;
+
+                    for (tensor_id, layout) in input_tensors.iter().zip(input_layouts.iter()) {
+                        if !graph.metadata.tensor_info.contains_key(tensor_id)
+                            && crate::tensor::get(*tensor_id).is_some()
+                        {
+                            let tensor = crate::tensor::tensor_from_id(*tensor_id);
+                            let tensor_info = TensorInfo {
+                                id: *tensor_id,
+                                shape: Some(layout.get_shape().iter().map(|&s| Some(s)).collect()),
+                                dtype: Some(tensor.get_dtype()),
+                                layout: None,
+                                memory_layout: None,
+                            };
+                            graph.metadata.tensor_info.insert(*tensor_id, tensor_info);
+                        }
+                    }
+
+                    for (tensor_id, layout) in output_tensors.iter().zip(output_layouts.iter()) {
+                        if !graph.metadata.tensor_info.contains_key(tensor_id)
+                            && crate::tensor::get(*tensor_id).is_some()
+                        {
+                            let tensor = crate::tensor::tensor_from_id(*tensor_id);
+                            let tensor_info = TensorInfo {
+                                id: *tensor_id,
+                                shape: Some(layout.get_shape().iter().map(|&s| Some(s)).collect()),
+                                dtype: Some(tensor.get_dtype()),
+                                layout: None,
+                                memory_layout: None,
+                            };
+                            graph.metadata.tensor_info.insert(*tensor_id, tensor_info);
+                        }
+                    }
 
                     let graph_node = GraphNode {
                         id: node_id,
