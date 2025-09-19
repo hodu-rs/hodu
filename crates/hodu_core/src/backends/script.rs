@@ -2,10 +2,7 @@ pub(crate) mod ir;
 
 use crate::error::{HoduError, HoduResult};
 use crate::{
-    backends::{
-        be_hodu::executor::HoduExecutor,
-        executor::{CompileOptions, ExecutionOutputs, ExecutorT},
-    },
+    backends::executor::{CompileOptions, ExecutionOutputs, Executor, ExecutorT},
     compat::*,
     tensor::Tensor,
     types::{backend::Backend, device::Device},
@@ -155,25 +152,17 @@ impl Script {
     }
 
     /// Create appropriate executor based on backend and device settings
-    fn create_executor(&self, target_device: Device) -> HoduResult<HoduExecutor> {
+    fn create_executor(&self, target_device: Device) -> HoduResult<Executor> {
+        use crate::backends::be_hodu::executor::HoduExecutor;
+        #[cfg(feature = "xla")]
+        use crate::backends::be_xla::executor::XlaExecutor;
+
         match self.backend.unwrap_or(Backend::HODU) {
-            Backend::HODU => Ok(HoduExecutor::new(target_device)),
-            Backend::ONNX => {
-                #[cfg(feature = "onnx")]
-                {
-                    // TODO: Implement ONNX executor when available
-                    Err(HoduError::UnsupportedBackend(Backend::ONNX))
-                }
-                #[cfg(not(feature = "onnx"))]
-                {
-                    Err(HoduError::UnsupportedBackend(Backend::ONNX))
-                }
-            },
+            Backend::HODU => Ok(Executor::Hodu(HoduExecutor::new(target_device))),
             Backend::XLA => {
                 #[cfg(feature = "xla")]
                 {
-                    // TODO: Implement XLA executor when available
-                    Err(HoduError::UnsupportedBackend(Backend::XLA))
+                    Ok(Executor::Xla(XlaExecutor::new(target_device)?))
                 }
                 #[cfg(not(feature = "xla"))]
                 {

@@ -12,6 +12,8 @@ tests=(
     "serde|serde only (no-std)"
     "std|no features (std)"
     "std,serde|serde only (std)"
+    "std,xla|xla only (std)"
+    "std,serde,xla|serde, xla (std)"
 )
 
 passed=0

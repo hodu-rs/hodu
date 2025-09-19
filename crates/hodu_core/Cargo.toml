@@ -19,11 +19,11 @@ std = [
 ]
 serde = ["dep:bincode", "dep:flate2", "dep:serde"]
 
-cuda = []
+cuda = ["xla?/cuda"]
 # cuda = ["dep:hodu_cuda_kernels"]
 metal = []
 
-xla = []
+xla = ["dep:xla"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -38,3 +38,4 @@ rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
 serde = { workspace = true, optional = true }
 spin = { workspace = true }
+xla = { workspace = true, optional = true }

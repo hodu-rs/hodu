@@ -37,6 +37,7 @@ serde = { version = "1.0.219", default-features = false, features = [
     "alloc",
 ] }
 spin = "0.10"
+xla = { git = "https://github.com/hodu-rs/xla-rs.git", branch = "hodu" }
 
 [features]
 default = ["std", "serde"]
@@ -46,7 +47,6 @@ serde = ["hodu_internal/serde"]
 cuda = ["hodu_internal/cuda"]
 metal = ["hodu_internal/metal"]
 
-onnx = ["hodu_internal/onnx"]
 xla = ["hodu_internal/xla"]
 
 
