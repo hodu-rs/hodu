@@ -161,7 +161,7 @@ impl HoduExecutor {
 
         // Handle decompression if needed
         let data = match &constant.compression {
-            #[cfg(feature = "std")]
+            #[cfg(all(feature = "serde", feature = "std"))]
             Some(CompressionType::Gzip) => {
                 use std::io::Read;
                 let mut decoder = flate2::read::GzDecoder::new(&constant.data[..]);
@@ -170,6 +170,12 @@ impl HoduExecutor {
                     .read_to_end(&mut decompressed)
                     .map_err(|e| HoduError::DecompressionError(e.to_string()))?;
                 decompressed
+            },
+            #[cfg(not(all(feature = "serde", feature = "std")))]
+            Some(CompressionType::Gzip) => {
+                return Err(HoduError::InternalError(
+                    "Gzip decompression requires both 'serde' and 'std' features to be enabled".to_string(),
+                ));
             },
             Some(CompressionType::Zstd) => {
                 return Err(HoduError::InternalError(

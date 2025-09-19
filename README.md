@@ -59,6 +59,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+With the `cuda` feature enabled, you can use CUDA in dynamic execution with the following setting:
+
+```diff
+- set_runtime_device(Device::CPU);
++ set_runtime_device(Device::CUDA);
+```
+
 ### Static Computation Graphs
 
 For more complex workflows or when you need reusable computation graphs, you can use the Builder pattern:
@@ -99,3 +106,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+With the `cuda` feature enabled, you can use CUDA in static computation graphs with the following setting:
+
+```diff
+let mut script = builder.build()?;
++ script.set_device(Device::CUDA);
+```
+
+With the `xla` feature enabled, you can use XLA in static computation graphs with the following setting:
+
+```diff
+let mut script = builder.build()?;
++ script.set_backend(Backend::XLA);
+```
+
+## Features
+
+### Default Features
+| Feature | Description | Dependencies |
+|---------|-------------|--------------|
+| `std` | Standard library support | - |
+| `serde` | Serialization/deserialization support | - |
+
+### Optional Features
+| Feature | Description | Dependencies |
+|---------|-------------|--------------|
+| `cuda` | NVIDIA CUDA GPU support | CUDA toolkit |
+| `metal` | Apple Metal GPU support | Metal framework (macOS) |
+| `xla` | Google XLA compiler backend | XLA libraries |
