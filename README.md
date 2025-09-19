@@ -135,3 +135,7 @@ let mut script = builder.build()?;
 | `cuda` | NVIDIA CUDA GPU support | CUDA toolkit |
 | `metal` | Apple Metal GPU support | Metal framework (macOS) |
 | `xla` | Google XLA compiler backend | XLA libraries |
+
+### Feature Compatibility
+
+- **XLA Backend**: The `xla` feature is not compatible with `no_std` environments as it requires standard library support for XLA compilation and execution.
