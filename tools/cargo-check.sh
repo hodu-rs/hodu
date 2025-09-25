@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Test all feature combinations for hodu_core
+# Test all feature combinations for hodu
 
 set -e
 
@@ -22,15 +22,15 @@ total=${#tests[@]}
 for test in "${tests[@]}"; do
     features="${test%|*}"
     desc="${test#*|}"
-    
+
     echo -n "Testing $desc... "
-    
+
     if [ -z "$features" ]; then
         cmd="cargo check --no-default-features"
     else
         cmd="cargo check --no-default-features --features $features"
     fi
-    
+
     if $cmd &>/dev/null; then
         echo "[ OK ]"
         ((passed++))
