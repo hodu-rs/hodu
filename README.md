@@ -1,25 +1,36 @@
-<div align="center">
-  <img src="assets/hodu/hodu_avatar.png" alt="Hodu Avatar" width="200"/>
-   <br>
-   <sub><i>Character by: <a href="https://github.com/SkuldNorniern">Eira</a></i></sub>
+# Hodu, a user-friendly ML framework built in Rust.
 
-  <h1>hodu</h1>
-  <p>Hodu is a user-friendly ML framework built in Rust for rapid prototyping and embedded deployment.</p>
-
-  [![Crates.io](https://img.shields.io/crates/v/hodu.svg)](https://crates.io/crates/hodu)
-  [![Doc.rs](https://docs.rs/hodu/badge.svg)](https://docs.rs/hodu)
-  [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/hodu-rs/hodu#license)
-</div>
+[![Crates.io](https://img.shields.io/crates/v/hodu.svg)](https://crates.io/crates/hodu)
+[![Doc.rs](https://docs.rs/hodu/badge.svg)](https://docs.rs/hodu)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/hodu-rs/hodu#license)
 
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
-## About hodu
+## About Hodu
 
-`hodu` is a machine learning library built with user convenience at its core, designed for both rapid prototyping and seamless production deployment—including embedded environments.
+<img align="right" src="assets/hodu/hodu_avatar.png" alt="Hodu Avatar" width="200"/>
 
-While Hodu shares similarities with PyTorch and TensorFlow, it brings a unique approach to ML workflows that prioritizes ease of use without sacrificing performance.
+**Hodu** is a machine learning library built with user convenience at its core, designed for both rapid prototyping and seamless production deployment—including embedded environments.
 
-For static computation graphs, we leverage powerful backends like [OpenXLA/PJRT](https://github.com/openxla/xla) to provide fast, optimized just-in-time compilation that keeps your models running at peak efficiency.
+### Core Differentiators
+
+Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu offers unique advantages:
+
+- **Hybrid Execution Model**: Seamlessly switch between dynamic execution for rapid prototyping and static computation graphs for optimized production deployment
+- **Memory Safety by Design**: Leverage Rust's ownership system to eliminate common ML deployment issues like memory leaks and data races
+- **Embedded-First Architecture**: Full `no_std` support enables ML inference on microcontrollers and resource-constrained devices
+- **Zero-Cost Abstractions**: High-level APIs that compile down to efficient machine code without runtime overhead
+
+### Dual Backend Architecture
+
+- **HODU Backend**: Pure Rust implementation with `no_std` support for embedded environments
+  - CPU operations with SIMD optimization
+  - CUDA GPU acceleration (with `cuda` feature)
+  - Metal GPU support for macOS (with `metal` feature)
+- **XLA Backend**: JIT compilation via [OpenXLA/PJRT](https://github.com/openxla/xla) (requires `std`)
+  - Advanced graph-level optimizations
+  - CPU and CUDA device support
+  - Production-grade performance for static computation graphs
 
 > [!WARNING]
 >
@@ -27,7 +38,7 @@ For static computation graphs, we leverage powerful backends like [OpenXLA/PJRT]
 > - The framework is under active development
 > - Features may be experimental or incomplete
 > - Functionality is not guaranteed for production use
-> 
+>
 > It is recommended to use the latest version.
 
 ## Get started
@@ -63,7 +74,7 @@ With the `cuda` feature enabled, you can use CUDA in dynamic execution with the 
 
 ```diff
 - set_runtime_device(Device::CPU);
-+ set_runtime_device(Device::CUDA);
++ set_runtime_device(Device::CUDA(0));
 ```
 
 ### Static Computation Graphs
@@ -111,7 +122,7 @@ With the `cuda` feature enabled, you can use CUDA in static computation graphs w
 
 ```diff
 let mut script = builder.build()?;
-+ script.set_device(Device::CUDA);
++ script.set_device(Device::CUDA(0));
 ```
 
 With the `xla` feature enabled, you can use XLA in static computation graphs with the following setting:
@@ -130,12 +141,24 @@ let mut script = builder.build()?;
 | `serde` | Serialization/deserialization support | - |
 
 ### Optional Features
-| Feature | Description | Dependencies |
-|---------|-------------|--------------|
-| `cuda` | NVIDIA CUDA GPU support | CUDA toolkit |
-| `metal` | Apple Metal GPU support | Metal framework (macOS) |
-| `xla` | Google XLA compiler backend | XLA libraries |
+| Feature | Description | Dependencies | Required Features |
+|---------|-------------|--------------|-------------------|
+| `cuda` | NVIDIA CUDA GPU support | CUDA toolkit | - |
+| `metal` | Apple Metal GPU support | Metal framework (macOS) | - |
+| `xla` | Google XLA compiler backend | XLA libraries | `std` |
 
-### Feature Compatibility
+## Supported platforms
 
-- **XLA Backend**: The `xla` feature is not compatible with `no_std` environments as it requires standard library support for XLA compilation and execution.
+## Docs
+
+## Inspired by
+
+Hodu draws inspiration from the following amazing projects:
+
+- [maidenx](https://github.com/miniex/maidenx) - The predecessor project to Hodu
+- [candle](https://github.com/huggingface/candle) - Minimalist ML framework for Rust
+- [GoMlx](https://github.com/gomlx/gomlx) - An Accelerated Machine Learning Framework For Go
+
+## Credits
+
+Hodu Character Design: Created by <a href="https://github.com/SkuldNorniern">Eira</a>
