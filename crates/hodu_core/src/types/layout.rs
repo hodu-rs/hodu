@@ -173,4 +173,44 @@ impl Layout {
 
         Ok((lhs_broadcast, rhs_broadcast))
     }
+
+    pub fn transpose(&self, dim1: isize, dim2: isize) -> HoduResult<Self> {
+        let ndim = self.get_ndim();
+        if ndim < 2 {
+            return Err(HoduError::InternalError(
+                "transpose requires at least 2 dimensions".to_string(),
+            ));
+        }
+
+        let dim1 = if dim1 < 0 {
+            (ndim as isize + dim1) as usize
+        } else {
+            dim1 as usize
+        };
+
+        let dim2 = if dim2 < 0 {
+            (ndim as isize + dim2) as usize
+        } else {
+            dim2 as usize
+        };
+
+        if dim1 >= ndim || dim2 >= ndim {
+            return Err(HoduError::InternalError(format!(
+                "transpose dimensions out of range: {} and {} for tensor with {} dimensions",
+                dim1, dim2, ndim
+            )));
+        }
+
+        let mut new_shape = self.shape.clone();
+        let mut new_strides = self.strides.clone();
+
+        new_shape.swap(dim1, dim2);
+        new_strides.swap(dim1, dim2);
+
+        Ok(Self {
+            shape: new_shape,
+            strides: new_strides,
+            offset: self.offset,
+        })
+    }
 }

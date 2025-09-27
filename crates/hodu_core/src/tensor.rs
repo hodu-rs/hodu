@@ -224,6 +224,10 @@ impl Tensor {
         with_tensor(self.0, |t| t.requires_grad).unwrap_or(false)
     }
 
+    pub fn is_contiguous(&self) -> bool {
+        self.get_layout().is_contiguous()
+    }
+
     pub fn backward(&self) -> HoduResult<()> {
         let dtype = self.get_dtype();
         if !dtype.is_float() {
@@ -319,4 +323,21 @@ pub(crate) fn set_grad_tensor_id(tensor_id: TensorId, grad_tensor_id: TensorId) 
     } else {
         Err(HoduError::TensorNotFound(tensor_id))
     }
+}
+
+pub(crate) fn from_shared_storage_with_grad(source_tensor: &Tensor, layout: Layout, requires_grad: bool) -> Tensor {
+    let storage_arc =
+        with_tensor(source_tensor.id(), |tensor_ref| tensor_ref.storage.clone()).expect("Source tensor not found");
+
+    let tensor_ = Tensor_ {
+        storage: storage_arc,
+        is_runtime: true,
+        layout,
+        requires_grad,
+        grad_tensor_id: None,
+    };
+
+    let tensor_id = TensorId::new();
+    insert(tensor_id, tensor_);
+    Tensor(tensor_id)
 }

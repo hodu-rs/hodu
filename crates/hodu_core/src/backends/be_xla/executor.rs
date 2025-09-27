@@ -1,7 +1,10 @@
 use crate::{
     backends::{
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
-        op::Op,
+        op::{
+            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, MatrixOp, MemoryOp, Op, ReduceOp, ShapeOp,
+            UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+        },
         script::{ir::ScriptIR, Script},
     },
     compat::*,
@@ -11,7 +14,7 @@ use crate::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
-use xla::{ElementType, Literal, PjRtClient, PjRtLoadedExecutable, XlaBuilder, XlaOp};
+use xla::{ElementType, Literal, PjRtClient, PjRtLoadedExecutable, PrimitiveType, XlaBuilder, XlaOp};
 
 // Thread-safe wrapper for PjRtLoadedExecutable
 // SAFETY: XLA's PjRtLoadedExecutable is thread-safe in practice,
@@ -165,6 +168,12 @@ impl XlaExecutor {
             }
         }
 
+        // Process constants and create constant operations
+        for (tensor_id, constant_node) in &script_ir.graph.metadata.constants {
+            let constant_op = self.convert_constant_to_xla_op(&builder, constant_node)?;
+            xla_ops.insert(*tensor_id, constant_op);
+        }
+
         // Process all nodes in execution order
         for &node_id in &script_ir.graph.execution_plan.execution_order {
             let node = &script_ir.graph.topology.nodes[node_id.0];
@@ -184,7 +193,7 @@ impl XlaExecutor {
                 .collect::<HoduResult<Vec<_>>>()?;
 
             // Execute the operation and store result
-            let result_op = self.execute_xla_operation(&builder, &node.operation, &input_ops, compiled_script)?;
+            let result_op = self.execute_xla_operation(&builder, &node.operation, &input_ops, compiled_script, node)?;
 
             // Store the result for output tensor
             if let Some(&output_tensor_id) = node.output_tensors.first() {
@@ -192,24 +201,41 @@ impl XlaExecutor {
             }
         }
 
-        // Find the final output operation
-        let output_names: Vec<_> = compiled_script.output_mapping.keys().cloned().collect();
-        if output_names.len() != 1 {
-            return Err(HoduError::InternalError(
-                "XLA backend currently supports single output only".to_string(),
-            ));
-        }
+        // Handle multiple outputs by creating a tuple
+        let mut output_names: Vec<_> = compiled_script.output_mapping.keys().cloned().collect();
+        output_names.sort(); // Ensure consistent ordering
 
-        let output_tensor_id = compiled_script
-            .output_mapping
-            .get(&output_names[0])
-            .ok_or_else(|| HoduError::InternalError("Output tensor mapping not found".to_string()))?;
+        let computation = if output_names.len() == 1 {
+            // Single output case
+            let output_tensor_id = compiled_script
+                .output_mapping
+                .get(&output_names[0])
+                .ok_or_else(|| HoduError::InternalError("Output tensor mapping not found".to_string()))?;
 
-        let final_op = xla_ops
-            .get(output_tensor_id)
-            .ok_or_else(|| HoduError::InternalError("Final output operation not found".to_string()))?;
+            let final_op = xla_ops
+                .get(output_tensor_id)
+                .ok_or_else(|| HoduError::InternalError("Final output operation not found".to_string()))?;
 
-        let computation = final_op.build().map_err(xla_error_to_hodu_error)?;
+            final_op.build().map_err(xla_error_to_hodu_error)?
+        } else {
+            // Multiple output case - create tuple
+            let mut output_ops = Vec::new();
+            for output_name in &output_names {
+                let output_tensor_id = compiled_script.output_mapping.get(output_name).ok_or_else(|| {
+                    HoduError::InternalError(format!("Output tensor mapping not found for {}", output_name))
+                })?;
+
+                let output_op = xla_ops.get(output_tensor_id).ok_or_else(|| {
+                    HoduError::InternalError(format!("Output operation not found for {}", output_name))
+                })?;
+
+                output_ops.push(output_op.clone());
+            }
+
+            // Create tuple of outputs using builder
+            let tuple_op = builder.tuple(&output_ops).map_err(xla_error_to_hodu_error)?;
+            tuple_op.build().map_err(xla_error_to_hodu_error)?
+        };
         let executable = self.client.compile(&computation).map_err(xla_error_to_hodu_error)?;
         Ok(Arc::new(ThreadSafeExecutable(executable)))
     }
@@ -220,6 +246,7 @@ impl XlaExecutor {
         operation: &Op,
         input_ops: &[XlaOp],
         _compiled_script: &XlaCompiledScript,
+        current_node: &crate::backends::script::ir::GraphNode,
     ) -> HoduResult<XlaOp> {
         match operation {
             // Binary Operations
@@ -230,13 +257,13 @@ impl XlaExecutor {
                     ));
                 }
                 let result = match op {
-                    crate::backends::op::BinaryOp::Add => input_ops[0].add_(&input_ops[1]),
-                    crate::backends::op::BinaryOp::Sub => input_ops[0].sub_(&input_ops[1]),
-                    crate::backends::op::BinaryOp::Mul => input_ops[0].mul_(&input_ops[1]),
-                    crate::backends::op::BinaryOp::Div => input_ops[0].div_(&input_ops[1]),
-                    crate::backends::op::BinaryOp::Pow => input_ops[0].pow(&input_ops[1]),
-                    crate::backends::op::BinaryOp::Maximum => input_ops[0].max(&input_ops[1]),
-                    crate::backends::op::BinaryOp::Minimum => input_ops[0].min(&input_ops[1]),
+                    BinaryOp::Add => input_ops[0].add_(&input_ops[1]),
+                    BinaryOp::Sub => input_ops[0].sub_(&input_ops[1]),
+                    BinaryOp::Mul => input_ops[0].mul_(&input_ops[1]),
+                    BinaryOp::Div => input_ops[0].div_(&input_ops[1]),
+                    BinaryOp::Pow => input_ops[0].pow(&input_ops[1]),
+                    BinaryOp::Maximum => input_ops[0].max(&input_ops[1]),
+                    BinaryOp::Minimum => input_ops[0].min(&input_ops[1]),
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
@@ -250,9 +277,9 @@ impl XlaExecutor {
                     ));
                 }
                 let result = match op {
-                    crate::backends::op::BinaryLogicalOp::LogicalAnd => input_ops[0].and(&input_ops[1]),
-                    crate::backends::op::BinaryLogicalOp::LogicalOr => input_ops[0].or(&input_ops[1]),
-                    crate::backends::op::BinaryLogicalOp::LogicalXor => input_ops[0].xor(&input_ops[1]),
+                    BinaryLogicalOp::LogicalAnd => input_ops[0].and(&input_ops[1]),
+                    BinaryLogicalOp::LogicalOr => input_ops[0].or(&input_ops[1]),
+                    BinaryLogicalOp::LogicalXor => input_ops[0].xor(&input_ops[1]),
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
@@ -266,12 +293,33 @@ impl XlaExecutor {
                     ));
                 }
                 let result = match op {
-                    crate::backends::op::CmpOp::Eq => input_ops[0].eq(&input_ops[1]),
-                    crate::backends::op::CmpOp::Ne => input_ops[0].ne(&input_ops[1]),
-                    crate::backends::op::CmpOp::Lt => input_ops[0].lt(&input_ops[1]),
-                    crate::backends::op::CmpOp::Le => input_ops[0].le(&input_ops[1]),
-                    crate::backends::op::CmpOp::Gt => input_ops[0].gt(&input_ops[1]),
-                    crate::backends::op::CmpOp::Ge => input_ops[0].ge(&input_ops[1]),
+                    CmpOp::Eq => input_ops[0].eq(&input_ops[1]),
+                    CmpOp::Ne => input_ops[0].ne(&input_ops[1]),
+                    CmpOp::Lt => input_ops[0].lt(&input_ops[1]),
+                    CmpOp::Le => input_ops[0].le(&input_ops[1]),
+                    CmpOp::Gt => input_ops[0].gt(&input_ops[1]),
+                    CmpOp::Ge => input_ops[0].ge(&input_ops[1]),
+                }
+                .map_err(xla_error_to_hodu_error)?;
+                Ok(result)
+            },
+
+            // Comparison with Scalar Operations
+            Op::CmpScalar(op, _, scalar) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Scalar comparison operation requires exactly 1 input".to_string(),
+                    ));
+                }
+                let scalar_value = scalar.to_f32();
+                let scalar_op = builder.constant_r0(scalar_value).map_err(xla_error_to_hodu_error)?;
+                let result = match op {
+                    CmpScalarOp::EqScalar => input_ops[0].eq(&scalar_op),
+                    CmpScalarOp::NeScalar => input_ops[0].ne(&scalar_op),
+                    CmpScalarOp::LtScalar => input_ops[0].lt(&scalar_op),
+                    CmpScalarOp::LeScalar => input_ops[0].le(&scalar_op),
+                    CmpScalarOp::GtScalar => input_ops[0].gt(&scalar_op),
+                    CmpScalarOp::GeScalar => input_ops[0].ge(&scalar_op),
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
@@ -285,27 +333,88 @@ impl XlaExecutor {
                     ));
                 }
                 let result = match op {
-                    crate::backends::op::UnaryOp::Neg => input_ops[0].neg(),
-                    crate::backends::op::UnaryOp::Abs => input_ops[0].abs(),
-                    crate::backends::op::UnaryOp::Sign => input_ops[0].sign(),
-                    crate::backends::op::UnaryOp::Square => input_ops[0].mul_(&input_ops[0]),
-                    crate::backends::op::UnaryOp::Relu => {
+                    UnaryOp::Neg => input_ops[0].neg(),
+                    UnaryOp::Abs => input_ops[0].abs(),
+                    UnaryOp::Sign => input_ops[0].sign(),
+                    UnaryOp::Square => input_ops[0].mul_(&input_ops[0]),
+                    UnaryOp::Relu => {
                         let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
                         input_ops[0].max(&zero)
                     },
-                    crate::backends::op::UnaryOp::Sigmoid => input_ops[0].logistic(), // Use XLA's builtin logistic
-                    crate::backends::op::UnaryOp::Tanh => input_ops[0].tanh(),
-                    crate::backends::op::UnaryOp::Sin => input_ops[0].sin(),
-                    crate::backends::op::UnaryOp::Cos => input_ops[0].cos(),
-                    crate::backends::op::UnaryOp::Ln => input_ops[0].log(),
-                    crate::backends::op::UnaryOp::Exp => input_ops[0].exp(),
-                    crate::backends::op::UnaryOp::Sqrt => input_ops[0].sqrt(),
-                    _ => {
-                        return Err(HoduError::InternalError(format!(
-                            "Unary operation {:?} not yet implemented for XLA",
-                            op
-                        )))
+                    UnaryOp::Sigmoid => input_ops[0].logistic(), // Use XLA's builtin logistic
+                    UnaryOp::Tanh => input_ops[0].tanh(),
+                    UnaryOp::Gelu => {
+                        // GELU approximation: 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x^3)))
+                        let sqrt_2_over_pi = builder
+                            .constant_r0(0.7978845608028654f32)
+                            .map_err(xla_error_to_hodu_error)?; // sqrt(2/π)
+                        let gelu_coeff = builder.constant_r0(0.044715f32).map_err(xla_error_to_hodu_error)?;
+                        let half = builder.constant_r0(0.5f32).map_err(xla_error_to_hodu_error)?;
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+
+                        let x = &input_ops[0];
+                        let x_cubed = x
+                            .mul_(x)
+                            .map_err(xla_error_to_hodu_error)?
+                            .mul_(x)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let inner = x
+                            .add_(&gelu_coeff.mul_(&x_cubed).map_err(xla_error_to_hodu_error)?)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let tanh_arg = sqrt_2_over_pi.mul_(&inner).map_err(xla_error_to_hodu_error)?;
+                        let tanh_result = tanh_arg.tanh().map_err(xla_error_to_hodu_error)?;
+                        let one_plus_tanh = one.add_(&tanh_result).map_err(xla_error_to_hodu_error)?;
+                        half.mul_(x).map_err(xla_error_to_hodu_error)?.mul_(&one_plus_tanh)
                     },
+                    UnaryOp::Sin => input_ops[0].sin(),
+                    UnaryOp::Cos => input_ops[0].cos(),
+                    UnaryOp::Tan => {
+                        let sin_val = input_ops[0].sin().map_err(xla_error_to_hodu_error)?;
+                        let cos_val = input_ops[0].cos().map_err(xla_error_to_hodu_error)?;
+                        sin_val.div_(&cos_val)
+                    },
+                    UnaryOp::Ln => input_ops[0].log(),
+                    UnaryOp::Log10 => {
+                        let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
+                        let ln_10 = builder
+                            .constant_r0(2.302585092994046f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(10)
+                        ln_val.div_(&ln_10)
+                    },
+                    UnaryOp::Log2 => {
+                        let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
+                        let ln_2 = builder
+                            .constant_r0(0.6931471805599453f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(2)
+                        ln_val.div_(&ln_2)
+                    },
+                    UnaryOp::Exp => input_ops[0].exp(),
+                    UnaryOp::Exp10 => {
+                        let ln_10 = builder
+                            .constant_r0(2.302585092994046f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(10)
+                        let scaled = input_ops[0].mul_(&ln_10).map_err(xla_error_to_hodu_error)?;
+                        scaled.exp()
+                    },
+                    UnaryOp::Exp2 => {
+                        let ln_2 = builder
+                            .constant_r0(0.6931471805599453f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(2)
+                        let scaled = input_ops[0].mul_(&ln_2).map_err(xla_error_to_hodu_error)?;
+                        scaled.exp()
+                    },
+                    UnaryOp::Softplus => {
+                        // softplus(x) = log(1 + exp(x))
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+                        let exp_x = input_ops[0].exp().map_err(xla_error_to_hodu_error)?;
+                        let one_plus_exp = one.add_(&exp_x).map_err(xla_error_to_hodu_error)?;
+                        one_plus_exp.log()
+                    },
+                    UnaryOp::Recip => {
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+                        one.div_(&input_ops[0])
+                    },
+                    UnaryOp::Sqrt => input_ops[0].sqrt(),
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
@@ -319,7 +428,47 @@ impl XlaExecutor {
                     ));
                 }
                 let result = match op {
-                    crate::backends::op::UnaryLogicalOp::LogicalNot => input_ops[0].not(),
+                    UnaryLogicalOp::LogicalNot => input_ops[0].not(),
+                }
+                .map_err(xla_error_to_hodu_error)?;
+                Ok(result)
+            },
+
+            // Unary Scalar Operations
+            Op::UnaryScalar(op, _, scalar) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Unary scalar operation requires exactly 1 input".to_string(),
+                    ));
+                }
+                let scalar_value = scalar.to_f32();
+                let scalar_op = builder.constant_r0(scalar_value).map_err(xla_error_to_hodu_error)?;
+                let result = match op {
+                    UnaryScalarOp::AddScalar => input_ops[0].add_(&scalar_op),
+                    UnaryScalarOp::SubScalar => input_ops[0].sub_(&scalar_op),
+                    UnaryScalarOp::MulScalar => input_ops[0].mul_(&scalar_op),
+                    UnaryScalarOp::DivScalar => input_ops[0].div_(&scalar_op),
+                    UnaryScalarOp::PowScalar => input_ops[0].pow(&scalar_op),
+                    UnaryScalarOp::MaximumScalar => input_ops[0].max(&scalar_op),
+                    UnaryScalarOp::MinimumScalar => input_ops[0].min(&scalar_op),
+                    UnaryScalarOp::LeakyRelu => {
+                        let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
+                        let positive_part = input_ops[0].max(&zero).map_err(xla_error_to_hodu_error)?;
+                        let negative_part = input_ops[0].min(&zero).map_err(xla_error_to_hodu_error)?;
+                        let scaled_negative = negative_part.mul_(&scalar_op).map_err(xla_error_to_hodu_error)?;
+                        positive_part.add_(&scaled_negative)
+                    },
+                    UnaryScalarOp::Elu => {
+                        // ELU: x if x > 0, else α * (exp(x) - 1)
+                        let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+                        let exp_part = input_ops[0].exp().map_err(xla_error_to_hodu_error)?;
+                        let elu_negative = scalar_op
+                            .mul_(&exp_part.sub_(&one).map_err(xla_error_to_hodu_error)?)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let condition = input_ops[0].gt(&zero).map_err(xla_error_to_hodu_error)?;
+                        condition.select(&input_ops[0], &elu_negative)
+                    },
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
@@ -332,11 +481,465 @@ impl XlaExecutor {
                         "Matrix operation requires exactly 2 inputs".to_string(),
                     ));
                 }
-                let result = match op {
-                    crate::backends::op::MatrixOp::Matmul => input_ops[0].dot(&input_ops[1]),
+
+                match op {
+                    MatrixOp::Matmul => {
+                        // Matrix multiplication for 2D tensors only
+                        // Get input shapes to validate they are 2D
+                        let lhs_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                        let rhs_shape = input_ops[1].shape().map_err(xla_error_to_hodu_error)?;
+
+                        match (lhs_shape, rhs_shape) {
+                            (xla::Shape::Array(lhs_array), xla::Shape::Array(rhs_array)) => {
+                                let lhs_dims = lhs_array.dims();
+                                let rhs_dims = rhs_array.dims();
+
+                                if lhs_dims.len() != 2 || rhs_dims.len() != 2 {
+                                    return Err(HoduError::InternalError(
+                                        "Matrix multiplication requires exactly 2D tensors".to_string(),
+                                    ));
+                                }
+
+                                // Use XLA's dot operation for 2D matrix multiplication
+                                input_ops[0].dot(&input_ops[1]).map_err(xla_error_to_hodu_error)
+                            },
+                            _ => Err(HoduError::InternalError(
+                                "Expected array shapes for matrix multiplication".to_string(),
+                            )),
+                        }
+                    },
                 }
-                .map_err(xla_error_to_hodu_error)?;
-                Ok(result)
+            },
+
+            // Reduce Operations
+            Op::Reduce(reduce_op, _, dims_scalars) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Reduce operation requires exactly 1 input".to_string(),
+                    ));
+                }
+
+                // Extract dimensions from scalar array
+                let dims: Vec<i64> = dims_scalars.iter().map(|scalar| scalar.to_u64() as i64).collect();
+
+                match reduce_op {
+                    ReduceOp::Sum => {
+                        if dims.is_empty() {
+                            // Sum all elements
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0].reduce_sum(&all_dims, false)
+                        } else {
+                            input_ops[0].reduce_sum(&dims, false)
+                        }
+                        .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Mean => {
+                        if dims.is_empty() {
+                            // Mean of all elements
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0].reduce_mean(&all_dims, false)
+                        } else {
+                            input_ops[0].reduce_mean(&dims, false)
+                        }
+                        .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Max => {
+                        if dims.is_empty() {
+                            // Max of all elements
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0].reduce_max(&all_dims, false)
+                        } else {
+                            input_ops[0].reduce_max(&dims, false)
+                        }
+                        .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Min => {
+                        if dims.is_empty() {
+                            // Min of all elements
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0].reduce_min(&all_dims, false)
+                        } else {
+                            input_ops[0].reduce_min(&dims, false)
+                        }
+                        .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Prod => {
+                        // XLA doesn't have built-in reduce_prod, so we implement it using reduce with multiplication
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+
+                        // Create multiplication computation
+                        let comp_builder = XlaBuilder::new("prod_computation");
+                        let lhs = comp_builder
+                            .parameter(0, ElementType::F32, &[], "lhs")
+                            .map_err(xla_error_to_hodu_error)?;
+                        let rhs = comp_builder
+                            .parameter(1, ElementType::F32, &[], "rhs")
+                            .map_err(xla_error_to_hodu_error)?;
+                        let mul_result = lhs.mul_(&rhs).map_err(xla_error_to_hodu_error)?;
+                        let prod_computation = mul_result.build().map_err(xla_error_to_hodu_error)?;
+
+                        if dims.is_empty() {
+                            // Product of all elements
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0].reduce(one, prod_computation, &all_dims, false)
+                        } else {
+                            input_ops[0].reduce(one, prod_computation, &dims, false)
+                        }
+                        .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Std => {
+                        // XLA doesn't have built-in std, so we implement it as sqrt(variance)
+                        let mean_op = if dims.is_empty() {
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0]
+                                .reduce_mean(&all_dims, true)
+                                .map_err(xla_error_to_hodu_error)?
+                        } else {
+                            input_ops[0].reduce_mean(&dims, true).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        // Variance: mean((x - mean)^2)
+                        let diff = input_ops[0].sub_(&mean_op).map_err(xla_error_to_hodu_error)?;
+                        let squared = diff.mul_(&diff).map_err(xla_error_to_hodu_error)?;
+                        let variance = if dims.is_empty() {
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            squared.reduce_mean(&all_dims, false).map_err(xla_error_to_hodu_error)?
+                        } else {
+                            squared.reduce_mean(&dims, false).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        // Standard deviation: sqrt(variance)
+                        variance.sqrt().map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Var => {
+                        // XLA doesn't have built-in variance, so we implement it as mean((x - mean)^2)
+                        let mean_op = if dims.is_empty() {
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            input_ops[0]
+                                .reduce_mean(&all_dims, true)
+                                .map_err(xla_error_to_hodu_error)?
+                        } else {
+                            input_ops[0].reduce_mean(&dims, true).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        // Variance: mean((x - mean)^2)
+                        let diff = input_ops[0].sub_(&mean_op).map_err(xla_error_to_hodu_error)?;
+                        let squared = diff.mul_(&diff).map_err(xla_error_to_hodu_error)?;
+                        if dims.is_empty() {
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            squared.reduce_mean(&all_dims, false)
+                        } else {
+                            squared.reduce_mean(&dims, false)
+                        }
+                        .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::Norm => {
+                        // L2 norm: sqrt(sum(x^2))
+                        let squared = input_ops[0].mul_(&input_ops[0]).map_err(xla_error_to_hodu_error)?;
+                        let sum_squared = if dims.is_empty() {
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let all_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                _ => {
+                                    return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
+                                },
+                            };
+                            squared.reduce_sum(&all_dims, false).map_err(xla_error_to_hodu_error)?
+                        } else {
+                            squared.reduce_sum(&dims, false).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        // L2 norm: sqrt(sum_squared)
+                        sum_squared.sqrt().map_err(xla_error_to_hodu_error)
+                    },
+                }
+            },
+
+            // Shape Operations
+            Op::Shape(op, _) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "View operation requires exactly 1 input".to_string(),
+                    ));
+                }
+                match op {
+                    ShapeOp::Reshape => {
+                        // Get target shape from output layout
+                        if let Some(target_layout) = current_node.output_layouts.first() {
+                            let target_shape: Vec<i64> = target_layout.get_shape().iter().map(|&d| d as i64).collect();
+                            input_ops[0].reshape(&target_shape).map_err(xla_error_to_hodu_error)
+                        } else {
+                            // Fallback: return input unchanged
+                            Ok(input_ops[0].clone())
+                        }
+                    },
+                    ShapeOp::Flatten => {
+                        // Get input shape and flatten to 1D
+                        let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                        let total_size = match input_shape {
+                            xla::Shape::Array(array_shape) => array_shape.dims().iter().product::<i64>(),
+                            _ => {
+                                return Err(HoduError::InternalError(
+                                    "Expected array shape for flatten operation".to_string(),
+                                ))
+                            },
+                        };
+
+                        let flat_shape = vec![total_size];
+                        input_ops[0].reshape(&flat_shape).map_err(xla_error_to_hodu_error)
+                    },
+                    ShapeOp::Squeeze => {
+                        // Get target shape from output layout (dimensions of size 1 removed)
+                        if let Some(target_layout) = current_node.output_layouts.first() {
+                            let target_shape: Vec<i64> = target_layout.get_shape().iter().map(|&d| d as i64).collect();
+                            input_ops[0].reshape(&target_shape).map_err(xla_error_to_hodu_error)
+                        } else {
+                            // Fallback: return input unchanged
+                            Ok(input_ops[0].clone())
+                        }
+                    },
+                    ShapeOp::Unsqueeze => {
+                        // Get target shape from output layout (dimensions of size 1 added)
+                        if let Some(target_layout) = current_node.output_layouts.first() {
+                            let target_shape: Vec<i64> = target_layout.get_shape().iter().map(|&d| d as i64).collect();
+                            input_ops[0].reshape(&target_shape).map_err(xla_error_to_hodu_error)
+                        } else {
+                            // Fallback: return input unchanged
+                            Ok(input_ops[0].clone())
+                        }
+                    },
+                    ShapeOp::Broadcast => {
+                        // Get target shape from output layout
+                        if let Some(target_layout) = current_node.output_layouts.first() {
+                            let target_shape: Vec<i64> = target_layout.get_shape().iter().map(|&d| d as i64).collect();
+
+                            // Use XLA's broadcast_in_dim for explicit broadcasting
+                            // For now, assume we're broadcasting to larger dimensions (left-padding with 1s)
+                            let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
+                            let input_dims: Vec<i64> = match input_shape {
+                                xla::Shape::Array(array_shape) => array_shape.dims().to_vec(),
+                                _ => {
+                                    return Err(HoduError::InternalError(
+                                        "Expected array shape for broadcast operation".to_string(),
+                                    ))
+                                },
+                            };
+
+                            if input_dims == target_shape {
+                                // No broadcasting needed
+                                Ok(input_ops[0].clone())
+                            } else {
+                                // Create broadcast dimensions mapping
+                                let input_rank = input_dims.len();
+                                let target_rank = target_shape.len();
+
+                                if input_rank <= target_rank {
+                                    // Standard broadcasting: map input dimensions to the rightmost target dimensions
+                                    let broadcast_dims: Vec<i64> =
+                                        (target_rank - input_rank..target_rank).map(|i| i as i64).collect();
+
+                                    input_ops[0]
+                                        .broadcast_in_dim(&target_shape, &broadcast_dims)
+                                        .map_err(xla_error_to_hodu_error)
+                                } else {
+                                    // Input has more dimensions than target, this shouldn't happen in normal broadcasting
+                                    Err(HoduError::InternalError(
+                                        "Cannot broadcast tensor to smaller shape".to_string(),
+                                    ))
+                                }
+                            }
+                        } else {
+                            // Fallback: return input unchanged
+                            Ok(input_ops[0].clone())
+                        }
+                    },
+                    ShapeOp::Transpose => {
+                        // Get input and output shapes
+                        let input_layout = current_node.input_layouts.first().ok_or_else(|| {
+                            HoduError::InternalError("Missing input layout for transpose".to_string())
+                        })?;
+                        let output_layout = current_node.output_layouts.first().ok_or_else(|| {
+                            HoduError::InternalError("Missing output layout for transpose".to_string())
+                        })?;
+
+                        let input_shape = input_layout.get_shape();
+                        let output_shape = output_layout.get_shape();
+                        let ndim = input_layout.get_ndim();
+
+                        if ndim < 2 {
+                            return Err(HoduError::InternalError(
+                                "Cannot transpose tensor with fewer than 2 dimensions".to_string(),
+                            ));
+                        }
+
+                        // Find which dimensions were swapped by comparing shapes
+                        let mut dim1 = None;
+                        let mut dim2 = None;
+                        for i in 0..ndim {
+                            for j in (i + 1)..ndim {
+                                if input_shape[i] == output_shape[j] && input_shape[j] == output_shape[i] {
+                                    // Check if all other dimensions match
+                                    let mut all_match = true;
+                                    for k in 0..ndim {
+                                        if k != i && k != j && input_shape[k] != output_shape[k] {
+                                            all_match = false;
+                                            break;
+                                        }
+                                    }
+                                    if all_match {
+                                        dim1 = Some(i);
+                                        dim2 = Some(j);
+                                        break;
+                                    }
+                                }
+                            }
+                            if dim1.is_some() {
+                                break;
+                            }
+                        }
+
+                        match (dim1, dim2) {
+                            (Some(d1), Some(d2)) => {
+                                // Create permutation array for transpose
+                                let mut permutation: Vec<i64> = (0..ndim as i64).collect();
+                                permutation.swap(d1, d2);
+
+                                input_ops[0].transpose(&permutation).map_err(xla_error_to_hodu_error)
+                            },
+                            _ => {
+                                // Fallback: assume last two dimensions for matrix transpose
+                                let mut permutation: Vec<i64> = (0..ndim as i64).collect();
+                                permutation.swap(ndim - 2, ndim - 1);
+
+                                input_ops[0].transpose(&permutation).map_err(xla_error_to_hodu_error)
+                            },
+                        }
+                    },
+                }
+            },
+
+            // Cast Operations
+            Op::Cast(op, _) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Cast operation requires exactly 1 input".to_string(),
+                    ));
+                }
+                match op {
+                    CastOp::ToDType => {
+                        // Get target dtype from output tensor metadata
+                        if let Some(output_tensor_id) = current_node.output_tensors.first() {
+                            // Get target dtype from compiled script tensor_dtypes
+                            let target_dtype = _compiled_script
+                                .tensor_dtypes
+                                .get(output_tensor_id)
+                                .copied()
+                                .unwrap_or(DType::F32); // Default to F32 if not specified
+
+                            // Convert DType to XLA PrimitiveType
+                            let target_primitive_type = match target_dtype {
+                                DType::BOOL => PrimitiveType::Pred,
+                                DType::F8E4M3 | DType::F8E5M2 => {
+                                    return Err(HoduError::InternalError(
+                                        "F8 types not supported in XLA backend".to_string(),
+                                    ));
+                                },
+                                DType::BF16 => PrimitiveType::Bf16,
+                                DType::F16 => PrimitiveType::F16,
+                                DType::F32 => PrimitiveType::F32,
+                                DType::F64 => PrimitiveType::F64,
+                                DType::U8 => PrimitiveType::U8,
+                                DType::U16 => PrimitiveType::U16,
+                                DType::U32 => PrimitiveType::U32,
+                                DType::U64 => PrimitiveType::U64,
+                                DType::I8 => PrimitiveType::S8,
+                                DType::I16 => PrimitiveType::S16,
+                                DType::I32 => PrimitiveType::S32,
+                                DType::I64 => PrimitiveType::S64,
+                            };
+
+                            let result = input_ops[0]
+                                .convert(target_primitive_type)
+                                .map_err(xla_error_to_hodu_error)?;
+
+                            Ok(result)
+                        } else {
+                            Err(HoduError::InternalError(
+                                "Cast operation has no output tensor".to_string(),
+                            ))
+                        }
+                    },
+                }
+            },
+
+            // Memory Operations
+            Op::Memory(op, _) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Memory operation requires exactly 1 input".to_string(),
+                    ));
+                }
+                match op {
+                    MemoryOp::Contiguous => {
+                        // XLA tensors are always contiguous in memory
+                        // So we can just return the input unchanged
+                        Ok(input_ops[0].clone())
+                    },
+                }
             },
 
             // For now, return error for unsupported operations
@@ -811,13 +1414,17 @@ impl ExecutorT for XlaExecutor {
         // Convert results back to tensors using output_mapping
         let mut outputs = HashMap::new();
 
-        // Get output names in consistent order
-        let output_names: Vec<_> = compiled.output_mapping.keys().cloned().collect();
+        // Get output names in consistent order (to match compile order)
+        let mut output_names: Vec<_> = compiled.output_mapping.keys().cloned().collect();
+        output_names.sort(); // Must match the order used in compile
 
-        for (i, output_name) in output_names.iter().enumerate() {
-            let result_literal = result_buffers[0][i]
+        if output_names.len() == 1 {
+            // Single output case
+            let result_literal = result_buffers[0][0]
                 .to_literal_sync()
-                .map_err(|e| HoduError::InternalError(format!("Failed to convert result {} to literal: {:?}", i, e)))?;
+                .map_err(|e| HoduError::InternalError(format!("Failed to convert result to literal: {:?}", e)))?;
+
+            let output_name = &output_names[0];
 
             // Get expected dtype from tensor_dtypes mapping
             let output_tensor_id = compiled
@@ -828,13 +1435,44 @@ impl ExecutorT for XlaExecutor {
                 .tensor_dtypes
                 .get(output_tensor_id)
                 .copied()
-                .unwrap_or(DType::F32); // Default to F32 if not found
+                .unwrap_or(DType::F32);
 
             let tensor = self
                 .literal_to_tensor(&result_literal, expected_dtype)
-                .map_err(|e| HoduError::InternalError(format!("Failed to convert literal {} to tensor: {}", i, e)))?;
+                .map_err(|e| HoduError::InternalError(format!("Failed to convert literal to tensor: {}", e)))?;
 
             outputs.insert(output_name.clone(), tensor);
+        } else {
+            // Multiple output case - access tuple elements directly
+            if result_buffers[0].len() != output_names.len() {
+                return Err(HoduError::InternalError(format!(
+                    "Tuple has {} elements but expected {} outputs",
+                    result_buffers[0].len(),
+                    output_names.len()
+                )));
+            }
+
+            for (i, output_name) in output_names.iter().enumerate() {
+                let element_literal = result_buffers[0][i].to_literal_sync().map_err(|e| {
+                    HoduError::InternalError(format!("Failed to convert tuple element {} to literal: {:?}", i, e))
+                })?;
+
+                // Get expected dtype from tensor_dtypes mapping
+                let output_tensor_id = compiled.output_mapping.get(output_name).ok_or_else(|| {
+                    HoduError::InternalError(format!("Output tensor ID not found for {}", output_name))
+                })?;
+                let expected_dtype = compiled
+                    .tensor_dtypes
+                    .get(output_tensor_id)
+                    .copied()
+                    .unwrap_or(DType::F32);
+
+                let tensor = self.literal_to_tensor(&element_literal, expected_dtype).map_err(|e| {
+                    HoduError::InternalError(format!("Failed to convert literal {} to tensor: {}", i, e))
+                })?;
+
+                outputs.insert(output_name.clone(), tensor);
+            }
         }
 
         Ok(outputs)
@@ -842,5 +1480,197 @@ impl ExecutorT for XlaExecutor {
 
     fn cleanup(&mut self) -> HoduResult<()> {
         Ok(())
+    }
+}
+
+impl XlaExecutor {
+    fn convert_constant_to_xla_op(
+        &self,
+        builder: &XlaBuilder,
+        constant: &crate::backends::script::ir::ConstantNode,
+    ) -> HoduResult<XlaOp> {
+        use crate::types::dtype::DType;
+
+        // Decompress data if needed
+        let data = match &constant.compression {
+            #[cfg(all(feature = "serde", feature = "std"))]
+            Some(crate::backends::script::ir::CompressionType::Gzip) => {
+                let mut decoder = flate2::read::GzDecoder::new(&constant.data[..]);
+                let mut decompressed = Vec::new();
+                std::io::Read::read_to_end(&mut decoder, &mut decompressed)
+                    .map_err(|e| HoduError::DecompressionError(e.to_string()))?;
+                decompressed
+            },
+            #[cfg(not(all(feature = "serde", feature = "std")))]
+            Some(crate::backends::script::ir::CompressionType::Gzip) => {
+                return Err(HoduError::InternalError(
+                    "Gzip decompression requires both 'serde' and 'std' features to be enabled".to_string(),
+                ));
+            },
+            Some(crate::backends::script::ir::CompressionType::None) => constant.data.clone(),
+            Some(crate::backends::script::ir::CompressionType::Zstd) => {
+                return Err(HoduError::InternalError(
+                    "Zstd decompression not implemented for XLA".to_string(),
+                ));
+            },
+            None => constant.data.clone(),
+        };
+
+        let dims: Vec<i64> = constant.shape.iter().map(|&d| d as i64).collect();
+
+        // Convert DType to XLA ElementType
+        let element_type = Self::dtype_to_element_type(constant.dtype)?;
+
+        // Create XLA constant based on dtype
+        let xla_op = match constant.dtype {
+            DType::F32 => {
+                let values: Vec<f32> = data
+                    .chunks_exact(4)
+                    .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::F64 => {
+                let values: Vec<f64> = data
+                    .chunks_exact(8)
+                    .map(|chunk| {
+                        f64::from_le_bytes([
+                            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                        ])
+                    })
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::I32 => {
+                let values: Vec<i32> = data
+                    .chunks_exact(4)
+                    .map(|chunk| i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::I64 => {
+                let values: Vec<i64> = data
+                    .chunks_exact(8)
+                    .map(|chunk| {
+                        i64::from_le_bytes([
+                            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                        ])
+                    })
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::I16 => {
+                let values: Vec<i16> = data
+                    .chunks_exact(2)
+                    .map(|chunk| i16::from_le_bytes([chunk[0], chunk[1]]))
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::I8 => {
+                let values: Vec<i8> = data.iter().map(|&b| b as i8).collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::U32 => {
+                let values: Vec<u32> = data
+                    .chunks_exact(4)
+                    .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::U64 => {
+                let values: Vec<u64> = data
+                    .chunks_exact(8)
+                    .map(|chunk| {
+                        u64::from_le_bytes([
+                            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
+                        ])
+                    })
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::U16 => {
+                let values: Vec<u16> = data
+                    .chunks_exact(2)
+                    .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+                    .collect();
+                self.create_xla_constant(builder, &values, &dims, element_type)
+            },
+            DType::U8 => self.create_xla_constant(builder, &data, &dims, element_type),
+            DType::BOOL => {
+                let literal = xla::Literal::create_from_shape_and_untyped_data(
+                    element_type,
+                    &dims.iter().map(|&d| d as usize).collect::<Vec<_>>(),
+                    &data,
+                )
+                .map_err(xla_error_to_hodu_error)?;
+                Ok(builder.constant_literal(&literal).map_err(xla_error_to_hodu_error)?)
+            },
+            // For F16 and BF16, we'll create them using literal directly since they may not implement NativeType
+            DType::F16 => {
+                let literal = xla::Literal::create_from_shape_and_untyped_data(
+                    element_type,
+                    &dims.iter().map(|&d| d as usize).collect::<Vec<_>>(),
+                    &data,
+                )
+                .map_err(xla_error_to_hodu_error)?;
+                Ok(builder.constant_literal(&literal).map_err(xla_error_to_hodu_error)?)
+            },
+            DType::BF16 => {
+                let literal = xla::Literal::create_from_shape_and_untyped_data(
+                    element_type,
+                    &dims.iter().map(|&d| d as usize).collect::<Vec<_>>(),
+                    &data,
+                )
+                .map_err(xla_error_to_hodu_error)?;
+                Ok(builder.constant_literal(&literal).map_err(xla_error_to_hodu_error)?)
+            },
+            DType::F8E4M3 | DType::F8E5M2 => {
+                return Err(HoduError::InternalError(format!(
+                    "XLA does not support {:?} dtype",
+                    constant.dtype
+                )));
+            },
+        }?;
+
+        Ok(xla_op)
+    }
+
+    fn create_xla_constant<T: xla::NativeType + Copy>(
+        &self,
+        builder: &XlaBuilder,
+        values: &[T],
+        dims: &[i64],
+        element_type: ElementType,
+    ) -> HoduResult<XlaOp> {
+        if dims.is_empty() {
+            // Scalar constant
+            builder.constant_r0(values[0]).map_err(xla_error_to_hodu_error)
+        } else if dims.len() == 1 {
+            // 1D constant
+            builder.constant_r1(values).map_err(xla_error_to_hodu_error)
+        } else {
+            // Multi-dimensional constant - use literal creation
+            let shape: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+            let literal = self.create_literal_from_values(values, &shape, element_type)?;
+            builder.constant_literal(&literal).map_err(xla_error_to_hodu_error)
+        }
+    }
+
+    fn create_literal_from_values<T>(
+        &self,
+        values: &[T],
+        shape: &[usize],
+        element_type: ElementType,
+    ) -> HoduResult<xla::Literal>
+    where
+        T: Copy,
+    {
+        use std::mem;
+
+        // Convert values to bytes based on type
+        let data_bytes = unsafe { std::slice::from_raw_parts(values.as_ptr() as *const u8, mem::size_of_val(values)) };
+
+        xla::Literal::create_from_shape_and_untyped_data(element_type, shape, data_bytes)
+            .map_err(xla_error_to_hodu_error)
     }
 }

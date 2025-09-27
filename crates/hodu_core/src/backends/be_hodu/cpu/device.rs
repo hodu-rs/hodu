@@ -95,7 +95,10 @@ impl HoduDeviceT for CpuDevice {
                 }
                 Ok(CpuStorage::F64(data))
             },
-            _ => Err(HoduError::UnsupportedDType(dtype)),
+            _ => Err(HoduError::UnsupportedDType {
+                dtype,
+                op: "randn".to_string(),
+            }),
         }
     }
 }

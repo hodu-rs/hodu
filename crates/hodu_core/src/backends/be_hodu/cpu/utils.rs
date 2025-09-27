@@ -1,4 +1,9 @@
-use crate::{compat::*, scalar::Scalar, types::layout::Layout};
+use crate::{
+    compat::*,
+    error::{HoduError, HoduResult},
+    scalar::Scalar,
+    types::layout::Layout,
+};
 
 pub fn binary_map<T: Copy, U: Copy, F: FnMut(T, T) -> U>(
     lhs_storage: &[T],
@@ -206,6 +211,95 @@ pub fn binary_logical_map<T: Copy, F: FnMut(T, T) -> bool>(
     result
 }
 
+pub fn unary_map<T: Copy, U: Copy, F: FnMut(T) -> U>(storage: &[T], layout: &Layout, mut f: F) -> Vec<U> {
+    let offset = layout.get_offset();
+    let size = layout.get_size();
+
+    if layout.is_contiguous() {
+        storage[offset..offset + size].iter().map(|&v| f(v)).collect()
+    } else {
+        let mut result = Vec::with_capacity(size);
+        let dims = layout.get_shape();
+        let strides = layout.get_strides();
+
+        for i in 0..size {
+            let mut idx = offset;
+            let mut tmp_i = i;
+
+            for d in (0..dims.len()).rev() {
+                let i_dim = tmp_i % dims[d];
+                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                tmp_i /= dims[d];
+            }
+
+            let v = unsafe { storage.get_unchecked(idx) };
+            result.push(f(*v));
+        }
+        result
+    }
+}
+
+pub fn unary_logical_map<T: Copy, F: FnMut(T) -> bool>(storage: &[T], layout: &Layout, mut f: F) -> Vec<bool> {
+    let offset = layout.get_offset();
+    let size = layout.get_size();
+
+    if layout.is_contiguous() {
+        storage[offset..offset + size].iter().map(|&v| f(v)).collect()
+    } else {
+        let mut result = Vec::with_capacity(size);
+        let dims = layout.get_shape();
+        let strides = layout.get_strides();
+
+        for i in 0..size {
+            let mut idx = offset;
+            let mut tmp_i = i;
+
+            for d in (0..dims.len()).rev() {
+                let i_dim = tmp_i % dims[d];
+                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                tmp_i /= dims[d];
+            }
+
+            let v = unsafe { storage.get_unchecked(idx) };
+            result.push(f(*v));
+        }
+        result
+    }
+}
+
+pub fn unary_scalar_map<T: Copy, F: FnMut(T, Scalar) -> T>(
+    storage: &[T],
+    layout: &Layout,
+    scalar: Scalar,
+    mut f: F,
+) -> Vec<T> {
+    let offset = layout.get_offset();
+    let size = layout.get_size();
+
+    if layout.is_contiguous() {
+        storage[offset..offset + size].iter().map(|&v| f(v, scalar)).collect()
+    } else {
+        let mut result = Vec::with_capacity(size);
+        let dims = layout.get_shape();
+        let strides = layout.get_strides();
+
+        for i in 0..size {
+            let mut idx = offset;
+            let mut tmp_i = i;
+
+            for d in (0..dims.len()).rev() {
+                let i_dim = tmp_i % dims[d];
+                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                tmp_i /= dims[d];
+            }
+
+            let v = unsafe { storage.get_unchecked(idx) };
+            result.push(f(*v, scalar));
+        }
+        result
+    }
+}
+
 pub fn cmp_map<T: Copy, F: FnMut(T, T) -> bool>(
     lhs_storage: &[T],
     rhs_storage: &[T],
@@ -342,101 +436,12 @@ pub fn cmp_scalar_map<T: Copy, F: FnMut(T, Scalar) -> bool>(
     }
 }
 
-pub fn unary_map<T: Copy, U: Copy, F: FnMut(T) -> U>(storage: &[T], layout: &Layout, mut f: F) -> Vec<U> {
-    let offset = layout.get_offset();
-    let size = layout.get_size();
-
-    if layout.is_contiguous() {
-        storage[offset..offset + size].iter().map(|&v| f(v)).collect()
-    } else {
-        let mut result = Vec::with_capacity(size);
-        let dims = layout.get_shape();
-        let strides = layout.get_strides();
-
-        for i in 0..size {
-            let mut idx = offset;
-            let mut tmp_i = i;
-
-            for d in (0..dims.len()).rev() {
-                let i_dim = tmp_i % dims[d];
-                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
-                tmp_i /= dims[d];
-            }
-
-            let v = unsafe { storage.get_unchecked(idx) };
-            result.push(f(*v));
-        }
-        result
-    }
-}
-
-pub fn unary_logical_map<T: Copy, F: FnMut(T) -> bool>(storage: &[T], layout: &Layout, mut f: F) -> Vec<bool> {
-    let offset = layout.get_offset();
-    let size = layout.get_size();
-
-    if layout.is_contiguous() {
-        storage[offset..offset + size].iter().map(|&v| f(v)).collect()
-    } else {
-        let mut result = Vec::with_capacity(size);
-        let dims = layout.get_shape();
-        let strides = layout.get_strides();
-
-        for i in 0..size {
-            let mut idx = offset;
-            let mut tmp_i = i;
-
-            for d in (0..dims.len()).rev() {
-                let i_dim = tmp_i % dims[d];
-                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
-                tmp_i /= dims[d];
-            }
-
-            let v = unsafe { storage.get_unchecked(idx) };
-            result.push(f(*v));
-        }
-        result
-    }
-}
-
-pub fn unary_scalar_map<T: Copy, F: FnMut(T, Scalar) -> T>(
-    storage: &[T],
-    layout: &Layout,
-    scalar: Scalar,
-    mut f: F,
-) -> Vec<T> {
-    let offset = layout.get_offset();
-    let size = layout.get_size();
-
-    if layout.is_contiguous() {
-        storage[offset..offset + size].iter().map(|&v| f(v, scalar)).collect()
-    } else {
-        let mut result = Vec::with_capacity(size);
-        let dims = layout.get_shape();
-        let strides = layout.get_strides();
-
-        for i in 0..size {
-            let mut idx = offset;
-            let mut tmp_i = i;
-
-            for d in (0..dims.len()).rev() {
-                let i_dim = tmp_i % dims[d];
-                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
-                tmp_i /= dims[d];
-            }
-
-            let v = unsafe { storage.get_unchecked(idx) };
-            result.push(f(*v, scalar));
-        }
-        result
-    }
-}
-
 pub fn matmul_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output = T> + Default>(
     lhs_storage: &[T],
     rhs_storage: &[T],
     lhs_layout: &Layout,
     rhs_layout: &Layout,
-) -> crate::error::HoduResult<Vec<T>> {
+) -> HoduResult<Vec<T>> {
     // Matrix multiplication with proper offset/stride handling
     // A: (m, k), B: (k, n) -> C: (m, n)
 
@@ -448,7 +453,7 @@ pub fn matmul_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output =
     let rhs_offset = rhs_layout.get_offset();
 
     if lhs_shape.len() != 2 || rhs_shape.len() != 2 {
-        return Err(crate::error::HoduError::IncompatibleShapes {
+        return Err(HoduError::IncompatibleShapes {
             lhs: lhs_shape.to_vec(),
             rhs: rhs_shape.to_vec(),
             op: "matmul - only 2D tensors supported".to_string(),
@@ -459,7 +464,7 @@ pub fn matmul_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output =
     let (k2, n) = (rhs_shape[0], rhs_shape[1]);
 
     if k1 != k2 {
-        return Err(crate::error::HoduError::IncompatibleShapes {
+        return Err(HoduError::IncompatibleShapes {
             lhs: lhs_shape.to_vec(),
             rhs: rhs_shape.to_vec(),
             op: "matmul - inner dimensions must match".to_string(),
@@ -490,4 +495,785 @@ pub fn matmul_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output =
     }
 
     Ok(result)
+}
+
+pub fn reduce_sum<T: Copy + Default + ops::Add<Output = T>>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    // Handle empty dims (reduce all)
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0; // Mark for removal
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        if output_shape.is_empty() {
+            output_shape = vec![1]; // Scalar result
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![T::default(); output_size];
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let mut sum = T::default();
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            sum = sum + storage[flat_index];
+        }
+
+        result[0] = sum;
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional reduction - simplified implementation
+    for output_idx in 0..output_size {
+        let mut sum = T::default();
+
+        // Generate indices for the output tensor
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        // Map output indices back to input indices
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0; // Will iterate over this
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        // Iterate over reduced dimensions
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            // Set the reduced dimension indices
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            // Calculate flat index
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            sum = sum + storage[flat_index];
+        }
+
+        result[output_idx] = sum;
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_mean<T>(storage: &[T], layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<(Vec<T>, Vec<usize>)>
+where
+    T: Copy + Default + ops::Add<Output = T> + ops::Div<Output = T>,
+    T: num_traits::NumCast,
+{
+    let (sum_result, output_shape) = reduce_sum(storage, layout, dims, keep_dim)?;
+
+    // Calculate the number of elements that were reduced
+    let shape = layout.get_shape();
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..shape.len()).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    let count = reduce_dims.iter().map(|&d| shape[d]).product::<usize>();
+    let count_val = T::from(count).unwrap();
+
+    let mean_result = sum_result.into_iter().map(|x| x / count_val).collect();
+
+    Ok((mean_result, output_shape))
+}
+
+pub fn reduce_max<T: Copy + PartialOrd>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0;
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        if output_shape.is_empty() {
+            output_shape = vec![1];
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![storage[offset]; output_size]; // Initialize with first element
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let mut max_val = storage[offset];
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            if val > max_val {
+                max_val = val;
+            }
+        }
+
+        result[0] = max_val;
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional case - similar to sum but with max operation
+    for output_idx in 0..output_size {
+        let mut max_val = storage[offset];
+        let mut first = true;
+
+        // Similar logic to sum but finding maximum
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0;
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            if first || val > max_val {
+                max_val = val;
+                first = false;
+            }
+        }
+
+        result[output_idx] = max_val;
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_min<T: Copy + PartialOrd>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0;
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        if output_shape.is_empty() {
+            output_shape = vec![1];
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![storage[offset]; output_size];
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let mut min_val = storage[offset];
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            if val < min_val {
+                min_val = val;
+            }
+        }
+
+        result[0] = min_val;
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional case - similar to max but with min operation
+    for output_idx in 0..output_size {
+        let mut min_val = storage[offset];
+        let mut first = true;
+
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0;
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            if first || val < min_val {
+                min_val = val;
+                first = false;
+            }
+        }
+
+        result[output_idx] = min_val;
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_prod<T: Copy + ops::Mul<Output = T>>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)>
+where
+    T: num_traits::One,
+{
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0;
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        if output_shape.is_empty() {
+            output_shape = vec![1];
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![T::one(); output_size];
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let mut prod_val = T::one();
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            prod_val = prod_val * storage[flat_index];
+        }
+
+        result[0] = prod_val;
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional case
+    for output_idx in 0..output_size {
+        let mut prod_val = T::one();
+
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0;
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            prod_val = prod_val * storage[flat_index];
+        }
+
+        result[output_idx] = prod_val;
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_std<T>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+    unbiased: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)>
+where
+    T: Copy
+        + Default
+        + ops::Add<Output = T>
+        + ops::Sub<Output = T>
+        + ops::Mul<Output = T>
+        + ops::Div<Output = T>
+        + num_traits::NumCast,
+    T: num_traits::Float, // This provides sqrt
+{
+    let (var_result, output_shape) = reduce_var(storage, layout, dims, keep_dim, unbiased)?;
+
+    let std_result = var_result.into_iter().map(|x| x.sqrt()).collect();
+
+    Ok((std_result, output_shape))
+}
+
+pub fn reduce_var<T>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+    unbiased: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)>
+where
+    T: Copy
+        + Default
+        + ops::Add<Output = T>
+        + ops::Sub<Output = T>
+        + ops::Mul<Output = T>
+        + ops::Div<Output = T>
+        + num_traits::NumCast,
+{
+    // First calculate mean
+    let (mean_result, output_shape) = reduce_mean(storage, layout, dims, keep_dim)?;
+
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![T::default(); output_size];
+
+    // Calculate the number of elements that were reduced
+    let n = reduce_dims.iter().map(|&d| shape[d]).product::<usize>();
+    let denominator = if unbiased && n > 1 { n - 1 } else { n };
+    let denom_val = T::from(denominator).unwrap();
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let mean_val = mean_result[0];
+        let mut var_sum = T::default();
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let diff = storage[flat_index] - mean_val;
+            var_sum = var_sum + diff * diff;
+        }
+
+        result[0] = var_sum / denom_val;
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional case
+    for output_idx in 0..output_size {
+        let mean_val = mean_result[output_idx];
+        let mut var_sum = T::default();
+
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0;
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let diff = storage[flat_index] - mean_val;
+            var_sum = var_sum + diff * diff;
+        }
+
+        result[output_idx] = var_sum / denom_val;
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_norm<T>(storage: &[T], layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<(Vec<T>, Vec<usize>)>
+where
+    T: Copy + Default + ops::Add<Output = T> + ops::Mul<Output = T> + num_traits::Float, // This provides sqrt
+{
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0;
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        if output_shape.is_empty() {
+            output_shape = vec![1];
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![T::default(); output_size];
+
+    // Simple case: reduce all dimensions (L2 norm of entire tensor)
+    if reduce_dims.len() == ndim {
+        let mut sum_squares = T::default();
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            sum_squares = sum_squares + val * val;
+        }
+
+        result[0] = sum_squares.sqrt();
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional case - compute L2 norm along specified dimensions
+    for output_idx in 0..output_size {
+        let mut sum_squares = T::default();
+
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0;
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            sum_squares = sum_squares + val * val;
+        }
+
+        result[output_idx] = sum_squares.sqrt();
+    }
+
+    Ok((result, output_shape))
 }

@@ -40,7 +40,11 @@ pub trait HoduStorageT: Sized {
 
     fn matmul(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self>;
 
+    fn reduce(&self, _: crate::backends::op::ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self>;
+
     fn to_dtype(&self, _: DType) -> HoduResult<Self>;
+
+    fn contiguous(&self, _: &Layout) -> HoduResult<Self>;
 }
 
 #[derive(Debug)]
@@ -171,11 +175,35 @@ impl HoduStorage {
         }
     }
 
+    pub(crate) fn reduce(
+        &self,
+        reduce_op: crate::backends::op::ReduceOp,
+        layout: &Layout,
+        dims: &[usize],
+        keep_dim: bool,
+    ) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => {
+                let reduced_storage = storage.reduce(reduce_op, layout, dims, keep_dim)?;
+                Ok(Self::CPU(reduced_storage))
+            },
+        }
+    }
+
     pub(crate) fn to_dtype(&self, dtype: DType) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => {
                 let converted_storage = storage.to_dtype(dtype)?;
                 Ok(Self::CPU(converted_storage))
+            },
+        }
+    }
+
+    pub(crate) fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => {
+                let contiguous_storage = storage.contiguous(layout)?;
+                Ok(Self::CPU(contiguous_storage))
             },
         }
     }

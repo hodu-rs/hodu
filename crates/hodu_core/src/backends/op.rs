@@ -261,27 +261,49 @@ pub enum MatrixOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum TensorOp {
+    Dot,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ReduceOp {
     Sum,
-    SumToShape,
     Mean,
     Max, // no-backprop
     Min, // no-backprop
+    Prod,
+    Std,
+    Var,
+    Norm,
+}
+
+impl ReduceOp {
+    pub fn to_string(&self) -> String {
+        match self {
+            ReduceOp::Sum => "sum".to_string(),
+            ReduceOp::Mean => "mean".to_string(),
+            ReduceOp::Max => "max".to_string(),
+            ReduceOp::Min => "min".to_string(),
+            ReduceOp::Prod => "prod".to_string(),
+            ReduceOp::Std => "std".to_string(),
+            ReduceOp::Var => "var".to_string(),
+            ReduceOp::Norm => "norm".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub enum ViewOp {
-    Transpose,
-    Broadcast,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub enum ReshapeOp {
+pub enum ShapeOp {
     Reshape,
+    Flatten,
+    Squeeze,
+    Unsqueeze,
+    Broadcast,
+    Transpose,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -289,6 +311,13 @@ pub enum ReshapeOp {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum CastOp {
     ToDType, // no-backprop
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum MemoryOp {
+    Contiguous, // no-backprop
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -303,10 +332,11 @@ pub enum Op {
     UnaryLogical(UnaryLogicalOp, TensorId),
     UnaryScalar(UnaryScalarOp, TensorId, Scalar),
     Matrix(MatrixOp, TensorId, TensorId),
+    Tensor(TensorOp, TensorId, TensorId),
     Reduce(ReduceOp, TensorId, Vec<Scalar>),
-    View(ViewOp, TensorId),
-    Reshape(ReshapeOp, TensorId),
+    Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
+    Memory(MemoryOp, TensorId),
 }
 
 impl Op {
@@ -320,10 +350,11 @@ impl Op {
             Op::UnaryLogical(_, t) => vec![*t],
             Op::UnaryScalar(_, t, _) => vec![*t],
             Op::Matrix(_, t1, t2) => vec![*t1, *t2],
+            Op::Tensor(_, t1, t2) => vec![*t1, *t2],
             Op::Reduce(_, t, _) => vec![*t],
-            Op::View(_, t) => vec![*t],
-            Op::Reshape(_, t) => vec![*t],
+            Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
+            Op::Memory(_, t) => vec![*t],
         }
     }
 }
