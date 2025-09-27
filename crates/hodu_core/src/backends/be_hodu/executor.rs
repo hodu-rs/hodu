@@ -3,7 +3,8 @@ use crate::{
         be_hodu::storage::{HoduStorage, HoduStorageT},
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
-            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, MatrixOp, Op, UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, MatrixOp, MemoryOp, Op, ShapeOp, UnaryLogicalOp,
+            UnaryOp, UnaryScalarOp,
         },
         script::{
             ir::{NodeId, ScriptIR},
@@ -99,10 +100,18 @@ impl HoduExecutor {
         }
 
         for output in &script_ir.graph.metadata.outputs {
-            if let Some(tensor_info) = script_ir.graph.metadata.tensor_info.get(&output.tensor_id) {
-                if let Some(ref shape) = tensor_info.shape {
-                    let shape_usize: Vec<usize> = shape.iter().map(|s| s.unwrap_or(1)).collect();
-                    tensor_layouts.insert(output.tensor_id, Layout::from_shape(&shape_usize));
+            #[cfg(not(feature = "std"))]
+            pub use alloc::collections::btree_map::Entry;
+            #[cfg(feature = "std")]
+            pub use std::collections::hash_map::Entry;
+            // Don't overwrite output layouts if they already exist from node processing
+            // This preserves transpose and other view operation layouts
+            if let Entry::Vacant(e) = tensor_layouts.entry(output.tensor_id) {
+                if let Some(tensor_info) = script_ir.graph.metadata.tensor_info.get(&output.tensor_id) {
+                    if let Some(ref shape) = tensor_info.shape {
+                        let shape_usize: Vec<usize> = shape.iter().map(|s| s.unwrap_or(1)).collect();
+                        e.insert(Layout::from_shape(&shape_usize));
+                    }
                 }
             }
         }
@@ -434,12 +443,43 @@ impl HoduExecutor {
 
                 self.execute_matrix_op(*matrix_op, lhs_storage, rhs_storage, lhs_layout, rhs_layout)
             },
+            Op::Reduce(reduce_op, tensor_id, dims_scalars) => {
+                let input_storage = tensor_storage
+                    .get(tensor_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
+
+                let input_layout = compiled_node
+                    .input_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Reduce operation requires input layout".to_string()))?;
+
+                // Extract dimensions from scalar array
+                let dims: Vec<usize> = dims_scalars.iter().map(|scalar| scalar.to_u32() as usize).collect();
+
+                let keep_dim = false; // Default keep_dim behavior
+
+                input_storage.reduce(*reduce_op, input_layout, &dims, keep_dim)
+            },
+            Op::Shape(shape_op, tensor_id) => {
+                let input_storage = tensor_storage
+                    .get(tensor_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
+
+                self.execute_shape_op(*shape_op, input_storage)
+            },
             Op::Cast(cast_op, tensor_id) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)
                     .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
 
                 self.execute_cast_op(*cast_op, input_storage, compiled_node, compiled)
+            },
+            Op::Memory(memory_op, tensor_id) => {
+                let input_storage = tensor_storage
+                    .get(tensor_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
+
+                self.execute_memory_op(*memory_op, input_storage, compiled_node)
             },
             _ => Err(HoduError::InternalError(format!(
                 "Operation {:?} not implemented yet",
@@ -611,6 +651,54 @@ impl HoduExecutor {
         }
     }
 
+    fn execute_shape_op(&self, shape_op: ShapeOp, input_storage: &HoduStorage) -> HoduResult<HoduStorage> {
+        match shape_op {
+            ShapeOp::Reshape => {
+                // For reshape operations, we simply return the same storage
+                // The layout change is handled at the tensor level
+                match input_storage {
+                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+                }
+            },
+            ShapeOp::Flatten => {
+                // For flatten operations, we simply return the same storage
+                // The layout change is handled at the tensor level
+                match input_storage {
+                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+                }
+            },
+            ShapeOp::Squeeze => {
+                // For squeeze operations, we simply return the same storage
+                // The layout change is handled at the tensor level
+                match input_storage {
+                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+                }
+            },
+            ShapeOp::Unsqueeze => {
+                // For unsqueeze operations, we simply return the same storage
+                // The layout change is handled at the tensor level
+                match input_storage {
+                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+                }
+            },
+            ShapeOp::Broadcast => {
+                // For broadcast operations, we simply return the same storage
+                // The layout change is handled at a higher level
+                match input_storage {
+                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+                }
+            },
+            ShapeOp::Transpose => {
+                // For transpose operations, we return the same storage
+                // The layout change (dimension swapping) is handled at the tensor level
+                // The actual data reorganization is done through strided memory access
+                match input_storage {
+                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+                }
+            },
+        }
+    }
+
     fn execute_cast_op(
         &self,
         cast_op: CastOp,
@@ -639,6 +727,26 @@ impl HoduExecutor {
                         Ok(HoduStorage::CPU(converted_storage))
                     },
                 }
+            },
+        }
+    }
+
+    fn execute_memory_op(
+        &self,
+        memory_op: MemoryOp,
+        input_storage: &HoduStorage,
+        compiled_node: &CompiledNode,
+    ) -> HoduResult<HoduStorage> {
+        match memory_op {
+            MemoryOp::Contiguous => {
+                // Get the input layout from compiled node
+                let input_layout = compiled_node
+                    .input_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Contiguous operation has no input layout".to_string()))?;
+
+                // Execute contiguous operation on storage
+                input_storage.contiguous(input_layout)
             },
         }
     }

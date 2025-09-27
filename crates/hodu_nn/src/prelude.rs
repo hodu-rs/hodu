@@ -1,0 +1,8 @@
+//! Prelude module for convenient imports
+//!
+//! Usage: `use hodu_nn::prelude::*;`
+
+// Re-export core library types and functions
+pub use crate::module::Module;
+pub use crate::modules::linear::Linear;
+pub use crate::optimizer::Optimizer;

@@ -27,7 +27,10 @@ pub enum HoduError {
         right: DType,
         op: String,
     },
-    UnsupportedDType(DType),
+    UnsupportedDType {
+        dtype: DType,
+        op: String,
+    },
     // Shape and Layout
     ShapeMismatch {
         expected: Vec<usize>,
@@ -100,8 +103,8 @@ impl fmt::Display for HoduError {
                     "DType conflict in operation '{op}' - left operand is {left}, right operand is {right}"
                 )
             },
-            Self::UnsupportedDType(dtype) => {
-                write!(f, "Unsupported dtype - {dtype}")
+            Self::UnsupportedDType { dtype, op } => {
+                write!(f, "Unsupported dtype - {dtype} in operation '{op}'")
             },
             Self::ShapeMismatch { expected, got } => {
                 write!(f, "Shape mismatch - expected {expected:?}, got {got:?}")

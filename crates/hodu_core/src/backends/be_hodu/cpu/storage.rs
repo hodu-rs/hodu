@@ -4,13 +4,14 @@ use crate::{
             cpu::{
                 device::CpuDevice,
                 utils::{
-                    binary_logical_map, binary_map, cmp_map, cmp_scalar_map, matmul_map, unary_logical_map, unary_map,
-                    unary_scalar_map,
+                    binary_logical_map, binary_map, cmp_map, cmp_scalar_map, matmul_map, reduce_max, reduce_mean,
+                    reduce_min, reduce_norm, reduce_prod, reduce_std, reduce_sum, reduce_var, unary_logical_map,
+                    unary_map, unary_scalar_map,
                 },
             },
             storage::HoduStorageT,
         },
-        op::{BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT},
+        op::{BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT},
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -864,6 +865,213 @@ impl HoduStorageT for CpuStorage {
         }
     }
 
+    fn reduce(&self, reduce_op: ReduceOp, layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        match self {
+            Self::F8E4M3(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Mean => reduce_mean(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Std => reduce_std(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Var => reduce_var(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Norm => reduce_norm(storage, layout, dims, keep_dim)?,
+                };
+                Ok(Self::F8E4M3(data))
+            },
+            Self::F8E5M2(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Mean => reduce_mean(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Std => reduce_std(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Var => reduce_var(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Norm => reduce_norm(storage, layout, dims, keep_dim)?,
+                };
+                Ok(Self::F8E5M2(data))
+            },
+            Self::BF16(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Mean => reduce_mean(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Std => reduce_std(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Var => reduce_var(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Norm => reduce_norm(storage, layout, dims, keep_dim)?,
+                };
+                Ok(Self::BF16(data))
+            },
+            Self::F16(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Mean => reduce_mean(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Std => reduce_std(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Var => reduce_var(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Norm => reduce_norm(storage, layout, dims, keep_dim)?,
+                };
+                Ok(Self::F16(data))
+            },
+            Self::F32(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Mean => reduce_mean(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Std => reduce_std(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Var => reduce_var(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Norm => reduce_norm(storage, layout, dims, keep_dim)?,
+                };
+                Ok(Self::F32(data))
+            },
+            Self::F64(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Mean => reduce_mean(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Std => reduce_std(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Var => reduce_var(storage, layout, dims, keep_dim, false)?,
+                    ReduceOp::Norm => reduce_norm(storage, layout, dims, keep_dim)?,
+                };
+                Ok(Self::F64(data))
+            },
+            Self::U8(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::U8(data))
+            },
+            Self::U16(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::U16(data))
+            },
+            Self::U32(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::U32(data))
+            },
+            Self::U64(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::U64(data))
+            },
+            Self::I8(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::I8(data))
+            },
+            Self::I16(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::I16(data))
+            },
+            Self::I32(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::I32(data))
+            },
+            Self::I64(storage) => {
+                let (data, _shape) = match reduce_op {
+                    ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Max => reduce_max(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Min => reduce_min(storage, layout, dims, keep_dim)?,
+                    ReduceOp::Prod => reduce_prod(storage, layout, dims, keep_dim)?,
+                    _ => {
+                        return Err(HoduError::UnsupportedDType {
+                            dtype: self.get_dtype(),
+                            op: reduce_op.to_string(),
+                        })
+                    },
+                };
+                Ok(Self::I64(data))
+            },
+            _ => Err(HoduError::UnsupportedDType {
+                dtype: self.get_dtype(),
+                op: "reduce".to_string(),
+            }),
+        }
+    }
+
     fn to_dtype(&self, target_dtype: DType) -> HoduResult<Self> {
         if self.get_dtype() == target_dtype {
             return Ok(self.clone());
@@ -1168,6 +1376,74 @@ impl HoduStorageT for CpuStorage {
             (Self::I64(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
             (Self::I64(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
             (Self::I64(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v)),
+        };
+
+        Ok(result)
+    }
+
+    fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
+        // If already contiguous, return clone
+        if layout.is_contiguous() {
+            return Ok(self.clone());
+        }
+
+        let shape = layout.get_shape();
+        let strides = layout.get_strides();
+        let total_size = layout.get_size();
+
+        macro_rules! contiguous_impl {
+            ($storage:expr, $dtype_variant:ident) => {{
+                let mut contiguous_data = Vec::with_capacity(total_size);
+
+                // Multi-dimensional index iteration
+                let mut indices = vec![0; shape.len()];
+                for _ in 0..total_size {
+                    // Calculate linear offset from multi-dimensional indices
+                    let mut offset = layout.get_offset();
+                    for (_i, (&idx, &stride)) in indices.iter().zip(strides.iter()).enumerate() {
+                        offset += idx * stride;
+                    }
+
+                    // Copy element at calculated offset
+                    if offset < $storage.len() {
+                        contiguous_data.push($storage[offset]);
+                    }
+
+                    // Increment indices (row-major order)
+                    let mut carry = 1;
+                    for i in (0..shape.len()).rev() {
+                        indices[i] += carry;
+                        if indices[i] < shape[i] {
+                            carry = 0;
+                            break;
+                        }
+                        indices[i] = 0;
+                    }
+                    if carry != 0 {
+                        break;
+                    }
+                }
+
+                Self::$dtype_variant(contiguous_data)
+            }};
+        }
+
+        let result = match self {
+            Self::BOOL(storage) => contiguous_impl!(storage, BOOL),
+            Self::F8E4M3(storage) => contiguous_impl!(storage, F8E4M3),
+            Self::F8E5M2(storage) => contiguous_impl!(storage, F8E5M2),
+            Self::BF16(storage) => contiguous_impl!(storage, BF16),
+            Self::F16(storage) => contiguous_impl!(storage, F16),
+            Self::F32(storage) => contiguous_impl!(storage, F32),
+            Self::F64(storage) => contiguous_impl!(storage, F64),
+            Self::U8(storage) => contiguous_impl!(storage, U8),
+            Self::U16(storage) => contiguous_impl!(storage, U16),
+            Self::U32(storage) => contiguous_impl!(storage, U32),
+            Self::U64(storage) => contiguous_impl!(storage, U64),
+            Self::I8(storage) => contiguous_impl!(storage, I8),
+            Self::I16(storage) => contiguous_impl!(storage, I16),
+            Self::I32(storage) => contiguous_impl!(storage, I32),
+            Self::I64(storage) => contiguous_impl!(storage, I64),
         };
 
         Ok(result)

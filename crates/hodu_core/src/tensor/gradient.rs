@@ -2,14 +2,13 @@ mod utils;
 
 use crate::{
     backends::op::{
-        BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, MatrixOp, Op, ReduceOp, ReshapeOp, UnaryLogicalOp,
-        UnaryOp, UnaryScalarOp, ViewOp,
+        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, MatrixOp, Op, ReduceOp, ShapeOp, UnaryLogicalOp, UnaryOp,
+        UnaryScalarOp,
     },
     compat::*,
     error::{HoduError, HoduResult},
     scalar::Scalar,
-    tensor,
-    tensor::{set_grad_tensor_id, tensor_from_id, TensorId},
+    tensor::{self, set_grad_tensor_id, tensor_from_id, TensorId},
 };
 use utils::*;
 
@@ -218,7 +217,7 @@ impl VjpCompute for UnaryOp {
                 // d/dx log10(x) = 1/(x * ln(10))
                 let input_tensor = tensor_from_id(input);
                 let dtype = input_tensor.get_dtype();
-                let ln_10 = create_scalar_for_dtype(core::f64::consts::LN_10, dtype);
+                let ln_10 = create_scalar_for_dtype(core::f32::consts::LN_10, dtype);
                 let x_ln_10 = create_mul_scalar_tensor(input, ln_10)?;
                 let derivative = create_recip_tensor(x_ln_10)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
@@ -227,7 +226,7 @@ impl VjpCompute for UnaryOp {
                 // d/dx log2(x) = 1/(x * ln(2))
                 let input_tensor = tensor_from_id(input);
                 let dtype = input_tensor.get_dtype();
-                let ln_2 = create_scalar_for_dtype(core::f64::consts::LN_2, dtype);
+                let ln_2 = create_scalar_for_dtype(core::f32::consts::LN_2, dtype);
                 let x_ln_2 = create_mul_scalar_tensor(input, ln_2)?;
                 let derivative = create_recip_tensor(x_ln_2)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
@@ -240,7 +239,7 @@ impl VjpCompute for UnaryOp {
                 // d/dx 10^x = 10^x * ln(10)
                 let input_tensor = tensor_from_id(input);
                 let dtype = input_tensor.get_dtype();
-                let ln_10 = create_scalar_for_dtype(core::f64::consts::LN_10, dtype);
+                let ln_10 = create_scalar_for_dtype(core::f32::consts::LN_10, dtype);
                 let derivative = create_mul_scalar_tensor(_output, ln_10)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
@@ -248,7 +247,7 @@ impl VjpCompute for UnaryOp {
                 // d/dx 2^x = 2^x * ln(2)
                 let input_tensor = tensor_from_id(input);
                 let dtype = input_tensor.get_dtype();
-                let ln_2 = create_scalar_for_dtype(core::f64::consts::LN_2, dtype);
+                let ln_2 = create_scalar_for_dtype(core::f32::consts::LN_2, dtype);
                 let derivative = create_mul_scalar_tensor(_output, ln_2)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
@@ -322,12 +321,12 @@ impl VjpCompute for UnaryScalarOp {
                     let one = create_scalar_for_dtype(1.0, dtype);
                     // Create 1/c scalar with proper dtype
                     let c_value = match c {
-                        Scalar::F32(v) => create_scalar_for_dtype(1.0 / v as f64, dtype),
-                        Scalar::F64(v) => create_scalar_for_dtype(1.0 / v, dtype),
-                        Scalar::F16(v) => create_scalar_for_dtype(1.0 / v.to_f64(), dtype),
-                        Scalar::BF16(v) => create_scalar_for_dtype(1.0 / v.to_f64(), dtype),
-                        Scalar::F8E4M3(v) => create_scalar_for_dtype(1.0 / v.to_f32() as f64, dtype),
-                        Scalar::F8E5M2(v) => create_scalar_for_dtype(1.0 / v.to_f32() as f64, dtype),
+                        Scalar::F32(v) => create_scalar_for_dtype(1.0 / v, dtype),
+                        Scalar::F64(v) => create_scalar_for_dtype(1.0 / v as f32, dtype),
+                        Scalar::F16(v) => create_scalar_for_dtype(1.0 / v.to_f32(), dtype),
+                        Scalar::BF16(v) => create_scalar_for_dtype(1.0 / v.to_f32(), dtype),
+                        Scalar::F8E4M3(v) => create_scalar_for_dtype(1.0 / v.to_f32(), dtype),
+                        Scalar::F8E5M2(v) => create_scalar_for_dtype(1.0 / v.to_f32(), dtype),
                         _ => one,
                     };
                     Ok(vec![create_mul_scalar_tensor(grad_output, c_value)?])
@@ -341,12 +340,12 @@ impl VjpCompute for UnaryScalarOp {
                     let input_tensor = tensor_from_id(input);
                     let dtype = input_tensor.get_dtype();
                     let c_minus_one = match c {
-                        Scalar::F32(v) => create_scalar_for_dtype((v - 1.0) as f64, dtype),
-                        Scalar::F64(v) => create_scalar_for_dtype(v - 1.0, dtype),
-                        Scalar::F16(v) => create_scalar_for_dtype(v.to_f64() - 1.0, dtype),
-                        Scalar::BF16(v) => create_scalar_for_dtype(v.to_f64() - 1.0, dtype),
-                        Scalar::F8E4M3(v) => create_scalar_for_dtype((v.to_f32() - 1.0) as f64, dtype),
-                        Scalar::F8E5M2(v) => create_scalar_for_dtype((v.to_f32() - 1.0) as f64, dtype),
+                        Scalar::F32(v) => create_scalar_for_dtype(v - 1.0, dtype),
+                        Scalar::F64(v) => create_scalar_for_dtype((v - 1.0) as f32, dtype),
+                        Scalar::F16(v) => create_scalar_for_dtype(v.to_f32() - 1.0, dtype),
+                        Scalar::BF16(v) => create_scalar_for_dtype(v.to_f32() - 1.0, dtype),
+                        Scalar::F8E4M3(v) => create_scalar_for_dtype(v.to_f32() - 1.0, dtype),
+                        Scalar::F8E5M2(v) => create_scalar_for_dtype(v.to_f32() - 1.0, dtype),
                         _ => create_scalar_for_dtype(0.0, dtype),
                     };
                     let x_power_c_minus_one = create_pow_scalar_tensor(input, c_minus_one)?;
@@ -425,36 +424,20 @@ impl VjpCompute for MatrixOp {
 impl VjpCompute for ReduceOp {
     fn compute_vjp(
         &self,
-        inputs: &[TensorId],
+        _inputs: &[TensorId],
         _output: TensorId,
-        grad_output: TensorId,
+        _grad_output: TensorId,
         _scalar: Option<Scalar>,
     ) -> HoduResult<Vec<TensorId>> {
-        let input = inputs[0];
         match self {
-            ReduceOp::Sum => {
-                // d/dx sum(x) = broadcast(grad_output, x.shape)
-                // For now, assume shapes are compatible and return grad_output
-                Ok(vec![grad_output])
-            },
-            ReduceOp::SumToShape => {
-                // Similar to Sum but to specific shape
-                Ok(vec![grad_output])
-            },
-            ReduceOp::Mean => {
-                // d/dx mean(x) = grad_output / numel(x)
-                // For now, approximate as grad_output
-                Ok(vec![grad_output])
-            },
-            ReduceOp::Max | ReduceOp::Min => {
-                // No gradients for discrete operations
-                Ok(vec![create_zeros_like_tensor(input)?])
+            _ => {
+                todo!()
             },
         }
     }
 }
 
-impl VjpCompute for ViewOp {
+impl VjpCompute for ShapeOp {
     fn compute_vjp(
         &self,
         _inputs: &[TensorId],
@@ -463,56 +446,16 @@ impl VjpCompute for ViewOp {
         _scalar: Option<Scalar>,
     ) -> HoduResult<Vec<TensorId>> {
         match self {
-            ViewOp::Transpose => {
+            ShapeOp::Transpose => {
                 // TODO: Implement transpose gradient (reverse the transpose)
                 Ok(vec![grad_output])
             },
-            ViewOp::Broadcast => {
+            ShapeOp::Broadcast => {
                 // TODO: Implement broadcast gradient (sum over broadcasted dims)
                 Ok(vec![grad_output])
             },
-        }
-    }
-}
-
-impl VjpCompute for ReshapeOp {
-    fn compute_vjp(
-        &self,
-        inputs: &[TensorId],
-        _output: TensorId,
-        grad_output: TensorId,
-        _scalar: Option<Scalar>,
-    ) -> HoduResult<Vec<TensorId>> {
-        match self {
-            ReshapeOp::Reshape => {
-                // Reshape gradient back to original shape
-                let input = inputs[0];
-                let input_tensor = tensor_from_id(input);
-                let _original_shape = input_tensor.get_layout().get_shape();
-                // TODO: Implement reshape gradient (reshape grad_output to original_shape)
-                Ok(vec![grad_output])
-            },
-        }
-    }
-}
-
-impl VjpCompute for CastOp {
-    fn compute_vjp(
-        &self,
-        inputs: &[TensorId],
-        _output: TensorId,
-        grad_output: TensorId,
-        _scalar: Option<Scalar>,
-    ) -> HoduResult<Vec<TensorId>> {
-        match self {
-            CastOp::ToDType => {
-                // For dtype casting, gradient passes through unchanged
-                // but needs to be cast back to original dtype
-                let input = inputs[0];
-                let input_tensor = tensor_from_id(input);
-                let original_dtype = input_tensor.get_dtype();
-                let grad_cast_back = tensor_from_id(grad_output).to_dtype(original_dtype)?;
-                Ok(vec![grad_cast_back.id()])
+            _ => {
+                todo!()
             },
         }
     }
@@ -644,8 +587,7 @@ fn compute_vjp_for_op(
         },
         Op::Matrix(matrix_op, _, _) => matrix_op.compute_vjp(inputs, output, grad_output, None),
         Op::Reduce(reduce_op, _, _) => reduce_op.compute_vjp(inputs, output, grad_output, None),
-        Op::View(view_op, _) => view_op.compute_vjp(inputs, output, grad_output, None),
-        Op::Reshape(reshape_op, _) => reshape_op.compute_vjp(inputs, output, grad_output, None),
-        Op::Cast(cast_op, _) => cast_op.compute_vjp(inputs, output, grad_output, None),
+        Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output, None),
+        _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }
 }

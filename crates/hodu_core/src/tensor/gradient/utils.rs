@@ -1,8 +1,8 @@
 use crate::{
     error::HoduResult,
     scalar::Scalar,
-    tensor,
-    tensor::{tensor_from_id, TensorId},
+    tensor::{tensor_from_id, Tensor, TensorId},
+    types::dtype::DType,
 };
 
 // Basic binary operations
@@ -139,16 +139,8 @@ pub fn create_lt_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
 }
 
 // Helper function to create scalar with matching dtype
-pub fn create_scalar_for_dtype(value: f64, dtype: crate::types::dtype::DType) -> Scalar {
-    match dtype {
-        crate::types::dtype::DType::F64 => Scalar::F64(value),
-        crate::types::dtype::DType::F32 => Scalar::F32(value as f32),
-        crate::types::dtype::DType::F16 => Scalar::F16(half::f16::from_f64(value)),
-        crate::types::dtype::DType::BF16 => Scalar::BF16(half::bf16::from_f64(value)),
-        crate::types::dtype::DType::F8E5M2 => Scalar::F8E5M2(float8::F8E5M2::from(value as f32)),
-        crate::types::dtype::DType::F8E4M3 => Scalar::F8E4M3(float8::F8E4M3::from(value as f32)),
-        _ => Scalar::F32(value as f32), // fallback for non-float types
-    }
+pub fn create_scalar_for_dtype(value: f32, dtype: DType) -> Scalar {
+    Scalar::from_f32(value, dtype)
 }
 
 // Utility functions
@@ -156,6 +148,6 @@ pub fn create_zeros_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     let layout = tensor_a.get_layout();
     let dtype = tensor_a.get_dtype();
-    let zeros_tensor = tensor::Tensor::zeros(layout.get_shape(), dtype)?;
+    let zeros_tensor = Tensor::zeros(layout.get_shape(), dtype)?;
     Ok(zeros_tensor.id())
 }

@@ -47,7 +47,11 @@ pub use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 pub use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 // Core traits and functions
-pub use core::fmt;
+#[cfg(not(feature = "std"))]
+pub use core::{fmt, ops};
+
+#[cfg(feature = "std")]
+pub use std::{fmt, ops};
 
 // Debug printing
 #[cfg(feature = "std")]
