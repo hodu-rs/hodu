@@ -934,7 +934,7 @@ impl Tensor {
         self.broadcast(&target_shape)
     }
 
-    pub fn transpose(&self, dim1: isize, dim2: isize) -> HoduResult<Self> {
+    pub fn transpose(&self, dim1: i32, dim2: i32) -> HoduResult<Self> {
         let layout = self.get_layout();
         let new_layout = layout.transpose(dim1, dim2)?;
         let requires_grad = self.is_requires_grad();

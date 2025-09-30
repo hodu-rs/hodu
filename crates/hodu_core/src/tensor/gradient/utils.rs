@@ -2,7 +2,6 @@ use crate::{
     error::HoduResult,
     scalar::Scalar,
     tensor::{tensor_from_id, Tensor, TensorId},
-    types::dtype::DType,
 };
 
 // Basic binary operations
@@ -18,6 +17,12 @@ pub fn create_mul_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
     tensor_a.mul(&tensor_b).map(|t| t.id())
 }
 
+pub fn create_sub_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    let tensor_b = tensor_from_id(b);
+    tensor_a.sub(&tensor_b).map(|t| t.id())
+}
+
 pub fn create_div_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     let tensor_b = tensor_from_id(b);
@@ -28,6 +33,47 @@ pub fn create_pow_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     let tensor_b = tensor_from_id(b);
     tensor_a.pow(&tensor_b).map(|t| t.id())
+}
+
+// CMP operations
+pub fn create_ge_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    let tensor_b = tensor_from_id(b);
+    tensor_a.ge(&tensor_b).map(|t| t.id())
+}
+
+pub fn create_gt_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    let tensor_b = tensor_from_id(b);
+    tensor_a.gt(&tensor_b).map(|t| t.id())
+}
+
+pub fn create_le_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    let tensor_b = tensor_from_id(b);
+    tensor_a.le(&tensor_b).map(|t| t.id())
+}
+
+pub fn create_lt_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    let tensor_b = tensor_from_id(b);
+    tensor_a.lt(&tensor_b).map(|t| t.id())
+}
+
+// CMP Scalar operations
+pub fn create_gt_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.gt_scalar(scalar).map(|t| t.id())
+}
+
+pub fn create_le_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.le_scalar(scalar).map(|t| t.id())
+}
+
+pub fn create_ge_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.ge_scalar(scalar).map(|t| t.id())
 }
 
 // Unary operations
@@ -76,7 +122,7 @@ pub fn create_exp_tensor(a: TensorId) -> HoduResult<TensorId> {
     tensor_a.exp().map(|t| t.id())
 }
 
-// Scalar operations
+// Unary Scalar operations
 pub fn create_add_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     tensor_a.add_scalar(scalar).map(|t| t.id())
@@ -97,52 +143,6 @@ pub fn create_pow_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<Tenso
     tensor_a.pow_scalar(scalar).map(|t| t.id())
 }
 
-// Comparison operations that return masks (as tensors)
-pub fn create_gt_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    tensor_a.gt_scalar(scalar).map(|t| t.id())
-}
-
-pub fn create_le_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    tensor_a.le_scalar(scalar).map(|t| t.id())
-}
-
-pub fn create_ge_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    tensor_a.ge_scalar(scalar).map(|t| t.id())
-}
-
-// Binary comparison operations
-pub fn create_ge_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    let tensor_b = tensor_from_id(b);
-    tensor_a.ge(&tensor_b).map(|t| t.id())
-}
-
-pub fn create_gt_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    let tensor_b = tensor_from_id(b);
-    tensor_a.gt(&tensor_b).map(|t| t.id())
-}
-
-pub fn create_le_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    let tensor_b = tensor_from_id(b);
-    tensor_a.le(&tensor_b).map(|t| t.id())
-}
-
-pub fn create_lt_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
-    let tensor_a = tensor_from_id(a);
-    let tensor_b = tensor_from_id(b);
-    tensor_a.lt(&tensor_b).map(|t| t.id())
-}
-
-// Helper function to create scalar with matching dtype
-pub fn create_scalar_for_dtype(value: f32, dtype: DType) -> Scalar {
-    Scalar::from_f32(value, dtype)
-}
-
 // Utility functions
 pub fn create_zeros_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
@@ -150,4 +150,12 @@ pub fn create_zeros_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let dtype = tensor_a.get_dtype();
     let zeros_tensor = Tensor::zeros(layout.get_shape(), dtype)?;
     Ok(zeros_tensor.id())
+}
+
+pub fn create_ones_like_tensor(a: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    let layout = tensor_a.get_layout();
+    let dtype = tensor_a.get_dtype();
+    let ones_tensor = Tensor::ones(layout.get_shape(), dtype)?;
+    Ok(ones_tensor.id())
 }
