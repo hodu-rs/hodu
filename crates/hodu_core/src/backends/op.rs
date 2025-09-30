@@ -261,13 +261,6 @@ pub enum MatrixOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub enum TensorOp {
-    Dot,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ReduceOp {
     Sum,
     Mean,
@@ -332,11 +325,11 @@ pub enum Op {
     UnaryLogical(UnaryLogicalOp, TensorId),
     UnaryScalar(UnaryScalarOp, TensorId, Scalar),
     Matrix(MatrixOp, TensorId, TensorId),
-    Tensor(TensorOp, TensorId, TensorId),
     Reduce(ReduceOp, TensorId, Vec<Scalar>),
     Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
     Memory(MemoryOp, TensorId),
+    Dummy,
 }
 
 impl Op {
@@ -350,11 +343,11 @@ impl Op {
             Op::UnaryLogical(_, t) => vec![*t],
             Op::UnaryScalar(_, t, _) => vec![*t],
             Op::Matrix(_, t1, t2) => vec![*t1, *t2],
-            Op::Tensor(_, t1, t2) => vec![*t1, *t2],
             Op::Reduce(_, t, _) => vec![*t],
             Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
             Op::Memory(_, t) => vec![*t],
+            Op::Dummy => vec![],
         }
     }
 }

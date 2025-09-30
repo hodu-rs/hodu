@@ -174,7 +174,7 @@ impl Layout {
         Ok((lhs_broadcast, rhs_broadcast))
     }
 
-    pub fn transpose(&self, dim1: isize, dim2: isize) -> HoduResult<Self> {
+    pub fn transpose(&self, dim1: i32, dim2: i32) -> HoduResult<Self> {
         let ndim = self.get_ndim();
         if ndim < 2 {
             return Err(HoduError::InternalError(
@@ -183,13 +183,13 @@ impl Layout {
         }
 
         let dim1 = if dim1 < 0 {
-            (ndim as isize + dim1) as usize
+            (ndim as i32 + dim1) as usize
         } else {
             dim1 as usize
         };
 
         let dim2 = if dim2 < 0 {
-            (ndim as isize + dim2) as usize
+            (ndim as i32 + dim2) as usize
         } else {
             dim2 as usize
         };
