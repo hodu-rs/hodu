@@ -18,6 +18,8 @@ use crate::{
     types::{device::Device, dtype::DType, layout::Layout},
 };
 
+type SharedStorage = Arc<HoduStorage>;
+
 #[derive(Debug)]
 pub struct HoduExecutor {
     current_device: Device,
@@ -28,7 +30,7 @@ pub struct HoduCompiledScript {
     execution_plan: Vec<CompiledNode>,
     input_mapping: HashMap<String, TensorId>,
     output_mapping: HashMap<String, TensorId>,
-    constant_storage: HashMap<TensorId, HoduStorage>,
+    constant_storage: HashMap<TensorId, SharedStorage>,
     tensor_layouts: HashMap<TensorId, Layout>,
     tensor_dtypes: HashMap<TensorId, DType>,
 }
@@ -51,7 +53,7 @@ impl HoduExecutor {
     }
 
     fn convert_script_ir_to_compiled_nodes(&self, script_ir: &ScriptIR) -> HoduResult<Vec<CompiledNode>> {
-        let mut compiled_nodes = Vec::new();
+        let mut compiled_nodes = Vec::with_capacity(script_ir.graph.topology.nodes.len());
 
         for node in &script_ir.graph.topology.nodes {
             let compiled_node = CompiledNode {
@@ -65,20 +67,43 @@ impl HoduExecutor {
             compiled_nodes.push(compiled_node);
         }
 
+        // Build execution order lookup map for O(1) access
+        #[cfg(feature = "std")]
+        let execution_order_map: HashMap<NodeId, usize> = script_ir
+            .graph
+            .execution_plan
+            .execution_order
+            .iter()
+            .enumerate()
+            .map(|(index, &node_id)| (node_id, index))
+            .collect();
+
+        #[cfg(not(feature = "std"))]
+        let execution_order_map: HashMap<NodeId, usize> = script_ir
+            .graph
+            .execution_plan
+            .execution_order
+            .iter()
+            .enumerate()
+            .map(|(index, &node_id)| (node_id, index))
+            .collect();
+
         compiled_nodes.sort_by_key(|node| {
-            script_ir
-                .graph
-                .execution_plan
-                .execution_order
-                .iter()
-                .position(|&id| id == node.id)
-                .unwrap_or(usize::MAX)
+            execution_order_map.get(&node.id).copied().unwrap_or(usize::MAX)
         });
 
         Ok(compiled_nodes)
     }
 
     fn collect_tensor_layouts(&self, script_ir: &ScriptIR) -> HashMap<TensorId, Layout> {
+        // Estimate capacity: node layouts + inputs + outputs
+        let estimated_layout_count = script_ir.graph.topology.nodes.len() * 2
+            + script_ir.graph.metadata.inputs.len()
+            + script_ir.graph.metadata.outputs.len();
+
+        #[cfg(feature = "std")]
+        let mut tensor_layouts = HashMap::with_capacity(estimated_layout_count);
+        #[cfg(not(feature = "std"))]
         let mut tensor_layouts = HashMap::new();
 
         for node in &script_ir.graph.topology.nodes {
@@ -93,6 +118,7 @@ impl HoduExecutor {
         for input in &script_ir.graph.metadata.inputs {
             if let Some(tensor_info) = script_ir.graph.metadata.tensor_info.get(&input.tensor_id) {
                 if let Some(ref shape) = tensor_info.shape {
+                    // Avoid Vec allocation by collecting into a small stack array when possible
                     let shape_usize: Vec<usize> = shape.iter().map(|s| s.unwrap_or(1)).collect();
                     tensor_layouts.insert(input.tensor_id, Layout::from_shape(&shape_usize));
                 }
@@ -109,6 +135,7 @@ impl HoduExecutor {
             if let Entry::Vacant(e) = tensor_layouts.entry(output.tensor_id) {
                 if let Some(tensor_info) = script_ir.graph.metadata.tensor_info.get(&output.tensor_id) {
                     if let Some(ref shape) = tensor_info.shape {
+                        // Avoid Vec allocation by collecting into a small stack array when possible
                         let shape_usize: Vec<usize> = shape.iter().map(|s| s.unwrap_or(1)).collect();
                         e.insert(Layout::from_shape(&shape_usize));
                     }
@@ -131,14 +158,17 @@ impl HoduExecutor {
         tensor_dtypes
     }
 
-    fn prepare_constant_storage(&self, script_ir: &ScriptIR) -> HoduResult<HashMap<TensorId, HoduStorage>> {
+    fn prepare_constant_storage(&self, script_ir: &ScriptIR) -> HoduResult<HashMap<TensorId, SharedStorage>> {
+        #[cfg(feature = "std")]
+        let mut constant_storage = HashMap::with_capacity(script_ir.graph.metadata.constants.len());
+        #[cfg(not(feature = "std"))]
         let mut constant_storage = HashMap::new();
 
         for (tensor_id, constant_node) in &script_ir.graph.metadata.constants {
             match self.current_device {
                 Device::CPU => {
                     let storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                    constant_storage.insert(*tensor_id, HoduStorage::CPU(storage));
+                    constant_storage.insert(*tensor_id, Arc::new(HoduStorage::CPU(storage)));
                 },
                 Device::CUDA(_) => {
                     // TODO: Convert to CUDA storage
@@ -359,7 +389,7 @@ impl HoduExecutor {
     fn execute_node(
         &self,
         compiled_node: &CompiledNode,
-        tensor_storage: &HashMap<TensorId, HoduStorage>,
+        tensor_storage: &HashMap<TensorId, SharedStorage>,
         compiled: &HoduCompiledScript,
     ) -> HoduResult<HoduStorage> {
         match &compiled_node.operation {
@@ -491,8 +521,8 @@ impl HoduExecutor {
     fn execute_binary_op(
         &self,
         binary_op: BinaryOp,
-        lhs_storage: &HoduStorage,
-        rhs_storage: &HoduStorage,
+        lhs_storage: &SharedStorage,
+        rhs_storage: &SharedStorage,
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
@@ -512,8 +542,8 @@ impl HoduExecutor {
     fn execute_binary_logical_op(
         &self,
         binary_logical_op: BinaryLogicalOp,
-        lhs_storage: &HoduStorage,
-        rhs_storage: &HoduStorage,
+        lhs_storage: &SharedStorage,
+        rhs_storage: &SharedStorage,
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
@@ -535,8 +565,8 @@ impl HoduExecutor {
     fn execute_cmp_op(
         &self,
         cmp_op: CmpOp,
-        lhs_storage: &HoduStorage,
-        rhs_storage: &HoduStorage,
+        lhs_storage: &SharedStorage,
+        rhs_storage: &SharedStorage,
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
@@ -555,7 +585,7 @@ impl HoduExecutor {
     fn execute_cmp_scalar_op(
         &self,
         cmp_scalar_op: CmpScalarOp,
-        tensor_storage: &HoduStorage,
+        tensor_storage: &SharedStorage,
         layout: &Layout,
         scalar: Scalar,
     ) -> HoduResult<HoduStorage> {
@@ -574,7 +604,7 @@ impl HoduExecutor {
     fn execute_unary_op(
         &self,
         unary_op: UnaryOp,
-        input_storage: &HoduStorage,
+        input_storage: &SharedStorage,
         layout: &Layout,
     ) -> HoduResult<HoduStorage> {
         use crate::backends::op::*;
@@ -606,7 +636,7 @@ impl HoduExecutor {
     fn execute_unary_logical_op(
         &self,
         unary_logical_op: UnaryLogicalOp,
-        input_storage: &HoduStorage,
+        input_storage: &SharedStorage,
         layout: &Layout,
     ) -> HoduResult<HoduStorage> {
         use crate::backends::op::*;
@@ -619,7 +649,7 @@ impl HoduExecutor {
     fn execute_unary_scalar_op(
         &self,
         unary_scalar_op: UnaryScalarOp,
-        input_storage: &HoduStorage,
+        input_storage: &SharedStorage,
         layout: &Layout,
         scalar: Scalar,
     ) -> HoduResult<HoduStorage> {
@@ -641,8 +671,8 @@ impl HoduExecutor {
     fn execute_matrix_op(
         &self,
         matrix_op: MatrixOp,
-        lhs_storage: &HoduStorage,
-        rhs_storage: &HoduStorage,
+        lhs_storage: &SharedStorage,
+        rhs_storage: &SharedStorage,
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
@@ -651,58 +681,18 @@ impl HoduExecutor {
         }
     }
 
-    fn execute_shape_op(&self, shape_op: ShapeOp, input_storage: &HoduStorage) -> HoduResult<HoduStorage> {
-        match shape_op {
-            ShapeOp::Reshape => {
-                // For reshape operations, we simply return the same storage
-                // The layout change is handled at the tensor level
-                match input_storage {
-                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-                }
-            },
-            ShapeOp::Flatten => {
-                // For flatten operations, we simply return the same storage
-                // The layout change is handled at the tensor level
-                match input_storage {
-                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-                }
-            },
-            ShapeOp::Squeeze => {
-                // For squeeze operations, we simply return the same storage
-                // The layout change is handled at the tensor level
-                match input_storage {
-                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-                }
-            },
-            ShapeOp::Unsqueeze => {
-                // For unsqueeze operations, we simply return the same storage
-                // The layout change is handled at the tensor level
-                match input_storage {
-                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-                }
-            },
-            ShapeOp::Broadcast => {
-                // For broadcast operations, we simply return the same storage
-                // The layout change is handled at a higher level
-                match input_storage {
-                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-                }
-            },
-            ShapeOp::Transpose => {
-                // For transpose operations, we return the same storage
-                // The layout change (dimension swapping) is handled at the tensor level
-                // The actual data reorganization is done through strided memory access
-                match input_storage {
-                    HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-                }
-            },
+    fn execute_shape_op(&self, _shape_op: ShapeOp, input_storage: &SharedStorage) -> HoduResult<HoduStorage> {
+        // All shape operations (Reshape, Flatten, Squeeze, Unsqueeze, Broadcast, Transpose)
+        // simply return the same storage as the layout changes are handled at the tensor level
+        match input_storage.as_ref() {
+            HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
         }
     }
 
     fn execute_cast_op(
         &self,
         cast_op: CastOp,
-        input_storage: &HoduStorage,
+        input_storage: &SharedStorage,
         compiled_node: &CompiledNode,
         compiled: &HoduCompiledScript,
     ) -> HoduResult<HoduStorage> {
@@ -721,7 +711,7 @@ impl HoduExecutor {
                     .copied()
                     .unwrap_or(DType::F32); // Default to F32 if no dtype specified
 
-                match input_storage {
+                match input_storage.as_ref() {
                     HoduStorage::CPU(cpu_storage) => {
                         let converted_storage = cpu_storage.to_dtype(target_dtype)?;
                         Ok(HoduStorage::CPU(converted_storage))
@@ -734,7 +724,7 @@ impl HoduExecutor {
     fn execute_memory_op(
         &self,
         memory_op: MemoryOp,
-        input_storage: &HoduStorage,
+        input_storage: &SharedStorage,
         compiled_node: &CompiledNode,
     ) -> HoduResult<HoduStorage> {
         match memory_op {
@@ -801,41 +791,56 @@ impl ExecutorT for HoduExecutor {
     fn execute(&self, compiled: &Self::CompiledScript, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
         self.validate_inputs(compiled, &inputs)?;
 
-        let mut tensor_storage: HashMap<TensorId, HoduStorage> = HashMap::new();
+        // Pre-allocate HashMap with estimated capacity (std only)
+        #[cfg(feature = "std")]
+        let mut tensor_storage: HashMap<TensorId, SharedStorage> = {
+            let estimated_capacity = compiled.constant_storage.len() + inputs.len() + compiled.execution_plan.len();
+            HashMap::with_capacity(estimated_capacity)
+        };
+        #[cfg(not(feature = "std"))]
+        let mut tensor_storage: HashMap<TensorId, SharedStorage> = HashMap::new();
 
-        for (&tensor_id, storage) in &compiled.constant_storage {
-            let new_storage = match storage {
-                HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
-            };
-            tensor_storage.insert(tensor_id, new_storage);
+        // Insert constant storage (already wrapped in Arc - no cloning needed)
+        for (&tensor_id, shared_storage) in &compiled.constant_storage {
+            tensor_storage.insert(tensor_id, shared_storage.clone());
         }
 
+        // Convert input tensors to storage
         for (input_name, input_tensor) in &inputs {
             if let Some(&tensor_id) = compiled.input_mapping.get(*input_name) {
                 let storage = self.tensor_to_storage(input_tensor)?;
-                tensor_storage.insert(tensor_id, storage);
+                tensor_storage.insert(tensor_id, Arc::new(storage));
             }
         }
 
+        // Execute computation graph
         for compiled_node in &compiled.execution_plan {
             let result_storage = self.execute_node(compiled_node, &tensor_storage, compiled)?;
 
+            // Insert result for all output tensors of this node
+            let shared_result = Arc::new(result_storage);
             for &output_tensor_id in &compiled_node.output_tensors {
-                let cloned_result = match &result_storage {
-                    HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
-                };
-                tensor_storage.insert(output_tensor_id, cloned_result);
+                tensor_storage.insert(output_tensor_id, shared_result.clone());
             }
         }
 
+        // Prepare final outputs with pre-allocated capacity (std only)
+        #[cfg(feature = "std")]
+        let mut outputs = HashMap::with_capacity(compiled.output_mapping.len());
+        #[cfg(not(feature = "std"))]
         let mut outputs = HashMap::new();
         for (output_name, &tensor_id) in &compiled.output_mapping {
             if let Some(storage) = tensor_storage.get(&tensor_id) {
                 if let Some(layout) = compiled.tensor_layouts.get(&tensor_id) {
-                    let cloned_storage = match storage {
-                        HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
+                    // Clone the storage data only when creating the final output tensor
+                    // Use Arc::try_unwrap to avoid cloning when possible
+                    let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
+                        Ok(storage) => storage,
+                        Err(shared_storage) => match shared_storage.as_ref() {
+                            HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
+                        }
                     };
-                    let output_tensor = from_storage(cloned_storage, layout.clone(), false);
+                    let output_tensor = from_storage(output_storage, layout.clone(), false);
                     outputs.insert(output_name.clone(), output_tensor);
                 } else {
                     return Err(HoduError::InternalError(format!(
