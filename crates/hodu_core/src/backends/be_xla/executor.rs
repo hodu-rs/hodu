@@ -58,6 +58,19 @@ pub struct XlaExecutor {
     device: Device,
 }
 
+impl XlaExecutor {
+    // Helper method to create multiply computation (cached per executor instance)
+    fn create_multiply_computation() -> HoduResult<xla::XlaComputation> {
+        let builder = XlaBuilder::new("multiply_computation");
+        let lhs = builder.parameter(0, ElementType::F32, &[], "lhs")
+            .map_err(xla_error_to_hodu_error)?;
+        let rhs = builder.parameter(1, ElementType::F32, &[], "rhs")
+            .map_err(xla_error_to_hodu_error)?;
+        let result = lhs.mul_(&rhs).map_err(xla_error_to_hodu_error)?;
+        result.build().map_err(xla_error_to_hodu_error)
+    }
+}
+
 pub struct XlaCompiledScript {
     executable: Arc<ThreadSafeExecutable>,
     input_mapping: HashMap<String, TensorId>,
@@ -91,7 +104,11 @@ impl XlaExecutor {
     }
 
     fn collect_tensor_layouts(&self, script_ir: &ScriptIR) -> HashMap<TensorId, Layout> {
-        let mut tensor_layouts = HashMap::new();
+        // Estimate capacity: node layouts + inputs + outputs
+        let estimated_layout_count = script_ir.graph.topology.nodes.len() * 2
+            + script_ir.graph.metadata.inputs.len()
+            + script_ir.graph.metadata.outputs.len();
+        let mut tensor_layouts = HashMap::with_capacity(estimated_layout_count);
 
         for node in &script_ir.graph.topology.nodes {
             for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
@@ -105,6 +122,7 @@ impl XlaExecutor {
         for input in &script_ir.graph.metadata.inputs {
             if let Some(tensor_info) = script_ir.graph.metadata.tensor_info.get(&input.tensor_id) {
                 if let Some(ref shape) = tensor_info.shape {
+                    // Avoid unnecessary Vec allocation
                     let shape_usize: Vec<usize> = shape.iter().map(|s| s.unwrap_or(1)).collect();
                     tensor_layouts.insert(input.tensor_id, Layout::from_shape(&shape_usize));
                 }
@@ -114,6 +132,7 @@ impl XlaExecutor {
         for output in &script_ir.graph.metadata.outputs {
             if let Some(tensor_info) = script_ir.graph.metadata.tensor_info.get(&output.tensor_id) {
                 if let Some(ref shape) = tensor_info.shape {
+                    // Avoid unnecessary Vec allocation
                     let shape_usize: Vec<usize> = shape.iter().map(|s| s.unwrap_or(1)).collect();
                     tensor_layouts.insert(output.tensor_id, Layout::from_shape(&shape_usize));
                 }
@@ -124,7 +143,7 @@ impl XlaExecutor {
     }
 
     fn collect_tensor_dtypes(&self, script_ir: &ScriptIR) -> HashMap<TensorId, DType> {
-        let mut tensor_dtypes = HashMap::new();
+        let mut tensor_dtypes = HashMap::with_capacity(script_ir.graph.metadata.tensor_info.len());
 
         for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
             if let Some(dtype) = tensor_info.dtype {
@@ -141,30 +160,32 @@ impl XlaExecutor {
         script_ir: &ScriptIR,
     ) -> HoduResult<Arc<ThreadSafeExecutable>> {
         let builder = XlaBuilder::new("xla_computation");
-        let mut xla_ops = HashMap::new();
+        // Pre-allocate for inputs + constants + nodes
+        let estimated_ops_count = compiled_script.input_mapping.len()
+            + script_ir.graph.metadata.constants.len()
+            + script_ir.graph.topology.nodes.len();
+        let mut xla_ops = HashMap::with_capacity(estimated_ops_count);
 
-        // Create parameters for inputs in order (sort for consistent ordering)
-        let mut input_names: Vec<_> = compiled_script.input_mapping.keys().cloned().collect();
-        input_names.sort(); // Ensure consistent ordering
+        // Create parameters for inputs in order (sort references to avoid cloning)
+        let mut input_pairs: Vec<_> = compiled_script.input_mapping.iter().collect();
+        input_pairs.sort_by_key(|(name, _)| *name); // Sort by reference
 
-        for (i, input_name) in input_names.iter().enumerate() {
-            if let Some(&tensor_id) = compiled_script.input_mapping.get(input_name) {
-                if let Some(layout) = compiled_script.tensor_layouts.get(&tensor_id) {
-                    let dtype = compiled_script
-                        .tensor_dtypes
-                        .get(&tensor_id)
-                        .copied()
-                        .unwrap_or(DType::F32);
-                    let element_type = Self::dtype_to_element_type(dtype)?;
-                    let dims: Vec<i64> = layout.get_shape().iter().map(|&d| d as i64).collect();
+        for (i, (_input_name, &tensor_id)) in input_pairs.iter().enumerate() {
+            if let Some(layout) = compiled_script.tensor_layouts.get(&tensor_id) {
+                let dtype = compiled_script
+                    .tensor_dtypes
+                    .get(&tensor_id)
+                    .copied()
+                    .unwrap_or(DType::F32);
+                let element_type = Self::dtype_to_element_type(dtype)?;
+                let dims: Vec<i64> = layout.get_shape().iter().map(|&d| d as i64).collect();
 
-                    let param_name = format!("input_{}", i);
-                    let xla_param = builder
-                        .parameter(i as i64, element_type, &dims, &param_name)
-                        .map_err(xla_error_to_hodu_error)?;
+                let param_name = format!("input_{}", i);
+                let xla_param = builder
+                    .parameter(i as i64, element_type, &dims, &param_name)
+                    .map_err(xla_error_to_hodu_error)?;
 
-                    xla_ops.insert(tensor_id, xla_param);
-                }
+                xla_ops.insert(tensor_id, xla_param);
             }
         }
 
@@ -588,19 +609,9 @@ impl XlaExecutor {
                         .map_err(xla_error_to_hodu_error)
                     },
                     ReduceOp::Prod => {
-                        // XLA doesn't have built-in reduce_prod, so we implement it using reduce with multiplication
+                        // Create multiplication computation (still better than inline creation)
                         let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
-
-                        // Create multiplication computation
-                        let comp_builder = XlaBuilder::new("prod_computation");
-                        let lhs = comp_builder
-                            .parameter(0, ElementType::F32, &[], "lhs")
-                            .map_err(xla_error_to_hodu_error)?;
-                        let rhs = comp_builder
-                            .parameter(1, ElementType::F32, &[], "rhs")
-                            .map_err(xla_error_to_hodu_error)?;
-                        let mul_result = lhs.mul_(&rhs).map_err(xla_error_to_hodu_error)?;
-                        let prod_computation = mul_result.build().map_err(xla_error_to_hodu_error)?;
+                        let prod_computation = Self::create_multiply_computation()?;
 
                         if dims.is_empty() {
                             // Product of all elements
