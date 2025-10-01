@@ -47,7 +47,7 @@ pub trait HoduStorageT: Sized {
     fn contiguous(&self, _: &Layout) -> HoduResult<Self>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HoduStorage {
     CPU(CpuStorage),
 }
