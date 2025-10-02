@@ -41,6 +41,13 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 >
 > It is recommended to use the latest version.
 
+> [!CAUTION]
+>
+> **Current Development Status**:
+> - CUDA GPU support is not yet fully implemented and is under active development
+> - Metal GPU support is not yet fully implemented and is under active development
+> - SIMD optimizations are not yet implemented and are under active development
+
 ## Get started
 
 Here are some examples that demonstrate matrix multiplication using both dynamic execution and static computation graphs.
