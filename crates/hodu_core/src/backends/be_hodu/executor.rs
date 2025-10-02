@@ -88,9 +88,7 @@ impl HoduExecutor {
             .map(|(index, &node_id)| (node_id, index))
             .collect();
 
-        compiled_nodes.sort_by_key(|node| {
-            execution_order_map.get(&node.id).copied().unwrap_or(usize::MAX)
-        });
+        compiled_nodes.sort_by_key(|node| execution_order_map.get(&node.id).copied().unwrap_or(usize::MAX));
 
         Ok(compiled_nodes)
     }
@@ -839,7 +837,7 @@ impl ExecutorT for HoduExecutor {
                         Ok(storage) => storage,
                         Err(shared_storage) => match shared_storage.as_ref() {
                             HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
-                        }
+                        },
                     };
                     let output_tensor = from_storage(output_storage, layout.clone(), false);
                     outputs.insert(output_name.clone(), output_tensor);
