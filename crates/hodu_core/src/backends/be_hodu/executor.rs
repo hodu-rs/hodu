@@ -96,13 +96,14 @@ impl HoduExecutor {
     }
 
     fn collect_tensor_layouts(&self, script_ir: &ScriptIR) -> HashMap<TensorId, Layout> {
-        // Estimate capacity: node layouts + inputs + outputs
-        let estimated_layout_count = script_ir.graph.topology.nodes.len() * 2
-            + script_ir.graph.metadata.inputs.len()
-            + script_ir.graph.metadata.outputs.len();
-
         #[cfg(feature = "std")]
-        let mut tensor_layouts = HashMap::with_capacity(estimated_layout_count);
+        let mut tensor_layouts = {
+            // Estimate capacity: node layouts + inputs + outputs
+            let estimated_layout_count = script_ir.graph.topology.nodes.len() * 2
+                + script_ir.graph.metadata.inputs.len()
+                + script_ir.graph.metadata.outputs.len();
+            HashMap::with_capacity(estimated_layout_count)
+        };
         #[cfg(not(feature = "std"))]
         let mut tensor_layouts = HashMap::new();
 
