@@ -40,11 +40,13 @@ pub fn derive_module_impl(input: TokenStream) -> TokenStream {
     let input_type = if num_inputs == 1 {
         quote!(&#hodu_core_path::tensor::Tensor)
     } else {
-        let tensor_refs = std::iter::repeat_n(quote!(&#hodu_core_path::tensor::Tensor), num_inputs).collect::<Vec<_>>();
+        let tensor_refs = (0..num_inputs)
+            .map(|_| quote!(&#hodu_core_path::tensor::Tensor))
+            .collect::<Vec<_>>();
         quote!((#(#tensor_refs),*))
     };
 
-    let layer_impl = quote! {
+    let module_impl = quote! {
         impl #impl_generics #hodu_nn_path::module::Module<#input_type>
             for #name #ty_generics #where_clause
         {
@@ -59,7 +61,7 @@ pub fn derive_module_impl(input: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
-        #layer_impl
+        #module_impl
     };
 
     TokenStream::from(expanded)
