@@ -1,6 +1,7 @@
 use crate::{compat::*, types::dtype::DType};
 use float8::{F8E4M3, F8E5M2};
 use half::{bf16, f16};
+use num_traits::float::Float;
 
 #[cfg(feature = "serde")]
 mod serde_impls {
@@ -976,6 +977,159 @@ impl From<isize> for Scalar {
             Scalar::I32(x as i32)
         } else {
             Scalar::I64(x as i64)
+        }
+    }
+}
+
+impl ops::Add for Scalar {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a || b),
+            (Self::U8(a), Self::U8(b)) => Self::U8(a + b),
+            (Self::U16(a), Self::U16(b)) => Self::U16(a + b),
+            (Self::U32(a), Self::U32(b)) => Self::U32(a + b),
+            (Self::U64(a), Self::U64(b)) => Self::U64(a + b),
+            (Self::I8(a), Self::I8(b)) => Self::I8(a + b),
+            (Self::I16(a), Self::I16(b)) => Self::I16(a + b),
+            (Self::I32(a), Self::I32(b)) => Self::I32(a + b),
+            (Self::I64(a), Self::I64(b)) => Self::I64(a + b),
+            (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a + b),
+            (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a + b),
+            (Self::BF16(a), Self::BF16(b)) => Self::BF16(a + b),
+            (Self::F16(a), Self::F16(b)) => Self::F16(a + b),
+            (Self::F32(a), Self::F32(b)) => Self::F32(a + b),
+            (Self::F64(a), Self::F64(b)) => Self::F64(a + b),
+            (lhs, rhs) => panic!("Cannot add {:?} and {:?}", lhs, rhs),
+        }
+    }
+}
+
+impl ops::Sub for Scalar {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self {
+        match (self, rhs) {
+            (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && !b),
+            (Self::U8(a), Self::U8(b)) => Self::U8(a - b),
+            (Self::U16(a), Self::U16(b)) => Self::U16(a - b),
+            (Self::U32(a), Self::U32(b)) => Self::U32(a - b),
+            (Self::U64(a), Self::U64(b)) => Self::U64(a - b),
+            (Self::I8(a), Self::I8(b)) => Self::I8(a - b),
+            (Self::I16(a), Self::I16(b)) => Self::I16(a - b),
+            (Self::I32(a), Self::I32(b)) => Self::I32(a - b),
+            (Self::I64(a), Self::I64(b)) => Self::I64(a - b),
+            (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a - b),
+            (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a - b),
+            (Self::BF16(a), Self::BF16(b)) => Self::BF16(a - b),
+            (Self::F16(a), Self::F16(b)) => Self::F16(a - b),
+            (Self::F32(a), Self::F32(b)) => Self::F32(a - b),
+            (Self::F64(a), Self::F64(b)) => Self::F64(a - b),
+            (lhs, rhs) => panic!("Cannot subtract {:?} from {:?}", rhs, lhs),
+        }
+    }
+}
+
+impl ops::Mul for Scalar {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && b),
+            (Self::U8(a), Self::U8(b)) => Self::U8(a * b),
+            (Self::U16(a), Self::U16(b)) => Self::U16(a * b),
+            (Self::U32(a), Self::U32(b)) => Self::U32(a * b),
+            (Self::U64(a), Self::U64(b)) => Self::U64(a * b),
+            (Self::I8(a), Self::I8(b)) => Self::I8(a * b),
+            (Self::I16(a), Self::I16(b)) => Self::I16(a * b),
+            (Self::I32(a), Self::I32(b)) => Self::I32(a * b),
+            (Self::I64(a), Self::I64(b)) => Self::I64(a * b),
+            (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a * b),
+            (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a * b),
+            (Self::BF16(a), Self::BF16(b)) => Self::BF16(a * b),
+            (Self::F16(a), Self::F16(b)) => Self::F16(a * b),
+            (Self::F32(a), Self::F32(b)) => Self::F32(a * b),
+            (Self::F64(a), Self::F64(b)) => Self::F64(a * b),
+            (lhs, rhs) => panic!("Cannot multiply {:?} by {:?}", rhs, lhs),
+        }
+    }
+}
+
+impl ops::Div for Scalar {
+    type Output = Self;
+
+    fn div(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && b),
+            (Self::U8(a), Self::U8(b)) => Self::U8(a / b),
+            (Self::U16(a), Self::U16(b)) => Self::U16(a / b),
+            (Self::U32(a), Self::U32(b)) => Self::U32(a / b),
+            (Self::U64(a), Self::U64(b)) => Self::U64(a / b),
+            (Self::I8(a), Self::I8(b)) => Self::I8(a / b),
+            (Self::I16(a), Self::I16(b)) => Self::I16(a / b),
+            (Self::I32(a), Self::I32(b)) => Self::I32(a / b),
+            (Self::I64(a), Self::I64(b)) => Self::I64(a / b),
+            (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a / b),
+            (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a / b),
+            (Self::BF16(a), Self::BF16(b)) => Self::BF16(a / b),
+            (Self::F16(a), Self::F16(b)) => Self::F16(a / b),
+            (Self::F32(a), Self::F32(b)) => Self::F32(a / b),
+            (Self::F64(a), Self::F64(b)) => Self::F64(a / b),
+            (lhs, rhs) => panic!("Cannot divide {:?} by {:?}", rhs, lhs),
+        }
+    }
+}
+
+impl ops::Rem for Scalar {
+    type Output = Self;
+
+    fn rem(self, rhs: Self) -> Self::Output {
+        match (self, rhs) {
+            (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && b),
+            (Self::U8(a), Self::U8(b)) => Self::U8(a % b),
+            (Self::U16(a), Self::U16(b)) => Self::U16(a % b),
+            (Self::U32(a), Self::U32(b)) => Self::U32(a % b),
+            (Self::U64(a), Self::U64(b)) => Self::U64(a % b),
+            (Self::I8(a), Self::I8(b)) => Self::I8(a % b),
+            (Self::I16(a), Self::I16(b)) => Self::I16(a % b),
+            (Self::I32(a), Self::I32(b)) => Self::I32(a % b),
+            (Self::I64(a), Self::I64(b)) => Self::I64(a % b),
+            (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a % b),
+            (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a % b),
+            (Self::BF16(a), Self::BF16(b)) => Self::BF16(a % b),
+            (Self::F16(a), Self::F16(b)) => Self::F16(a % b),
+            (Self::F32(a), Self::F32(b)) => Self::F32(a % b),
+            (Self::F64(a), Self::F64(b)) => Self::F64(a % b),
+            (lhs, rhs) => panic!("Cannot modulo {:?} by {:?}", rhs, lhs),
+        }
+    }
+}
+
+impl Scalar {
+    pub fn powi(self, exp: i32) -> Self {
+        match self {
+            Self::BOOL(a) => {
+                if exp == 0 {
+                    Self::BOOL(true)
+                } else {
+                    Self::BOOL(a)
+                }
+            },
+            Self::U8(a) => Self::U8(a.pow(exp as u32)),
+            Self::U16(a) => Self::U16(a.pow(exp as u32)),
+            Self::U32(a) => Self::U32(a.pow(exp as u32)),
+            Self::U64(a) => Self::U64(a.pow(exp as u32)),
+            Self::I8(a) => Self::I8(a.pow(exp as u32)),
+            Self::I16(a) => Self::I16(a.pow(exp as u32)),
+            Self::I32(a) => Self::I32(a.pow(exp as u32)),
+            Self::I64(a) => Self::I64(a.pow(exp as u32)),
+            Self::F8E4M3(a) => Self::F8E4M3(a.powi(exp)),
+            Self::F8E5M2(a) => Self::F8E5M2(a.powi(exp)),
+            Self::BF16(a) => Self::BF16(a.powi(exp)),
+            Self::F16(a) => Self::F16(a.powi(exp)),
+            Self::F32(a) => Self::F32(a.powi(exp)),
+            Self::F64(a) => Self::F64(a.powi(exp)),
         }
     }
 }
