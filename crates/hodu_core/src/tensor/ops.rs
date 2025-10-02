@@ -52,6 +52,17 @@ macro_rules! binary_op {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
             let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors(self, rhs)?;
 
+            let (lhs_broadcasted, rhs_broadcasted) =
+                if lhs_broadcasted.get_dtype() == DType::BOOL && rhs_broadcasted.get_dtype() != DType::BOOL {
+                    let lhs_broadcasted = lhs_broadcasted.to_dtype(rhs_broadcasted.get_dtype())?;
+                    (lhs_broadcasted, rhs_broadcasted)
+                } else if lhs_broadcasted.get_dtype() != DType::BOOL && rhs_broadcasted.get_dtype() == DType::BOOL {
+                    let rhs_broadcasted = rhs_broadcasted.to_dtype(lhs_broadcasted.get_dtype())?;
+                    (lhs_broadcasted, rhs_broadcasted)
+                } else {
+                    (lhs_broadcasted, rhs_broadcasted)
+                };
+
             if builder::is_builder_active() {
                 let result_layout = lhs_broadcasted.get_layout().clone();
                 let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
