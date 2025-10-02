@@ -620,7 +620,12 @@ pub fn reduce_sum<T: Copy + Default + ops::Add<Output = T>>(
     Ok((result, output_shape))
 }
 
-pub fn reduce_mean<T>(storage: &[T], layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<(Vec<T>, Vec<usize>)>
+pub fn reduce_mean<T>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)>
 where
     T: Copy + Default + ops::Add<Output = T> + ops::Div<Output = T>,
     T: num_traits::NumCast,
@@ -1161,7 +1166,12 @@ where
     Ok((result, output_shape))
 }
 
-pub fn reduce_norm<T>(storage: &[T], layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<(Vec<T>, Vec<usize>)>
+pub fn reduce_norm<T>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<T>, Vec<usize>)>
 where
     T: Copy + Default + ops::Add<Output = T> + ops::Mul<Output = T> + num_traits::Float, // This provides sqrt
 {

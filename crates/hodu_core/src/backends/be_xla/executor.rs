@@ -62,9 +62,11 @@ impl XlaExecutor {
     // Helper method to create multiply computation (cached per executor instance)
     fn create_multiply_computation() -> HoduResult<xla::XlaComputation> {
         let builder = XlaBuilder::new("multiply_computation");
-        let lhs = builder.parameter(0, ElementType::F32, &[], "lhs")
+        let lhs = builder
+            .parameter(0, ElementType::F32, &[], "lhs")
             .map_err(xla_error_to_hodu_error)?;
-        let rhs = builder.parameter(1, ElementType::F32, &[], "rhs")
+        let rhs = builder
+            .parameter(1, ElementType::F32, &[], "rhs")
             .map_err(xla_error_to_hodu_error)?;
         let result = lhs.mul_(&rhs).map_err(xla_error_to_hodu_error)?;
         result.build().map_err(xla_error_to_hodu_error)
