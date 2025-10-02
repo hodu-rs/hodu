@@ -12,9 +12,9 @@ use crate::{
     tensor::{from_storage, Tensor, TensorId},
     types::{device::Device, dtype::DType, layout::Layout},
 };
+use hodu_xla::{ElementType, Literal, PjRtClient, PjRtLoadedExecutable, PrimitiveType, XlaBuilder, XlaOp};
 use std::collections::HashMap;
 use std::sync::Arc;
-use xla::{ElementType, Literal, PjRtClient, PjRtLoadedExecutable, PrimitiveType, XlaBuilder, XlaOp};
 
 // Thread-safe wrapper for PjRtLoadedExecutable
 // SAFETY: XLA's PjRtLoadedExecutable is thread-safe in practice,
@@ -49,7 +49,7 @@ impl std::ops::Deref for ThreadSafeClient {
 }
 
 // Helper function to convert XLA errors to HoduError
-fn xla_error_to_hodu_error(err: xla::Error) -> HoduError {
+fn xla_error_to_hodu_error(err: hodu_xla::Error) -> HoduError {
     HoduError::InternalError(format!("XLA error: {:?}", err))
 }
 
@@ -60,7 +60,7 @@ pub struct XlaExecutor {
 
 impl XlaExecutor {
     // Helper method to create multiply computation (cached per executor instance)
-    fn create_multiply_computation() -> HoduResult<xla::XlaComputation> {
+    fn create_multiply_computation() -> HoduResult<hodu_xla::XlaComputation> {
         let builder = XlaBuilder::new("multiply_computation");
         let lhs = builder
             .parameter(0, ElementType::F32, &[], "lhs")
@@ -513,7 +513,7 @@ impl XlaExecutor {
                         let rhs_shape = input_ops[1].shape().map_err(xla_error_to_hodu_error)?;
 
                         match (lhs_shape, rhs_shape) {
-                            (xla::Shape::Array(lhs_array), xla::Shape::Array(rhs_array)) => {
+                            (hodu_xla::Shape::Array(lhs_array), hodu_xla::Shape::Array(rhs_array)) => {
                                 let lhs_dims = lhs_array.dims();
                                 let rhs_dims = rhs_array.dims();
 
@@ -551,7 +551,7 @@ impl XlaExecutor {
                             // Sum all elements
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -567,7 +567,7 @@ impl XlaExecutor {
                             // Mean of all elements
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -583,7 +583,7 @@ impl XlaExecutor {
                             // Max of all elements
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -599,7 +599,7 @@ impl XlaExecutor {
                             // Min of all elements
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -619,7 +619,7 @@ impl XlaExecutor {
                             // Product of all elements
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -635,7 +635,7 @@ impl XlaExecutor {
                         let mean_op = if dims.is_empty() {
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -653,7 +653,7 @@ impl XlaExecutor {
                         let variance = if dims.is_empty() {
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -671,7 +671,7 @@ impl XlaExecutor {
                         let mean_op = if dims.is_empty() {
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -689,7 +689,7 @@ impl XlaExecutor {
                         if dims.is_empty() {
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -706,7 +706,7 @@ impl XlaExecutor {
                         let sum_squared = if dims.is_empty() {
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let all_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                                hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
                                 _ => {
                                     return Err(HoduError::InternalError("Expected array shape for reduce".to_string()))
                                 },
@@ -744,7 +744,7 @@ impl XlaExecutor {
                         // Get input shape and flatten to 1D
                         let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                         let total_size = match input_shape {
-                            xla::Shape::Array(array_shape) => array_shape.dims().iter().product::<i64>(),
+                            hodu_xla::Shape::Array(array_shape) => array_shape.dims().iter().product::<i64>(),
                             _ => {
                                 return Err(HoduError::InternalError(
                                     "Expected array shape for flatten operation".to_string(),
@@ -784,7 +784,7 @@ impl XlaExecutor {
                             // For now, assume we're broadcasting to larger dimensions (left-padding with 1s)
                             let input_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
                             let input_dims: Vec<i64> = match input_shape {
-                                xla::Shape::Array(array_shape) => array_shape.dims().to_vec(),
+                                hodu_xla::Shape::Array(array_shape) => array_shape.dims().to_vec(),
                                 _ => {
                                     return Err(HoduError::InternalError(
                                         "Expected array shape for broadcast operation".to_string(),
@@ -1421,7 +1421,7 @@ impl ExecutorT for XlaExecutor {
         // Execute the computation
         let result_buffers = compiled
             .executable
-            .execute::<xla::Literal>(&xla_inputs)
+            .execute::<hodu_xla::Literal>(&xla_inputs)
             .map_err(|e| HoduError::InternalError(format!("Failed to execute XLA computation: {:?}", e)))?;
 
         // Convert results back to tensors using output_mapping
@@ -1610,7 +1610,7 @@ impl XlaExecutor {
             },
             DType::U8 => self.create_xla_constant(builder, &data, &dims, element_type),
             DType::BOOL => {
-                let literal = xla::Literal::create_from_shape_and_untyped_data(
+                let literal = hodu_xla::Literal::create_from_shape_and_untyped_data(
                     element_type,
                     &dims.iter().map(|&d| d as usize).collect::<Vec<_>>(),
                     &data,
@@ -1620,7 +1620,7 @@ impl XlaExecutor {
             },
             // For F16 and BF16, we'll create them using literal directly since they may not implement NativeType
             DType::F16 => {
-                let literal = xla::Literal::create_from_shape_and_untyped_data(
+                let literal = hodu_xla::Literal::create_from_shape_and_untyped_data(
                     element_type,
                     &dims.iter().map(|&d| d as usize).collect::<Vec<_>>(),
                     &data,
@@ -1629,7 +1629,7 @@ impl XlaExecutor {
                 Ok(builder.constant_literal(&literal).map_err(xla_error_to_hodu_error)?)
             },
             DType::BF16 => {
-                let literal = xla::Literal::create_from_shape_and_untyped_data(
+                let literal = hodu_xla::Literal::create_from_shape_and_untyped_data(
                     element_type,
                     &dims.iter().map(|&d| d as usize).collect::<Vec<_>>(),
                     &data,
@@ -1648,7 +1648,7 @@ impl XlaExecutor {
         Ok(xla_op)
     }
 
-    fn create_xla_constant<T: xla::NativeType + Copy>(
+    fn create_xla_constant<T: hodu_xla::NativeType + Copy>(
         &self,
         builder: &XlaBuilder,
         values: &[T],
@@ -1674,7 +1674,7 @@ impl XlaExecutor {
         values: &[T],
         shape: &[usize],
         element_type: ElementType,
-    ) -> HoduResult<xla::Literal>
+    ) -> HoduResult<hodu_xla::Literal>
     where
         T: Copy,
     {
@@ -1683,7 +1683,7 @@ impl XlaExecutor {
         // Convert values to bytes based on type
         let data_bytes = unsafe { std::slice::from_raw_parts(values.as_ptr() as *const u8, mem::size_of_val(values)) };
 
-        xla::Literal::create_from_shape_and_untyped_data(element_type, shape, data_bytes)
+        hodu_xla::Literal::create_from_shape_and_untyped_data(element_type, shape, data_bytes)
             .map_err(xla_error_to_hodu_error)
     }
 }
