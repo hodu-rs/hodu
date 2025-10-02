@@ -19,11 +19,11 @@ std = [
 ]
 serde = ["dep:bincode", "dep:flate2", "dep:serde"]
 
-cuda = ["xla?/cuda"]
+cuda = ["hodu_xla?/cuda"]
 # cuda = ["dep:hodu_cuda_kernels"]
 metal = []
 
-xla = ["dep:xla"]
+xla = ["dep:hodu_xla"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }
@@ -32,10 +32,10 @@ flate2 = { workspace = true, optional = true }
 float8 = { workspace = true }
 half = { workspace = true, default-features = false }
 # hodu_cuda_kernels = { path = "../hodu_cuda_kernels", version = "0.1.0", optional = true }
+hodu_xla = { workspace = true, optional = true }
 num-traits = { workspace = true, default-features = false }
 paste = { workspace = true }
 rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
 serde = { workspace = true, optional = true }
 spin = { workspace = true }
-xla = { workspace = true, optional = true }
