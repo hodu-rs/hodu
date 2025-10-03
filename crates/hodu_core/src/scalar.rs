@@ -1107,13 +1107,13 @@ impl ops::Rem for Scalar {
 }
 
 impl Scalar {
-    pub fn powi(self, exp: i32) -> Self {
+    pub fn powi(&self, exp: i32) -> Self {
         match self {
             Self::BOOL(a) => {
                 if exp == 0 {
                     Self::BOOL(true)
                 } else {
-                    Self::BOOL(a)
+                    Self::BOOL(*a)
                 }
             },
             Self::U8(a) => Self::U8(a.pow(exp as u32)),
@@ -1130,6 +1130,26 @@ impl Scalar {
             Self::F16(a) => Self::F16(a.powi(exp)),
             Self::F32(a) => Self::F32(a.powi(exp)),
             Self::F64(a) => Self::F64(a.powi(exp)),
+        }
+    }
+
+    pub fn sqrt(&self) -> Self {
+        match self {
+            Self::BOOL(a) => Self::BOOL(*a),
+            Self::U8(a) => Scalar::U8(((*a as f32).sqrt()).clamp(0.0, u8::MAX as f32) as u8),
+            Self::U16(a) => Scalar::U16(((*a as f32).sqrt()).clamp(0.0, u16::MAX as f32) as u16),
+            Self::U32(a) => Scalar::U32(((*a as f32).sqrt()).clamp(0.0, u32::MAX as f32) as u32),
+            Self::U64(a) => Scalar::U64(((*a as f32).sqrt()).clamp(0.0, u64::MAX as f32) as u64),
+            Self::I8(a) => Scalar::I8(((*a as f32).sqrt()).clamp(0.0, i8::MAX as f32) as i8),
+            Self::I16(a) => Scalar::I16(((*a as f32).sqrt()).clamp(0.0, i16::MAX as f32) as i16),
+            Self::I32(a) => Scalar::I32(((*a as f32).sqrt()).clamp(0.0, i32::MAX as f32) as i32),
+            Self::I64(a) => Scalar::I64(((*a as f32).sqrt()).clamp(0.0, i64::MAX as f32) as i64),
+            Self::F8E4M3(a) => Self::F8E4M3(a.sqrt()),
+            Self::F8E5M2(a) => Self::F8E5M2(a.sqrt()),
+            Self::BF16(a) => Self::BF16(a.sqrt()),
+            Self::F16(a) => Self::F16(a.sqrt()),
+            Self::F32(a) => Self::F32(a.sqrt()),
+            Self::F64(a) => Self::F64(a.sqrt()),
         }
     }
 }

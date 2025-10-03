@@ -58,6 +58,12 @@ impl Tensor {
         Ok(from_storage(storage, layout, !is_builder_active()))
     }
 
+    pub fn zeros_like(tensor: &Tensor) -> HoduResult<Self> {
+        let layout = tensor.get_layout();
+        let shape = layout.get_shape();
+        Self::zeros(&shape, tensor.get_dtype())
+    }
+
     pub fn ones(shape: &[usize], dtype: DType) -> HoduResult<Self> {
         let device = if is_builder_active() {
             Device::CPU
@@ -68,6 +74,12 @@ impl Tensor {
         let mut storage = HoduDevice::zeros(&layout, device, dtype)?;
         storage.const_set(Scalar::one(dtype), &layout)?;
         Ok(from_storage(storage, layout, !is_builder_active()))
+    }
+
+    pub fn ones_like(tensor: &Tensor) -> HoduResult<Self> {
+        let layout = tensor.get_layout();
+        let shape = layout.get_shape();
+        Self::ones(&shape, tensor.get_dtype())
     }
 
     pub fn full<T: Into<Scalar>>(shape: &[usize], value: T) -> HoduResult<Self> {
@@ -81,6 +93,12 @@ impl Tensor {
         let mut storage = HoduDevice::zeros(&layout, device, value.get_dtype())?;
         storage.const_set(value, &layout)?;
         Ok(from_storage(storage, layout, !is_builder_active()))
+    }
+
+    pub fn full_like(tensor: &Tensor, value: Scalar) -> HoduResult<Self> {
+        let layout = tensor.get_layout();
+        let shape = layout.get_shape();
+        Self::full(&shape, value)
     }
 
     pub fn randn<T: Into<Scalar>>(shape: &[usize], mean: T, std: T) -> HoduResult<Self> {
@@ -99,5 +117,11 @@ impl Tensor {
         let layout = Layout::from_shape(shape);
         let storage = HoduDevice::randn(&layout, device, dtype, mean.to_f64(), std.to_f64())?;
         Ok(from_storage(storage, layout, !is_builder_active()))
+    }
+
+    pub fn randn_like<T: Into<Scalar>>(tensor: &Tensor, mean: T, std: T) -> HoduResult<Self> {
+        let layout = tensor.get_layout();
+        let shape = layout.get_shape();
+        Self::randn(&shape, mean, std)
     }
 }
