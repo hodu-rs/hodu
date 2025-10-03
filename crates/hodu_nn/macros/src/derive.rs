@@ -78,11 +78,11 @@ pub fn derive_optimizer_impl(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #impl_generics #hodu_nn_path::optimizer::Optimizer for #name #ty_generics #where_clause {
-            fn step(&mut self, parameters: &[&#hodu_core_path::tensor::Tensor])
+            fn step(&mut self, parameters: &mut [&mut #hodu_core_path::tensor::Tensor])
                 -> #hodu_core_path::error::HoduResult<()> {
                 self.step(parameters)
             }
-            fn zero_grad(&self, parameters: &[&#hodu_core_path::tensor::Tensor])
+            fn zero_grad(&mut self, parameters: &mut [&mut #hodu_core_path::tensor::Tensor])
                 -> #hodu_core_path::error::HoduResult<()> {
                 self.zero_grad(parameters)
             }

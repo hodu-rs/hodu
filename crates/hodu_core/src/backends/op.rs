@@ -311,7 +311,6 @@ pub enum CastOp {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum MemoryOp {
     Contiguous, // no-backprop
-    Set,        // no-backprop
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -329,7 +328,7 @@ pub enum Op {
     Reduce(ReduceOp, TensorId, Vec<Scalar>),
     Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
-    Memory(MemoryOp, TensorId, Option<TensorId>),
+    Memory(MemoryOp, TensorId),
     Dummy,
 }
 
@@ -347,13 +346,7 @@ impl Op {
             Op::Reduce(_, t, _) => vec![*t],
             Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
-            Op::Memory(_, t, src_t) => {
-                if let Some(src_tensor_id) = src_t {
-                    vec![*t, *src_tensor_id]
-                } else {
-                    vec![*t]
-                }
-            },
+            Op::Memory(_, t) => vec![*t],
             Op::Dummy => vec![],
         }
     }

@@ -13,7 +13,7 @@ impl ReLU {
         input.relu()
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -30,7 +30,7 @@ impl Sigmoid {
         input.sigmoid()
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -47,7 +47,7 @@ impl Tanh {
         input.tanh()
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -64,7 +64,7 @@ impl Gelu {
         input.gelu()
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -81,7 +81,7 @@ impl Softplus {
         input.softplus()
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -103,7 +103,7 @@ impl LeakyReLU {
         input.leaky_relu(exponent)
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -125,7 +125,7 @@ impl ELU {
         input.elu(exponent)
     }
 
-    pub fn parameters(&self) -> Vec<&Tensor> {
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
