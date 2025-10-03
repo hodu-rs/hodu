@@ -12,11 +12,6 @@ repository = "https://github.com/miniex/hodu"
 std = ["hodu_core/std"]
 serde = ["hodu_core/serde"]
 
-cuda = ["hodu_core/cuda"]
-metal = ["hodu_core/metal"]
-
-xla = ["hodu_core/xla"]
-
 [dependencies]
 hodu_core = { path = "../hodu_core", version = "0.1.0" }
 hodu_nn_macros = { path = "macros", version = "0.1.0" }

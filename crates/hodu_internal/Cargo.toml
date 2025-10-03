@@ -9,8 +9,8 @@ publish = true
 repository = "https://github.com/miniex/hodu"
 
 [features]
-std = ["hodu_core/std"]
-serde = ["hodu_core/serde"]
+std = ["hodu_core/std", "hodu_nn/std"]
+serde = ["hodu_core/serde", "hodu_nn/serde"]
 
 cuda = ["hodu_core/cuda"]
 metal = ["hodu_core/metal"]
