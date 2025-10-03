@@ -1043,6 +1043,15 @@ impl Tensor {
             });
         }
 
+        // Check that both tensors have the same offset
+        if self_layout.get_offset() != src_layout.get_offset() {
+            return Err(HoduError::InternalError(format!(
+                "set operation requires tensors to have same offset: destination has {}, source has {}",
+                self_layout.get_offset(),
+                src_layout.get_offset()
+            )));
+        }
+
         if builder::is_builder_active() {
             // Script context: record set operation
             let requires_grad = self.is_requires_grad() || src.is_requires_grad();
