@@ -30,7 +30,7 @@ impl Adam {
         }
     }
 
-    pub fn step(&mut self, parameters: &[&Tensor]) -> HoduResult<()> {
+    pub fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
         if self.m.is_empty() || self.v.is_empty() {
             self.m = parameters
                 .iter()
@@ -44,7 +44,7 @@ impl Adam {
 
         self.t += 1;
 
-        for ((param, m), v) in parameters.iter().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
+        for ((param, m), v) in parameters.iter_mut().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
             let grad = param.grad()?;
             let lr = self.learning_rate.to_dtype(grad.get_dtype());
             let beta1 = self.beta1.to_dtype(grad.get_dtype());
@@ -78,14 +78,14 @@ impl Adam {
 
             // Update parameters
             let step = m_hat.div(&v_hat.sqrt()?.add_scalar(epsilon)?)?;
-            param.set(&param.sub(&step.mul_scalar(lr_t)?)?)?;
+            param.set_(&param.sub(&step.mul_scalar(lr_t)?)?)?;
         }
 
         Ok(())
     }
 
-    pub fn zero_grad(&self, parameters: &[&Tensor]) -> HoduResult<()> {
-        for param in parameters.iter() {
+    pub fn zero_grad(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+        for param in parameters.iter_mut() {
             param.zero_grad()?;
         }
         Ok(())

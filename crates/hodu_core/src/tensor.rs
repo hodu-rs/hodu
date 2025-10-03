@@ -220,6 +220,10 @@ impl Tensor {
         }
     }
 
+    pub fn requires_grad(&self) -> HoduResult<()> {
+        self.set_requires_grad(true)
+    }
+
     pub fn is_requires_grad(&self) -> bool {
         with_tensor(self.0, |t| t.requires_grad).unwrap_or(false)
     }
@@ -264,7 +268,10 @@ impl Tensor {
 
         if let Ok(grad_tensor) = self.grad() {
             let zeros = Self::zeros(grad_tensor.get_layout().get_shape(), grad_tensor.get_dtype())?;
-            grad_tensor.set(&zeros)?;
+
+            with_tensor_mut(self.0, |tensor_ref| {
+                tensor_ref.grad_tensor_id = Some(zeros.0);
+            });
         }
 
         Ok(())

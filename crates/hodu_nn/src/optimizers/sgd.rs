@@ -13,18 +13,18 @@ impl SGD {
         }
     }
 
-    pub fn step(&mut self, parameters: &[&Tensor]) -> HoduResult<()> {
-        for param in parameters.iter() {
+    pub fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+        for param in parameters.iter_mut() {
             let grad = param.grad()?;
             let lr = self.learning_rate.to_dtype(grad.get_dtype());
 
-            param.set(&param.sub(&grad.mul_scalar(lr)?)?)?;
+            param.set_(&param.sub(&grad.mul_scalar(lr)?)?)?;
         }
         Ok(())
     }
 
-    pub fn zero_grad(&self, parameters: &[&Tensor]) -> HoduResult<()> {
-        for param in parameters.iter() {
+    pub fn zero_grad(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+        for param in parameters.iter_mut() {
             param.zero_grad()?;
         }
         Ok(())
