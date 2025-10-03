@@ -256,6 +256,19 @@ impl Tensor {
             Err(HoduError::TensorNotFound(self.0))
         }
     }
+
+    pub fn zero_grad(&self) -> HoduResult<()> {
+        if !self.is_requires_grad() {
+            return Ok(()); // No gradient to zero
+        }
+
+        if let Ok(grad_tensor) = self.grad() {
+            let zeros = Self::zeros(grad_tensor.get_layout().get_shape(), grad_tensor.get_dtype())?;
+            grad_tensor.set(&zeros)?;
+        }
+
+        Ok(())
+    }
 }
 
 pub(crate) fn from_storage(storage: HoduStorage, layout: Layout, is_runtime: bool) -> Tensor {
