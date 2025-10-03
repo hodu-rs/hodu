@@ -987,16 +987,7 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             let op = Op::Cast(op::CastOp::ToDType, self.id());
-            register_operation_in_builder(
-                op.clone(),
-                result_id,
-                vec![self.get_layout().clone()],
-                vec![result_layout],
-            );
-
-            if self.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id()])?;
-            }
+            register_operation_in_builder(op, result_id, vec![self.get_layout().clone()], vec![result_layout]);
 
             Ok(result_tensor)
         } else {
@@ -1004,11 +995,6 @@ impl Tensor {
             let layout = self.get_layout().clone();
             let requires_grad = self.is_requires_grad() && dtype.is_float();
             let result = from_storage_with_grad(storage, layout, true, requires_grad);
-
-            if !gradient::is_computing_gradients() && self.is_requires_grad() {
-                let op = Op::Cast(op::CastOp::ToDType, self.id());
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
-            }
 
             Ok(result)
         }
@@ -1028,12 +1014,8 @@ impl Tensor {
             let requires_grad = self.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(contiguous_layout.clone(), requires_grad);
 
-            let op = Op::Memory(op::MemoryOp::Contiguous, self.id());
-            register_operation_in_builder(op.clone(), result_id, vec![layout], vec![contiguous_layout]);
-
-            if self.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id()])?;
-            }
+            let op = Op::Memory(op::MemoryOp::Contiguous, self.id(), None);
+            register_operation_in_builder(op, result_id, vec![layout], vec![contiguous_layout]);
 
             Ok(result_tensor)
         } else {
@@ -1042,10 +1024,45 @@ impl Tensor {
             let requires_grad = self.is_requires_grad();
             let result = from_storage_with_grad(storage, contiguous_layout, true, requires_grad);
 
-            if !gradient::is_computing_gradients() && self.is_requires_grad() {
-                let op = Op::Memory(op::MemoryOp::Contiguous, self.id());
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
-            }
+            Ok(result)
+        }
+    }
+
+    pub fn set(&self, src: &Tensor) -> HoduResult<Self> {
+        // Check shape compatibility
+        let self_layout = self.get_layout();
+        let src_layout = src.get_layout();
+        let self_shape = self_layout.get_shape();
+        let src_shape = src_layout.get_shape();
+
+        if self_shape != src_shape {
+            return Err(HoduError::IncompatibleShapes {
+                lhs: self_shape.to_vec(),
+                rhs: src_shape.to_vec(),
+                op: "set - tensors must have same shape".to_string(),
+            });
+        }
+
+        if builder::is_builder_active() {
+            // Script context: record set operation
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(self_layout.clone(), requires_grad);
+
+            let op = Op::Memory(op::MemoryOp::Set, self.id(), Some(src.id()));
+            register_operation_in_builder(
+                op,
+                result_id,
+                vec![self_layout.clone(), src_layout],
+                vec![self_layout.clone()],
+            );
+
+            Ok(result_tensor)
+        } else {
+            // Runtime context: copy src data (shapes already validated)
+            let storage = src.with_storage(|src_storage| Ok(src_storage.clone()))?;
+
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let result = from_storage_with_grad(storage, self_layout, true, requires_grad);
 
             Ok(result)
         }

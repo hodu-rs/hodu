@@ -503,12 +503,19 @@ impl HoduExecutor {
 
                 self.execute_cast_op(*cast_op, input_storage, compiled_node, compiled)
             },
-            Op::Memory(memory_op, tensor_id) => {
+            Op::Memory(memory_op, tensor_id, src_tensor_id) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)
                     .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
 
-                self.execute_memory_op(*memory_op, input_storage, compiled_node)
+                if let Some(src_id) = src_tensor_id {
+                    let src_storage = tensor_storage
+                        .get(src_id)
+                        .ok_or_else(|| HoduError::InternalError(format!("Source tensor {src_id:?} not found")))?;
+                    self.execute_memory_op_with_src(*memory_op, input_storage, src_storage, compiled_node)
+                } else {
+                    self.execute_memory_op(*memory_op, input_storage, compiled_node)
+                }
             },
             _ => Err(HoduError::InternalError(format!(
                 "Operation {:?} not implemented yet",
@@ -736,6 +743,27 @@ impl HoduExecutor {
 
                 // Execute contiguous operation on storage
                 input_storage.contiguous(input_layout)
+            },
+            MemoryOp::Set => Err(HoduError::InternalError(
+                "Set operation requires source tensor".to_string(),
+            )),
+        }
+    }
+
+    fn execute_memory_op_with_src(
+        &self,
+        memory_op: MemoryOp,
+        _input_storage: &SharedStorage,
+        src_storage: &SharedStorage,
+        _compiled_node: &CompiledNode,
+    ) -> HoduResult<HoduStorage> {
+        match memory_op {
+            MemoryOp::Contiguous => Err(HoduError::InternalError(
+                "Contiguous operation doesn't need source tensor".to_string(),
+            )),
+            MemoryOp::Set => {
+                // Copy data from src storage (shapes already validated)
+                Ok(src_storage.as_ref().clone())
             },
         }
     }

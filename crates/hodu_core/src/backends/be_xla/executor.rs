@@ -940,17 +940,32 @@ impl XlaExecutor {
             },
 
             // Memory Operations
-            Op::Memory(op, _) => {
-                if input_ops.len() != 1 {
-                    return Err(HoduError::InternalError(
-                        "Memory operation requires exactly 1 input".to_string(),
-                    ));
-                }
+            Op::Memory(op, _, src_tensor_id) => {
                 match op {
                     MemoryOp::Contiguous => {
+                        if input_ops.len() != 1 {
+                            return Err(HoduError::InternalError(
+                                "Contiguous operation requires exactly 1 input".to_string(),
+                            ));
+                        }
                         // XLA tensors are always contiguous in memory
                         // So we can just return the input unchanged
                         Ok(input_ops[0].clone())
+                    },
+                    MemoryOp::Set => {
+                        if src_tensor_id.is_none() {
+                            return Err(HoduError::InternalError(
+                                "Set operation requires source tensor".to_string(),
+                            ));
+                        }
+                        if input_ops.len() != 2 {
+                            return Err(HoduError::InternalError(
+                                "Set operation requires exactly 2 inputs".to_string(),
+                            ));
+                        }
+                        // For XLA, set operation returns the source tensor (input_ops[1])
+                        // input_ops[0] is destination, input_ops[1] is source
+                        Ok(input_ops[1].clone())
                     },
                 }
             },
