@@ -154,17 +154,42 @@ let mut script = builder.build()?;
 | `metal` | Apple Metal GPU support | Metal framework (macOS) | - |
 | `xla` | Google XLA compiler backend | XLA libraries | `std` |
 
-## Supported platforms
+## Supported Platforms
+
+### Standard Environments
+
+| Platform | Architecture | Backend | Features | Status |
+|----------|-------------|---------|----------|--------|
+| **Linux** | x86_64 | HODU (CPU) | `std` | 🧪 Experimental |
+| | x86_64 | HODU (CUDA) | `std`, `cuda` | 🚧 In Development |
+| | x86_64 | XLA | `std`, `xla` | 🧪 Experimental |
+| | aarch64 | HODU (CPU) | `std` | 🧪 Experimental |
+| **macOS** | x86_64 | HODU (CPU) | `std` | 🧪 Experimental |
+| | x86_64 | HODU (Metal) | `std`, `metal` | 🚧 In Development |
+| | x86_64 | XLA | `std`, `xla` | 🧪 Experimental |
+| | aarch64 (Apple Silicon) | HODU (CPU) | `std` | ✅ Stable |
+| | aarch64 (Apple Silicon) | HODU (Metal) | `std`, `metal` | 🚧 In Development |
+| | aarch64 (Apple Silicon) | XLA | `std`, `xla` | ✅ Stable |
+| **Windows** | x86_64 | HODU (CPU) | `std` | 🧪 Experimental |
+| | x86_64 | HODU (CUDA) | `std`, `cuda` | 🚧 In Development |
+| | x86_64 | XLA | `std`, `xla` | 🧪 Experimental |
+
+### Embedded Environments
+
+🧪 **Experimental**: Embedded platforms (ARM Cortex-M, RISC-V, Embedded Linux) are supported via `no_std` feature but are experimental and not extensively tested in production environments.
 
 ## Docs
 
-- [CHANGELOG](docs/CHANGELOG.md) - Project changelog and version history
-- [TODOS](docs/TODOS.md) - Planned features and improvements
-- [Operations Documentation](docs/ops.md) - Supported tensor operations
-- [Gradient Tape Management Guide (Korean)](docs/tape_ko.md) - 그래디언트 테이프 관리 가이드
-- [Gradient Tape Management Guide (English)](docs/tape_en.md) - Gradient tape management guide
-- [Script Mode Guide (Korean)](docs/script_ko.md) - Script 모드 가이드
-- [Script Mode Guide (English)](docs/script_en.md) - Script mode guide
+- [CHANGELOG](CHANGELOG.md) - Project changelog and version history
+- [TODOS](TODOS.md) - Planned features and improvements
+
+- [Tensor Creation Guide (Korean)](docs/tensor_creation_ko.md) - 텐서 생성 가이드
+- [Tensor Creation Guide (English)](docs/tensor_creation_en.md) - Tensor creation guide
+- [Tensor Operations Guide](docs/ops.md) - Tensor operations guide (only English)
+- [Builder/Script Guide (Korean)](docs/builder_and_script_ko.md) - Builder/Script 가이드
+- [Builder/Script Guide (English)](docs/builder_and_script_en.md) - Builder/Script guide
+- [Gradient Tape Management Guide (Korean)](docs/tensor_gradient_tape_ko.md) - 그래디언트 테이프 관리 가이드
+- [Gradient Tape Management Guide (English)](docs/tensor_gradient_tape_en.md) - Gradient tape management guide
 
 ## Inspired by
 

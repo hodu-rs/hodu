@@ -1,8 +1,109 @@
-# Script Mode Guide
+# Builder and Script Guide
+
+## Overview
+
+Hodu provides two execution modes:
+
+1. **Dynamic Execution**: Execute operations immediately
+2. **Static Execution**: Build graph with Builder, then compile and execute with Script
+
+**Builder** is a tool for defining computation graphs, and **Script** is an object that compiles and executes that graph.
+
+## What is Builder?
+
+Builder provides a context for incrementally constructing a computation graph.
+
+### Builder Lifecycle
+
+```rust
+use hodu::prelude::*;
+
+// 1. Create Builder
+let builder = Builder::new("my_script".to_string());
+
+// 2. Start Builder (activate context)
+builder.start()?;
+
+// 3. All tensor operations in this section are recorded to the graph
+let x = Tensor::input("x", &[2, 3])?;
+let y = Tensor::input("y", &[3, 4])?;
+let result = x.matmul(&y)?;
+
+// 4. Register outputs
+builder.add_output("result", result)?;
+
+// 5. End Builder (deactivate context)
+builder.end()?;
+
+// 6. Build Script
+let mut script = builder.build()?;
+```
+
+### Key Builder Methods
+
+#### Builder::new()
+
+Create a new Builder:
+
+```rust
+let builder = Builder::new("computation_name".to_string());
+```
+
+#### builder.start()
+
+Activate the Builder context. All subsequent tensor operations will be recorded to the graph:
+
+```rust
+builder.start()?;
+
+// Operations are now recorded
+let a = Tensor::input("a", &[10])?;
+let b = a.mul_scalar(2.0)?;
+```
+
+**Important**: `Tensor::input()` can only be used after calling `start()`.
+
+#### builder.add_input()
+
+Explicitly register an input placeholder (usually called automatically by `Tensor::input()`):
+
+```rust
+let x = Tensor::input("x", &[10, 20])?;  // Automatically calls add_input
+```
+
+#### builder.add_output()
+
+Register output tensors:
+
+```rust
+builder.add_output("result", result_tensor)?;
+builder.add_output("loss", loss_tensor)?;
+```
+
+Multiple outputs can be registered.
+
+#### builder.end()
+
+Deactivate the Builder context:
+
+```rust
+builder.end()?;
+
+// Operations are no longer recorded to the graph
+let c = Tensor::randn(&[5], 0.0, 1.0)?;  // Dynamic execution
+```
+
+#### builder.build()
+
+Create a Script from the recorded graph:
+
+```rust
+let mut script = builder.build()?;
+```
 
 ## What is Script?
 
-Script is a feature that enables optimized execution by pre-compiling computation graphs. Unlike dynamic execution mode, operations are first converted to IR (Intermediate Representation), then optimized and executed by backends (HODU, XLA).
+Script is an object that compiles and executes computation graphs defined by Builder with optimization. Unlike dynamic execution mode, operations are first converted to IR (Intermediate Representation), then optimized and executed by backends (HODU, XLA).
 
 ## Basic Usage
 
