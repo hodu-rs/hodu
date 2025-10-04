@@ -988,7 +988,12 @@ impl Tensor {
         if builder::is_builder_active() {
             let (tensor_id, result) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
             let op = Op::Shape(op::ShapeOp::Transpose, self.id());
-            register_operation_in_builder(op, tensor_id, vec![self.get_layout()], vec![new_layout]);
+            register_operation_in_builder(op.clone(), tensor_id, vec![self.get_layout()], vec![new_layout]);
+
+            if self.is_requires_grad() {
+                gradient::record_operation(tensor_id, op, vec![self.id()])?;
+            }
+
             Ok(result)
         } else {
             // Tensor is contiguous, we can share storage
