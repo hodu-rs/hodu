@@ -3,7 +3,7 @@ members = ["crates/*"]
 
 [package]
 name = "hodu"
-version = "0.1.0"
+version = "0.1.1"
 description = "A user-friendly ML framework built in Rust for rapid prototyping and embedded deployment"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
