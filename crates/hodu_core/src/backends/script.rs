@@ -31,8 +31,8 @@ impl Default for Script {
     }
 }
 
-impl std::fmt::Debug for Script {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for Script {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Script")
             .field("ir", &self.ir)
             .field("backend", &self.backend)
