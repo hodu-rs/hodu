@@ -51,18 +51,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     builder.end()?;
 
     let mut script = builder.build()?;
+    #[cfg(feature = "xla")]
+    script.set_backend(Backend::XLA);
 
     script.add_input("input", input_tensor);
     script.add_input("target", target_tensor);
 
-    let start = Instant::now();
+    println!("Compiling script...");
+    let compile_start = Instant::now();
+    script.compile()?;
+    let compile_elapsed = compile_start.elapsed();
+    println!("Compilation time: {:?}", compile_elapsed);
+
+    println!("Running script...");
+    let run_start = Instant::now();
     let output = script.run()?;
-    let elapsed = start.elapsed();
+    let run_elapsed = run_start.elapsed();
 
     println!("Loss: {}", output["loss"]);
     println!("Weight: {}", output["weight"]);
     println!("Bias: {}", output["bias"]);
-    println!("Total time: {:?}", elapsed);
+    println!("Execution time: {:?}", run_elapsed);
+    println!("Total time: {:?}", compile_elapsed + run_elapsed);
 
     Ok(())
 }
