@@ -1,12 +1,12 @@
 [package]
 name = "hodu_core"
-version = "0.1.1"
+version = "0.1.2"
 description = "hodu core"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 publish = true
-repository = "https://github.com/miniex/hodu"
+repository = "https://github.com/hodu-rs/hodu"
 
 [features]
 std = [
@@ -31,7 +31,7 @@ dashmap = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 float8 = { workspace = true }
 half = { workspace = true, default-features = false }
-# hodu_cuda_kernels = { path = "../hodu_cuda_kernels", version = "0.1.1", optional = true }
+# hodu_cuda_kernels = { path = "../hodu_cuda_kernels", version = "0.1.2", optional = true }
 hodu_xla = { workspace = true, optional = true }
 num-traits = { workspace = true, default-features = false }
 paste = { workspace = true }
