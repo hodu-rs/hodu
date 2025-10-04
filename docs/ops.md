@@ -1,93 +1,167 @@
-# binary
-add
-sub
-mul
-div
-pow
-maximum
-minimum
-# binary logical
-logical_and
-logical_or
-logical_xor
-# cmp
-eq
-ne
-lt
-le
-gt
-ge
-# cmp scalar
-eq_scalar
-ne_scalar
-lt_scalar
-le_scalar
-gt_scalar
-ge_scalar
-# unary
-neg
-abs
-sign
-square
-relu
-sigmoid
-tanh
-gelu
-sin
-cos
-tan
-ln
-log10
-log2
-exp
-exp10
-exp2
-softplus
-recip
-sqrt
-# unary logical
-logical_not
-# unary scalar
-add_scalar
-sub_scalar
-mul_scalar
-div_scalar
-pow_scalar
-maximum_scalar
-minimum_scalar
-leaky_relu
-elu
-# matrix
-matmul
-# reduce
-sum
-- sum_all
-- sum_to_shape
-mean
-- mean_all
-max
-min
-prod
-std
-- std_all
-var
-- var_all
-norm
-- l2_norm
-- l1_norm (abs + sum)
-# shape
-reshape
-- view
-flatten
-squeeze
-unsqueeze
-broadcast
-- broadcast_like
-- broadcast_left
-transpose
-- t
-# index - TODO
-# cast
-to_dtype
-# memory
-contiguous
+# Tensor Operations
+
+This document lists all supported tensor operations in Hodu.
+
+## Binary Operations
+
+Element-wise operations between two tensors.
+
+| Operation | Description |
+|-----------|-------------|
+| `add` | Element-wise addition: `a + b` |
+| `sub` | Element-wise subtraction: `a - b` |
+| `mul` | Element-wise multiplication: `a * b` |
+| `div` | Element-wise division: `a / b` |
+| `pow` | Element-wise power: `a^b` |
+| `maximum` | Element-wise maximum: `max(a, b)` |
+| `minimum` | Element-wise minimum: `min(a, b)` |
+
+## Binary Logical Operations
+
+Logical operations between two tensors.
+
+| Operation | Description |
+|-----------|-------------|
+| `logical_and` | Logical AND: `a && b` |
+| `logical_or` | Logical OR: `a \|\| b` |
+| `logical_xor` | Logical XOR: `a ^ b` |
+
+## Comparison Operations
+
+Element-wise comparison between two tensors, returns boolean tensor.
+
+| Operation | Description |
+|-----------|-------------|
+| `eq` | Equal: `a == b` |
+| `ne` | Not equal: `a != b` |
+| `lt` | Less than: `a < b` |
+| `le` | Less than or equal: `a <= b` |
+| `gt` | Greater than: `a > b` |
+| `ge` | Greater than or equal: `a >= b` |
+
+## Comparison with Scalar
+
+Element-wise comparison between tensor and scalar.
+
+| Operation | Description |
+|-----------|-------------|
+| `eq_scalar` | Equal to scalar: `a == c` |
+| `ne_scalar` | Not equal to scalar: `a != c` |
+| `lt_scalar` | Less than scalar: `a < c` |
+| `le_scalar` | Less than or equal to scalar: `a <= c` |
+| `gt_scalar` | Greater than scalar: `a > c` |
+| `ge_scalar` | Greater than or equal to scalar: `a >= c` |
+
+## Unary Operations
+
+Element-wise operations on a single tensor.
+
+### Basic Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `neg` | Negation: `-a` |
+| `abs` | Absolute value: `\|a\|` |
+| `sign` | Sign function: `sign(a)` |
+| `square` | Square: `a²` |
+| `sqrt` | Square root: `√a` |
+| `recip` | Reciprocal: `1/a` |
+
+### Activation Functions
+
+| Operation | Description |
+|-----------|-------------|
+| `relu` | ReLU: `max(0, a)` |
+| `sigmoid` | Sigmoid: `1 / (1 + exp(-a))` |
+| `tanh` | Hyperbolic tangent |
+| `gelu` | Gaussian Error Linear Unit |
+| `softplus` | Softplus: `ln(1 + exp(a))` |
+
+### Trigonometric Functions
+
+| Operation | Description |
+|-----------|-------------|
+| `sin` | Sine function |
+| `cos` | Cosine function |
+| `tan` | Tangent function |
+
+### Exponential and Logarithmic Functions
+
+| Operation | Description |
+|-----------|-------------|
+| `exp` | Natural exponential: `e^a` |
+| `exp2` | Base-2 exponential: `2^a` |
+| `exp10` | Base-10 exponential: `10^a` |
+| `ln` | Natural logarithm: `log_e(a)` |
+| `log2` | Base-2 logarithm: `log_2(a)` |
+| `log10` | Base-10 logarithm: `log_10(a)` |
+
+## Unary Logical Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `logical_not` | Logical NOT: `!a` |
+
+## Unary Operations with Scalar
+
+Element-wise operations between tensor and scalar.
+
+| Operation | Description |
+|-----------|-------------|
+| `add_scalar` | Add scalar: `a + c` |
+| `sub_scalar` | Subtract scalar: `a - c` |
+| `mul_scalar` | Multiply by scalar: `a * c` |
+| `div_scalar` | Divide by scalar: `a / c` |
+| `pow_scalar` | Power with scalar exponent: `a^c` |
+| `maximum_scalar` | Maximum with scalar: `max(a, c)` |
+| `minimum_scalar` | Minimum with scalar: `min(a, c)` |
+| `leaky_relu` | Leaky ReLU with slope parameter |
+| `elu` | ELU with alpha parameter |
+
+## Matrix Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `matmul` | Matrix multiplication: `A @ B` |
+
+## Reduction Operations
+
+Operations that reduce tensor dimensions.
+
+| Operation | Description | Variants |
+|-----------|-------------|----------|
+| `sum` | Sum along specified dimensions | `sum_all`, `sum_to_shape` |
+| `mean` | Mean along specified dimensions | `mean_all` |
+| `max` | Maximum along specified dimensions | - |
+| `min` | Minimum along specified dimensions | - |
+| `prod` | Product along specified dimensions | - |
+| `std` | Standard deviation along specified dimensions | `std_all` |
+| `var` | Variance along specified dimensions | `var_all` |
+| `norm` | Norm along specified dimensions | `l2_norm`, `l1_norm` |
+
+**Note**: `l1_norm` is implemented as a combination of `abs` and `sum` operations
+
+## Shape Operations
+
+Operations that manipulate tensor shape and layout.
+
+| Operation | Description | Aliases |
+|-----------|-------------|---------|
+| `reshape` | Change tensor shape | `view` |
+| `flatten` | Flatten tensor to 1D | - |
+| `squeeze` | Remove dimensions of size 1 | - |
+| `unsqueeze` | Add dimension of size 1 | - |
+| `broadcast` | Broadcast to larger shape | `broadcast_like`, `broadcast_left` |
+| `transpose` | Swap two dimensions | `t` (for last two dims) |
+
+## Type Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `to_dtype` | Cast tensor to different data type |
+
+## Memory Operations
+
+| Operation | Description |
+|-----------|-------------|
+| `contiguous` | Ensure tensor has contiguous memory layout |
