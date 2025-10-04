@@ -2,19 +2,46 @@ pub(crate) mod ir;
 
 use crate::error::{HoduError, HoduResult};
 use crate::{
-    backends::executor::{CompileOptions, ExecutionOutputs, Executor, ExecutorT},
+    backends::executor::{CompileOptions, CompiledScript, ExecutionOutputs, Executor, ExecutorT},
     compat::*,
     tensor::Tensor,
     types::{backend::Backend, device::Device},
 };
 use ir::ScriptIR;
 
-#[derive(Default, Debug)]
 pub struct Script {
     ir: Option<ScriptIR>,
     backend: Option<Backend>,
     device: Option<Device>,
     runtime_inputs: HashMap<String, Tensor>,
+    compiled: Option<CompiledScript>,
+    executor: Option<Executor>,
+}
+
+impl Default for Script {
+    fn default() -> Self {
+        Self {
+            ir: None,
+            backend: None,
+            device: None,
+            runtime_inputs: HashMap::new(),
+            compiled: None,
+            executor: None,
+        }
+    }
+}
+
+impl std::fmt::Debug for Script {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Script")
+            .field("ir", &self.ir)
+            .field("backend", &self.backend)
+            .field("device", &self.device)
+            .field("runtime_inputs", &self.runtime_inputs)
+            .field("compiled", &self.compiled.is_some())
+            .field("executor", &self.executor.is_some())
+            .finish()
+    }
 }
 
 impl Script {
@@ -25,6 +52,8 @@ impl Script {
             backend: None,
             device: None,
             runtime_inputs: HashMap::new(),
+            compiled: None,
+            executor: None,
         }
     }
 
@@ -34,6 +63,8 @@ impl Script {
             backend: None,
             device: None,
             runtime_inputs: HashMap::new(),
+            compiled: None,
+            executor: None,
         }
     }
 
@@ -61,6 +92,9 @@ impl Script {
 
     pub fn set_backend(&mut self, backend: Backend) {
         self.backend = Some(backend);
+        // Invalidate cached compilation when backend changes
+        self.compiled = None;
+        self.executor = None;
     }
 
     pub fn get_device(&self) -> Option<Device> {
@@ -69,6 +103,9 @@ impl Script {
 
     pub fn set_device(&mut self, device: Device) {
         self.device = Some(device);
+        // Invalidate cached compilation when device changes
+        self.compiled = None;
+        self.executor = None;
     }
 
     /// Add an input tensor for script execution
@@ -111,27 +148,22 @@ impl Script {
         &self.runtime_inputs
     }
 
-    /// Execute the script with previously added inputs
+    /// Compile the script for execution
     ///
-    /// # Returns
-    /// * `HoduResult<ExecutionOutputs>` - Output tensors mapped by name
+    /// This method compiles the script IR into an optimized executable form.
+    /// The compiled result is cached, so subsequent calls to `run()` will reuse it.
     ///
     /// # Example
     /// ```
-    /// script.add_input("x", tensor_x);
-    /// script.add_input("y", tensor_y);
-    /// let outputs = script.run()?;
-    /// let result = &outputs["result"];
+    /// script.compile()?;  // Explicit compilation (optional)
+    /// script.run()?;      // Uses cached compilation
     /// ```
-    pub fn run(&self) -> HoduResult<ExecutionOutputs> {
+    pub fn compile(&mut self) -> HoduResult<()> {
         // Validate that we have IR
         let _ir = self
             .ir
             .as_ref()
-            .ok_or_else(|| HoduError::ScriptValidationFailed("Cannot run script without IR".to_string()))?;
-
-        // Convert runtime inputs to ExecutionInputs format
-        let inputs: HashMap<&str, Tensor> = self.runtime_inputs.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+            .ok_or_else(|| HoduError::ScriptValidationFailed("Cannot compile script without IR".to_string()))?;
 
         // Determine target device
         let target_device = self.device.unwrap_or(Device::CPU);
@@ -147,8 +179,42 @@ impl Script {
 
         let compiled_script = executor.compile(self, compile_options)?;
 
-        // Execute the compiled script
-        executor.execute(&compiled_script, inputs)
+        // Cache the compiled script and executor
+        self.compiled = Some(compiled_script);
+        self.executor = Some(executor);
+
+        Ok(())
+    }
+
+    /// Execute the script with previously added inputs
+    ///
+    /// If the script hasn't been compiled yet, it will be compiled automatically.
+    /// Subsequent calls will reuse the cached compilation.
+    ///
+    /// # Returns
+    /// * `HoduResult<ExecutionOutputs>` - Output tensors mapped by name
+    ///
+    /// # Example
+    /// ```
+    /// script.add_input("x", tensor_x);
+    /// script.add_input("y", tensor_y);
+    /// let outputs = script.run()?;
+    /// let result = &outputs["result"];
+    /// ```
+    pub fn run(&mut self) -> HoduResult<ExecutionOutputs> {
+        // Compile if not already compiled
+        if self.compiled.is_none() || self.executor.is_none() {
+            self.compile()?;
+        }
+
+        // Convert runtime inputs to ExecutionInputs format
+        let inputs: HashMap<&str, Tensor> = self.runtime_inputs.iter().map(|(k, v)| (k.as_str(), *v)).collect();
+
+        // Execute using cached compilation
+        let executor = self.executor.as_ref().unwrap();
+        let compiled = self.compiled.as_ref().unwrap();
+
+        executor.execute(compiled, inputs)
     }
 
     /// Create appropriate executor based on backend and device settings

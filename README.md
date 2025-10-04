@@ -160,9 +160,11 @@ let mut script = builder.build()?;
 
 - [CHANGELOG](docs/CHANGELOG.md) - Project changelog and version history
 - [TODOS](docs/TODOS.md) - Planned features and improvements
+- [Operations Documentation](docs/ops.md) - Supported tensor operations
 - [Gradient Tape Management Guide (Korean)](docs/tape_ko.md) - 그래디언트 테이프 관리 가이드
 - [Gradient Tape Management Guide (English)](docs/tape_en.md) - Gradient tape management guide
-- [Operations Documentation](docs/ops.md) - Supported tensor operations
+- [Script Mode Guide (Korean)](docs/script_ko.md) - Script 모드 가이드
+- [Script Mode Guide (English)](docs/script_en.md) - Script mode guide
 
 ## Inspired by
 
