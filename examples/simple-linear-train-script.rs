@@ -1,0 +1,68 @@
+use hodu::prelude::*;
+use std::time::Instant;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let input_data: Vec<Vec<f32>> = (0..10000)
+        .map(|i| {
+            vec![
+                (i % 100) as f32 / 100.0,
+                ((i % 100) + 1) as f32 / 100.0,
+                ((i % 100) + 2) as f32 / 100.0,
+            ]
+        })
+        .collect();
+    let target_data: Vec<Vec<f32>> = (0..10000).map(|i| vec![((i % 100) * 10) as f32 / 1000.0]).collect();
+
+    let input_tensor = Tensor::new(input_data)?;
+    let target_tensor = Tensor::new(target_data)?;
+
+    // Build script
+    let builder = Builder::new("linear_training".to_string());
+    builder.start()?;
+
+    let mut linear = Linear::new(3, 1, true, DType::F32)?;
+    let mse_loss = MSE::new();
+    let mut optimizer = SGD::new(0.01);
+
+    let input = Tensor::input("input", &[10000, 3])?;
+    input.requires_grad()?;
+    let target = Tensor::input("target", &[10000, 1])?;
+
+    let epochs = 1000;
+    let mut final_loss = Tensor::full(&[], 0.0)?;
+
+    for _ in 0..epochs {
+        let pred = linear.forward(&input)?;
+        let loss = mse_loss.forward((&pred, &target))?;
+
+        loss.backward()?;
+
+        optimizer.step(&mut linear.parameters())?;
+        optimizer.zero_grad(&mut linear.parameters())?;
+
+        final_loss = loss;
+    }
+
+    let params = linear.parameters();
+    builder.add_output("loss", final_loss)?;
+    builder.add_output("weight", *params[0])?;
+    builder.add_output("bias", *params[1])?;
+
+    builder.end()?;
+
+    let mut script = builder.build()?;
+
+    script.add_input("input", input_tensor);
+    script.add_input("target", target_tensor);
+
+    let start = Instant::now();
+    let output = script.run()?;
+    let elapsed = start.elapsed();
+
+    println!("Loss: {}", output["loss"]);
+    println!("Weight: {}", output["weight"]);
+    println!("Bias: {}", output["bias"]);
+    println!("Total time: {:?}", elapsed);
+
+    Ok(())
+}
