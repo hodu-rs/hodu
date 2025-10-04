@@ -530,6 +530,34 @@ impl Tensor {
         self.reduce_operation(op::ReduceOp::Sum, &[], false)
     }
 
+    pub fn sum_to_shape(&self, target_shape: &[usize]) -> HoduResult<Self> {
+        let current_layout = self.get_layout();
+        let current_shape = current_layout.get_shape();
+
+        if current_shape == target_shape {
+            return Ok(*self);
+        }
+
+        let mut result = *self;
+
+        if current_shape.len() > target_shape.len() {
+            let dims_to_sum: Vec<usize> = (0..(current_shape.len() - target_shape.len())).collect();
+            for &dim in dims_to_sum.iter().rev() {
+                result = result.sum(&[dim], false)?;
+            }
+        }
+
+        let result_layout = result.get_layout();
+        let result_shape = result_layout.get_shape();
+        for (i, (&target_dim, &current_dim)) in target_shape.iter().zip(result_shape.iter()).enumerate() {
+            if target_dim == 1 && current_dim > 1 {
+                result = result.sum(&[i], true)?;
+            }
+        }
+
+        Ok(result)
+    }
+
     pub fn mean(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(op::ReduceOp::Mean, dims, keep_dim)
     }

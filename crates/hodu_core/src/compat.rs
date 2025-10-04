@@ -2,6 +2,8 @@
 //!
 //! Internal module for handling differences between std and no-std environments.
 
+#![allow(unused_imports)]
+
 // Basic types and formatting
 #[cfg(not(feature = "std"))]
 pub use alloc::{
@@ -48,12 +50,17 @@ pub use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 // Core traits and functions
 #[cfg(not(feature = "std"))]
-pub use core::{fmt, ops};
+pub use core::{
+    cell::{Cell, RefCell},
+    fmt, ops,
+};
 
 #[cfg(feature = "std")]
-pub use std::{fmt, ops};
+pub use std::{
+    cell::{Cell, RefCell},
+    fmt, ops, thread_local,
+};
 
 // Debug printing
 #[cfg(feature = "std")]
-#[allow(unused_imports)]
 pub use std::{eprintln, println};

@@ -50,20 +50,33 @@ pub trait VjpCompute {
 
 impl VjpCompute for BinaryOp {
     fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
+        // Get input shapes for gradient reduction
+        let input_a_shape = tensor_from_id(inputs[0]).get_layout().get_shape().to_vec();
+        let input_b_shape = tensor_from_id(inputs[1]).get_layout().get_shape().to_vec();
+
         match self {
-            BinaryOp::Add => Ok(vec![grad_output, grad_output]),
-            BinaryOp::Sub => Ok(vec![grad_output, create_neg_tensor(grad_output)?]),
+            BinaryOp::Add => Ok(vec![
+                create_sum_to_shape_tensor(grad_output, &input_a_shape)?,
+                create_sum_to_shape_tensor(grad_output, &input_b_shape)?,
+            ]),
+            BinaryOp::Sub => Ok(vec![
+                create_sum_to_shape_tensor(grad_output, &input_a_shape)?,
+                create_sum_to_shape_tensor(create_neg_tensor(grad_output)?, &input_b_shape)?,
+            ]),
             BinaryOp::Mul => Ok(vec![
-                create_mul_tensor(grad_output, inputs[1])?,
-                create_mul_tensor(grad_output, inputs[0])?,
+                create_sum_to_shape_tensor(create_mul_tensor(grad_output, inputs[1])?, &input_a_shape)?,
+                create_sum_to_shape_tensor(create_mul_tensor(grad_output, inputs[0])?, &input_b_shape)?,
             ]),
             BinaryOp::Div => {
-                let grad_a = create_div_tensor(grad_output, inputs[1])?;
+                let grad_a_raw = create_div_tensor(grad_output, inputs[1])?;
                 let b_squared = create_mul_tensor(inputs[1], inputs[1])?;
                 let grad_output_mul_a = create_mul_tensor(grad_output, inputs[0])?;
-                let grad_a_div_b_sq = create_div_tensor(grad_output_mul_a, b_squared)?;
-                let neg_grad_a_div_b_sq = create_neg_tensor(grad_a_div_b_sq)?;
-                Ok(vec![grad_a, neg_grad_a_div_b_sq])
+                let grad_b_div_b_sq = create_div_tensor(grad_output_mul_a, b_squared)?;
+                let grad_b_raw = create_neg_tensor(grad_b_div_b_sq)?;
+                Ok(vec![
+                    create_sum_to_shape_tensor(grad_a_raw, &input_a_shape)?,
+                    create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,
+                ])
             },
             BinaryOp::Pow => {
                 // d/dx (x^y) = y * x^(y-1)
@@ -75,30 +88,37 @@ impl VjpCompute for BinaryOp {
                 let dtype = x_tensor.get_dtype();
                 let one = Scalar::one(dtype);
 
-                let grad_x = create_mul_tensor(
+                let grad_x_raw = create_mul_tensor(
                     grad_output,
                     create_mul_tensor(y, create_pow_tensor(x, create_sub_scalar_tensor(y, one)?)?)?,
                 )?;
-                let grad_y = create_mul_tensor(grad_output, create_mul_tensor(_output, create_ln_tensor(x)?)?)?;
+                let grad_y_raw = create_mul_tensor(grad_output, create_mul_tensor(_output, create_ln_tensor(x)?)?)?;
 
-                Ok(vec![grad_x, grad_y])
+                Ok(vec![
+                    create_sum_to_shape_tensor(grad_x_raw, &input_a_shape)?,
+                    create_sum_to_shape_tensor(grad_y_raw, &input_b_shape)?,
+                ])
             },
             BinaryOp::Maximum => {
                 // gradient goes to the larger input
                 let a_ge_b = create_ge_tensor(inputs[0], inputs[1])?; // a >= b mask
                 let b_gt_a = create_gt_tensor(inputs[1], inputs[0])?; // b > a mask
+                let grad_a_raw = create_mul_tensor(grad_output, a_ge_b)?;
+                let grad_b_raw = create_mul_tensor(grad_output, b_gt_a)?;
                 Ok(vec![
-                    create_mul_tensor(grad_output, a_ge_b)?, // grad to a if a >= b
-                    create_mul_tensor(grad_output, b_gt_a)?, // grad to b if b > a
+                    create_sum_to_shape_tensor(grad_a_raw, &input_a_shape)?,
+                    create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,
                 ])
             },
             BinaryOp::Minimum => {
                 // gradient goes to the smaller input
                 let a_le_b = create_le_tensor(inputs[0], inputs[1])?; // a <= b mask
                 let b_lt_a = create_lt_tensor(inputs[1], inputs[0])?; // b < a mask
+                let grad_a_raw = create_mul_tensor(grad_output, a_le_b)?;
+                let grad_b_raw = create_mul_tensor(grad_output, b_lt_a)?;
                 Ok(vec![
-                    create_mul_tensor(grad_output, a_le_b)?, // grad to a if a <= b
-                    create_mul_tensor(grad_output, b_lt_a)?, // grad to b if b < a
+                    create_sum_to_shape_tensor(grad_a_raw, &input_a_shape)?,
+                    create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,
                 ])
             },
         }
@@ -669,9 +689,124 @@ impl VjpCompute for ShapeOp {
     }
 }
 
-static COMPUTATION_TAPE: Mutex<Vec<(TensorId, Op, Vec<TensorId>)>> = Mutex::new(Vec::new());
+#[derive(Clone)]
+struct TapeEntry {
+    output_id: TensorId,
+    op: Op,
+    input_ids: Vec<TensorId>,
+}
+
+// Multiple tapes, one per context
+#[cfg(feature = "std")]
+static GRADIENT_TAPES: LazyLock<Mutex<HashMap<usize, Vec<TapeEntry>>>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert(0, Vec::new()); // Default context
+    Mutex::new(map)
+});
+
+#[cfg(not(feature = "std"))]
+static GRADIENT_TAPES: LazyLock<Mutex<HashMap<usize, Vec<TapeEntry>>>> = LazyLock::new(|| {
+    let mut map = HashMap::new();
+    map.insert(0, Vec::new()); // Default context
+    Mutex::new(map)
+});
+
+static CONTEXT_COUNTER: AtomicUsize = AtomicUsize::new(1); // Start from 1 (0 is default)
+
+#[cfg(feature = "std")]
+thread_local! {
+    static CONTEXT_STACK: RefCell<Vec<usize>> = RefCell::new(vec![]);
+}
+
+#[cfg(not(feature = "std"))]
+static CONTEXT_STACK: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+
+// Helper functions for context stack access
+#[cfg(feature = "std")]
+fn push_context(context_id: usize) {
+    CONTEXT_STACK.with(|stack| {
+        stack.borrow_mut().push(context_id);
+    });
+}
+
+#[cfg(not(feature = "std"))]
+fn push_context(context_id: usize) {
+    CONTEXT_STACK.lock().push(context_id);
+}
+
+#[cfg(feature = "std")]
+fn pop_context() {
+    CONTEXT_STACK.with(|stack| {
+        stack.borrow_mut().pop();
+    });
+}
+
+#[cfg(not(feature = "std"))]
+fn pop_context() {
+    CONTEXT_STACK.lock().pop();
+}
 
 static IS_COMPUTING_GRADIENTS: AtomicBool = AtomicBool::new(false);
+
+/// Auto-cleaning gradient context using RAII
+pub struct GradientContext {
+    context_id: usize,
+}
+
+impl GradientContext {
+    pub fn new() -> Self {
+        let context_id = CONTEXT_COUNTER.fetch_add(1, Ordering::Relaxed);
+
+        // Push to context stack
+        push_context(context_id);
+
+        // Initialize empty tape
+        #[cfg(feature = "std")]
+        {
+            GRADIENT_TAPES.lock().unwrap().insert(context_id, Vec::new());
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            GRADIENT_TAPES.lock().insert(context_id, Vec::new());
+        }
+
+        Self { context_id }
+    }
+}
+
+impl Drop for GradientContext {
+    fn drop(&mut self) {
+        // Don't drop the default context (ID 0)
+        if self.context_id == 0 {
+            return;
+        }
+
+        // Pop from context stack
+        pop_context();
+
+        // Remove tape
+        #[cfg(feature = "std")]
+        {
+            GRADIENT_TAPES.lock().unwrap().remove(&self.context_id);
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            GRADIENT_TAPES.lock().remove(&self.context_id);
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+fn get_active_context() -> usize {
+    CONTEXT_STACK.with(|stack| {
+        stack.borrow().last().copied().unwrap_or(0) // Default to context 0
+    })
+}
+
+#[cfg(not(feature = "std"))]
+fn get_active_context() -> usize {
+    CONTEXT_STACK.lock().last().copied().unwrap_or(0)
+}
 
 pub fn is_computing_gradients() -> bool {
     IS_COMPUTING_GRADIENTS.load(Ordering::Relaxed)
@@ -679,29 +814,87 @@ pub fn is_computing_gradients() -> bool {
 
 pub fn record_operation(output_id: TensorId, op: Op, input_ids: Vec<TensorId>) -> HoduResult<()> {
     if !is_computing_gradients() {
-        let mut tape = {
+        let context_id = get_active_context();
+
+        let mut tapes = {
             #[cfg(feature = "std")]
             {
-                COMPUTATION_TAPE.lock().map_err(|_| HoduError::GradientTapeCorrupted)?
+                GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?
             }
             #[cfg(not(feature = "std"))]
             {
-                COMPUTATION_TAPE.lock()
+                GRADIENT_TAPES.lock()
             }
         };
-        tape.push((output_id, op, input_ids));
+
+        if let Some(tape) = tapes.get_mut(&context_id) {
+            tape.push(TapeEntry {
+                output_id,
+                op,
+                input_ids,
+            });
+        }
     }
     Ok(())
 }
 
-// pub fn clear_tape() {
-//     match COMPUTATION_TAPE.lock() {
-//         Ok(mut tape) => tape.clear(),
-//         Err(e) => {
-//             eprintln!("Warning: Failed to clear gradient tape: {e}");
-//         },
+// pub fn clear_all_tapes() {
+//     #[cfg(feature = "std")]
+//     {
+//         if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
+//             for tape in tapes.values_mut() {
+//                 tape.clear();
+//             }
+//         }
+//     }
+//     #[cfg(not(feature = "std"))]
+//     {
+//         let mut tapes = GRADIENT_TAPES.lock();
+//         for tape in tapes.values_mut() {
+//             tape.clear();
+//         }
 //     }
 // }
+
+/// Clear the default context tape (context 0)
+pub fn clear_default_context_tape() {
+    #[cfg(feature = "std")]
+    {
+        if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
+            if let Some(tape) = tapes.get_mut(&0) {
+                tape.clear();
+            }
+        }
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let mut tapes = GRADIENT_TAPES.lock();
+        if let Some(tape) = tapes.get_mut(&0) {
+            tape.clear();
+        }
+    }
+}
+
+/// Clear tape for active context
+pub fn clear_tape() {
+    let context_id = get_active_context();
+
+    #[cfg(feature = "std")]
+    {
+        if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
+            if let Some(tape) = tapes.get_mut(&context_id) {
+                tape.clear();
+            }
+        }
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let mut tapes = GRADIENT_TAPES.lock();
+        if let Some(tape) = tapes.get_mut(&context_id) {
+            tape.clear();
+        }
+    }
+}
 
 pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
     IS_COMPUTING_GRADIENTS.store(true, Ordering::Relaxed);
@@ -718,20 +911,24 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
         let mut gradients: HashMap<TensorId, TensorId> = HashMap::new();
         gradients.insert(loss_tensor_id, loss_grad_id);
 
+        // Get tape from active context
+        let context_id = get_active_context();
         let tape = {
             #[cfg(feature = "std")]
             {
-                COMPUTATION_TAPE.lock().map_err(|_| HoduError::GradientTapeCorrupted)?
+                let tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
+                tapes.get(&context_id).cloned().unwrap_or_default()
             }
             #[cfg(not(feature = "std"))]
             {
-                COMPUTATION_TAPE.lock()
+                let tapes = GRADIENT_TAPES.lock();
+                tapes.get(&context_id).cloned().unwrap_or_default()
             }
         };
 
-        for (output_id, op, input_ids) in tape.iter().rev() {
-            if let Some(&grad_output) = gradients.get(output_id) {
-                for &input_id in input_ids {
+        for entry in tape.iter().rev() {
+            if let Some(&grad_output) = gradients.get(&entry.output_id) {
+                for &input_id in &entry.input_ids {
                     if tensor::get(input_id).is_none() {
                         return Err(HoduError::TensorNotFound(input_id));
                     }
@@ -741,9 +938,9 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
                     return Err(HoduError::TensorNotFound(grad_output));
                 }
 
-                let input_grads = compute_vjp_for_op(op, input_ids, *output_id, grad_output)?;
+                let input_grads = compute_vjp_for_op(&entry.op, &entry.input_ids, entry.output_id, grad_output)?;
 
-                for (input_id, grad_id) in input_ids.iter().zip(input_grads.iter()) {
+                for (input_id, grad_id) in entry.input_ids.iter().zip(input_grads.iter()) {
                     if tensor::get(*grad_id).is_none() {
                         return Err(HoduError::TensorNotFound(*grad_id));
                     }

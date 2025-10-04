@@ -23,13 +23,6 @@ impl SGD {
         Ok(())
     }
 
-    pub fn zero_grad(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
-        for param in parameters.iter_mut() {
-            param.zero_grad()?;
-        }
-        Ok(())
-    }
-
     pub fn set_learning_rate(&mut self, learning_rate: impl Into<Scalar>) {
         self.learning_rate = learning_rate.into();
     }
