@@ -14,6 +14,7 @@ use crate::{
 pub use creation::{get_runtime_device, set_runtime_device};
 #[cfg(feature = "std")]
 use dashmap::DashMap;
+pub use gradient::{clear_default_context_tape, clear_tape, GradientContext};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]

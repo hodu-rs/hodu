@@ -184,6 +184,18 @@ where
     T: FormatValue,
 {
     let precision = f.precision();
+
+    // Check if all dimensions are 1 (scalar-like: [], [1], [1,1], etc.)
+    let is_scalar = shape.is_empty() || shape.iter().all(|&dim| dim == 1);
+
+    if is_scalar {
+        return write!(
+            f,
+            "{}",
+            data[0].format_value_with_precision(use_float_format, precision)
+        );
+    }
+
     match shape.len() {
         0 => {
             write!(
@@ -306,10 +318,17 @@ where
     }
 }
 
-fn debug_format_data<T>(data: &[T], use_float_format: bool) -> String
+fn debug_format_data<T>(data: &[T], use_float_format: bool, shape: &[usize]) -> String
 where
     T: FormatValue,
 {
+    // Check if all dimensions are 1 (scalar-like)
+    let is_scalar = shape.is_empty() || shape.iter().all(|&dim| dim == 1);
+
+    if is_scalar && !data.is_empty() {
+        return data[0].format_value(use_float_format);
+    }
+
     let mut result = String::from("[");
     let len = data.len();
 
@@ -486,105 +505,105 @@ impl fmt::Debug for Tensor {
             match self.get_dtype() {
                 DType::BOOL => {
                     if let Ok(data) = self.to_flatten_vec::<bool>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::F8E4M3 => {
                     if let Ok(data) = self.to_flatten_vec::<F8E4M3>() {
-                        write!(f, "{}", debug_format_data(&data, true))?;
+                        write!(f, "{}", debug_format_data(&data, true, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::F8E5M2 => {
                     if let Ok(data) = self.to_flatten_vec::<F8E5M2>() {
-                        write!(f, "{}", debug_format_data(&data, true))?;
+                        write!(f, "{}", debug_format_data(&data, true, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::BF16 => {
                     if let Ok(data) = self.to_flatten_vec::<bf16>() {
-                        write!(f, "{}", debug_format_data(&data, true))?;
+                        write!(f, "{}", debug_format_data(&data, true, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::F16 => {
                     if let Ok(data) = self.to_flatten_vec::<f16>() {
-                        write!(f, "{}", debug_format_data(&data, true))?;
+                        write!(f, "{}", debug_format_data(&data, true, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::F32 => {
                     if let Ok(data) = self.to_flatten_vec::<f32>() {
-                        write!(f, "{}", debug_format_data(&data, true))?;
+                        write!(f, "{}", debug_format_data(&data, true, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::F64 => {
                     if let Ok(data) = self.to_flatten_vec::<f64>() {
-                        write!(f, "{}", debug_format_data(&data, true))?;
+                        write!(f, "{}", debug_format_data(&data, true, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::U8 => {
                     if let Ok(data) = self.to_flatten_vec::<u8>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::U16 => {
                     if let Ok(data) = self.to_flatten_vec::<u16>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::U32 => {
                     if let Ok(data) = self.to_flatten_vec::<u32>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::U64 => {
                     if let Ok(data) = self.to_flatten_vec::<u64>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::I8 => {
                     if let Ok(data) = self.to_flatten_vec::<i8>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::I16 => {
                     if let Ok(data) = self.to_flatten_vec::<i16>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::I32 => {
                     if let Ok(data) = self.to_flatten_vec::<i32>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }
                 },
                 DType::I64 => {
                     if let Ok(data) = self.to_flatten_vec::<i64>() {
-                        write!(f, "{}", debug_format_data(&data, false))?;
+                        write!(f, "{}", debug_format_data(&data, false, shape))?;
                     } else {
                         write!(f, "<error>")?;
                     }

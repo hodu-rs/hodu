@@ -4,7 +4,7 @@ use crate::{
     tensor::{tensor_from_id, Tensor, TensorId},
 };
 
-// Basic binary operations
+// Binary operations
 pub fn create_add_tensor(a: TensorId, b: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     let tensor_b = tensor_from_id(b);
@@ -141,6 +141,12 @@ pub fn create_mul_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<Tenso
 pub fn create_pow_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     tensor_a.pow_scalar(scalar).map(|t| t.id())
+}
+
+// Reduce operations
+pub fn create_sum_to_shape_tensor(tensor_id: TensorId, target_shape: &[usize]) -> HoduResult<TensorId> {
+    let tensor = tensor_from_id(tensor_id);
+    tensor.sum_to_shape(target_shape).map(|t| t.id())
 }
 
 // Utility functions
