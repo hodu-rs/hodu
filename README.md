@@ -158,6 +158,12 @@ let mut script = builder.build()?;
 
 ## Docs
 
+- [CHANGELOG](docs/CHANGELOG.md) - Project changelog and version history
+- [TODOS](docs/TODOS.md) - Planned features and improvements
+- [Gradient Tape Management Guide (Korean)](docs/tape_ko.md) - 그래디언트 테이프 관리 가이드
+- [Gradient Tape Management Guide (English)](docs/tape_en.md) - Gradient tape management guide
+- [Operations Documentation](docs/ops.md) - Supported tensor operations
+
 ## Inspired by
 
 Hodu draws inspiration from the following amazing projects:
