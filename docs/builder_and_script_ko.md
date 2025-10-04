@@ -1,8 +1,109 @@
-# Script 모드 가이드
+# Builder와 Script 가이드
+
+## 개요
+
+Hodu는 두 가지 실행 모드를 제공합니다:
+
+1. **동적 실행 (Dynamic Execution)**: 연산을 즉시 실행
+2. **정적 실행 (Static Execution)**: Builder로 그래프를 구성한 후 Script로 컴파일하여 실행
+
+**Builder**는 연산 그래프를 정의하는 도구이고, **Script**는 그 그래프를 컴파일하고 실행하는 객체입니다.
+
+## Builder란?
+
+Builder는 연산 그래프를 단계적으로 구성하는 컨텍스트를 제공합니다.
+
+### Builder 생명주기
+
+```rust
+use hodu::prelude::*;
+
+// 1. Builder 생성
+let builder = Builder::new("my_script".to_string());
+
+// 2. Builder 시작 (컨텍스트 활성화)
+builder.start()?;
+
+// 3. 이 구간에서 모든 텐서 연산이 그래프에 기록됨
+let x = Tensor::input("x", &[2, 3])?;
+let y = Tensor::input("y", &[3, 4])?;
+let result = x.matmul(&y)?;
+
+// 4. 출력 등록
+builder.add_output("result", result)?;
+
+// 5. Builder 종료 (컨텍스트 비활성화)
+builder.end()?;
+
+// 6. Script 빌드
+let mut script = builder.build()?;
+```
+
+### Builder 주요 메서드
+
+#### Builder::new()
+
+새로운 Builder를 생성합니다:
+
+```rust
+let builder = Builder::new("computation_name".to_string());
+```
+
+#### builder.start()
+
+Builder 컨텍스트를 활성화합니다. 이후 모든 텐서 연산이 그래프에 기록됩니다:
+
+```rust
+builder.start()?;
+
+// 이제 연산들이 기록됨
+let a = Tensor::input("a", &[10])?;
+let b = a.mul_scalar(2.0)?;
+```
+
+**중요**: `start()` 호출 후에만 `Tensor::input()` 사용 가능합니다.
+
+#### builder.add_input()
+
+입력 placeholder를 명시적으로 등록합니다 (보통 `Tensor::input()`이 자동으로 호출):
+
+```rust
+let x = Tensor::input("x", &[10, 20])?;  // 자동으로 add_input 호출됨
+```
+
+#### builder.add_output()
+
+출력 텐서를 등록합니다:
+
+```rust
+builder.add_output("result", result_tensor)?;
+builder.add_output("loss", loss_tensor)?;
+```
+
+여러 출력을 등록할 수 있습니다.
+
+#### builder.end()
+
+Builder 컨텍스트를 비활성화합니다:
+
+```rust
+builder.end()?;
+
+// 이제 연산들이 더 이상 그래프에 기록되지 않음
+let c = Tensor::randn(&[5], 0.0, 1.0)?;  // 동적 실행
+```
+
+#### builder.build()
+
+기록된 그래프로부터 Script를 생성합니다:
+
+```rust
+let mut script = builder.build()?;
+```
 
 ## Script란?
 
-Script는 연산 그래프를 미리 컴파일하여 최적화된 실행을 가능하게 하는 기능입니다. 동적 실행 모드와 달리 연산들을 먼저 IR(Intermediate Representation)로 변환한 후, 백엔드(HODU, XLA)에서 최적화하여 실행합니다.
+Script는 Builder로 정의된 연산 그래프를 컴파일하여 최적화된 실행을 가능하게 하는 객체입니다. 동적 실행 모드와 달리 연산들을 먼저 IR(Intermediate Representation)로 변환한 후, 백엔드(HODU, XLA)에서 최적화하여 실행합니다.
 
 ## 기본 사용법
 
