@@ -106,6 +106,8 @@ Element-wise operations on a single tensor.
 
 Element-wise operations between tensor and scalar.
 
+### Arithmetic Operations
+
 | Operation | Description |
 |-----------|-------------|
 | `add_scalar` | Add scalar: `a + c` |
@@ -115,7 +117,12 @@ Element-wise operations between tensor and scalar.
 | `pow_scalar` | Power with scalar exponent: `a^c` |
 | `maximum_scalar` | Maximum with scalar: `max(a, c)` |
 | `minimum_scalar` | Minimum with scalar: `min(a, c)` |
-| `leaky_relu` | Leaky ReLU with slope parameter |
+
+### Activation Functions with Parameters
+
+| Operation | Description |
+|-----------|-------------|
+| `leaky_relu` | Leaky ReLU with negative slope parameter |
 | `elu` | ELU with alpha parameter |
 
 ## Matrix Operations
