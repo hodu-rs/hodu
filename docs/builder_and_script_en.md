@@ -284,28 +284,7 @@ let mut script = builder.build()?;
 
 ## Important Notes
 
-### 1. Transpose and Gradient
-
-Shape operations like `transpose()` in builder mode **must also be recorded to gradient tape**:
-
-```rust
-// Correct implementation (ops.rs)
-if builder::is_builder_active() {
-    let (tensor_id, result) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
-    let op = Op::Shape(op::ShapeOp::Transpose, self.id());
-    register_operation_in_builder(op.clone(), tensor_id, ...);
-
-    if self.is_requires_grad() {
-        gradient::record_operation(tensor_id, op, vec![self.id()])?;  // Required!
-    }
-
-    Ok(result)
-}
-```
-
-Forgetting this causes "Gradient not computed" error during backward.
-
-### 2. Script is Optimized for Inference
+### 1. Script is Optimized for Inference
 
 Script is more suitable for **inference** than training:
 
@@ -330,7 +309,7 @@ for batch in batches {
 }
 ```
 
-### 3. Cache Invalidation Conditions
+### 2. Cache Invalidation Conditions
 
 Compilation cache is invalidated when:
 
@@ -345,7 +324,7 @@ script.set_device(Device::CUDA(0));  // Cache invalidated!
 // Next run() will recompile
 ```
 
-### 4. Script Reuse
+### 3. Script Reuse
 
 Same script can be executed multiple times with different inputs:
 

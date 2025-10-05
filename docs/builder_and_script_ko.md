@@ -284,28 +284,7 @@ let mut script = builder.build()?;
 
 ## 주의사항
 
-### 1. Transpose와 Gradient
-
-Builder 모드에서 `transpose()` 같은 shape 연산은 **반드시 gradient tape에도 기록**되어야 합니다:
-
-```rust
-// 올바른 구현 (ops.rs)
-if builder::is_builder_active() {
-    let (tensor_id, result) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
-    let op = Op::Shape(op::ShapeOp::Transpose, self.id());
-    register_operation_in_builder(op.clone(), tensor_id, ...);
-
-    if self.is_requires_grad() {
-        gradient::record_operation(tensor_id, op, vec![self.id()])?;  // 필수!
-    }
-
-    Ok(result)
-}
-```
-
-이를 빼먹으면 backward 시 "Gradient not computed" 에러 발생.
-
-### 2. Script는 Inference 최적화에 적합
+### 1. Script는 Inference 최적화에 적합
 
 Training보다는 **추론(inference)**에 더 적합합니다:
 
@@ -330,7 +309,7 @@ for batch in batches {
 }
 ```
 
-### 3. 캐시 무효화 조건
+### 2. 캐시 무효화 조건
 
 다음의 경우 컴파일 캐시가 무효화됩니다:
 
@@ -345,7 +324,7 @@ script.set_device(Device::CUDA(0));  // 캐시 무효화!
 // 다음 run()에서 재컴파일
 ```
 
-### 4. Script 재사용
+### 3. Script 재사용
 
 같은 Script를 다른 입력으로 여러 번 실행 가능:
 
