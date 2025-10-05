@@ -1,11 +1,9 @@
-#![no_std]
-#[cfg(feature = "std")]
-extern crate std;
+#![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
 
 pub mod backends;
-pub(crate) mod compat;
+pub mod compat;
 pub mod error;
 pub(crate) mod flatten;
 pub mod prelude;

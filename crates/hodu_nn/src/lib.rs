@@ -1,3 +1,6 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
+pub(crate) mod compat;
 mod losses;
 pub mod module;
 mod modules;
