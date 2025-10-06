@@ -154,6 +154,13 @@ let mut script = builder.build()?;
 | `metal` | Apple Metal GPU support | Metal framework (macOS) | - |
 | `xla` | Google XLA compiler backend | XLA libraries | `std` |
 
+#### XLA Feature Requirements
+
+Building with the `xla` feature requires:
+- **LLVM** and **Clang** installed on your system
+- **RAM**: 8GB+ free memory
+- **Disk Space**: 20GB+ free storage
+
 ## Supported Platforms
 
 ### Standard Environments
