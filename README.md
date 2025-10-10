@@ -165,21 +165,23 @@ Building with the `xla` feature requires:
 
 ### Standard Environments
 
-| Platform | Architecture | Backend | Features | Status |
-|----------|-------------|---------|----------|--------|
-| **Linux** | x86_64 | HODU (CPU) | `std` | 🧪 Experimental |
-| | x86_64 | HODU (CUDA) | `std`, `cuda` | 🚧 In Development |
-| | x86_64 | XLA | `std`, `xla` | 🧪 Experimental |
-| | aarch64 | HODU (CPU) | `std` | 🧪 Experimental |
-| **macOS** | x86_64 | HODU (CPU) | `std` | 🧪 Experimental |
-| | x86_64 | HODU (Metal) | `std`, `metal` | 🚧 In Development |
-| | x86_64 | XLA | `std`, `xla` | 🧪 Experimental |
-| | aarch64 (Apple Silicon) | HODU (CPU) | `std` | ✅ Stable |
-| | aarch64 (Apple Silicon) | HODU (Metal) | `std`, `metal` | 🚧 In Development |
-| | aarch64 (Apple Silicon) | XLA | `std`, `xla` | ✅ Stable |
-| **Windows** | x86_64 | HODU (CPU) | `std` | 🧪 Experimental |
-| | x86_64 | HODU (CUDA) | `std`, `cuda` | 🚧 In Development |
-| | x86_64 | XLA | `std`, `xla` | 🧪 Experimental |
+| Platform | Architecture | Backend | Device | Features | Status |
+|----------|-------------|---------|--------|----------|--------|
+| **Linux** | x86_64 | HODU | CPU | `std` | ✅ Stable |
+| | x86_64 | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
+| | x86_64 | XLA | CPU | `std`, `xla` | 🧪 Experimental |
+| | x86_64 | XLA | CUDA | `std`, `xla`, `cuda` | 🚧 In Development |
+| | aarch64 | HODU | CPU | `std` | ✅ Stable |
+| **macOS** | x86_64 | HODU | CPU | `std` | 🧪 Experimental |
+| | x86_64 | HODU | Metal | `std`, `metal` | 🚧 In Development |
+| | x86_64 | XLA | CPU | `std`, `xla` | 🧪 Experimental |
+| | aarch64 (Apple Silicon) | HODU | CPU | `std` | ✅ Stable |
+| | aarch64 (Apple Silicon) | HODU | Metal | `std`, `metal` | 🚧 In Development |
+| | aarch64 (Apple Silicon) | XLA | CPU | `std`, `xla` | ✅ Stable |
+| **Windows** | x86_64 | HODU | CPU | `std` | ✅ Stable |
+| | x86_64 | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
+| | x86_64 | XLA | CPU | `std`, `xla` | 🧪 Experimental |
+| | x86_64 | XLA | CUDA | `std`, `xla`, `cuda` | 🚧 In Development |
 
 ### Embedded Environments
 
