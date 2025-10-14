@@ -256,6 +256,7 @@ pub trait UnaryScalarOpT {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum MatrixOp {
     Matmul,
+    Dot, // Supports 1D dot product, 2D matmul, and ND broadcast matmul
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

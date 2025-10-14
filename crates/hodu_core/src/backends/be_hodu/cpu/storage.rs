@@ -4,9 +4,9 @@ use crate::{
             cpu::{
                 device::CpuDevice,
                 utils::{
-                    binary_logical_map, binary_map, cmp_map, cmp_scalar_map, matmul_map, reduce_max, reduce_mean,
-                    reduce_min, reduce_norm, reduce_prod, reduce_std, reduce_sum, reduce_var, unary_logical_map,
-                    unary_map, unary_scalar_map,
+                    binary_logical_map, binary_map, cmp_map, cmp_scalar_map, dot_map, matmul_map, reduce_max,
+                    reduce_mean, reduce_min, reduce_norm, reduce_prod, reduce_std, reduce_sum, reduce_var,
+                    unary_logical_map, unary_map, unary_scalar_map,
                 },
             },
             storage::HoduStorageT,
@@ -861,6 +861,72 @@ impl HoduStorageT for CpuStorage {
                 left: self.get_dtype(),
                 right: rhs_storage.get_dtype(),
                 op: "matmul".to_string(),
+            }),
+        }
+    }
+
+    fn dot(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout) -> HoduResult<Self> {
+        match (self, rhs_storage) {
+            (Self::F8E4M3(lhs_data), Self::F8E4M3(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::F8E4M3(result_data))
+            },
+            (Self::F8E5M2(lhs_data), Self::F8E5M2(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::F8E5M2(result_data))
+            },
+            (Self::BF16(lhs_data), Self::BF16(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::BF16(result_data))
+            },
+            (Self::F16(lhs_data), Self::F16(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::F16(result_data))
+            },
+            (Self::F32(lhs_data), Self::F32(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::F32(result_data))
+            },
+            (Self::F64(lhs_data), Self::F64(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::F64(result_data))
+            },
+            (Self::U8(lhs_data), Self::U8(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::U8(result_data))
+            },
+            (Self::U16(lhs_data), Self::U16(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::U16(result_data))
+            },
+            (Self::U32(lhs_data), Self::U32(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::U32(result_data))
+            },
+            (Self::U64(lhs_data), Self::U64(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::U64(result_data))
+            },
+            (Self::I8(lhs_data), Self::I8(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::I8(result_data))
+            },
+            (Self::I16(lhs_data), Self::I16(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::I16(result_data))
+            },
+            (Self::I32(lhs_data), Self::I32(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::I32(result_data))
+            },
+            (Self::I64(lhs_data), Self::I64(rhs_data)) => {
+                let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
+                Ok(Self::I64(result_data))
+            },
+            _ => Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: rhs_storage.get_dtype(),
+                op: "dot".to_string(),
             }),
         }
     }

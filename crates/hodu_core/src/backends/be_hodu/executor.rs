@@ -677,6 +677,7 @@ impl HoduExecutor {
     ) -> HoduResult<HoduStorage> {
         match matrix_op {
             MatrixOp::Matmul => lhs_storage.matmul(rhs_storage, lhs_layout, rhs_layout),
+            MatrixOp::Dot => lhs_storage.dot(rhs_storage, lhs_layout, rhs_layout),
         }
     }
 

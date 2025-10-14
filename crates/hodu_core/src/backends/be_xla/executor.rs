@@ -507,29 +507,13 @@ impl XlaExecutor {
 
                 match op {
                     MatrixOp::Matmul => {
-                        // Matrix multiplication for 2D tensors only
-                        // Get input shapes to validate they are 2D
-                        let lhs_shape = input_ops[0].shape().map_err(xla_error_to_hodu_error)?;
-                        let rhs_shape = input_ops[1].shape().map_err(xla_error_to_hodu_error)?;
-
-                        match (lhs_shape, rhs_shape) {
-                            (hodu_xla::Shape::Array(lhs_array), hodu_xla::Shape::Array(rhs_array)) => {
-                                let lhs_dims = lhs_array.dims();
-                                let rhs_dims = rhs_array.dims();
-
-                                if lhs_dims.len() != 2 || rhs_dims.len() != 2 {
-                                    return Err(HoduError::InternalError(
-                                        "Matrix multiplication requires exactly 2D tensors".to_string(),
-                                    ));
-                                }
-
-                                // Use XLA's dot operation for 2D matrix multiplication
-                                input_ops[0].dot(&input_ops[1]).map_err(xla_error_to_hodu_error)
-                            },
-                            _ => Err(HoduError::InternalError(
-                                "Expected array shapes for matrix multiplication".to_string(),
-                            )),
-                        }
+                        // Use XLA's matmul which supports batched operations and broadcasting (1D, 2D, ND)
+                        input_ops[0].matmul(&input_ops[1]).map_err(xla_error_to_hodu_error)
+                    },
+                    MatrixOp::Dot => {
+                        // Simple dot operation (1D/2D only)
+                        // Use XLA's basic dot operation
+                        input_ops[0].dot(&input_ops[1]).map_err(xla_error_to_hodu_error)
                     },
                 }
             },

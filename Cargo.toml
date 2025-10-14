@@ -37,7 +37,7 @@ serde = { version = "1.0.219", default-features = false, features = [
     "alloc",
 ] }
 spin = "0.10"
-hodu_xla = "0.4.0"
+hodu_xla = "0.4.1"
 
 [features]
 default = ["std", "serde"]

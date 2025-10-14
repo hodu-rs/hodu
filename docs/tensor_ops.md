@@ -127,9 +127,36 @@ Element-wise operations between tensor and scalar.
 
 ## Matrix Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `matmul` | Matrix multiplication: `A @ B` |
+Hodu provides two matrix multiplication operations, following XLA's design:
+
+### matmul - Batched Matrix Multiplication
+
+Supports 1D, 2D, and ND tensors with broadcasting.
+
+| Input Shapes | Operation Type | Output Shape | Example |
+|--------------|----------------|--------------|---------|
+| `[N]` x `[N]` | Vector dot product | scalar `[]` | `[3] x [3] → []` |
+| `[M, K]` x `[K]` | Matrix-vector product | `[M]` | `[2, 3] x [3] → [2]` |
+| `[K]` x `[K, N]` | Vector-matrix product | `[N]` | `[3] x [3, 4] → [4]` |
+| `[M, K]` x `[K, N]` | Matrix multiplication | `[M, N]` | `[2, 3] x [3, 4] → [2, 4]` |
+| `[B..., M, K]` x `[B..., K, N]` | Batched matmul | `[B..., M, N]` | `[2, 3, 4] x [2, 4, 5] → [2, 3, 5]` |
+| `[B1..., M, K]` x `[B2..., K, N]` | Broadcast batched matmul | `[broadcast(B1, B2)..., M, N]` | `[1, 2, 3] x [4, 3, 2] → [4, 2, 2]` |
+
+### dot - Simple Dot Product
+
+Supports only 1D and 2D combinations (for simplicity).
+
+| Input Shapes | Operation Type | Output Shape | Example |
+|--------------|----------------|--------------|---------|
+| `[N]` x `[N]` | Vector dot product | scalar `[]` | `[3] x [3] → []` |
+| `[M, K]` x `[K]` | Matrix-vector product | `[M]` | `[2, 3] x [3] → [2]` |
+| `[K]` x `[K, N]` | Vector-matrix product | `[N]` | `[3] x [3, 4] → [4]` |
+| `[M, K]` x `[K, N]` | Matrix multiplication | `[M, N]` | `[2, 3] x [3, 4] → [2, 4]` |
+
+**Notes:**
+- For batched/ND operations (3D+), use `matmul` instead of `dot`
+- `matmul` handles broadcasting automatically for batch dimensions
+- Both operations follow XLA's semantics for consistency
 
 ## Reduction Operations
 

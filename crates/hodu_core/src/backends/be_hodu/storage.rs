@@ -40,6 +40,8 @@ pub trait HoduStorageT: Sized {
 
     fn matmul(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self>;
 
+    fn dot(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self>;
+
     fn reduce(&self, _: crate::backends::op::ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: DType) -> HoduResult<Self>;
@@ -170,6 +172,15 @@ impl HoduStorage {
         match (self, rhs_storage) {
             (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => {
                 let storage = lhs_storage.matmul(rhs_storage, lhs_layout, rhs_layout)?;
+                Ok(Self::CPU(storage))
+            },
+        }
+    }
+
+    pub(crate) fn dot(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout) -> HoduResult<Self> {
+        match (self, rhs_storage) {
+            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => {
+                let storage = lhs_storage.dot(rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(Self::CPU(storage))
             },
         }
