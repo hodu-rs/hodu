@@ -756,9 +756,7 @@ impl Tensor {
             let result_layout = Layout::from_shape(&result_shape);
 
             let storage = self.with_storage(|lhs_storage| {
-                other.with_storage(|rhs_storage| {
-                    lhs_storage.dot(rhs_storage, &self.get_layout(), &other.get_layout())
-                })
+                other.with_storage(|rhs_storage| lhs_storage.dot(rhs_storage, &self.get_layout(), &other.get_layout()))
             })?;
 
             let requires_grad = self.is_requires_grad() || other.is_requires_grad();
