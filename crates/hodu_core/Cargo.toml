@@ -19,7 +19,7 @@ std = [
 ]
 serde = ["dep:bincode", "dep:flate2", "dep:serde"]
 
-cuda = ["hodu_xla?/cuda"]
+cuda = []
 # cuda = ["dep:hodu_cuda_kernels"]
 metal = []
 

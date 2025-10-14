@@ -169,18 +169,19 @@ Building with the `xla` feature requires:
 |--------------|---------|--------|----------|--------|
 | x86_64-unknown-linux-gnu | HODU | CPU | `std` | ✅ Stable |
 | | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
-| | XLA | CPU | `std`, `xla` | 🧪 Experimental |
+| | XLA | CPU | `std`, `xla` | ✅ Stable |
 | | XLA | CUDA | `std`, `xla`, `cuda` | 🚧 In Development |
 | aarch64-unknown-linux-gnu | HODU | CPU | `std` | ✅ Stable |
+| | XLA | CPU | `std`, `xla` | ✅ Stable |
 | x86_64-apple-darwin | HODU | CPU | `std` | 🧪 Experimental |
 | | HODU | Metal | `std`, `metal` | 🚧 In Development |
-| | XLA | CPU | `std`, `xla` | 🧪 Experimental |
+| | XLA | CPU | `std`, `xla` | 🚧 In Development |
 | aarch64-apple-darwin | HODU | CPU | `std` | ✅ Stable |
 | | HODU | Metal | `std`, `metal` | 🚧 In Development |
 | | XLA | CPU | `std`, `xla` | ✅ Stable |
 | x86_64-pc-windows-msvc | HODU | CPU | `std` | ✅ Stable |
 | | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
-| | XLA | CPU | `std`, `xla` | 🧪 Experimental |
+| | XLA | CPU | `std`, `xla` | 🚧 In Development |
 | | XLA | CUDA | `std`, `xla`, `cuda` | 🚧 In Development |
 
 ### Embedded Environments
