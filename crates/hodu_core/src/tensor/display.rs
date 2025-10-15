@@ -185,8 +185,7 @@ where
 {
     let precision = f.precision();
 
-    // Check if all dimensions are 1 (scalar-like: [], [1], [1,1], etc.)
-    let is_scalar = shape.is_empty() || shape.iter().all(|&dim| dim == 1);
+    let is_scalar = shape.is_empty();
 
     if is_scalar {
         return write!(

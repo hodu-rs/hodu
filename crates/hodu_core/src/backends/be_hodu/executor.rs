@@ -489,6 +489,101 @@ impl HoduExecutor {
 
                 input_storage.reduce(*reduce_op, input_layout, &dims, keep_dim)
             },
+            Op::Concat(_concat_op, input_tensor_ids, params) => {
+                // Extract dimension from params
+                let dim = params
+                    .first()
+                    .ok_or_else(|| {
+                        HoduError::InternalError("Concat operation requires dimension parameter".to_string())
+                    })?
+                    .to_u32() as usize;
+
+                // Get all input storages
+                let input_storages: Vec<&SharedStorage> = input_tensor_ids
+                    .iter()
+                    .map(|tensor_id| {
+                        tensor_storage
+                            .get(tensor_id)
+                            .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))
+                    })
+                    .collect::<HoduResult<Vec<_>>>()?;
+
+                // Get all input layouts
+                let layouts: Vec<&Layout> = compiled_node.input_layouts.iter().collect();
+
+                // Call concat on first storage with remaining storages
+                if input_storages.is_empty() {
+                    return Err(HoduError::InternalError(
+                        "Concat requires at least one input".to_string(),
+                    ));
+                }
+
+                // Dereference Arc wrappers to get &HoduStorage
+                let storage_refs: Vec<&HoduStorage> = input_storages.iter().map(|s| s.as_ref()).collect();
+                storage_refs[0].concat(&storage_refs[1..], &layouts, dim)
+            },
+            Op::Split(_split_op, input_tensor_id, size_scalars, _output_index) => {
+                let input_storage = tensor_storage
+                    .get(input_tensor_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {input_tensor_id:?} not found")))?;
+
+                let input_layout = compiled_node
+                    .input_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Split operation requires input layout".to_string()))?;
+
+                // Extract dimension by comparing input and output shapes
+                let output_layout = compiled_node
+                    .output_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Split operation requires output layout".to_string()))?;
+
+                let input_shape = input_layout.get_shape();
+                let output_shape = output_layout.get_shape();
+
+                let mut dim = None;
+                for (i, (&in_size, &out_size)) in input_shape.iter().zip(output_shape.iter()).enumerate() {
+                    if in_size != out_size {
+                        dim = Some(i);
+                        break;
+                    }
+                }
+
+                let dim =
+                    dim.ok_or_else(|| HoduError::InternalError("Could not determine split dimension".to_string()))?;
+
+                // Extract sizes from size_scalars (skip first element which is the dimension)
+                let sizes: Vec<usize> = size_scalars.iter().skip(1).map(|s| s.to_u32() as usize).collect();
+
+                // Call split on storage and return the specific output based on output_index
+                // Note: The split returns all splits, but we store all of them with different output indices
+                // Actually, for Split operation, each node produces one output, not all splits
+                // So we need to return all splits and let the execution plan handle storing them
+                input_storage.split(input_layout, dim, &sizes)?;
+
+                // Return the first split storage (the actual split results are handled by the node execution)
+                // This is a bit tricky because split returns Vec<Storage> but we need to return single Storage
+                // Let's check how the split operation is supposed to work...
+                // Looking at the Op::Split signature: Op::Split(SplitOp, TensorId, Vec<Scalar>, usize)
+                // The usize is the output_index, so each Split node produces one output
+
+                let splits = input_storage.split(input_layout, dim, &sizes)?;
+                let output_index = match &compiled_node.operation {
+                    Op::Split(_, _, _, idx) => *idx,
+                    _ => 0,
+                };
+
+                if output_index >= splits.len() {
+                    return Err(HoduError::InternalError(format!(
+                        "Split output index {} out of bounds (total splits: {})",
+                        output_index,
+                        splits.len()
+                    )));
+                }
+
+                // Return only the specific split for this output
+                Ok(splits[output_index].clone())
+            },
             Op::Shape(shape_op, tensor_id) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)

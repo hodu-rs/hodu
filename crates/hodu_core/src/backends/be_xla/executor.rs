@@ -706,6 +706,99 @@ impl XlaExecutor {
                 }
             },
 
+            // Concat Operation
+            Op::Concat(_concat_op, _input_tensor_ids, params) => {
+                if input_ops.is_empty() {
+                    return Err(HoduError::InternalError(
+                        "Concat operation requires at least 1 input".to_string(),
+                    ));
+                }
+
+                // Extract dimension from params
+                if params.is_empty() {
+                    return Err(HoduError::InternalError(
+                        "Concat operation requires dimension parameter".to_string(),
+                    ));
+                }
+
+                let dim = params[0].to_u64() as i64;
+
+                // Use XLA's concat_in_dim operation
+                input_ops[0]
+                    .concat_in_dim(&input_ops[1..], dim)
+                    .map_err(xla_error_to_hodu_error)
+            },
+
+            // Split Operation
+            Op::Split(_split_op, _input_tensor_id, size_scalars, output_index) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Split operation requires exactly 1 input".to_string(),
+                    ));
+                }
+
+                // Extract dimension and sizes from the operation metadata
+                // The dimension is stored in the node metadata
+                // For now, we need to get it from the output layout comparison
+                let input_layout = current_node
+                    .input_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Missing input layout for split".to_string()))?;
+                let output_layout = current_node
+                    .output_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Missing output layout for split".to_string()))?;
+
+                // Find which dimension changed by comparing shapes
+                let input_shape = input_layout.get_shape();
+                let output_shape = output_layout.get_shape();
+
+                let mut split_dim = None;
+                for (i, (&in_size, &out_size)) in input_shape.iter().zip(output_shape.iter()).enumerate() {
+                    if in_size != out_size {
+                        split_dim = Some(i as i64);
+                        break;
+                    }
+                }
+
+                let dim = split_dim
+                    .ok_or_else(|| HoduError::InternalError("Could not determine split dimension".to_string()))?;
+
+                // Extract sizes from size_scalars (skip first element which is the dimension)
+                let sizes: Vec<i64> = size_scalars.iter().skip(1).map(|s| s.to_u64() as i64).collect();
+
+                // Calculate split indices (cumulative sum)
+                let mut split_indices = Vec::with_capacity(sizes.len() - 1);
+                let mut cumsum = 0i64;
+                for &size in &sizes[..sizes.len() - 1] {
+                    cumsum += size;
+                    split_indices.push(cumsum);
+                }
+
+                // Calculate start and limit for this output slice
+                let start_offset = if *output_index == 0 {
+                    0
+                } else {
+                    split_indices[*output_index - 1]
+                };
+
+                let size = sizes[*output_index];
+
+                // Use slice_in_dim operation for single dimension slicing
+                let sliced = input_ops[0]
+                    .slice_in_dim(start_offset, start_offset + size, 1, dim)
+                    .map_err(xla_error_to_hodu_error)?;
+
+                // Reshape to maintain dimensions when size is 1 (XLA may squeeze it)
+                // Get the target shape from output layout
+                if let Some(target_layout) = current_node.output_layouts.first() {
+                    let target_shape: Vec<i64> = target_layout.get_shape().iter().map(|&d| d as i64).collect();
+                    sliced.reshape(&target_shape).map_err(xla_error_to_hodu_error)
+                } else {
+                    Ok(sliced)
+                }
+            },
+
             // Shape Operations
             Op::Shape(op, _) => {
                 if input_ops.len() != 1 {

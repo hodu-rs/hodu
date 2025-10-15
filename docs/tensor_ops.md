@@ -175,6 +175,28 @@ Operations that reduce tensor dimensions.
 
 **Note**: `l1_norm` is implemented as a combination of `abs` and `sum` operations
 
+## Concat Operations
+
+Operations that combine tensors.
+
+| Operation | Description | Aliases |
+|-----------|-------------|---------|
+| `concat` | Concatenate along existing dimension | `cat` |
+| `stack` | Stack along new dimension | - |
+
+**Note**: `stack` is implemented as a combination of `unsqueeze` and `concat` operations
+
+## Split Operations
+
+Operations that split tensor.
+
+| Operation | Description | Aliases |
+|-----------|-------------|---------|
+| `split` | Split into specified sizes | - |
+| `chunk` | Split into N equal chunks | - |
+
+**Note**: `chunk` is implemented as a wrapper around `split` with automatically calculated equal sizes
+
 ## Shape Operations
 
 Operations that manipulate tensor shape and layout.

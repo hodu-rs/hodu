@@ -1138,6 +1138,246 @@ impl HoduStorageT for CpuStorage {
         }
     }
 
+    fn concat(&self, others: &[&Self], layouts: &[&Layout], dim: usize) -> HoduResult<Self> {
+        // Validate all storages have the same dtype
+        let first_dtype = self.get_dtype();
+        for other in others {
+            if other.get_dtype() != first_dtype {
+                return Err(HoduError::DTypeConflictInOp {
+                    left: first_dtype,
+                    right: other.get_dtype(),
+                    op: "concat".to_string(),
+                });
+            }
+        }
+
+        // All layouts include self's layout at index 0
+        let first_layout = layouts[0];
+        let first_shape = first_layout.get_shape();
+        let ndim = first_shape.len();
+
+        if dim >= ndim {
+            return Err(HoduError::IncompatibleShapes {
+                lhs: first_shape.to_vec(),
+                rhs: vec![],
+                op: format!(
+                    "concat - dimension {} out of range for {}-dimensional tensor",
+                    dim, ndim
+                ),
+            });
+        }
+
+        // Verify all tensors have the same shape except at concat dimension
+        for (_i, layout) in layouts.iter().enumerate().skip(1) {
+            let shape = layout.get_shape();
+            if shape.len() != ndim {
+                return Err(HoduError::IncompatibleShapes {
+                    lhs: first_shape.to_vec(),
+                    rhs: shape.to_vec(),
+                    op: "concat - all tensors must have the same number of dimensions".to_string(),
+                });
+            }
+            for (j, (&s1, &s2)) in first_shape.iter().zip(shape.iter()).enumerate() {
+                if j != dim && s1 != s2 {
+                    return Err(HoduError::IncompatibleShapes {
+                        lhs: first_shape.to_vec(),
+                        rhs: shape.to_vec(),
+                        op: format!("concat - dimension {} must match (got {} vs {})", j, s1, s2),
+                    });
+                }
+            }
+        }
+
+        // Calculate output shape
+        let mut output_shape = first_shape.to_vec();
+        output_shape[dim] = layouts.iter().map(|l| l.get_shape()[dim]).sum();
+
+        macro_rules! concat_impl {
+            ($first_storage:expr, $other_storages:expr, $dtype_variant:ident) => {{
+                let total_size: usize = output_shape.iter().product();
+                let mut result = Vec::with_capacity(total_size);
+
+                // Create indices for iteration over all dimensions
+                let mut indices = vec![0; ndim];
+
+                for _ in 0..total_size {
+                    // Determine which tensor to read from based on concat dimension index
+                    let mut cumulative_dim_size = 0;
+                    let mut tensor_idx = 0;
+                    let dim_index = indices[dim];
+
+                    for (i, layout) in layouts.iter().enumerate() {
+                        let dim_size = layout.get_shape()[dim];
+                        if dim_index < cumulative_dim_size + dim_size {
+                            tensor_idx = i;
+                            break;
+                        }
+                        cumulative_dim_size += dim_size;
+                    }
+
+                    // Adjust index for the selected tensor
+                    let mut local_indices = indices.clone();
+                    local_indices[dim] -= cumulative_dim_size;
+
+                    // Calculate flat index in the source tensor
+                    let layout = layouts[tensor_idx];
+                    let strides = layout.get_strides();
+                    let mut flat_index = layout.get_offset();
+                    for (idx, stride) in local_indices.iter().zip(strides.iter()) {
+                        flat_index += idx * stride;
+                    }
+
+                    // Get data from appropriate storage
+                    let value = if tensor_idx == 0 {
+                        $first_storage[flat_index]
+                    } else {
+                        match $other_storages[tensor_idx - 1] {
+                            Self::$dtype_variant(storage) => storage[flat_index],
+                            _ => unreachable!(),
+                        }
+                    };
+                    result.push(value);
+
+                    // Increment indices (row-major order)
+                    let mut carry = 1;
+                    for i in (0..ndim).rev() {
+                        indices[i] += carry;
+                        if indices[i] < output_shape[i] {
+                            carry = 0;
+                            break;
+                        }
+                        indices[i] = 0;
+                    }
+                    if carry != 0 {
+                        break;
+                    }
+                }
+
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, others) {
+            (Self::BOOL(first), _) => concat_impl!(first, others, BOOL),
+            (Self::F8E4M3(first), _) => concat_impl!(first, others, F8E4M3),
+            (Self::F8E5M2(first), _) => concat_impl!(first, others, F8E5M2),
+            (Self::BF16(first), _) => concat_impl!(first, others, BF16),
+            (Self::F16(first), _) => concat_impl!(first, others, F16),
+            (Self::F32(first), _) => concat_impl!(first, others, F32),
+            (Self::F64(first), _) => concat_impl!(first, others, F64),
+            (Self::U8(first), _) => concat_impl!(first, others, U8),
+            (Self::U16(first), _) => concat_impl!(first, others, U16),
+            (Self::U32(first), _) => concat_impl!(first, others, U32),
+            (Self::U64(first), _) => concat_impl!(first, others, U64),
+            (Self::I8(first), _) => concat_impl!(first, others, I8),
+            (Self::I16(first), _) => concat_impl!(first, others, I16),
+            (Self::I32(first), _) => concat_impl!(first, others, I32),
+            (Self::I64(first), _) => concat_impl!(first, others, I64),
+        };
+
+        Ok(result)
+    }
+
+    fn split(&self, layout: &Layout, dim: usize, sizes: &[usize]) -> HoduResult<Vec<Self>> {
+        let shape = layout.get_shape();
+        let ndim = shape.len();
+
+        if dim >= ndim {
+            return Err(HoduError::IncompatibleShapes {
+                lhs: shape.to_vec(),
+                rhs: vec![],
+                op: format!("split - dimension {} out of range for {}-dimensional tensor", dim, ndim),
+            });
+        }
+
+        // Verify sizes sum to dimension size
+        let total_size: usize = sizes.iter().sum();
+        if total_size != shape[dim] {
+            return Err(HoduError::IncompatibleShapes {
+                lhs: vec![shape[dim]],
+                rhs: vec![total_size],
+                op: format!(
+                    "split - sizes must sum to dimension size (got {} vs {})",
+                    total_size, shape[dim]
+                ),
+            });
+        }
+
+        macro_rules! split_impl {
+            ($storage:expr, $dtype_variant:ident) => {{
+                let mut results = Vec::with_capacity(sizes.len());
+                let strides = layout.get_strides();
+                let mut split_offset = 0usize; // Track cumulative offset along split dimension
+
+                for &size in sizes {
+                    // Calculate output shape for this split
+                    let mut output_shape = shape.to_vec();
+                    output_shape[dim] = size;
+                    let output_size: usize = output_shape.iter().product();
+
+                    let mut result = Vec::with_capacity(output_size);
+                    let mut indices = vec![0; ndim];
+
+                    for _ in 0..output_size {
+                        // Calculate flat index in source tensor
+                        let mut flat_index = layout.get_offset();
+                        for i in 0..ndim {
+                            let idx = if i == dim {
+                                indices[i] + split_offset // Add split offset for the split dimension
+                            } else {
+                                indices[i]
+                            };
+                            flat_index += idx * strides[i];
+                        }
+
+                        result.push($storage[flat_index]);
+
+                        // Increment indices
+                        let mut carry = 1;
+                        for i in (0..ndim).rev() {
+                            indices[i] += carry;
+                            if indices[i] < output_shape[i] {
+                                carry = 0;
+                                break;
+                            }
+                            indices[i] = 0;
+                        }
+                        if carry != 0 {
+                            break;
+                        }
+                    }
+
+                    results.push(Self::$dtype_variant(result));
+
+                    // Move to next split position along the split dimension
+                    split_offset += size;
+                }
+
+                results
+            }};
+        }
+
+        let results = match self {
+            Self::BOOL(storage) => split_impl!(storage, BOOL),
+            Self::F8E4M3(storage) => split_impl!(storage, F8E4M3),
+            Self::F8E5M2(storage) => split_impl!(storage, F8E5M2),
+            Self::BF16(storage) => split_impl!(storage, BF16),
+            Self::F16(storage) => split_impl!(storage, F16),
+            Self::F32(storage) => split_impl!(storage, F32),
+            Self::F64(storage) => split_impl!(storage, F64),
+            Self::U8(storage) => split_impl!(storage, U8),
+            Self::U16(storage) => split_impl!(storage, U16),
+            Self::U32(storage) => split_impl!(storage, U32),
+            Self::U64(storage) => split_impl!(storage, U64),
+            Self::I8(storage) => split_impl!(storage, I8),
+            Self::I16(storage) => split_impl!(storage, I16),
+            Self::I32(storage) => split_impl!(storage, I32),
+            Self::I64(storage) => split_impl!(storage, I64),
+        };
+
+        Ok(results)
+    }
+
     fn to_dtype(&self, target_dtype: DType) -> HoduResult<Self> {
         if self.get_dtype() == target_dtype {
             return Ok(self.clone());

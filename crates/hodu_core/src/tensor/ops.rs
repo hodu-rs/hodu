@@ -8,7 +8,7 @@ use crate::{
     scalar::Scalar,
     tensor::{
         create_builder_tensor_with_grad, from_shared_storage_with_grad, from_storage_with_grad, gradient,
-        register_operation_in_builder, Tensor,
+        register_operation_in_builder, Tensor, TensorId,
     },
     types::{dtype::DType, layout::Layout},
 };
@@ -71,7 +71,7 @@ macro_rules! binary_op {
                 let op = Op::Binary(op::BinaryOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![
                         lhs_broadcasted.get_layout().clone(),
                         rhs_broadcasted.get_layout().clone(),
@@ -126,7 +126,7 @@ macro_rules! binary_logical_op {
                 );
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![
                         lhs_broadcasted.get_layout().clone(),
                         rhs_broadcasted.get_layout().clone(),
@@ -177,7 +177,7 @@ macro_rules! cmp_op {
                 let op = Op::Cmp(op::CmpOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![
                         lhs_broadcasted.get_layout().clone(),
                         rhs_broadcasted.get_layout().clone(),
@@ -227,7 +227,7 @@ macro_rules! cmp_scalar_op {
                 let op = Op::CmpScalar(op::CmpScalarOp::$op_name, self.id(), scalar);
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![self.get_layout().clone()],
                     vec![result_layout],
                 );
@@ -266,7 +266,7 @@ macro_rules! unary_op {
                 let op = Op::Unary(op::UnaryOp::$op_name, self.id());
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![self.get_layout().clone()],
                     vec![result_layout],
                 );
@@ -304,7 +304,7 @@ macro_rules! unary_logical_op {
                 let op = Op::UnaryLogical(op::UnaryLogicalOp::$op_name, self.id());
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![self.get_layout().clone()],
                     vec![result_layout],
                 );
@@ -344,7 +344,7 @@ macro_rules! unary_scalar_op {
                 let op = Op::UnaryScalar(op::UnaryScalarOp::$op_name, self.id(), scalar);
                 register_operation_in_builder(
                     op.clone(),
-                    result_id,
+                    vec![result_id],
                     vec![self.get_layout().clone()],
                     vec![result_layout],
                 );
@@ -598,7 +598,7 @@ impl Tensor {
             let op = Op::Matrix(op::MatrixOp::Matmul, lhs_broadcasted.id(), rhs_broadcasted.id());
             register_operation_in_builder(
                 op.clone(),
-                result_id,
+                vec![result_id],
                 vec![
                     lhs_broadcasted.get_layout().clone(),
                     rhs_broadcasted.get_layout().clone(),
@@ -734,7 +734,7 @@ impl Tensor {
             let op = Op::Matrix(op::MatrixOp::Dot, self.id(), other.id());
             register_operation_in_builder(
                 op.clone(),
-                result_id,
+                vec![result_id],
                 vec![self.get_layout().clone(), other.get_layout().clone()],
                 vec![result_layout],
             );
@@ -890,7 +890,7 @@ impl Tensor {
 
             let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
             let op = Op::Reduce(reduce_op, self.id(), dims_scalars);
-            register_operation_in_builder(op.clone(), result_id, vec![layout.clone()], vec![result_layout]);
+            register_operation_in_builder(op.clone(), vec![result_id], vec![layout.clone()], vec![result_layout]);
 
             if self.is_requires_grad() {
                 gradient::record_operation(result_id, op, vec![self.id()])?;
@@ -939,6 +939,190 @@ impl Tensor {
         }
     }
 
+    // Concat Operations
+    pub fn concat<D: Into<Scalar>>(tensors: &[&Self], dim: D) -> HoduResult<Self> {
+        if tensors.is_empty() {
+            return Err(HoduError::InternalError(
+                "concat requires at least one tensor".to_string(),
+            ));
+        }
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        let first = tensors[0];
+        let mut output_shape = first.get_layout().get_shape().to_vec();
+        for tensor in &tensors[1..] {
+            let layout = tensor.get_layout();
+            let shape = layout.get_shape();
+            if shape.len() != output_shape.len() {
+                return Err(HoduError::IncompatibleShapes {
+                    lhs: output_shape,
+                    rhs: shape.to_vec(),
+                    op: "concat - all tensors must have same number of dimensions".to_string(),
+                });
+            }
+            output_shape[dim_usize] += shape[dim_usize];
+        }
+
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&output_shape);
+            let requires_grad = tensors.iter().any(|t| t.is_requires_grad());
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
+            let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
+            let input_layouts: Vec<Layout> = tensors.iter().map(|t| t.get_layout().clone()).collect();
+            register_operation_in_builder(op.clone(), vec![result_id], input_layouts, vec![result_layout]);
+
+            if requires_grad {
+                gradient::record_operation(result_id, op, tensor_ids)?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let layouts: Vec<_> = tensors.iter().map(|t| t.get_layout()).collect();
+            let layout_refs: Vec<_> = layouts.iter().collect();
+
+            // Clone storages to avoid lifetime issues
+            let mut all_storages: Vec<_> = Vec::new();
+            for tensor in tensors.iter() {
+                let storage = tensor.with_storage(|s| Ok(s.clone()))?;
+                all_storages.push(storage);
+            }
+
+            let first_storage = &all_storages[0];
+            let other_refs: Vec<_> = all_storages[1..].iter().collect();
+            let storage = first_storage.concat(&other_refs, &layout_refs, dim_usize)?;
+
+            let result_layout = Layout::from_shape(&output_shape);
+            let requires_grad = tensors.iter().any(|t| t.is_requires_grad());
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
+                let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
+                gradient::record_operation(result.id(), op, tensor_ids)?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn cat<D: Into<Scalar>>(tensors: &[&Self], dim: D) -> HoduResult<Self> {
+        Self::concat(tensors, dim)
+    }
+
+    pub fn stack<D: Into<Scalar>>(tensors: &[&Self], dim: D) -> HoduResult<Self> {
+        if tensors.is_empty() {
+            return Err(HoduError::InternalError(
+                "stack requires at least one tensor".to_string(),
+            ));
+        }
+        let dim_scalar = dim.into();
+        let dim_isize = dim_scalar.to_i64() as isize;
+
+        let unsqueezed: Vec<Self> = tensors
+            .iter()
+            .map(|t| t.unsqueeze(dim_isize))
+            .collect::<HoduResult<_>>()?;
+        let unsqueezed_refs: Vec<&Self> = unsqueezed.iter().collect();
+        Self::concat(&unsqueezed_refs, dim_scalar)
+    }
+
+    // Split Operations
+    pub fn split<D: Into<Scalar>>(&self, sizes: &[usize], dim: D) -> HoduResult<Vec<Self>> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let shape = layout.get_shape();
+
+            let mut params = vec![dim_scalar];
+            params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
+
+            let requires_grad = self.is_requires_grad();
+            let mut result_tensors = Vec::new();
+            let mut result_layouts = Vec::new();
+
+            for &size in sizes {
+                let mut result_shape = shape.to_vec();
+                result_shape[dim_usize] = size;
+                let result_layout = Layout::from_shape(&result_shape);
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+                result_tensors.push((result_id, result_tensor));
+                result_layouts.push(result_layout);
+            }
+
+            // Register separate operation for each split output with its output_index
+            for (output_index, ((result_id, _), result_layout)) in
+                result_tensors.iter().zip(&result_layouts).enumerate()
+            {
+                let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), output_index);
+                register_operation_in_builder(
+                    op.clone(),
+                    vec![*result_id],
+                    vec![layout.clone()],
+                    vec![result_layout.clone()],
+                );
+
+                if requires_grad {
+                    gradient::record_operation(*result_id, op, vec![self.id()])?;
+                }
+            }
+
+            Ok(result_tensors.into_iter().map(|(_, t)| t).collect())
+        } else {
+            let storages = self.with_storage(|storage| storage.split(&self.get_layout(), dim_usize, sizes))?;
+            let layout = self.get_layout();
+            let shape = layout.get_shape();
+            let requires_grad = self.is_requires_grad();
+
+            let results: Vec<Self> = storages
+                .into_iter()
+                .zip(sizes.iter())
+                .map(|(storage, &size)| {
+                    let mut result_shape = shape.to_vec();
+                    result_shape[dim_usize] = size;
+                    let result_layout = Layout::from_shape(&result_shape);
+                    from_storage_with_grad(storage, result_layout, true, requires_grad)
+                })
+                .collect();
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let mut params = vec![dim_scalar];
+                params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
+                // Record operation for each split result with its output_index
+                for (output_index, result) in results.iter().enumerate() {
+                    let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), output_index);
+                    gradient::record_operation(result.id(), op, vec![self.id()])?;
+                }
+            }
+
+            Ok(results)
+        }
+    }
+
+    pub fn chunk<D: Into<Scalar>>(&self, chunks: usize, dim: D) -> HoduResult<Vec<Self>> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+        let layout = self.get_layout();
+        let shape = layout.get_shape();
+        let dim_size = shape[dim_usize];
+
+        let chunk_size = (dim_size + chunks - 1) / chunks;
+        let sizes: Vec<usize> = (0..chunks)
+            .map(|i| {
+                let start = i * chunk_size;
+                let end = ((i + 1) * chunk_size).min(dim_size);
+                end - start
+            })
+            .filter(|&s| s > 0)
+            .collect();
+
+        self.split(&sizes, dim_scalar)
+    }
+
     // Shape Operations
     pub fn reshape<S: AsRef<[usize]>>(&self, shape: S) -> HoduResult<Self> {
         let new_shape = shape.as_ref();
@@ -969,7 +1153,12 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
             let op = Op::Shape(op::ShapeOp::Reshape, self.id());
-            register_operation_in_builder(op.clone(), result_id, vec![current_layout.clone()], vec![new_layout]);
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![current_layout.clone()],
+                vec![new_layout],
+            );
 
             if self.is_requires_grad() {
                 gradient::record_operation(result_id, op, vec![self.id()])?;
@@ -1012,7 +1201,12 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
             let op = Op::Shape(op::ShapeOp::Flatten, self.id());
-            register_operation_in_builder(op.clone(), result_id, vec![current_layout.clone()], vec![new_layout]);
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![current_layout.clone()],
+                vec![new_layout],
+            );
 
             if self.is_requires_grad() {
                 gradient::record_operation(result_id, op, vec![self.id()])?;
@@ -1089,7 +1283,12 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
             let op = Op::Shape(op::ShapeOp::Squeeze, self.id());
-            register_operation_in_builder(op.clone(), result_id, vec![current_layout.clone()], vec![new_layout]);
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![current_layout.clone()],
+                vec![new_layout],
+            );
 
             if self.is_requires_grad() {
                 gradient::record_operation(result_id, op, vec![self.id()])?;
@@ -1151,7 +1350,12 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
             let op = Op::Shape(op::ShapeOp::Unsqueeze, self.id());
-            register_operation_in_builder(op.clone(), result_id, vec![current_layout.clone()], vec![new_layout]);
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![current_layout.clone()],
+                vec![new_layout],
+            );
 
             if self.is_requires_grad() {
                 gradient::record_operation(result_id, op, vec![self.id()])?;
@@ -1187,7 +1391,12 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(target_layout.clone(), requires_grad);
 
             let op = Op::Shape(op::ShapeOp::Broadcast, self.id());
-            register_operation_in_builder(op.clone(), result_id, vec![current_layout.clone()], vec![target_layout]);
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![current_layout.clone()],
+                vec![target_layout],
+            );
 
             if self.is_requires_grad() {
                 gradient::record_operation(result_id, op, vec![self.id()])?;
@@ -1238,7 +1447,7 @@ impl Tensor {
         if builder::is_builder_active() {
             let (tensor_id, result) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
             let op = Op::Shape(op::ShapeOp::Transpose, self.id());
-            register_operation_in_builder(op.clone(), tensor_id, vec![self.get_layout()], vec![new_layout]);
+            register_operation_in_builder(op.clone(), vec![tensor_id], vec![self.get_layout()], vec![new_layout]);
 
             if self.is_requires_grad() {
                 gradient::record_operation(tensor_id, op, vec![self.id()])?;
@@ -1270,7 +1479,12 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             let op = Op::Cast(op::CastOp::ToDType, self.id());
-            register_operation_in_builder(op, result_id, vec![self.get_layout().clone()], vec![result_layout]);
+            register_operation_in_builder(
+                op,
+                vec![result_id],
+                vec![self.get_layout().clone()],
+                vec![result_layout],
+            );
 
             Ok(result_tensor)
         } else {
@@ -1298,7 +1512,7 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(contiguous_layout.clone(), requires_grad);
 
             let op = Op::Memory(op::MemoryOp::Contiguous, self.id());
-            register_operation_in_builder(op, result_id, vec![layout], vec![contiguous_layout]);
+            register_operation_in_builder(op, vec![result_id], vec![layout], vec![contiguous_layout]);
 
             Ok(result_tensor)
         } else {

@@ -2,8 +2,8 @@ mod utils;
 
 use crate::{
     backends::op::{
-        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, MatrixOp, Op, ReduceOp, ShapeOp, UnaryLogicalOp, UnaryOp,
-        UnaryScalarOp,
+        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, MatrixOp, Op, ReduceOp, ShapeOp, SplitOp,
+        UnaryLogicalOp, UnaryOp, UnaryScalarOp,
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -44,6 +44,19 @@ pub trait VjpCompute {
     ) -> HoduResult<Vec<TensorId>> {
         Err(HoduError::VjpFunctionNotFound(format!(
             "compute_vjp_with_dims not implemented"
+        )))
+    }
+
+    fn compute_vjp_with_split_info(
+        &self,
+        _inputs: &[TensorId],
+        _output: TensorId,
+        _grad_output: TensorId,
+        _params: &[Scalar],
+        _output_index: usize,
+    ) -> HoduResult<Vec<TensorId>> {
+        Err(HoduError::VjpFunctionNotFound(format!(
+            "compute_vjp_with_split_info not implemented"
         )))
     }
 }
@@ -614,6 +627,77 @@ impl VjpCompute for ReduceOp {
     }
 }
 
+impl VjpCompute for ConcatOp {
+    fn compute_vjp_with_dims(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        params: &[Scalar],
+    ) -> HoduResult<Vec<TensorId>> {
+        if params.is_empty() {
+            return Err(HoduError::InternalError("Concat requires dim parameter".to_string()));
+        }
+        let dim = params[0];
+
+        let sizes: Vec<usize> = inputs
+            .iter()
+            .map(|&id| {
+                let tensor = tensor_from_id(id);
+                tensor.get_layout().get_shape()[dim.to_u64() as usize]
+            })
+            .collect();
+
+        let grad_tensor = tensor_from_id(grad_output);
+        let grad_splits = grad_tensor.split(&sizes, dim)?;
+        Ok(grad_splits.iter().map(|t| t.id()).collect())
+    }
+}
+
+impl VjpCompute for SplitOp {
+    fn compute_vjp_with_split_info(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        params: &[Scalar],
+        output_index: usize,
+    ) -> HoduResult<Vec<TensorId>> {
+        if params.is_empty() {
+            return Err(HoduError::InternalError("Split requires dim parameter".to_string()));
+        }
+
+        let input = inputs[0];
+        let input_tensor = tensor_from_id(input);
+        let input_layout = input_tensor.get_layout();
+        let input_shape = input_layout.get_shape();
+        let dtype = input_tensor.get_dtype();
+
+        let dim = params[0].to_u64() as usize;
+        let sizes: Vec<usize> = params[1..].iter().map(|s| s.to_u64() as usize).collect();
+
+        // Create zero tensors for all splits
+        let mut grad_pieces = Vec::new();
+        for (idx, &size) in sizes.iter().enumerate() {
+            if idx == output_index {
+                // Use the actual gradient for this output
+                grad_pieces.push(tensor_from_id(grad_output).clone());
+            } else {
+                // Create zeros for other outputs
+                let mut piece_shape = input_shape.to_vec();
+                piece_shape[dim] = size;
+                let zeros = tensor::Tensor::zeros(&piece_shape, dtype)?;
+                grad_pieces.push(zeros);
+            }
+        }
+
+        // Concat all pieces back together
+        let grad_refs: Vec<&tensor::Tensor> = grad_pieces.iter().collect();
+        let result = tensor::Tensor::concat(&grad_refs, dim)?;
+        Ok(vec![result.id()])
+    }
+}
+
 impl VjpCompute for ShapeOp {
     fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
         let input = inputs[0];
@@ -1022,6 +1106,10 @@ fn compute_vjp_for_op(
         Op::Matrix(matrix_op, _, _) => matrix_op.compute_vjp(inputs, output, grad_output),
         Op::Reduce(reduce_op, _, dims_scalars) => {
             reduce_op.compute_vjp_with_dims(inputs, output, grad_output, dims_scalars)
+        },
+        Op::Concat(concat_op, _, params) => concat_op.compute_vjp_with_dims(inputs, output, grad_output, params),
+        Op::Split(split_op, _, params, output_index) => {
+            split_op.compute_vjp_with_split_info(inputs, output, grad_output, params, *output_index)
         },
         Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output),
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),

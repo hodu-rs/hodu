@@ -303,6 +303,22 @@ pub enum ShapeOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum ConcatOp {
+    Concat,
+    Stack,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum SplitOp {
+    Split,
+    Chunk,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum CastOp {
     ToDType, // no-backprop
 }
@@ -327,6 +343,8 @@ pub enum Op {
     UnaryScalar(UnaryScalarOp, TensorId, Scalar),
     Matrix(MatrixOp, TensorId, TensorId),
     Reduce(ReduceOp, TensorId, Vec<Scalar>),
+    Concat(ConcatOp, Vec<TensorId>, Vec<Scalar>),
+    Split(SplitOp, TensorId, Vec<Scalar>, usize),
     Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
     Memory(MemoryOp, TensorId),
@@ -345,6 +363,8 @@ impl Op {
             Op::UnaryScalar(_, t, _) => vec![*t],
             Op::Matrix(_, t1, t2) => vec![*t1, *t2],
             Op::Reduce(_, t, _) => vec![*t],
+            Op::Concat(_, tt, _) => tt.clone(),
+            Op::Split(_, t, _, _) => vec![*t],
             Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
             Op::Memory(_, t) => vec![*t],

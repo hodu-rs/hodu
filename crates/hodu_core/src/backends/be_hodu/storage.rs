@@ -6,6 +6,7 @@ use crate::{
         },
         op::{BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT},
     },
+    compat::*,
     error::HoduResult,
     scalar::Scalar,
     types::{device::Device, dtype::DType, layout::Layout},
@@ -43,6 +44,10 @@ pub trait HoduStorageT: Sized {
     fn dot(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self>;
 
     fn reduce(&self, _: crate::backends::op::ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self>;
+
+    fn concat(&self, _: &[&Self], _: &[&Layout], _: usize) -> HoduResult<Self>;
+
+    fn split(&self, _: &Layout, _: usize, _: &[usize]) -> HoduResult<Vec<Self>>;
 
     fn to_dtype(&self, _: DType) -> HoduResult<Self>;
 
@@ -197,6 +202,30 @@ impl HoduStorage {
             Self::CPU(storage) => {
                 let reduced_storage = storage.reduce(reduce_op, layout, dims, keep_dim)?;
                 Ok(Self::CPU(reduced_storage))
+            },
+        }
+    }
+
+    pub(crate) fn concat(&self, others: &[&Self], layouts: &[&Layout], dim: usize) -> HoduResult<Self> {
+        match self {
+            Self::CPU(first_storage) => {
+                let other_cpu_storages: Vec<&CpuStorage> = others
+                    .iter()
+                    .map(|s| match s {
+                        Self::CPU(storage) => storage,
+                    })
+                    .collect();
+                let result = first_storage.concat(&other_cpu_storages, layouts, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn split(&self, layout: &Layout, dim: usize, sizes: &[usize]) -> HoduResult<Vec<Self>> {
+        match self {
+            Self::CPU(storage) => {
+                let results = storage.split(layout, dim, sizes)?;
+                Ok(results.into_iter().map(Self::CPU).collect())
             },
         }
     }
