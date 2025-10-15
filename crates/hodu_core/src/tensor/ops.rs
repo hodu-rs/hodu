@@ -1226,17 +1226,19 @@ impl Tensor {
         }
     }
 
-    pub fn squeeze(&self, dim: Option<isize>) -> HoduResult<Self> {
+    pub fn squeeze<D: Into<Scalar> + Clone>(&self, dim: Option<D>) -> HoduResult<Self> {
         let current_layout = self.get_layout();
         let current_shape = current_layout.get_shape();
         let ndim = current_shape.len();
 
-        let new_shape = if let Some(dim) = dim {
+        let new_shape = if let Some(ref dim) = dim {
             // Squeeze specific dimension
-            let actual_dim = if dim < 0 {
-                (ndim as isize + dim) as usize
+            let dim_scalar = dim.clone().into();
+            let dim_i32 = dim_scalar.to_i64() as i32;
+            let actual_dim = if dim_i32 < 0 {
+                (ndim as i32 + dim_i32) as usize
             } else {
-                dim as usize
+                dim_i32 as usize
             };
 
             if actual_dim >= ndim {
@@ -1245,7 +1247,7 @@ impl Tensor {
                     rhs: vec![],
                     op: format!(
                         "squeeze - dimension {} out of range for {}-dimensional tensor",
-                        dim, ndim
+                        dim_i32, ndim
                     ),
                 });
             }
@@ -1256,7 +1258,7 @@ impl Tensor {
                     rhs: vec![],
                     op: format!(
                         "squeeze - cannot squeeze dimension {} with size {}",
-                        dim, current_shape[actual_dim]
+                        dim_i32, current_shape[actual_dim]
                     ),
                 });
             }
@@ -1273,7 +1275,7 @@ impl Tensor {
         if !current_layout.is_contiguous() {
             // If not contiguous, make it contiguous first then squeeze
             let contiguous_tensor = self.contiguous()?;
-            return contiguous_tensor.squeeze(dim);
+            return contiguous_tensor.squeeze(dim.clone());
         }
 
         let new_layout = Layout::from_shape(&new_shape);
@@ -1308,16 +1310,18 @@ impl Tensor {
         }
     }
 
-    pub fn unsqueeze(&self, dim: isize) -> HoduResult<Self> {
+    pub fn unsqueeze<D: Into<Scalar>>(&self, dim: D) -> HoduResult<Self> {
         let current_layout = self.get_layout();
         let current_shape = current_layout.get_shape();
         let ndim = current_shape.len();
 
         // Convert negative dimension to positive
-        let actual_dim = if dim < 0 {
-            (ndim as isize + dim + 1) as usize
+        let dim_scalar = dim.into();
+        let dim_i32 = dim_scalar.to_i64() as i32;
+        let actual_dim = if dim_i32 < 0 {
+            (ndim as i32 + dim_i32 + 1) as usize
         } else {
-            dim as usize
+            dim_i32 as usize
         };
 
         // Check bounds (can insert at position 0 to ndim inclusive)
@@ -1327,7 +1331,7 @@ impl Tensor {
                 rhs: vec![],
                 op: format!(
                     "unsqueeze - dimension {} out of range for {}-dimensional tensor",
-                    dim, ndim
+                    dim_i32, ndim
                 ),
             });
         }
@@ -1340,7 +1344,7 @@ impl Tensor {
         if !current_layout.is_contiguous() {
             // If not contiguous, make it contiguous first then unsqueeze
             let contiguous_tensor = self.contiguous()?;
-            return contiguous_tensor.unsqueeze(dim);
+            return contiguous_tensor.unsqueeze(dim_scalar);
         }
 
         let new_layout = Layout::from_shape(&new_shape);
@@ -1432,16 +1436,23 @@ impl Tensor {
         self.broadcast(&target_shape)
     }
 
-    pub fn transpose(&self, dim1: i32, dim2: i32) -> HoduResult<Self> {
+    pub fn transpose<D1: Into<Scalar>, D2: Into<Scalar>>(&self, dim1: D1, dim2: D2) -> HoduResult<Self> {
         let layout = self.get_layout();
-        let new_layout = layout.transpose(dim1, dim2)?;
+
+        // Convert scalars to i32 for layout.transpose
+        let dim1_scalar = dim1.into();
+        let dim2_scalar = dim2.into();
+        let dim1_i32 = dim1_scalar.to_i64() as i32;
+        let dim2_i32 = dim2_scalar.to_i64() as i32;
+
+        let new_layout = layout.transpose(dim1_i32, dim2_i32)?;
         let requires_grad = self.is_requires_grad();
 
         // First check if tensor is contiguous
         if !layout.is_contiguous() {
             // If not contiguous, make it contiguous first then transpose
             let contiguous_tensor = self.contiguous()?;
-            return contiguous_tensor.transpose(dim1, dim2);
+            return contiguous_tensor.transpose(dim1_scalar, dim2_scalar);
         }
 
         if builder::is_builder_active() {
@@ -1469,6 +1480,95 @@ impl Tensor {
 
     pub fn t(&self) -> HoduResult<Self> {
         self.transpose(-2, -1)
+    }
+
+    pub fn permute<A: Into<Scalar> + Copy>(&self, axes: &[A]) -> HoduResult<Self> {
+        let layout = self.get_layout();
+        let shape = layout.get_shape();
+        let ndim = shape.len();
+
+        // Validate axes length
+        if axes.len() != ndim {
+            return Err(HoduError::IncompatibleShapes {
+                lhs: shape.to_vec(),
+                rhs: vec![],
+                op: format!(
+                    "permute - axes length {} must match tensor dimensions {}",
+                    axes.len(),
+                    ndim
+                ),
+            });
+        }
+
+        // Convert Scalar axes to usize, handling negative indices
+        let mut axes_usize = Vec::with_capacity(ndim);
+        for &axis in axes {
+            let axis_scalar = axis.into();
+            let axis_i32 = axis_scalar.to_i64() as i32;
+            let actual_axis = if axis_i32 < 0 {
+                (ndim as i32 + axis_i32) as usize
+            } else {
+                axis_i32 as usize
+            };
+
+            if actual_axis >= ndim {
+                return Err(HoduError::IncompatibleShapes {
+                    lhs: shape.to_vec(),
+                    rhs: vec![],
+                    op: format!(
+                        "permute - axis {} out of range for {}-dimensional tensor",
+                        axis_i32, ndim
+                    ),
+                });
+            }
+
+            axes_usize.push(actual_axis);
+        }
+
+        // Check that axes contains each dimension exactly once
+        let mut seen = vec![false; ndim];
+        for &axis in &axes_usize {
+            if seen[axis] {
+                return Err(HoduError::IncompatibleShapes {
+                    lhs: shape.to_vec(),
+                    rhs: axes_usize.clone(),
+                    op: format!("permute - duplicate axis {} in permutation", axis),
+                });
+            }
+            seen[axis] = true;
+        }
+
+        let new_layout = layout.permute(&axes_usize)?;
+        let requires_grad = self.is_requires_grad();
+
+        // First check if tensor is contiguous
+        if !layout.is_contiguous() {
+            // If not contiguous, make it contiguous first then permute
+            let contiguous_tensor = self.contiguous()?;
+            return contiguous_tensor.permute(axes);
+        }
+
+        if builder::is_builder_active() {
+            let (tensor_id, result) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let op = Op::Shape(op::ShapeOp::Permute, self.id());
+            register_operation_in_builder(op.clone(), vec![tensor_id], vec![self.get_layout()], vec![new_layout]);
+
+            if self.is_requires_grad() {
+                gradient::record_operation(tensor_id, op, vec![self.id()])?;
+            }
+
+            Ok(result)
+        } else {
+            // Tensor is contiguous, we can share storage
+            let result = from_shared_storage_with_grad(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && self.is_requires_grad() {
+                let op = Op::Shape(op::ShapeOp::Permute, self.id());
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
+        }
     }
 
     // Cast Operations

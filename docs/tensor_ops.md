@@ -209,6 +209,7 @@ Operations that manipulate tensor shape and layout.
 | `unsqueeze` | Add dimension of size 1 | - |
 | `broadcast` | Broadcast to larger shape | `broadcast_like`, `broadcast_left` |
 | `transpose` | Swap two dimensions | `t` (for last two dims) |
+| `permute` | Reorder dimensions | - |
 
 ## Type Operations
 

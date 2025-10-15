@@ -729,6 +729,33 @@ impl VjpCompute for ShapeOp {
                 let squeezed_grad = grad_tensor.reshape(input_shape)?;
                 Ok(vec![squeezed_grad.id()])
             },
+            ShapeOp::Broadcast => {
+                // Sum over the broadcasted dimensions to get back to original shape
+                let mut result_grad = grad_tensor.clone();
+
+                // Handle dimension differences (leading dimensions were added)
+                if grad_shape.len() > input_shape.len() {
+                    // Sum over leading dimensions that were added during broadcasting
+                    let dims_to_sum: Vec<usize> = (0..(grad_shape.len() - input_shape.len())).collect();
+                    for &dim in dims_to_sum.iter().rev() {
+                        result_grad = result_grad.sum(&[dim], false)?;
+                    }
+                }
+
+                // Handle size-1 dimensions that were broadcasted
+                let current_layout = result_grad.get_layout();
+                let current_shape = current_layout.get_shape();
+                for (i, (&input_dim, &current_dim)) in input_shape.iter().zip(current_shape.iter()).enumerate() {
+                    if input_dim == 1 && current_dim > 1 {
+                        // This dimension was broadcasted from size 1, sum it back
+                        result_grad = result_grad.sum(&[i], true)?; // keep_dim=true to maintain size 1
+                    }
+                }
+
+                // Final reshape to ensure exact match
+                let final_grad = result_grad.reshape(input_shape)?;
+                Ok(vec![final_grad.id()])
+            },
             ShapeOp::Transpose => {
                 // Reverse the transpose by finding which dimensions were swapped
                 // Compare input and output shapes to determine the transpose dimensions
@@ -771,32 +798,41 @@ impl VjpCompute for ShapeOp {
                     Ok(vec![transposed_grad.id()])
                 }
             },
-            ShapeOp::Broadcast => {
-                // Sum over the broadcasted dimensions to get back to original shape
-                let mut result_grad = grad_tensor.clone();
+            ShapeOp::Permute => {
+                // Reverse the permutation by finding the inverse permutation
+                // If forward permutation is [a, b, c], then inverse is such that inverse[forward[i]] = i
+                if input_shape.len() != grad_shape.len() {
+                    return Err(HoduError::InternalError(
+                        "Input and gradient shapes must have same rank for permute".to_string(),
+                    ));
+                }
 
-                // Handle dimension differences (leading dimensions were added)
-                if grad_shape.len() > input_shape.len() {
-                    // Sum over leading dimensions that were added during broadcasting
-                    let dims_to_sum: Vec<usize> = (0..(grad_shape.len() - input_shape.len())).collect();
-                    for &dim in dims_to_sum.iter().rev() {
-                        result_grad = result_grad.sum(&[dim], false)?;
+                let ndim = input_shape.len();
+
+                // Find the forward permutation by comparing input and grad shapes
+                let mut forward_perm = vec![0; ndim];
+                for i in 0..ndim {
+                    for j in 0..ndim {
+                        if input_shape[i] == grad_shape[j] {
+                            // Check if this dimension is already used
+                            let already_used = forward_perm[..i].contains(&j);
+                            if !already_used {
+                                forward_perm[i] = j;
+                                break;
+                            }
+                        }
                     }
                 }
 
-                // Handle size-1 dimensions that were broadcasted
-                let current_layout = result_grad.get_layout();
-                let current_shape = current_layout.get_shape();
-                for (i, (&input_dim, &current_dim)) in input_shape.iter().zip(current_shape.iter()).enumerate() {
-                    if input_dim == 1 && current_dim > 1 {
-                        // This dimension was broadcasted from size 1, sum it back
-                        result_grad = result_grad.sum(&[i], true)?; // keep_dim=true to maintain size 1
-                    }
+                // Compute inverse permutation
+                let mut inverse_perm = vec![0usize; ndim];
+                for (i, &p) in forward_perm.iter().enumerate() {
+                    inverse_perm[p] = i;
                 }
 
-                // Final reshape to ensure exact match
-                let final_grad = result_grad.reshape(input_shape)?;
-                Ok(vec![final_grad.id()])
+                // Apply inverse permutation to gradient
+                let permuted_grad = grad_tensor.permute(&inverse_perm)?;
+                Ok(vec![permuted_grad.id()])
             },
         }
     }

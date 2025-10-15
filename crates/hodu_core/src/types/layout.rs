@@ -213,4 +213,49 @@ impl Layout {
             offset: self.offset,
         })
     }
+
+    pub fn permute(&self, axes: &[usize]) -> HoduResult<Self> {
+        let ndim = self.get_ndim();
+
+        if axes.len() != ndim {
+            return Err(HoduError::InternalError(format!(
+                "permute axes length {} must match tensor dimensions {}",
+                axes.len(),
+                ndim
+            )));
+        }
+
+        // Validate axes
+        let mut seen = vec![false; ndim];
+        for &axis in axes {
+            if axis >= ndim {
+                return Err(HoduError::InternalError(format!(
+                    "permute axis {} out of range for {}-dimensional tensor",
+                    axis, ndim
+                )));
+            }
+            if seen[axis] {
+                return Err(HoduError::InternalError(format!(
+                    "permute axis {} appears more than once",
+                    axis
+                )));
+            }
+            seen[axis] = true;
+        }
+
+        // Permute shape and strides according to axes
+        let mut new_shape = Vec::with_capacity(ndim);
+        let mut new_strides = Vec::with_capacity(ndim);
+
+        for &axis in axes {
+            new_shape.push(self.shape[axis]);
+            new_strides.push(self.strides[axis]);
+        }
+
+        Ok(Self {
+            shape: new_shape,
+            strides: new_strides,
+            offset: self.offset,
+        })
+    }
 }

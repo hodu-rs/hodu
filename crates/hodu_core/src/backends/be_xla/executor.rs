@@ -959,6 +959,39 @@ impl XlaExecutor {
                             },
                         }
                     },
+                    ShapeOp::Permute => {
+                        // Get input and output shapes
+                        let input_layout = current_node
+                            .input_layouts
+                            .first()
+                            .ok_or_else(|| HoduError::InternalError("Missing input layout for permute".to_string()))?;
+                        let output_layout = current_node
+                            .output_layouts
+                            .first()
+                            .ok_or_else(|| HoduError::InternalError("Missing output layout for permute".to_string()))?;
+
+                        let input_shape = input_layout.get_shape();
+                        let output_shape = output_layout.get_shape();
+                        let ndim = input_layout.get_ndim();
+
+                        // Find the permutation by comparing input and output shapes
+                        let mut permutation = vec![0i64; ndim];
+                        for i in 0..ndim {
+                            // Find which output dimension corresponds to input dimension i
+                            for j in 0..ndim {
+                                if input_shape[i] == output_shape[j] {
+                                    // Check if this is not already assigned
+                                    let already_used = permutation[..i].contains(&(j as i64));
+                                    if !already_used {
+                                        permutation[i] = j as i64;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        input_ops[0].transpose(&permutation).map_err(xla_error_to_hodu_error)
+                    },
                 }
             },
 

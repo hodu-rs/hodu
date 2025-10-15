@@ -291,18 +291,6 @@ impl ReduceOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub enum ShapeOp {
-    Reshape,
-    Flatten,
-    Squeeze,
-    Unsqueeze,
-    Broadcast,
-    Transpose,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ConcatOp {
     Concat,
     Stack,
@@ -314,6 +302,19 @@ pub enum ConcatOp {
 pub enum SplitOp {
     Split,
     Chunk,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum ShapeOp {
+    Reshape,
+    Flatten,
+    Squeeze,
+    Unsqueeze,
+    Broadcast,
+    Transpose,
+    Permute,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
