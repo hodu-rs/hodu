@@ -197,6 +197,15 @@ Operations that split tensor.
 
 **Note**: `chunk` is implemented as a wrapper around `split` with automatically calculated equal sizes
 
+## Normalization Operations
+
+| Operation | Description | Aliases |
+|-----------|-------------|---------|
+| `softmax` | Softmax normalization along dimension | - |
+| `log_softmax` | Log-softmax normalization along dimension | - |
+
+**Note**: `softmax` and `log_softmax` are implemented using `exp`, `sum`, and `ln` with numerically stable computation by subtracting the maximum value
+
 ## Shape Operations
 
 Operations that manipulate tensor shape and layout.
