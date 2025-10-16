@@ -1,10 +1,10 @@
 # Neural Network Modules Guide
 
-This document provides a comprehensive overview of neural network modules available in `hodu_nn`.
+This document provides a comprehensive overview of neural network modules available in `hodu::nn`.
 
 ## Overview
 
-`hodu_nn` provides PyTorch-style neural network building blocks organized into three main categories:
+`hodu::nn` provides PyTorch-style neural network building blocks organized into three main categories:
 
 1. **Modules**: Layers and transformations (Linear, Activation functions)
 2. **Loss Functions**: Training objectives (MSE, CrossEntropy, etc.)
@@ -20,7 +20,7 @@ Fully connected (dense) layer with optional bias.
 
 ```rust
 use hodu::prelude::*;
-use hodu_nn::modules::Linear;
+use hodu::nn::modules::Linear;
 
 // Create linear layer: 784 -> 128
 let layer = Linear::new(784, 128, true, DType::F32)?;
@@ -54,7 +54,7 @@ All activation functions are stateless and have no parameters.
 Rectified Linear Unit: `max(0, x)`
 
 ```rust
-use hodu_nn::modules::ReLU;
+use hodu::nn::modules::ReLU;
 
 let relu = ReLU::new();
 let output = relu.forward(&input)?;
@@ -70,7 +70,7 @@ let output = relu.forward(&input)?;
 Logistic sigmoid: `σ(x) = 1 / (1 + e^(-x))`
 
 ```rust
-use hodu_nn::modules::Sigmoid;
+use hodu::nn::modules::Sigmoid;
 
 let sigmoid = Sigmoid::new();
 let output = sigmoid.forward(&input)?;
@@ -86,7 +86,7 @@ let output = sigmoid.forward(&input)?;
 Hyperbolic tangent: `tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))`
 
 ```rust
-use hodu_nn::modules::Tanh;
+use hodu::nn::modules::Tanh;
 
 let tanh = Tanh::new();
 let output = tanh.forward(&input)?;
@@ -102,7 +102,7 @@ let output = tanh.forward(&input)?;
 Gaussian Error Linear Unit: `x * Φ(x)` where Φ is standard normal CDF
 
 ```rust
-use hodu_nn::modules::Gelu;
+use hodu::nn::modules::Gelu;
 
 let gelu = Gelu::new();
 let output = gelu.forward(&input)?;
@@ -118,7 +118,7 @@ let output = gelu.forward(&input)?;
 Smooth approximation of ReLU: `log(1 + e^x)`
 
 ```rust
-use hodu_nn::modules::Softplus;
+use hodu::nn::modules::Softplus;
 
 let softplus = Softplus::new();
 let output = softplus.forward(&input)?;
@@ -134,7 +134,7 @@ let output = softplus.forward(&input)?;
 Leaky ReLU: `max(αx, x)`
 
 ```rust
-use hodu_nn::modules::LeakyReLU;
+use hodu::nn::modules::LeakyReLU;
 
 let leaky = LeakyReLU::new(0.01);  // α = 0.01
 let output = leaky.forward(&input)?;
@@ -152,7 +152,7 @@ let output = leaky.forward(&input)?;
 Exponential Linear Unit
 
 ```rust
-use hodu_nn::modules::ELU;
+use hodu::nn::modules::ELU;
 
 let elu = ELU::new(1.0);  // α = 1.0
 let output = elu.forward(&input)?;
@@ -190,7 +190,7 @@ f(x) = x           if x > 0
 Mean Squared Error: Average of squared differences
 
 ```rust
-use hodu_nn::losses::MSELoss;
+use hodu::nn::losses::MSELoss;
 
 let criterion = MSELoss::new();
 let loss = criterion.forward((&predictions, &targets))?;
@@ -210,7 +210,7 @@ MSE = mean((predictions - targets)²)
 Mean Absolute Error: Average of absolute differences
 
 ```rust
-use hodu_nn::losses::MAELoss;
+use hodu::nn::losses::MAELoss;
 
 let criterion = MAELoss::new();
 let loss = criterion.forward((&predictions, &targets))?;
@@ -230,7 +230,7 @@ MAE = mean(|predictions - targets|)
 Combination of MSE and MAE with configurable threshold
 
 ```rust
-use hodu_nn::losses::HuberLoss;
+use hodu::nn::losses::HuberLoss;
 
 let criterion = HuberLoss::new(1.0);  // delta = 1.0
 let loss = criterion.forward((&predictions, &targets))?;
@@ -254,7 +254,7 @@ where x = predictions - targets
 Binary Cross Entropy: For binary classification with probabilities
 
 ```rust
-use hodu_nn::losses::BCELoss;
+use hodu::nn::losses::BCELoss;
 
 let criterion = BCELoss::new();
 // Or with custom epsilon for numerical stability
@@ -282,7 +282,7 @@ BCE = -mean[target * log(pred) + (1 - target) * log(1 - pred)]
 Binary Cross Entropy with logits: More numerically stable
 
 ```rust
-use hodu_nn::losses::BCEWithLogitsLoss;
+use hodu::nn::losses::BCEWithLogitsLoss;
 
 let criterion = BCEWithLogitsLoss::new();
 let loss = criterion.forward((&logits, &targets))?;  // No sigmoid needed
@@ -304,7 +304,7 @@ where x = logits
 Negative Log Likelihood: For multi-class classification with log probabilities
 
 ```rust
-use hodu_nn::losses::NLLLoss;
+use hodu::nn::losses::NLLLoss;
 
 let criterion = NLLLoss::new();  // Default: dim=-1
 // Or specify class dimension
@@ -344,7 +344,7 @@ NLL = -mean(log_probs[batch_idx, target[batch_idx]])
 Cross Entropy: Combines log_softmax + NLLLoss
 
 ```rust
-use hodu_nn::losses::CrossEntropyLoss;
+use hodu::nn::losses::CrossEntropyLoss;
 
 let criterion = CrossEntropyLoss::new();  // Default: dim=-1
 // Or specify class dimension
@@ -410,7 +410,7 @@ CE = -mean(log(softmax(logits))[batch_idx, target[batch_idx]])
 Stochastic Gradient Descent
 
 ```rust
-use hodu_nn::optimizers::SGD;
+use hodu::nn::optimizers::SGD;
 
 let mut optimizer = SGD::new(0.01);  // learning_rate = 0.01
 
@@ -445,7 +445,7 @@ optimizer.set_learning_rate(0.001);
 Adaptive Moment Estimation
 
 ```rust
-use hodu_nn::optimizers::Adam;
+use hodu::nn::optimizers::Adam;
 
 let mut optimizer = Adam::new(
     0.001,  // learning_rate
@@ -502,7 +502,7 @@ v̂_t = v_t / (1 - β₂^t)
 
 ```rust
 use hodu::prelude::*;
-use hodu_nn::{modules::*, losses::*, optimizers::*};
+use hodu::nn::{modules::*, losses::*, optimizers::*};
 
 fn main() -> HoduResult<()> {
     // Create model layers

@@ -1,10 +1,10 @@
 # 신경망 모듈 가이드
 
-이 문서는 `hodu_nn`에서 제공하는 신경망 모듈에 대한 포괄적인 개요를 제공합니다.
+이 문서는 `hodu::nn`에서 제공하는 신경망 모듈에 대한 포괄적인 개요를 제공합니다.
 
 ## 개요
 
-`hodu_nn`은 PyTorch 스타일의 신경망 구성 요소를 세 가지 주요 카테고리로 제공합니다:
+`hodu::nn`은 PyTorch 스타일의 신경망 구성 요소를 세 가지 주요 카테고리로 제공합니다:
 
 1. **모듈 (Modules)**: 레이어와 변환 (Linear, 활성화 함수)
 2. **손실 함수 (Loss Functions)**: 학습 목표 (MSE, CrossEntropy 등)
@@ -20,7 +20,7 @@
 
 ```rust
 use hodu::prelude::*;
-use hodu_nn::modules::Linear;
+use hodu::nn::modules::Linear;
 
 // Linear 레이어 생성: 784 -> 128
 let layer = Linear::new(784, 128, true, DType::F32)?;
@@ -54,7 +54,7 @@ output = input @ weight.T + bias
 정류 선형 유닛(Rectified Linear Unit): `max(0, x)`
 
 ```rust
-use hodu_nn::modules::ReLU;
+use hodu::nn::modules::ReLU;
 
 let relu = ReLU::new();
 let output = relu.forward(&input)?;
@@ -70,7 +70,7 @@ let output = relu.forward(&input)?;
 로지스틱 시그모이드: `σ(x) = 1 / (1 + e^(-x))`
 
 ```rust
-use hodu_nn::modules::Sigmoid;
+use hodu::nn::modules::Sigmoid;
 
 let sigmoid = Sigmoid::new();
 let output = sigmoid.forward(&input)?;
@@ -86,7 +86,7 @@ let output = sigmoid.forward(&input)?;
 쌍곡 탄젠트: `tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))`
 
 ```rust
-use hodu_nn::modules::Tanh;
+use hodu::nn::modules::Tanh;
 
 let tanh = Tanh::new();
 let output = tanh.forward(&input)?;
@@ -102,7 +102,7 @@ let output = tanh.forward(&input)?;
 가우시안 오차 선형 유닛(Gaussian Error Linear Unit): `x * Φ(x)` (Φ는 표준 정규 CDF)
 
 ```rust
-use hodu_nn::modules::Gelu;
+use hodu::nn::modules::Gelu;
 
 let gelu = Gelu::new();
 let output = gelu.forward(&input)?;
@@ -118,7 +118,7 @@ let output = gelu.forward(&input)?;
 ReLU의 부드러운 근사: `log(1 + e^x)`
 
 ```rust
-use hodu_nn::modules::Softplus;
+use hodu::nn::modules::Softplus;
 
 let softplus = Softplus::new();
 let output = softplus.forward(&input)?;
@@ -134,7 +134,7 @@ let output = softplus.forward(&input)?;
 Leaky ReLU: `max(αx, x)`
 
 ```rust
-use hodu_nn::modules::LeakyReLU;
+use hodu::nn::modules::LeakyReLU;
 
 let leaky = LeakyReLU::new(0.01);  // α = 0.01
 let output = leaky.forward(&input)?;
@@ -152,7 +152,7 @@ let output = leaky.forward(&input)?;
 지수 선형 유닛(Exponential Linear Unit)
 
 ```rust
-use hodu_nn::modules::ELU;
+use hodu::nn::modules::ELU;
 
 let elu = ELU::new(1.0);  // α = 1.0
 let output = elu.forward(&input)?;
@@ -190,7 +190,7 @@ f(x) = x           if x > 0
 평균 제곱 오차(Mean Squared Error): 제곱 차이의 평균
 
 ```rust
-use hodu_nn::losses::MSELoss;
+use hodu::nn::losses::MSELoss;
 
 let criterion = MSELoss::new();
 let loss = criterion.forward((&predictions, &targets))?;
@@ -210,7 +210,7 @@ MSE = mean((predictions - targets)²)
 평균 절대 오차(Mean Absolute Error): 절대 차이의 평균
 
 ```rust
-use hodu_nn::losses::MAELoss;
+use hodu::nn::losses::MAELoss;
 
 let criterion = MAELoss::new();
 let loss = criterion.forward((&predictions, &targets))?;
@@ -230,7 +230,7 @@ MAE = mean(|predictions - targets|)
 설정 가능한 임계값을 가진 MSE와 MAE의 조합
 
 ```rust
-use hodu_nn::losses::HuberLoss;
+use hodu::nn::losses::HuberLoss;
 
 let criterion = HuberLoss::new(1.0);  // delta = 1.0
 let loss = criterion.forward((&predictions, &targets))?;
@@ -254,7 +254,7 @@ L(x) = 0.5 * x²           if |x| ≤ δ
 이진 교차 엔트로피(Binary Cross Entropy): 확률을 사용한 이진 분류
 
 ```rust
-use hodu_nn::losses::BCELoss;
+use hodu::nn::losses::BCELoss;
 
 let criterion = BCELoss::new();
 // 또는 수치 안정성을 위한 커스텀 epsilon
@@ -282,7 +282,7 @@ BCE = -mean[target * log(pred) + (1 - target) * log(1 - pred)]
 로짓을 사용한 이진 교차 엔트로피: 더 수치적으로 안정적
 
 ```rust
-use hodu_nn::losses::BCEWithLogitsLoss;
+use hodu::nn::losses::BCEWithLogitsLoss;
 
 let criterion = BCEWithLogitsLoss::new();
 let loss = criterion.forward((&logits, &targets))?;  // sigmoid 불필요
@@ -304,7 +304,7 @@ loss = max(x, 0) - x * target + log(1 + exp(-|x|))
 음의 로그 우도(Negative Log Likelihood): 로그 확률을 사용한 다중 클래스 분류
 
 ```rust
-use hodu_nn::losses::NLLLoss;
+use hodu::nn::losses::NLLLoss;
 
 let criterion = NLLLoss::new();  // 기본값: dim=-1
 // 또는 클래스 차원 지정
@@ -344,7 +344,7 @@ NLL = -mean(log_probs[batch_idx, target[batch_idx]])
 교차 엔트로피: log_softmax + NLLLoss 결합
 
 ```rust
-use hodu_nn::losses::CrossEntropyLoss;
+use hodu::nn::losses::CrossEntropyLoss;
 
 let criterion = CrossEntropyLoss::new();  // 기본값: dim=-1
 // 또는 클래스 차원 지정
@@ -410,7 +410,7 @@ CE = -mean(log(softmax(logits))[batch_idx, target[batch_idx]])
 확률적 경사 하강법(Stochastic Gradient Descent)
 
 ```rust
-use hodu_nn::optimizers::SGD;
+use hodu::nn::optimizers::SGD;
 
 let mut optimizer = SGD::new(0.01);  // learning_rate = 0.01
 
@@ -445,7 +445,7 @@ optimizer.set_learning_rate(0.001);
 적응적 모멘트 추정(Adaptive Moment Estimation)
 
 ```rust
-use hodu_nn::optimizers::Adam;
+use hodu::nn::optimizers::Adam;
 
 let mut optimizer = Adam::new(
     0.001,  // learning_rate
@@ -502,7 +502,7 @@ v̂_t = v_t / (1 - β₂^t)
 
 ```rust
 use hodu::prelude::*;
-use hodu_nn::{modules::*, losses::*, optimizers::*};
+use hodu::nn::{modules::*, losses::*, optimizers::*};
 
 fn main() -> HoduResult<()> {
     // 모델 레이어 생성
