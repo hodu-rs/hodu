@@ -485,18 +485,77 @@ v̂_t = v_t / (1 - β₂^t)
 - Default choice for most deep learning tasks
 - Includes bias correction for initial steps
 
+### AdamW
+
+Adam with Decoupled Weight Decay
+
+```rust
+use hodu::nn::optimizers::AdamW;
+
+let mut optimizer = AdamW::new(
+    0.001,  // learning_rate
+    0.9,    // beta1 (first moment decay)
+    0.999,  // beta2 (second moment decay)
+    1e-8,   // epsilon (numerical stability)
+    0.01,   // weight_decay
+);
+
+// Training loop
+for epoch in 0..epochs {
+    let loss = model.forward(&input)?;
+    loss.backward()?;
+
+    optimizer.step(&mut model.parameters())?;
+    model.zero_grad()?;
+}
+
+// Adjust hyperparameters
+optimizer.set_learning_rate(0.0001);
+optimizer.set_weight_decay(0.001);
+```
+
+**Update Rules:**
+```
+θ = θ * (1 - lr * λ)                    // Weight decay (decoupled)
+m_t = β₁ * m_(t-1) + (1 - β₁) * g_t
+v_t = β₂ * v_(t-1) + (1 - β₂) * g_t²
+m̂_t = m_t / (1 - β₁^t)
+v̂_t = v_t / (1 - β₂^t)
+θ = θ - lr * m̂_t / (√v̂_t + ε)         // Gradient update
+```
+
+**Parameters:**
+- `learning_rate`: Base learning rate (typically 0.001)
+- `beta1`: First moment decay (typically 0.9)
+- `beta2`: Second moment decay (typically 0.999)
+- `epsilon`: Numerical stability (typically 1e-8)
+- `weight_decay`: L2 regularization strength (typically 0.01)
+
+**Characteristics:**
+- Decouples weight decay from gradient-based optimization
+- Better generalization than Adam in many cases
+- Fixes issues with L2 regularization in adaptive optimizers
+- Recommended for transformer models and fine-tuning
+
+**Key Difference from Adam:**
+- Adam: Weight decay is coupled with adaptive learning rate
+- AdamW: Weight decay is applied directly to parameters before gradient update
+- This makes weight decay behave more consistently across different learning rates
+
 ### Optimizer Comparison
 
-| Optimizer | Speed | Memory | Hyperparameters | Convergence |
-|-----------|-------|--------|-----------------|-------------|
-| SGD | Fast | Low | 1 (lr) | Requires tuning |
-| Adam | Medium | High | 4 (lr, β₁, β₂, ε) | Robust, fast |
+| Optimizer | Speed | Memory | Hyperparameters | Convergence | Weight Decay |
+|-----------|-------|--------|-----------------|-------------|--------------|
+| SGD | Fast | Low | 1 (lr) | Requires tuning | Not built-in |
+| Adam | Medium | High | 4 (lr, β₁, β₂, ε) | Robust, fast | Coupled (incorrect) |
+| AdamW | Medium | High | 5 (lr, β₁, β₂, ε, λ) | Robust, fast | Decoupled (correct) |
 
 **Selection Guide:**
-- **Default choice**: Adam with default parameters
+- **Default choice**: AdamW with default parameters (best for most cases)
+- **Without regularization**: Adam with default parameters
 - **Limited memory**: SGD
-- **Fine-tuning**: SGD with momentum (not yet implemented)
-- **Fast prototyping**: Adam
+- **Fine-tuning pretrained models**: AdamW with small weight decay
+- **Fast prototyping**: AdamW or Adam
 
 ## Complete Example
 
