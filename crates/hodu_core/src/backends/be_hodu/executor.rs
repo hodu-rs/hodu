@@ -3,8 +3,8 @@ use crate::{
         be_hodu::storage::{HoduStorage, HoduStorageT},
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
-            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, MatrixOp, MemoryOp, Op, ShapeOp, UnaryLogicalOp,
-            UnaryOp, UnaryScalarOp,
+            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
+            UnaryLogicalOp, UnaryOp, UnaryScalarOp,
         },
         script::{
             ir::{NodeId, ScriptIR},
@@ -145,12 +145,21 @@ impl HoduExecutor {
         tensor_layouts
     }
 
-    fn collect_tensor_dtypes(&self, script_ir: &ScriptIR) -> HashMap<TensorId, DType> {
+    fn collect_tensor_dtypes(&self, script_ir: &ScriptIR, script: &Script) -> HashMap<TensorId, DType> {
         let mut tensor_dtypes = HashMap::new();
 
         for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
             if let Some(dtype) = tensor_info.dtype {
                 tensor_dtypes.insert(tensor_id, dtype);
+            }
+        }
+
+        // Override dtypes for input tensors with actual runtime input dtypes
+        let runtime_inputs = script.get_inputs();
+        for input in &script_ir.graph.metadata.inputs {
+            if let Some(tensor) = runtime_inputs.get(&input.name) {
+                let actual_dtype = tensor.get_dtype();
+                tensor_dtypes.insert(input.tensor_id, actual_dtype);
             }
         }
 
@@ -584,6 +593,114 @@ impl HoduExecutor {
                 // Return only the specific split for this output
                 Ok(splits[output_index].clone())
             },
+            Op::Indexing(indexing_op, tensor_ids, params) => {
+                match indexing_op {
+                    IndexingOp::IndexSelect | IndexingOp::Gather => {
+                        if tensor_ids.len() != 2 {
+                            return Err(HoduError::InternalError(format!(
+                                "{:?} requires 2 tensors, got {}",
+                                indexing_op,
+                                tensor_ids.len()
+                            )));
+                        }
+
+                        let self_storage = tensor_storage
+                            .get(&tensor_ids[0])
+                            .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", tensor_ids[0])))?;
+                        let indices_storage = tensor_storage
+                            .get(&tensor_ids[1])
+                            .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", tensor_ids[1])))?;
+
+                        let self_layout = &compiled_node.input_layouts[0];
+                        let indices_layout = &compiled_node.input_layouts[1];
+
+                        // Extract dim from params
+                        let dim = params
+                            .first()
+                            .ok_or_else(|| {
+                                HoduError::InternalError(format!("{:?} requires dimension parameter", indexing_op))
+                            })?
+                            .to_u64() as usize;
+
+                        match indexing_op {
+                            IndexingOp::IndexSelect => {
+                                self_storage.index_select(self_layout, indices_storage, indices_layout, dim)
+                            },
+                            IndexingOp::Gather => {
+                                self_storage.gather(self_layout, indices_storage, indices_layout, dim)
+                            },
+                            _ => unreachable!(),
+                        }
+                    },
+                    IndexingOp::Scatter | IndexingOp::ScatterAdd | IndexingOp::ScatterMax | IndexingOp::ScatterMin => {
+                        if tensor_ids.len() != 3 {
+                            return Err(HoduError::InternalError(format!(
+                                "{:?} requires 3 tensors, got {}",
+                                indexing_op,
+                                tensor_ids.len()
+                            )));
+                        }
+
+                        let self_storage = tensor_storage
+                            .get(&tensor_ids[0])
+                            .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", tensor_ids[0])))?;
+                        let indices_storage = tensor_storage
+                            .get(&tensor_ids[1])
+                            .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", tensor_ids[1])))?;
+                        let src_storage = tensor_storage
+                            .get(&tensor_ids[2])
+                            .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", tensor_ids[2])))?;
+
+                        let self_layout = &compiled_node.input_layouts[0];
+                        let indices_layout = &compiled_node.input_layouts[1];
+                        let src_layout = &compiled_node.input_layouts[2];
+
+                        // Extract dim from params
+                        let dim = params
+                            .first()
+                            .ok_or_else(|| {
+                                HoduError::InternalError(format!("{:?} requires dimension parameter", indexing_op))
+                            })?
+                            .to_u64() as usize;
+
+                        match indexing_op {
+                            IndexingOp::Scatter => self_storage.scatter(
+                                self_layout,
+                                indices_storage,
+                                indices_layout,
+                                src_storage,
+                                src_layout,
+                                dim,
+                            ),
+                            IndexingOp::ScatterAdd => self_storage.scatter_add(
+                                self_layout,
+                                indices_storage,
+                                indices_layout,
+                                src_storage,
+                                src_layout,
+                                dim,
+                            ),
+                            IndexingOp::ScatterMax => self_storage.scatter_max(
+                                self_layout,
+                                indices_storage,
+                                indices_layout,
+                                src_storage,
+                                src_layout,
+                                dim,
+                            ),
+                            IndexingOp::ScatterMin => self_storage.scatter_min(
+                                self_layout,
+                                indices_storage,
+                                indices_layout,
+                                src_storage,
+                                src_layout,
+                                dim,
+                            ),
+                            _ => unreachable!(),
+                        }
+                    },
+                }
+            },
             Op::Shape(shape_op, tensor_id) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)
@@ -871,7 +988,7 @@ impl ExecutorT for HoduExecutor {
         }
         let constant_storage = self.prepare_constant_storage(script_ir)?;
         let tensor_layouts = self.collect_tensor_layouts(script_ir);
-        let tensor_dtypes = self.collect_tensor_dtypes(script_ir);
+        let tensor_dtypes = self.collect_tensor_dtypes(script_ir, script);
 
         Ok(HoduCompiledScript {
             execution_plan,

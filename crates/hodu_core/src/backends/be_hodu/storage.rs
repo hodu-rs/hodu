@@ -49,6 +49,18 @@ pub trait HoduStorageT: Sized {
 
     fn split(&self, _: &Layout, _: usize, _: &[usize]) -> HoduResult<Vec<Self>>;
 
+    fn index_select(&self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
+    fn gather(&self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
+    fn scatter(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
+    fn scatter_add(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
+    fn scatter_max(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
+    fn scatter_min(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
     fn to_dtype(&self, _: DType) -> HoduResult<Self>;
 
     fn contiguous(&self, _: &Layout) -> HoduResult<Self>;
@@ -226,6 +238,104 @@ impl HoduStorage {
             Self::CPU(storage) => {
                 let results = storage.split(layout, dim, sizes)?;
                 Ok(results.into_iter().map(Self::CPU).collect())
+            },
+        }
+    }
+
+    pub(crate) fn index_select(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage) {
+            (Self::CPU(storage), Self::CPU(indices)) => {
+                let result = storage.index_select(layout, indices, indices_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn gather(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage) {
+            (Self::CPU(storage), Self::CPU(indices)) => {
+                let result = storage.gather(layout, indices, indices_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn scatter(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage, src_storage) {
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => {
+                let result = storage.scatter(layout, indices, indices_layout, src, src_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn scatter_add(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage, src_storage) {
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => {
+                let result = storage.scatter_add(layout, indices, indices_layout, src, src_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn scatter_max(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage, src_storage) {
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => {
+                let result = storage.scatter_max(layout, indices, indices_layout, src, src_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn scatter_min(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage, src_storage) {
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => {
+                let result = storage.scatter_min(layout, indices, indices_layout, src, src_layout, dim)?;
+                Ok(Self::CPU(result))
             },
         }
     }

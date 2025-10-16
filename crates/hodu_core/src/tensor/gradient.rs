@@ -2,7 +2,7 @@ mod utils;
 
 use crate::{
     backends::op::{
-        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, MatrixOp, Op, ReduceOp, ShapeOp, SplitOp,
+        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, IndexingOp, MatrixOp, Op, ReduceOp, ShapeOp, SplitOp,
         UnaryLogicalOp, UnaryOp, UnaryScalarOp,
     },
     compat::*,
@@ -698,6 +698,183 @@ impl VjpCompute for SplitOp {
     }
 }
 
+impl VjpCompute for IndexingOp {
+    fn compute_vjp_with_dims(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        params: &[Scalar],
+    ) -> HoduResult<Vec<TensorId>> {
+        if params.is_empty() {
+            return Err(HoduError::InternalError(
+                "Indexing operation requires dimension parameter".to_string(),
+            ));
+        }
+        let dim = params[0].to_u64() as usize;
+
+        match self {
+            IndexingOp::IndexSelect => {
+                // inputs: [self, indices]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError("IndexSelect requires 2 inputs".to_string()));
+                }
+
+                let self_id = inputs[0];
+                let indices_id = inputs[1];
+
+                let self_tensor = tensor_from_id(self_id);
+                let self_shape = self_tensor.get_layout().get_shape().to_vec();
+                let dtype = self_tensor.get_dtype();
+
+                // Create zero tensor with same shape as input
+                let grad_self = tensor::Tensor::zeros(&self_shape, dtype)?;
+
+                // Scatter the gradient back to the original positions
+                let indices_tensor = tensor_from_id(indices_id);
+                let grad_tensor = tensor_from_id(grad_output);
+                let result = grad_self.scatter_add(dim, &indices_tensor, &grad_tensor)?;
+
+                // IndexSelect doesn't have gradient w.r.t. indices
+                Ok(vec![result.id()])
+            },
+
+            IndexingOp::Gather => {
+                // inputs: [self, indices]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError("Gather requires 2 inputs".to_string()));
+                }
+
+                let self_id = inputs[0];
+                let indices_id = inputs[1];
+
+                let self_tensor = tensor_from_id(self_id);
+                let self_shape = self_tensor.get_layout().get_shape().to_vec();
+                let dtype = self_tensor.get_dtype();
+
+                // Create zero tensor with same shape as input
+                let grad_self = tensor::Tensor::zeros(&self_shape, dtype)?;
+
+                // Scatter the gradient back using scatter_add (accumulate for duplicate indices)
+                let indices_tensor = tensor_from_id(indices_id);
+                let grad_tensor = tensor_from_id(grad_output);
+                let result = grad_self.scatter_add(dim, &indices_tensor, &grad_tensor)?;
+
+                // Gather doesn't have gradient w.r.t. indices
+                Ok(vec![result.id()])
+            },
+
+            IndexingOp::Scatter => {
+                // inputs: [self, src, indices]
+                if inputs.len() != 3 {
+                    return Err(HoduError::InternalError("Scatter requires 3 inputs".to_string()));
+                }
+
+                let self_id = inputs[0];
+                let _src_id = inputs[1];
+                let indices_id = inputs[2];
+
+                let self_tensor = tensor_from_id(self_id);
+                let dtype = self_tensor.get_dtype();
+
+                let indices_tensor = tensor_from_id(indices_id);
+                let grad_tensor = tensor_from_id(grad_output);
+
+                // Gradient w.r.t. self: everywhere except scattered positions
+                // Create a mask: 1 everywhere, 0 at scattered positions
+                let ones = tensor::Tensor::ones(self_tensor.get_layout().get_shape(), dtype)?;
+                let zeros_at_indices = ones.scatter(
+                    dim,
+                    &indices_tensor,
+                    &tensor::Tensor::zeros(indices_tensor.get_layout().get_shape(), dtype)?,
+                )?;
+                let grad_self = grad_tensor.mul(&zeros_at_indices)?;
+
+                // Gradient w.r.t. src: gather from grad_output at indices
+                let grad_src = grad_tensor.gather(dim, &indices_tensor)?;
+
+                // Scatter doesn't have gradient w.r.t. indices
+                Ok(vec![grad_self.id(), grad_src.id()])
+            },
+
+            IndexingOp::ScatterAdd => {
+                // inputs: [self, src, indices]
+                if inputs.len() != 3 {
+                    return Err(HoduError::InternalError("ScatterAdd requires 3 inputs".to_string()));
+                }
+
+                let indices_id = inputs[2];
+                let indices_tensor = tensor_from_id(indices_id);
+                let grad_tensor = tensor_from_id(grad_output);
+
+                // Gradient w.r.t. self: full gradient (nothing is replaced, only added)
+                let grad_self = grad_output;
+
+                // Gradient w.r.t. src: gather from grad_output at indices
+                let grad_src = grad_tensor.gather(dim, &indices_tensor)?;
+
+                // ScatterAdd doesn't have gradient w.r.t. indices
+                Ok(vec![grad_self, grad_src.id()])
+            },
+
+            IndexingOp::ScatterMax | IndexingOp::ScatterMin => {
+                // inputs: [self, src, indices]
+                if inputs.len() != 3 {
+                    return Err(HoduError::InternalError(format!("{:?} requires 3 inputs", self)));
+                }
+
+                let self_id = inputs[0];
+                let src_id = inputs[1];
+                let indices_id = inputs[2];
+
+                let self_tensor = tensor_from_id(self_id);
+                let indices_tensor = tensor_from_id(indices_id);
+                let src_tensor = tensor_from_id(src_id);
+                let grad_tensor = tensor_from_id(grad_output);
+
+                // Get the values at the scattered positions from output
+                let scattered_values = grad_tensor.gather(dim, &indices_tensor)?;
+
+                // Determine which values "won" (were selected)
+                let src_won = match self {
+                    IndexingOp::ScatterMax => {
+                        // src won if src >= self at those positions
+                        let self_at_indices = self_tensor.gather(dim, &indices_tensor)?;
+                        src_tensor.ge(&self_at_indices)?
+                    },
+                    IndexingOp::ScatterMin => {
+                        // src won if src <= self at those positions
+                        let self_at_indices = self_tensor.gather(dim, &indices_tensor)?;
+                        src_tensor.le(&self_at_indices)?
+                    },
+                    _ => unreachable!(),
+                };
+
+                // Gradient w.r.t. src: flows through where src won
+                let grad_src = scattered_values.mul(&src_won)?;
+
+                // Gradient w.r.t. self: flows through where self won
+                // Create mask where self won (opposite of src_won)
+                let dtype = self_tensor.get_dtype();
+                let ones = tensor::Tensor::ones(src_won.get_layout().get_shape(), dtype)?;
+                let self_won = ones.sub(&src_won)?;
+
+                // Scatter the masked gradient back
+                let grad_src_scattered = grad_tensor.gather(dim, &indices_tensor)?;
+                let grad_self_at_indices = grad_src_scattered.mul(&self_won)?;
+
+                let zeros = tensor::Tensor::zeros(self_tensor.get_layout().get_shape(), dtype)?;
+                let grad_self = zeros.scatter_add(dim, &indices_tensor, &grad_self_at_indices)?;
+
+                // Add gradient from positions not affected by scatter
+                let grad_self_final = grad_self.add(&grad_tensor)?;
+
+                Ok(vec![grad_self_final.id(), grad_src.id()])
+            },
+        }
+    }
+}
+
 impl VjpCompute for ShapeOp {
     fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
         let input = inputs[0];
@@ -1147,6 +1324,7 @@ fn compute_vjp_for_op(
         Op::Split(split_op, _, params, output_index) => {
             split_op.compute_vjp_with_split_info(inputs, output, grad_output, params, *output_index)
         },
+        Op::Indexing(indexing_op, _, params) => indexing_op.compute_vjp_with_dims(inputs, output, grad_output, params),
         Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output),
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }

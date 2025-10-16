@@ -307,6 +307,18 @@ pub enum SplitOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum IndexingOp {
+    IndexSelect,
+    Gather,
+    Scatter,
+    ScatterAdd,
+    ScatterMax,
+    ScatterMin,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ShapeOp {
     Reshape,
     Flatten,
@@ -346,6 +358,7 @@ pub enum Op {
     Reduce(ReduceOp, TensorId, Vec<Scalar>),
     Concat(ConcatOp, Vec<TensorId>, Vec<Scalar>),
     Split(SplitOp, TensorId, Vec<Scalar>, usize),
+    Indexing(IndexingOp, Vec<TensorId>, Vec<Scalar>),
     Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
     Memory(MemoryOp, TensorId),
@@ -366,6 +379,7 @@ impl Op {
             Op::Reduce(_, t, _) => vec![*t],
             Op::Concat(_, tt, _) => tt.clone(),
             Op::Split(_, t, _, _) => vec![*t],
+            Op::Indexing(_, tt, _) => tt.clone(),
             Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
             Op::Memory(_, t) => vec![*t],

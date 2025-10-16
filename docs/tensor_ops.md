@@ -206,6 +206,19 @@ Operations that split tensor.
 
 **Note**: `softmax` and `log_softmax` are implemented using `exp`, `sum`, and `ln` with numerically stable computation by subtracting the maximum value
 
+## Indexing Operations
+
+Operations for selecting and gathering tensor elements.
+
+| Operation | Description |
+|-----------|-------------|
+| `index_select` | Select elements along dimension |
+| `gather` | Gather elements along dimension |
+| `scatter` | Scatter elements along dimension |
+| `scatter_add` | Scatter elements along dimension and add |
+| `scatter_max` | Scatter elements along dimension and take max |
+| `scatter_min` | Scatter elements along dimension and take min |
+
 ## Shape Operations
 
 Operations that manipulate tensor shape and layout.

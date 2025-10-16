@@ -1150,6 +1150,370 @@ impl Tensor {
         shifted.sub(&log_sum_exp)
     }
 
+    // Indexing Operations
+    pub fn index_select<D: Into<Scalar>>(&self, dim: D, indices: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let shape = layout.get_shape();
+
+            // Output shape: replace indexed dimension with indices size
+            let mut output_shape = shape.to_vec();
+            output_shape[dim_usize] = indices_layout.get_size();
+
+            let result_layout = Layout::from_shape(&output_shape);
+            let requires_grad = self.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(
+                op::IndexingOp::IndexSelect,
+                vec![self.id(), indices.id()],
+                vec![dim_scalar],
+            );
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone()],
+                vec![result_layout],
+            );
+
+            if self.is_requires_grad() {
+                gradient::record_operation(result_id, op, vec![self.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    storage.index_select(&self.get_layout(), indices_storage, &indices.get_layout(), dim_usize)
+                })
+            })?;
+
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let shape = layout.get_shape();
+            let mut output_shape = shape.to_vec();
+            output_shape[dim_usize] = indices_layout.get_size();
+
+            let result_layout = Layout::from_shape(&output_shape);
+            let requires_grad = self.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && self.is_requires_grad() {
+                let op = Op::Indexing(
+                    op::IndexingOp::IndexSelect,
+                    vec![self.id(), indices.id()],
+                    vec![dim_scalar],
+                );
+                gradient::record_operation(result.id(), op, vec![self.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn gather<D: Into<Scalar>>(&self, dim: D, indices: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+
+            // Output has same shape as indices
+            let result_layout = indices_layout.clone();
+            let requires_grad = self.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone()],
+                vec![result_layout],
+            );
+
+            if self.is_requires_grad() {
+                gradient::record_operation(result_id, op, vec![self.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    storage.gather(&self.get_layout(), indices_storage, &indices.get_layout(), dim_usize)
+                })
+            })?;
+
+            let result_layout = indices.get_layout().clone();
+            let requires_grad = self.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && self.is_requires_grad() {
+                let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
+                gradient::record_operation(result.id(), op, vec![self.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn scatter<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let src_layout = src.get_layout();
+
+            // Output has same shape as self
+            let result_layout = layout.clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(
+                op::IndexingOp::Scatter,
+                vec![self.id(), indices.id(), src.id()],
+                vec![dim_scalar],
+            );
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![result_layout],
+            );
+
+            if self.is_requires_grad() || src.is_requires_grad() {
+                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    src.with_storage(|src_storage| {
+                        storage.scatter(
+                            &self.get_layout(),
+                            indices_storage,
+                            &indices.get_layout(),
+                            src_storage,
+                            &src.get_layout(),
+                            dim_usize,
+                        )
+                    })
+                })
+            })?;
+
+            let result_layout = self.get_layout().clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
+                let op = Op::Indexing(
+                    op::IndexingOp::Scatter,
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                );
+                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn scatter_add<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let src_layout = src.get_layout();
+
+            let result_layout = layout.clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(
+                op::IndexingOp::ScatterAdd,
+                vec![self.id(), indices.id(), src.id()],
+                vec![dim_scalar],
+            );
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![result_layout],
+            );
+
+            if self.is_requires_grad() || src.is_requires_grad() {
+                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    src.with_storage(|src_storage| {
+                        storage.scatter_add(
+                            &self.get_layout(),
+                            indices_storage,
+                            &indices.get_layout(),
+                            src_storage,
+                            &src.get_layout(),
+                            dim_usize,
+                        )
+                    })
+                })
+            })?;
+
+            let result_layout = self.get_layout().clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
+                let op = Op::Indexing(
+                    op::IndexingOp::ScatterAdd,
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                );
+                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn scatter_max<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let src_layout = src.get_layout();
+
+            let result_layout = layout.clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(
+                op::IndexingOp::ScatterMax,
+                vec![self.id(), indices.id(), src.id()],
+                vec![dim_scalar],
+            );
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![result_layout],
+            );
+
+            if self.is_requires_grad() || src.is_requires_grad() {
+                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    src.with_storage(|src_storage| {
+                        storage.scatter_max(
+                            &self.get_layout(),
+                            indices_storage,
+                            &indices.get_layout(),
+                            src_storage,
+                            &src.get_layout(),
+                            dim_usize,
+                        )
+                    })
+                })
+            })?;
+
+            let result_layout = self.get_layout().clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
+                let op = Op::Indexing(
+                    op::IndexingOp::ScatterMax,
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                );
+                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn scatter_min<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let src_layout = src.get_layout();
+
+            let result_layout = layout.clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(
+                op::IndexingOp::ScatterMin,
+                vec![self.id(), indices.id(), src.id()],
+                vec![dim_scalar],
+            );
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![result_layout],
+            );
+
+            if self.is_requires_grad() || src.is_requires_grad() {
+                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    src.with_storage(|src_storage| {
+                        storage.scatter_min(
+                            &self.get_layout(),
+                            indices_storage,
+                            &indices.get_layout(),
+                            src_storage,
+                            &src.get_layout(),
+                            dim_usize,
+                        )
+                    })
+                })
+            })?;
+
+            let result_layout = self.get_layout().clone();
+            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
+                let op = Op::Indexing(
+                    op::IndexingOp::ScatterMin,
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                );
+                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
     // Shape Operations
     pub fn reshape<S: AsRef<[usize]>>(&self, shape: S) -> HoduResult<Self> {
         let new_shape = shape.as_ref();

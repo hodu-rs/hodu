@@ -1,14 +1,7 @@
 use crate::{
     backends::{
         be_hodu::{
-            cpu::{
-                device::CpuDevice,
-                utils::{
-                    binary_logical_map, binary_map, cmp_map, cmp_scalar_map, concat_map, dot_map, matmul_map,
-                    reduce_max, reduce_mean, reduce_min, reduce_norm, reduce_prod, reduce_std, reduce_sum, reduce_var,
-                    split_map, unary_logical_map, unary_map, unary_scalar_map,
-                },
-            },
+            cpu::{device::CpuDevice, utils::*},
             storage::HoduStorageT,
         },
         op::{BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT},
@@ -1280,6 +1273,723 @@ impl HoduStorageT for CpuStorage {
         };
 
         Ok(results)
+    }
+
+    fn index_select(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "index_select - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! index_select_impl {
+            ($storage:expr, $dtype_variant:ident) => {{
+                let result = index_select_map($storage, layout, indices_i32, indices_layout, dim)?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match self {
+            Self::BOOL(storage) => index_select_impl!(storage, BOOL),
+            Self::F8E4M3(storage) => index_select_impl!(storage, F8E4M3),
+            Self::F8E5M2(storage) => index_select_impl!(storage, F8E5M2),
+            Self::BF16(storage) => index_select_impl!(storage, BF16),
+            Self::F16(storage) => index_select_impl!(storage, F16),
+            Self::F32(storage) => index_select_impl!(storage, F32),
+            Self::F64(storage) => index_select_impl!(storage, F64),
+            Self::U8(storage) => index_select_impl!(storage, U8),
+            Self::U16(storage) => index_select_impl!(storage, U16),
+            Self::U32(storage) => index_select_impl!(storage, U32),
+            Self::U64(storage) => index_select_impl!(storage, U64),
+            Self::I8(storage) => index_select_impl!(storage, I8),
+            Self::I16(storage) => index_select_impl!(storage, I16),
+            Self::I32(storage) => index_select_impl!(storage, I32),
+            Self::I64(storage) => index_select_impl!(storage, I64),
+        };
+
+        Ok(result)
+    }
+
+    fn gather(&self, layout: &Layout, indices_storage: &Self, indices_layout: &Layout, dim: usize) -> HoduResult<Self> {
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.gather(layout, &Self::I32(converted), indices_layout, dim);
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "gather - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! gather_impl {
+            ($storage:expr, $dtype_variant:ident) => {{
+                let result = gather_map($storage, layout, indices_i32, indices_layout, dim)?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match self {
+            Self::BOOL(storage) => gather_impl!(storage, BOOL),
+            Self::F8E4M3(storage) => gather_impl!(storage, F8E4M3),
+            Self::F8E5M2(storage) => gather_impl!(storage, F8E5M2),
+            Self::BF16(storage) => gather_impl!(storage, BF16),
+            Self::F16(storage) => gather_impl!(storage, F16),
+            Self::F32(storage) => gather_impl!(storage, F32),
+            Self::F64(storage) => gather_impl!(storage, F64),
+            Self::U8(storage) => gather_impl!(storage, U8),
+            Self::U16(storage) => gather_impl!(storage, U16),
+            Self::U32(storage) => gather_impl!(storage, U32),
+            Self::U64(storage) => gather_impl!(storage, U64),
+            Self::I8(storage) => gather_impl!(storage, I8),
+            Self::I16(storage) => gather_impl!(storage, I16),
+            Self::I32(storage) => gather_impl!(storage, I32),
+            Self::I64(storage) => gather_impl!(storage, I64),
+        };
+
+        Ok(result)
+    }
+
+    fn scatter(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        // DType 검증
+        if self.get_dtype() != src_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: src_storage.get_dtype(),
+                op: "scatter".to_string(),
+            });
+        }
+
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "scatter - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! scatter_impl {
+            ($storage:expr, $src_storage:expr, $dtype_variant:ident) => {{
+                let result = scatter_map(
+                    $storage,
+                    layout,
+                    indices_i32,
+                    indices_layout,
+                    $src_storage,
+                    src_layout,
+                    dim,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, src_storage) {
+            (Self::BOOL(storage), Self::BOOL(src)) => scatter_impl!(storage, src, BOOL),
+            (Self::F8E4M3(storage), Self::F8E4M3(src)) => scatter_impl!(storage, src, F8E4M3),
+            (Self::F8E5M2(storage), Self::F8E5M2(src)) => scatter_impl!(storage, src, F8E5M2),
+            (Self::BF16(storage), Self::BF16(src)) => scatter_impl!(storage, src, BF16),
+            (Self::F16(storage), Self::F16(src)) => scatter_impl!(storage, src, F16),
+            (Self::F32(storage), Self::F32(src)) => scatter_impl!(storage, src, F32),
+            (Self::F64(storage), Self::F64(src)) => scatter_impl!(storage, src, F64),
+            (Self::U8(storage), Self::U8(src)) => scatter_impl!(storage, src, U8),
+            (Self::U16(storage), Self::U16(src)) => scatter_impl!(storage, src, U16),
+            (Self::U32(storage), Self::U32(src)) => scatter_impl!(storage, src, U32),
+            (Self::U64(storage), Self::U64(src)) => scatter_impl!(storage, src, U64),
+            (Self::I8(storage), Self::I8(src)) => scatter_impl!(storage, src, I8),
+            (Self::I16(storage), Self::I16(src)) => scatter_impl!(storage, src, I16),
+            (Self::I32(storage), Self::I32(src)) => scatter_impl!(storage, src, I32),
+            (Self::I64(storage), Self::I64(src)) => scatter_impl!(storage, src, I64),
+            _ => unreachable!(),
+        };
+
+        Ok(result)
+    }
+
+    fn scatter_add(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != src_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: src_storage.get_dtype(),
+                op: "scatter_add".to_string(),
+            });
+        }
+
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_add(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "scatter_add - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! scatter_add_impl {
+            ($storage:expr, $src_storage:expr, $dtype_variant:ident) => {{
+                let result = scatter_add_map(
+                    $storage,
+                    layout,
+                    indices_i32,
+                    indices_layout,
+                    $src_storage,
+                    src_layout,
+                    dim,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, src_storage) {
+            (Self::F8E4M3(storage), Self::F8E4M3(src)) => scatter_add_impl!(storage, src, F8E4M3),
+            (Self::F8E5M2(storage), Self::F8E5M2(src)) => scatter_add_impl!(storage, src, F8E5M2),
+            (Self::BF16(storage), Self::BF16(src)) => scatter_add_impl!(storage, src, BF16),
+            (Self::F16(storage), Self::F16(src)) => scatter_add_impl!(storage, src, F16),
+            (Self::F32(storage), Self::F32(src)) => scatter_add_impl!(storage, src, F32),
+            (Self::F64(storage), Self::F64(src)) => scatter_add_impl!(storage, src, F64),
+            (Self::U8(storage), Self::U8(src)) => scatter_add_impl!(storage, src, U8),
+            (Self::U16(storage), Self::U16(src)) => scatter_add_impl!(storage, src, U16),
+            (Self::U32(storage), Self::U32(src)) => scatter_add_impl!(storage, src, U32),
+            (Self::U64(storage), Self::U64(src)) => scatter_add_impl!(storage, src, U64),
+            (Self::I8(storage), Self::I8(src)) => scatter_add_impl!(storage, src, I8),
+            (Self::I16(storage), Self::I16(src)) => scatter_add_impl!(storage, src, I16),
+            (Self::I32(storage), Self::I32(src)) => scatter_add_impl!(storage, src, I32),
+            (Self::I64(storage), Self::I64(src)) => scatter_add_impl!(storage, src, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "scatter_add".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn scatter_max(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != src_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: src_storage.get_dtype(),
+                op: "scatter_max".to_string(),
+            });
+        }
+
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_max(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "scatter_max - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! scatter_max_impl {
+            ($storage:expr, $src_storage:expr, $dtype_variant:ident) => {{
+                let result = scatter_max_map(
+                    $storage,
+                    layout,
+                    indices_i32,
+                    indices_layout,
+                    $src_storage,
+                    src_layout,
+                    dim,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, src_storage) {
+            (Self::F8E4M3(storage), Self::F8E4M3(src)) => scatter_max_impl!(storage, src, F8E4M3),
+            (Self::F8E5M2(storage), Self::F8E5M2(src)) => scatter_max_impl!(storage, src, F8E5M2),
+            (Self::BF16(storage), Self::BF16(src)) => scatter_max_impl!(storage, src, BF16),
+            (Self::F16(storage), Self::F16(src)) => scatter_max_impl!(storage, src, F16),
+            (Self::F32(storage), Self::F32(src)) => scatter_max_impl!(storage, src, F32),
+            (Self::F64(storage), Self::F64(src)) => scatter_max_impl!(storage, src, F64),
+            (Self::U8(storage), Self::U8(src)) => scatter_max_impl!(storage, src, U8),
+            (Self::U16(storage), Self::U16(src)) => scatter_max_impl!(storage, src, U16),
+            (Self::U32(storage), Self::U32(src)) => scatter_max_impl!(storage, src, U32),
+            (Self::U64(storage), Self::U64(src)) => scatter_max_impl!(storage, src, U64),
+            (Self::I8(storage), Self::I8(src)) => scatter_max_impl!(storage, src, I8),
+            (Self::I16(storage), Self::I16(src)) => scatter_max_impl!(storage, src, I16),
+            (Self::I32(storage), Self::I32(src)) => scatter_max_impl!(storage, src, I32),
+            (Self::I64(storage), Self::I64(src)) => scatter_max_impl!(storage, src, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "scatter_max".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn scatter_min(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        src_storage: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != src_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: src_storage.get_dtype(),
+                op: "scatter_min".to_string(),
+            });
+        }
+
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.scatter_min(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    src_storage,
+                    src_layout,
+                    dim,
+                );
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "scatter_min - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! scatter_min_impl {
+            ($storage:expr, $src_storage:expr, $dtype_variant:ident) => {{
+                let result = scatter_min_map(
+                    $storage,
+                    layout,
+                    indices_i32,
+                    indices_layout,
+                    $src_storage,
+                    src_layout,
+                    dim,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, src_storage) {
+            (Self::F8E4M3(storage), Self::F8E4M3(src)) => scatter_min_impl!(storage, src, F8E4M3),
+            (Self::F8E5M2(storage), Self::F8E5M2(src)) => scatter_min_impl!(storage, src, F8E5M2),
+            (Self::BF16(storage), Self::BF16(src)) => scatter_min_impl!(storage, src, BF16),
+            (Self::F16(storage), Self::F16(src)) => scatter_min_impl!(storage, src, F16),
+            (Self::F32(storage), Self::F32(src)) => scatter_min_impl!(storage, src, F32),
+            (Self::F64(storage), Self::F64(src)) => scatter_min_impl!(storage, src, F64),
+            (Self::U8(storage), Self::U8(src)) => scatter_min_impl!(storage, src, U8),
+            (Self::U16(storage), Self::U16(src)) => scatter_min_impl!(storage, src, U16),
+            (Self::U32(storage), Self::U32(src)) => scatter_min_impl!(storage, src, U32),
+            (Self::U64(storage), Self::U64(src)) => scatter_min_impl!(storage, src, U64),
+            (Self::I8(storage), Self::I8(src)) => scatter_min_impl!(storage, src, I8),
+            (Self::I16(storage), Self::I16(src)) => scatter_min_impl!(storage, src, I16),
+            (Self::I32(storage), Self::I32(src)) => scatter_min_impl!(storage, src, I32),
+            (Self::I64(storage), Self::I64(src)) => scatter_min_impl!(storage, src, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "scatter_min".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
     }
 
     fn to_dtype(&self, target_dtype: DType) -> HoduResult<Self> {
