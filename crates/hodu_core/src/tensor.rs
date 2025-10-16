@@ -3,6 +3,7 @@ mod creation_static;
 mod display;
 mod gradient;
 mod ops;
+pub(super) mod utils;
 mod vec;
 
 use crate::{

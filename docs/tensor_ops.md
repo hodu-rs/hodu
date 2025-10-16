@@ -219,6 +219,23 @@ Operations for selecting and gathering tensor elements.
 | `scatter_max` | Scatter elements along dimension and take max |
 | `scatter_min` | Scatter elements along dimension and take min |
 
+## Selection Operations
+
+Operations for conditional selection and masking.
+
+| Operation | Description |
+|-----------|-------------|
+| `where3` | Select between self and other based on condition |
+| `masked_fill` | Fill elements where mask is true |
+| `clamp` | Clamp values to range `[min, max]` |
+| `clamp_min` | Clamp values to minimum |
+| `clamp_max` | Clamp values to maximum |
+
+**Notes**:
+- `where3` is implemented using element-wise operations with automatic broadcasting
+- `masked_fill` is implemented using `where3`
+- `clamp`, `clamp_min`, and `clamp_max` are implemented using `where3` and comparison operations
+
 ## Shape Operations
 
 Operations that manipulate tensor shape and layout.

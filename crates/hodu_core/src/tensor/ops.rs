@@ -1,3 +1,4 @@
+use super::utils::{broadcast_tensors2, broadcast_tensors3};
 use crate::{
     backends::{
         builder,
@@ -13,44 +14,10 @@ use crate::{
     types::{dtype::DType, layout::Layout},
 };
 
-// Utility function to broadcast two tensors to the same shape
-fn broadcast_tensors(a: &Tensor, b: &Tensor) -> HoduResult<(Tensor, Tensor)> {
-    let a_layout = a.get_layout();
-    let b_layout = b.get_layout();
-    let a_shape = a_layout.get_shape();
-    let b_shape = b_layout.get_shape();
-    let a_ndim = a_layout.get_ndim();
-    let b_ndim = b_layout.get_ndim();
-
-    let output_ndim = a_ndim.max(b_ndim);
-    let mut output_shape = vec![0; output_ndim];
-
-    // Compute output shape from right to left (broadcasting rules)
-    for i in 0..output_ndim {
-        let a_dim = if i < a_ndim { a_shape[a_ndim - 1 - i] } else { 1 };
-        let b_dim = if i < b_ndim { b_shape[b_ndim - 1 - i] } else { 1 };
-
-        if a_dim == 1 || b_dim == 1 || a_dim == b_dim {
-            output_shape[output_ndim - 1 - i] = a_dim.max(b_dim);
-        } else {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: a_shape.to_vec(),
-                rhs: b_shape.to_vec(),
-                op: "broadcast_tensors".to_string(),
-            });
-        }
-    }
-
-    let a_broadcasted = a.broadcast(&output_shape)?;
-    let b_broadcasted = b.broadcast(&output_shape)?;
-
-    Ok((a_broadcasted, b_broadcasted))
-}
-
 macro_rules! binary_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
-            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors(self, rhs)?;
+            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
             let (lhs_broadcasted, rhs_broadcasted) =
                 if lhs_broadcasted.get_dtype() == DType::BOOL && rhs_broadcasted.get_dtype() != DType::BOOL {
@@ -112,7 +79,7 @@ macro_rules! binary_op {
 macro_rules! binary_logical_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
-            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors(self, rhs)?;
+            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
             if builder::is_builder_active() {
                 let result_layout = lhs_broadcasted.get_layout().clone();
@@ -167,7 +134,7 @@ macro_rules! binary_logical_op {
 macro_rules! cmp_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
-            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors(self, rhs)?;
+            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
             if builder::is_builder_active() {
                 let result_layout = lhs_broadcasted.get_layout().clone();
@@ -1512,6 +1479,48 @@ impl Tensor {
 
             Ok(result)
         }
+    }
+
+    // Selection Operations
+    pub fn where3(&self, condition: &Tensor, other: &Tensor) -> HoduResult<Self> {
+        let (condition, x, y) = broadcast_tensors3(condition, self, other)?;
+
+        let mask = condition.to_dtype(x.get_dtype())?;
+        let one = Self::ones_like(&mask)?;
+        let inv_mask = one.sub(&mask)?;
+
+        let x_part = mask.mul(&x)?;
+        let y_part = inv_mask.mul(&y)?;
+        x_part.add(&y_part)
+    }
+
+    pub fn masked_fill<T: Into<Scalar>>(&self, mask: &Tensor, value: T) -> HoduResult<Self> {
+        let value_scalar = value.into();
+        let fill_tensor = Self::full_like(self, value_scalar)?;
+        self.where3(mask, &fill_tensor)
+    }
+
+    pub fn clamp<T: Into<Scalar>>(&self, min: T, max: T) -> HoduResult<Self> {
+        let min_scalar = min.into();
+        let max_scalar = max.into();
+
+        let min_tensor = Self::full_like(self, min_scalar)?;
+        let clamped_min = self.where3(&self.lt_scalar(min_scalar)?, &min_tensor)?;
+
+        let max_tensor = Self::full_like(&clamped_min, max_scalar)?;
+        clamped_min.where3(&clamped_min.gt_scalar(max_scalar)?, &max_tensor)
+    }
+
+    pub fn clamp_min<T: Into<Scalar>>(&self, min: T) -> HoduResult<Self> {
+        let min_scalar = min.into();
+        let min_tensor = Self::full_like(self, min_scalar)?;
+        self.where3(&self.lt_scalar(min_scalar)?, &min_tensor)
+    }
+
+    pub fn clamp_max<T: Into<Scalar>>(&self, max: T) -> HoduResult<Self> {
+        let max_scalar = max.into();
+        let max_tensor = Self::full_like(self, max_scalar)?;
+        self.where3(&self.gt_scalar(max_scalar)?, &max_tensor)
     }
 
     // Shape Operations
