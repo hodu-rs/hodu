@@ -17,4 +17,7 @@ pub use losses::{
     nll::NLLLoss,
 };
 pub use modules::{activation::*, linear::Linear};
-pub use optimizers::{adam::Adam, sgd::SGD};
+pub use optimizers::{
+    adam::{Adam, AdamW},
+    sgd::SGD,
+};

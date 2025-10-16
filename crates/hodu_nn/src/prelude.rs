@@ -14,4 +14,7 @@ pub use crate::losses::{
 pub use crate::module::Module;
 pub use crate::modules::{activation::*, linear::Linear};
 pub use crate::optimizer::Optimizer;
-pub use crate::optimizers::{adam::Adam, sgd::SGD};
+pub use crate::optimizers::{
+    adam::{Adam, AdamW},
+    sgd::SGD,
+};
