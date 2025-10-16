@@ -823,6 +823,14 @@ impl Tensor {
         self.abs()?.sum(dims, keep_dim)
     }
 
+    pub fn argmax(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        self.reduce_operation(op::ReduceOp::ArgMax, dims, keep_dim)
+    }
+
+    pub fn argmin(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        self.reduce_operation(op::ReduceOp::ArgMin, dims, keep_dim)
+    }
+
     fn reduce_operation(&self, reduce_op: op::ReduceOp, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
         if builder::is_builder_active() {
             let layout = self.get_layout();

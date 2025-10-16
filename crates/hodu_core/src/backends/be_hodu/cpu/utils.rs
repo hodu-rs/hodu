@@ -1430,6 +1430,202 @@ where
     Ok((result, output_shape))
 }
 
+pub fn reduce_argmax<T: Copy + PartialOrd>(
+    storage: &[T],
+    layout: &Layout,
+    dim: i32,
+    keep_dim: bool,
+) -> HoduResult<(Vec<i32>, Vec<usize>)> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    // Handle negative dimension
+    let actual_dim = if dim < 0 {
+        (ndim as i32 + dim) as usize
+    } else {
+        dim as usize
+    };
+
+    if actual_dim >= ndim {
+        return Err(HoduError::InternalError(format!(
+            "argmax - dimension {} out of range for {}-dimensional tensor",
+            dim, ndim
+        )));
+    }
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    if keep_dim {
+        output_shape[actual_dim] = 1;
+    } else {
+        output_shape.remove(actual_dim);
+        if output_shape.is_empty() {
+            output_shape = vec![1];
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![0i32; output_size];
+
+    // Iterate over output positions
+    for output_idx in 0..output_size {
+        let mut max_val = storage[offset];
+        let mut max_index = 0i32;
+        let mut first = true;
+
+        // Generate output indices
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        // Map output indices to input indices
+        let mut input_indices = vec![0; ndim];
+        let mut out_idx = 0;
+        for in_dim in 0..ndim {
+            if in_dim == actual_dim {
+                input_indices[in_dim] = 0; // Will iterate over this
+            } else {
+                if !keep_dim || out_idx < output_indices.len() {
+                    input_indices[in_dim] = if keep_dim {
+                        output_indices[out_idx]
+                    } else if out_idx < output_indices.len() {
+                        output_indices[out_idx]
+                    } else {
+                        0
+                    };
+                    out_idx += 1;
+                }
+            }
+        }
+
+        // Iterate along the reduction dimension
+        for i in 0..shape[actual_dim] {
+            input_indices[actual_dim] = i;
+
+            // Calculate flat index
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            if first || val > max_val {
+                max_val = val;
+                max_index = i as i32;
+                first = false;
+            }
+        }
+
+        result[output_idx] = max_index;
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_argmin<T: Copy + PartialOrd>(
+    storage: &[T],
+    layout: &Layout,
+    dim: i32,
+    keep_dim: bool,
+) -> HoduResult<(Vec<i32>, Vec<usize>)> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    // Handle negative dimension
+    let actual_dim = if dim < 0 {
+        (ndim as i32 + dim) as usize
+    } else {
+        dim as usize
+    };
+
+    if actual_dim >= ndim {
+        return Err(HoduError::InternalError(format!(
+            "argmin - dimension {} out of range for {}-dimensional tensor",
+            dim, ndim
+        )));
+    }
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    if keep_dim {
+        output_shape[actual_dim] = 1;
+    } else {
+        output_shape.remove(actual_dim);
+        if output_shape.is_empty() {
+            output_shape = vec![1];
+        }
+    }
+
+    let output_size = output_shape.iter().product::<usize>();
+    let mut result = vec![0i32; output_size];
+
+    // Iterate over output positions
+    for output_idx in 0..output_size {
+        let mut min_val = storage[offset];
+        let mut min_index = 0i32;
+        let mut first = true;
+
+        // Generate output indices
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        // Map output indices to input indices
+        let mut input_indices = vec![0; ndim];
+        let mut out_idx = 0;
+        for in_dim in 0..ndim {
+            if in_dim == actual_dim {
+                input_indices[in_dim] = 0; // Will iterate over this
+            } else {
+                if !keep_dim || out_idx < output_indices.len() {
+                    input_indices[in_dim] = if keep_dim {
+                        output_indices[out_idx]
+                    } else if out_idx < output_indices.len() {
+                        output_indices[out_idx]
+                    } else {
+                        0
+                    };
+                    out_idx += 1;
+                }
+            }
+        }
+
+        // Iterate along the reduction dimension
+        for i in 0..shape[actual_dim] {
+            input_indices[actual_dim] = i;
+
+            // Calculate flat index
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            let val = storage[flat_index];
+            if first || val < min_val {
+                min_val = val;
+                min_index = i as i32;
+                first = false;
+            }
+        }
+
+        result[output_idx] = min_index;
+    }
+
+    Ok((result, output_shape))
+}
+
 pub fn concat_map<T: Copy>(
     first_storage: &[T],
     other_storages: &[&[T]],

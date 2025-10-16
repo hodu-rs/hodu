@@ -612,17 +612,10 @@ impl VjpCompute for ReduceOp {
                 let result = derivative.mul(&broadcasted_grad)?;
                 Ok(vec![result.id()])
             },
-            ReduceOp::Max | ReduceOp::Min => {
-                // These are marked as no-backprop, but if we need gradients:
-                // Gradient flows only to the maximum/minimum elements
-                let output_tensor = tensor_from_id(output);
-                let broadcasted_output = output_tensor.broadcast(input_shape)?;
-                let mask = input_tensor.eq(&broadcasted_output)?;
-                let grad_tensor = tensor_from_id(grad_output);
-                let broadcasted_grad = grad_tensor.broadcast(input_shape)?;
-                let result = mask.mul(&broadcasted_grad)?;
-                Ok(vec![result.id()])
-            },
+            _ => Err(HoduError::InternalError(format!(
+                "{:?} is not differentiable - cannot compute gradients for discrete index operations",
+                self
+            ))),
         }
     }
 }

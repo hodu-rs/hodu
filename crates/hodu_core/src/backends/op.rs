@@ -271,6 +271,8 @@ pub enum ReduceOp {
     Std,
     Var,
     Norm,
+    ArgMax, // no-backprop
+    ArgMin, // no-backprop
 }
 
 impl ReduceOp {
@@ -284,6 +286,8 @@ impl ReduceOp {
             ReduceOp::Std => "std".to_string(),
             ReduceOp::Var => "var".to_string(),
             ReduceOp::Norm => "norm".to_string(),
+            ReduceOp::ArgMax => "argmax".to_string(),
+            ReduceOp::ArgMin => "argmin".to_string(),
         }
     }
 }

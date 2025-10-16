@@ -73,8 +73,8 @@ impl XlaExecutor {
     }
 
     // Helper method to convert PrimitiveType to ElementType
-    fn primitive_type_to_element_type(primitive_type: PrimitiveType) -> HoduResult<ElementType> {
-        match primitive_type {
+    fn element_type_to_element_type(element_type: PrimitiveType) -> HoduResult<ElementType> {
+        match element_type {
             PrimitiveType::Pred => Ok(ElementType::Pred),
             PrimitiveType::S8 => Ok(ElementType::S8),
             PrimitiveType::S16 => Ok(ElementType::S16),
@@ -92,7 +92,7 @@ impl XlaExecutor {
             PrimitiveType::C128 => Ok(ElementType::C128),
             _ => Err(HoduError::InternalError(format!(
                 "Cannot convert PrimitiveType {:?} to ElementType",
-                primitive_type
+                element_type
             ))),
         }
     }
@@ -737,6 +737,106 @@ impl XlaExecutor {
                         // L2 norm: sqrt(sum_squared)
                         sum_squared.sqrt().map_err(xla_error_to_hodu_error)
                     },
+                    ReduceOp::ArgMax => {
+                        // Implement argmax using: find max value, then find its index
+                        if dims.is_empty() {
+                            return Err(HoduError::InternalError(
+                                "ArgMax requires a dimension to reduce over".to_string(),
+                            ));
+                        }
+                        if dims.len() > 1 {
+                            return Err(HoduError::InternalError(
+                                "ArgMax only supports single dimension reduction".to_string(),
+                            ));
+                        }
+
+                        let dim = dims[0];
+                        let input = &input_ops[0];
+                        let shape = input.array_shape().map_err(xla_error_to_hodu_error)?;
+                        let input_dims: Vec<i64> = shape.dims().iter().map(|&d| d as i64).collect();
+                        let builder = input.builder();
+
+                        // Step 1: Find the max value along the dimension
+                        let max_val = input.reduce_max(&[dim], true).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 2: Create iota tensor for indices
+                        let indices = builder
+                            .iota(hodu_xla::ElementType::S64, &input_dims, dim)
+                            .map_err(xla_error_to_hodu_error)?;
+
+                        // Step 3: Create mask where input equals max (broadcast max to input shape)
+                        let mask = input.eq(&max_val).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 4: Convert mask to int64 and multiply with indices
+                        let mask_i64 = mask
+                            .convert(hodu_xla::PrimitiveType::S64)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let masked_indices = mask_i64.mul_(&indices).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 5: For non-matching positions, set to a large value so they don't affect min
+                        let large_val = builder.c0(i64::MAX).map_err(xla_error_to_hodu_error)?;
+                        let inv_mask = mask.not().map_err(xla_error_to_hodu_error)?;
+                        let inv_mask_i64 = inv_mask
+                            .convert(hodu_xla::PrimitiveType::S64)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let large_vals = inv_mask_i64.mul_(&large_val).map_err(xla_error_to_hodu_error)?;
+                        let adjusted_indices = masked_indices.add_(&large_vals).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 6: Take minimum to get the first occurrence
+                        adjusted_indices
+                            .reduce_min(&[dim], false)
+                            .map_err(xla_error_to_hodu_error)
+                    },
+                    ReduceOp::ArgMin => {
+                        // Implement argmin using: find min value, then find its index
+                        if dims.is_empty() {
+                            return Err(HoduError::InternalError(
+                                "ArgMin requires a dimension to reduce over".to_string(),
+                            ));
+                        }
+                        if dims.len() > 1 {
+                            return Err(HoduError::InternalError(
+                                "ArgMin only supports single dimension reduction".to_string(),
+                            ));
+                        }
+
+                        let dim = dims[0];
+                        let input = &input_ops[0];
+                        let shape = input.array_shape().map_err(xla_error_to_hodu_error)?;
+                        let input_dims: Vec<i64> = shape.dims().iter().map(|&d| d as i64).collect();
+                        let builder = input.builder();
+
+                        // Step 1: Find the min value along the dimension
+                        let min_val = input.reduce_min(&[dim], true).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 2: Create iota tensor for indices
+                        let indices = builder
+                            .iota(hodu_xla::ElementType::S64, &input_dims, dim)
+                            .map_err(xla_error_to_hodu_error)?;
+
+                        // Step 3: Create mask where input equals min (broadcast min to input shape)
+                        let mask = input.eq(&min_val).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 4: Convert mask to int64 and multiply with indices
+                        let mask_i64 = mask
+                            .convert(hodu_xla::PrimitiveType::S64)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let masked_indices = mask_i64.mul_(&indices).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 5: For non-matching positions, set to a large value so they don't affect min
+                        let large_val = builder.c0(i64::MAX).map_err(xla_error_to_hodu_error)?;
+                        let inv_mask = mask.not().map_err(xla_error_to_hodu_error)?;
+                        let inv_mask_i64 = inv_mask
+                            .convert(hodu_xla::PrimitiveType::S64)
+                            .map_err(xla_error_to_hodu_error)?;
+                        let large_vals = inv_mask_i64.mul_(&large_val).map_err(xla_error_to_hodu_error)?;
+                        let adjusted_indices = masked_indices.add_(&large_vals).map_err(xla_error_to_hodu_error)?;
+
+                        // Step 6: Take minimum to get the first occurrence
+                        adjusted_indices
+                            .reduce_min(&[dim], false)
+                            .map_err(xla_error_to_hodu_error)
+                    },
                 }
             },
 
@@ -988,8 +1088,8 @@ impl XlaExecutor {
                             .to_u64() as i64;
 
                         // Create update computation that replaces values
-                        let primitive_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
-                        let element_type = Self::primitive_type_to_element_type(primitive_type)?;
+                        let element_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
+                        let element_type = Self::element_type_to_element_type(element_type)?;
 
                         let update_builder = XlaBuilder::new("scatter_update");
                         let _old = update_builder
@@ -1174,8 +1274,8 @@ impl XlaExecutor {
                             .to_u64() as i64;
 
                         // Create add computation
-                        let primitive_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
-                        let element_type = Self::primitive_type_to_element_type(primitive_type)?;
+                        let element_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
+                        let element_type = Self::element_type_to_element_type(element_type)?;
 
                         let add_builder = XlaBuilder::new("scatter_add");
                         let old = add_builder
@@ -1341,8 +1441,8 @@ impl XlaExecutor {
                             .to_u64() as i64;
 
                         // Create max computation
-                        let primitive_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
-                        let element_type = Self::primitive_type_to_element_type(primitive_type)?;
+                        let element_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
+                        let element_type = Self::element_type_to_element_type(element_type)?;
 
                         let max_builder = XlaBuilder::new("scatter_max");
                         let old = max_builder
@@ -1505,8 +1605,8 @@ impl XlaExecutor {
                             .to_u64() as i64;
 
                         // Create min computation
-                        let primitive_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
-                        let element_type = Self::primitive_type_to_element_type(primitive_type)?;
+                        let element_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
+                        let element_type = Self::element_type_to_element_type(element_type)?;
 
                         let min_builder = XlaBuilder::new("scatter_min");
                         let old = min_builder
@@ -1871,7 +1971,7 @@ impl XlaExecutor {
                                 .unwrap_or(DType::F32); // Default to F32 if not specified
 
                             // Convert DType to XLA PrimitiveType
-                            let target_primitive_type = match target_dtype {
+                            let target_element_type = match target_dtype {
                                 DType::BOOL => PrimitiveType::Pred,
                                 DType::F8E4M3 | DType::F8E5M2 => {
                                     return Err(HoduError::InternalError(
@@ -1893,7 +1993,7 @@ impl XlaExecutor {
                             };
 
                             let result = input_ops[0]
-                                .convert(target_primitive_type)
+                                .convert(target_element_type)
                                 .map_err(xla_error_to_hodu_error)?;
 
                             Ok(result)
@@ -2295,6 +2395,26 @@ impl XlaExecutor {
 
         Ok(Self { client, device })
     }
+
+    fn xla_element_type_to_dtype(&self, element_type: hodu_xla::ElementType) -> Option<DType> {
+        use hodu_xla::ElementType;
+        match element_type {
+            ElementType::F32 => Some(DType::F32),
+            ElementType::F64 => Some(DType::F64),
+            ElementType::F16 => Some(DType::F16),
+            ElementType::Bf16 => Some(DType::BF16),
+            ElementType::U8 => Some(DType::U8),
+            ElementType::U16 => Some(DType::U16),
+            ElementType::U32 => Some(DType::U32),
+            ElementType::U64 => Some(DType::U64),
+            ElementType::S8 => Some(DType::I8),
+            ElementType::S16 => Some(DType::I16),
+            ElementType::S32 => Some(DType::I32),
+            ElementType::S64 => Some(DType::I64),
+            ElementType::Pred => Some(DType::BOOL),
+            _ => None,
+        }
+    }
 }
 
 unsafe impl Send for XlaExecutor {}
@@ -2417,8 +2537,15 @@ impl ExecutorT for XlaExecutor {
                 .copied()
                 .unwrap_or(DType::F32);
 
+            // For operations that change dtype (like argmax/argmin), detect actual dtype from literal
+            let actual_dtype =
+                self.xla_element_type_to_dtype(result_literal.element_type().map_err(|e| {
+                    HoduError::InternalError(format!("Failed to get element type from literal: {:?}", e))
+                })?);
+            let dtype_to_use = actual_dtype.unwrap_or(expected_dtype);
+
             let tensor = self
-                .literal_to_tensor(&result_literal, expected_dtype)
+                .literal_to_tensor(&result_literal, dtype_to_use)
                 .map_err(|e| HoduError::InternalError(format!("Failed to convert literal to tensor: {}", e)))?;
 
             outputs.insert(output_name.clone(), tensor);

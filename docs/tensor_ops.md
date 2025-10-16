@@ -172,6 +172,8 @@ Operations that reduce tensor dimensions.
 | `std` | Standard deviation along specified dimensions | `std_all` |
 | `var` | Variance along specified dimensions | `var_all` |
 | `norm` | Norm along specified dimensions | `l2_norm`, `l1_norm` |
+| `argmax` | Indices of maximum values along dimension | - |
+| `argmin` | Indices of minimum values along dimension | - |
 
 **Note**: `l1_norm` is implemented as a combination of `abs` and `sum` operations
 
@@ -261,3 +263,34 @@ Operations that manipulate tensor shape and layout.
 | Operation | Description |
 |-----------|-------------|
 | `contiguous` | Ensure tensor has contiguous memory layout |
+
+## Differentiability Summary
+
+Overview of which operations support automatic differentiation (gradient computation).
+
+### Differentiable Operations ✓
+
+| Category | Operations |
+|----------|-----------|
+| **Binary Ops** | `add`, `sub`, `mul`, `div`, `pow`, `maximum`, `minimum` |
+| **Unary Ops** | `neg`, `abs`, `square`, `sqrt`, `recip`, `relu`, `sigmoid`, `tanh`, `gelu`, `softplus`, `sin`, `cos`, `tan`, `exp`, `exp2`, `exp10`, `ln`, `log2`, `log10`, `leaky_relu`, `elu` |
+| **Unary Scalar** | `add_scalar`, `sub_scalar`, `mul_scalar`, `div_scalar`, `pow_scalar`, `maximum_scalar`, `minimum_scalar` |
+| **Matrix Ops** | `matmul`, `dot` |
+| **Reduction Ops** | `sum`, `mean`, `max`, `min`, `prod`, `std`, `var`, `norm` |
+| **Concat Ops** | `concat`, `stack` |
+| **Split Ops** | `split`, `chunk` |
+| **Normalization** | `softmax`, `log_softmax` |
+| **Indexing Ops** | `index_select`, `gather`, `scatter`, `scatter_add`, `scatter_max`, `scatter_min` |
+| **Selection Ops** | `where3`, `masked_fill`, `clamp`, `clamp_min`, `clamp_max` |
+| **Shape Ops** | `reshape`, `flatten`, `squeeze`, `unsqueeze`, `broadcast`, `transpose`, `permute` |
+| **Type Ops** | `to_dtype` |
+| **Memory Ops** | `contiguous` |
+
+### Non-Differentiable Operations ✗
+
+| Category | Operations | Reason |
+|----------|-----------|--------|
+| **Logical Ops** | `logical_and`, `logical_or`, `logical_xor`, `logical_not` | Boolean operations have no meaningful gradients |
+| **Comparison Ops** | `eq`, `ne`, `lt`, `le`, `gt`, `ge`, `eq_scalar`, `ne_scalar`, `lt_scalar`, `le_scalar`, `gt_scalar`, `ge_scalar` | Comparison operations return discrete boolean values |
+| **Index Ops** | `argmax`, `argmin` | Return discrete indices, not differentiable |
+| **Sign Op** | `sign` | Discontinuous function with undefined gradient at zero |
