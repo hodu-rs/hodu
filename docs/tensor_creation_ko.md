@@ -2,10 +2,11 @@
 
 ## 개요
 
-Hodu에서 텐서를 생성하는 방법은 크게 두 가지로 나뉩니다:
+Hodu에서 텐서를 생성하는 방법은 크게 세 가지로 나뉩니다:
 
 1. **동적 생성 (Dynamic Creation)**: 데이터를 포함한 실제 텐서를 즉시 생성
-2. **정적 생성 (Static Creation)**: Script 모드에서 입력 placeholder를 정의
+2. **연산적 생성 (Operational Creation)**: 다른 텐서로부터 연산을 통해 새로운 텐서 생성 (gradient 전파 지원)
+3. **정적 생성 (Static Creation)**: Script 모드에서 입력 placeholder를 정의
 
 ## 동적 텐서 생성
 
@@ -192,6 +193,58 @@ let randn = Tensor::randn_like(&original, 0.0, 1.0)?;
 println!("{}", randn);  // [-0.234, 1.567, 0.891]
 ```
 
+## 연산적 텐서 생성
+
+기존 텐서들로부터 연산을 통해 새로운 텐서를 생성합니다. 이 메서드들은 자동 미분을 위한 gradient 전파를 지원합니다.
+
+### Tensor::where3_select()
+
+조건에 따라 두 텐서 중 하나를 선택합니다:
+
+```rust
+use hodu::prelude::*;
+
+// 조건, x, y 텐서 생성
+let condition = Tensor::new(vec![true, false, true, false])?;
+let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0])?;
+let y = Tensor::new(vec![10.0, 20.0, 30.0, 40.0])?;
+
+// 조건이 true인 위치는 x, false인 위치는 y 선택
+let result = Tensor::where3_select(&condition, &x, &y)?;
+println!("{}", result);  // [1, 20, 3, 40]
+```
+
+**특징:**
+- 조건, x, y 텐서의 자동 브로드캐스팅 지원
+- 조건 텐서는 자동으로 x의 dtype에 맞춰 변환됨
+- 결과 shape는 브로드캐스팅 규칙에 따라 결정됨
+- x와 y 텐서 모두로 gradient가 전파됨
+
+**브로드캐스팅 예제:**
+
+```rust
+use hodu::prelude::*;
+
+// 조건: [2, 1], x: [2, 3], y: 스칼라
+let condition = Tensor::new(vec![vec![true], vec![false]])?;
+let x = Tensor::new(vec![
+    vec![1.0, 2.0, 3.0],
+    vec![4.0, 5.0, 6.0],
+])?;
+let y = Tensor::full(&[1], 100.0)?;
+
+let result = Tensor::where3_select(&condition, &x, &y)?;
+println!("{}", result);
+// [[1, 2, 3],      // condition[0]이 true -> x[0]
+//  [100, 100, 100]] // condition[1]이 false -> y
+```
+
+**사용 사례:**
+- 신경망에서 조건부 값 선택
+- 마스킹 연산
+- 커스텀 활성화 함수 구현
+- Gradient clipping 구현
+
 ## 정적 텐서 생성 (Script Mode)
 
 Script 모드에서 입력 placeholder를 정의할 때 사용합니다.
@@ -262,6 +315,12 @@ builder.end()?;
 | `full_like()` | 기존 텐서 기반 특정 값 | 복사 | 사용자 지정 | `Tensor::full_like(&tensor, val)` |
 | `randn()` | 정규분포 랜덤 | 자동 추론 | N(μ, σ²) | `Tensor::randn(&[2, 3], 0., 1.)` |
 | `randn_like()` | 기존 텐서 기반 랜덤 | 복사 | N(μ, σ²) | `Tensor::randn_like(&tensor, 0., 1.)` |
+
+### 연산적 생성
+
+| 함수 | 용도 | 특징 |
+|------|------|------|
+| `where3_select()` | 조건부 선택 | 브로드캐스팅 지원, gradient 전파 |
 
 ### 정적 생성
 
@@ -443,9 +502,11 @@ let filled = Tensor::full_like(&original, 7.0)?;  // f32 -> Scalar::F32 자동 �
 | **일 초기화** | `ones()`, `ones_like()` | 바이어스, 마스크 |
 | **특정 값** | `full()`, `full_like()` | 상수 텐서 필요 시 |
 | **랜덤** | `randn()`, `randn_like()` | 신경망 가중치 초기화 |
+| **조건부 선택** | `where3_select()` | 조건에 따라 텐서 선택 |
 | **Placeholder** | `input()` | Script 입력 정의 |
 
 **핵심 원칙:**
 - 동적 실행: 모든 생성 함수 사용 가능, runtime device 적용
 - Script 빌드 중: 동적 생성 함수는 CPU 고정, `input()`으로 placeholder 정의
+- 연산적 생성: 다른 텐서로부터 연산을 통해 텐서를 생성하며 gradient 지원
 - 실제 데이터가 필요하면 동적 생성, placeholder만 필요하면 `input()` 사용

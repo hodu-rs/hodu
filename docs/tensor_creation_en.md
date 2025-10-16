@@ -2,10 +2,11 @@
 
 ## Overview
 
-There are two main ways to create tensors in Hodu:
+There are three main ways to create tensors in Hodu:
 
 1. **Dynamic Creation**: Immediately create actual tensors with data
-2. **Static Creation**: Define input placeholders in Script mode
+2. **Operational Creation**: Create tensors from other tensors with gradient propagation
+3. **Static Creation**: Define input placeholders in Script mode
 
 ## Dynamic Tensor Creation
 
@@ -193,6 +194,58 @@ let randn = Tensor::randn_like(&original, 0.0, 1.0)?;
 println!("{}", randn);  // [-0.234, 1.567, 0.891]
 ```
 
+## Operational Tensor Creation
+
+Create new tensors from existing tensors through operations. These methods support gradient propagation for automatic differentiation.
+
+### Tensor::where3_select()
+
+Select elements from two tensors based on a condition:
+
+```rust
+use hodu::prelude::*;
+
+// Create condition, x, and y tensors
+let condition = Tensor::new(vec![true, false, true, false])?;
+let x = Tensor::new(vec![1.0, 2.0, 3.0, 4.0])?;
+let y = Tensor::new(vec![10.0, 20.0, 30.0, 40.0])?;
+
+// Select x where condition is true, y where condition is false
+let result = Tensor::where3_select(&condition, &x, &y)?;
+println!("{}", result);  // [1, 20, 3, 40]
+```
+
+**Features:**
+- Supports automatic broadcasting of condition, x, and y tensors
+- Condition tensor is automatically converted to match x's dtype
+- Result shape is determined by broadcasting rules
+- Gradient flows through both x and y tensors
+
+**Broadcasting Example:**
+
+```rust
+use hodu::prelude::*;
+
+// Condition: [2, 1], x: [2, 3], y: scalar
+let condition = Tensor::new(vec![vec![true], vec![false]])?;
+let x = Tensor::new(vec![
+    vec![1.0, 2.0, 3.0],
+    vec![4.0, 5.0, 6.0],
+])?;
+let y = Tensor::full(&[1], 100.0)?;
+
+let result = Tensor::where3_select(&condition, &x, &y)?;
+println!("{}", result);
+// [[1, 2, 3],      // condition[0] is true -> x[0]
+//  [100, 100, 100]] // condition[1] is false -> y
+```
+
+**Use Cases:**
+- Conditional value selection in neural networks
+- Masking operations
+- Implementing custom activation functions
+- Gradient clipping implementations
+
 ## Static Tensor Creation (Script Mode)
 
 Used to define input placeholders in Script mode.
@@ -263,6 +316,12 @@ builder.end()?;
 | `full_like()` | Filled tensor based on existing | Copied | User-specified | `Tensor::full_like(&tensor, val)` |
 | `randn()` | Normal distribution random | Auto-inferred | N(μ, σ²) | `Tensor::randn(&[2, 3], 0., 1.)` |
 | `randn_like()` | Random based on existing | Copied | N(μ, σ²) | `Tensor::randn_like(&tensor, 0., 1.)` |
+
+### Operational Creation
+
+| Function | Purpose | Features |
+|----------|---------|----------|
+| `where3_select()` | Conditional selection | Broadcasting support, gradient propagation |
 
 ### Static Creation
 
@@ -444,9 +503,11 @@ let filled = Tensor::full_like(&original, 7.0)?;  // f32 auto-converts to Scalar
 | **Ones initialization** | `ones()`, `ones_like()` | Bias, masks |
 | **Specific value** | `full()`, `full_like()` | When constant tensor is needed |
 | **Random** | `randn()`, `randn_like()` | Neural network weight initialization |
+| **Conditional selection** | `where3_select()` | Select from tensors based on condition |
 | **Placeholder** | `input()` | Define script inputs |
 
 **Core Principles:**
 - Dynamic execution: All creation functions available, runtime device applied
 - During script building: Dynamic creation functions use CPU, use `input()` for placeholders
+- Operational creation: Creates tensors from other tensors with gradient support
 - Use dynamic creation when actual data is needed, use `input()` when only placeholder is needed
