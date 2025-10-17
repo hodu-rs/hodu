@@ -171,11 +171,15 @@ Operations that reduce tensor dimensions.
 | `prod` | Product along specified dimensions | - |
 | `std` | Standard deviation along specified dimensions | `std_all` |
 | `var` | Variance along specified dimensions | `var_all` |
-| `norm` | Norm along specified dimensions | `l2_norm`, `l1_norm` |
+| `norm` | Lp norm with parameter `p` (p=1: L1, p=2: L2, other: Lp) | `l2_norm`, `l1_norm` |
 | `argmax` | Indices of maximum values along dimension | - |
 | `argmin` | Indices of minimum values along dimension | - |
 
-**Note**: `l1_norm` is implemented as a combination of `abs` and `sum` operations
+**Notes**:
+- `norm(p, dims, keep_dim)` computes the Lp norm: `(sum(|x|^p))^(1/p)`
+  - When `p=1`: delegates to `l1_norm` (combination of `abs` + `sum`)
+  - When `p=2`: delegates to `l2_norm` (native reduction operation)
+  - Other `p` values: combination of `abs`, `pow_scalar`, `sum`, and `pow_scalar`
 
 ## Concat Operations
 

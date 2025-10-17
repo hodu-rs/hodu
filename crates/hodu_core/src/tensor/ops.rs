@@ -811,8 +811,19 @@ impl Tensor {
         self.reduce_operation(op::ReduceOp::Var, &[], false)
     }
 
-    pub fn norm(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
-        self.reduce_operation(op::ReduceOp::Norm, dims, keep_dim)
+    pub fn norm(&self, p: impl Into<Scalar>, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        let p_scalar = p.into();
+        match p_scalar.to_u32() {
+            1 => self.l1_norm(dims, keep_dim),
+            2 => self.l2_norm(dims, keep_dim),
+            _ => {
+                let p_dtype = p_scalar.to_dtype(self.get_dtype());
+                self.abs()?
+                    .pow_scalar(p_dtype)?
+                    .sum(dims, keep_dim)?
+                    .pow_scalar(Scalar::one(self.get_dtype()) / p_dtype)
+            },
+        }
     }
 
     pub fn l2_norm(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {

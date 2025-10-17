@@ -81,8 +81,8 @@ std
 std_all@
 var
 var_all@
-norm
-l2_norm@
+norm?
+l2_norm
 l1_norm?
 argmax!
 argmin!
