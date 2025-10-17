@@ -4,11 +4,11 @@ use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
 #[derive(Module, Clone)]
 #[module(inputs = 2)]
-pub struct Huber {
+pub struct HuberLoss {
     delta: Scalar,
 }
 
-impl Huber {
+impl HuberLoss {
     pub fn new(delta: impl Into<Scalar>) -> Self {
         Self { delta: delta.into() }
     }

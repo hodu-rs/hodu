@@ -4,9 +4,9 @@ use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
 #[derive(Module, Clone)]
 #[module(inputs = 2)]
-pub struct MAE;
+pub struct MAELoss;
 
-impl MAE {
+impl MAELoss {
     pub fn new() -> Self {
         Self
     }

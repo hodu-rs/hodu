@@ -4,9 +4,9 @@ use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
 #[derive(Module, Clone)]
 #[module(inputs = 2)]
-pub struct MSE;
+pub struct MSELoss;
 
-impl MSE {
+impl MSELoss {
     pub fn new() -> Self {
         Self
     }

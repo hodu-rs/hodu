@@ -11,9 +11,9 @@ pub mod prelude;
 pub use losses::{
     binary_cross_entropy::{BCELoss, BCEWithLogitsLoss},
     cross_entropy::CrossEntropyLoss,
-    huber::Huber,
-    mae::MAE,
-    mse::MSE,
+    huber::HuberLoss,
+    mae::MAELoss,
+    mse::MSELoss,
     nll::NLLLoss,
 };
 pub use modules::{

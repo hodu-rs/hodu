@@ -150,22 +150,25 @@ pub enum UnaryOp {
     Abs,  // no-backprop
     Sign, // no-backprop
     Square,
+    Sqrt,
+    Recip,
+
     Relu,
     Sigmoid,
     Tanh,
     Gelu,
+    Softplus,
+
     Sin,
     Cos,
     Tan,
-    Ln,
-    Log10,
-    Log2,
+
     Exp,
-    Exp10,
     Exp2,
-    Softplus,
-    Recip,
-    Sqrt,
+    Exp10,
+    Ln,
+    Log2,
+    Log10,
 }
 
 pub trait UnaryOpT {
@@ -228,6 +231,7 @@ pub enum UnaryScalarOp {
     PowScalar,
     MaximumScalar, // no-backprop
     MinimumScalar, // no-backprop
+
     LeakyRelu,
     Elu,
 }

@@ -1,0 +1,43 @@
+# ascending order
+# activation <- __t_ops order, ascending
+
+// losses
+/// binary_cross_entropy
+BCELoss
+BCEWithLogitsLoss
+/// corss_entropy
+CrossEntropyLoss
+/// huber
+HuberLoss
+/// mae
+MAELoss
+/// mse
+MSELoss
+/// nll
+NLLLoss
+// modules
+/// activation
+ReLU
+Sigmoid
+Tanh
+Gelu
+Softplus
+LeakyReLU
+ELU
+/// conv
+Conv1D
+Conv2D
+Conv3D
+ConvTranspose1D
+ConvTranspose2D
+ConvTranspose3D
+/// dropout
+Dropout
+/// linear
+Linear
+// optimizers
+/// adam
+Adam
+AdamW
+/// sgd
+SGD

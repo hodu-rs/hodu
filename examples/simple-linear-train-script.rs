@@ -21,7 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     builder.start()?;
 
     let mut linear = Linear::new(3, 1, true, DType::F32)?;
-    let mse_loss = MSE::new();
+    let mse_loss = MSELoss::new();
     let mut optimizer = SGD::new(0.01);
 
     let input = Tensor::input("input", &[10000, 3])?;
