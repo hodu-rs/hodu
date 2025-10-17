@@ -14,6 +14,8 @@ pub trait HoduDeviceT: Sized {
     fn zeros(_: &Layout, _: DType) -> HoduResult<Self::HoduStorage>;
 
     fn randn(_: &Layout, _: DType, _: f64, _: f64) -> HoduResult<Self::HoduStorage>;
+
+    fn rand_uniform(_: &Layout, _: DType, _: f64, _: f64) -> HoduResult<Self::HoduStorage>;
 }
 
 pub enum HoduDevice {
@@ -38,6 +40,19 @@ impl HoduDevice {
     pub(crate) fn randn(layout: &Layout, device: Device, dtype: DType, mean: f64, std: f64) -> HoduResult<HoduStorage> {
         match device {
             Device::CPU => Ok(HoduStorage::CPU(CpuDevice::randn(layout, dtype, mean, std)?)),
+            _ => panic!(""),
+        }
+    }
+
+    pub(crate) fn rand_uniform(
+        layout: &Layout,
+        device: Device,
+        dtype: DType,
+        low: f64,
+        high: f64,
+    ) -> HoduResult<HoduStorage> {
+        match device {
+            Device::CPU => Ok(HoduStorage::CPU(CpuDevice::rand_uniform(layout, dtype, low, high)?)),
             _ => panic!(""),
         }
     }

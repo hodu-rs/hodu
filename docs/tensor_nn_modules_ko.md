@@ -10,6 +10,47 @@
 2. **손실 함수 (Loss Functions)**: 학습 목표 (MSE, CrossEntropy 등)
 3. **최적화기 (Optimizers)**: 파라미터 업데이트 알고리즘 (SGD, Adam)
 
+## 학습/평가 모드 전환
+
+신경망 모듈의 동작 모드를 전환하는 매크로입니다.
+
+### train!()
+
+학습 모드로 전환합니다. Dropout 등의 정규화 레이어가 활성화됩니다.
+
+```rust
+use hodu::prelude::*;
+
+train!();  // 학습 모드 활성화
+```
+
+### eval!()
+
+평가 모드로 전환합니다. Dropout 등의 정규화 레이어가 비활성화됩니다.
+
+```rust
+use hodu::prelude::*;
+
+eval!();  // 평가 모드 활성화
+```
+
+**사용 예시:**
+
+```rust
+use hodu::prelude::*;
+
+let dropout = Dropout::new(0.5);
+let input = Tensor::randn(&[32, 128], 0.0, 1.0)?;
+
+// 학습 시
+train!();
+let output = dropout.forward(&input)?;  // Dropout 적용됨
+
+// 평가 시
+eval!();
+let output = dropout.forward(&input)?;  // Dropout 적용 안됨
+```
+
 ## 모듈
 
 ### 선형 레이어
@@ -263,6 +304,28 @@ let output = conv_t.forward(&input)?;  // [4, 1, 64, 64, 64] (2배 업샘플링)
 - **padding**: 입력 주변에 0을 추가하여 출력 크기 조절
 - **dilation**: 커널 요소 사이의 간격, 수용 영역(receptive field)을 확장
 - **output_padding**: ConvTranspose에서 출력 크기를 미세 조정
+
+### 정규화 레이어
+
+#### Dropout
+
+무작위로 뉴런을 비활성화하여 과적합을 방지합니다.
+
+```rust
+use hodu::nn::modules::Dropout;
+
+let dropout = Dropout::new(0.5);  // 50% 확률로 드롭
+let output = dropout.forward(&input)?;
+```
+
+**파라미터:**
+- `p`: 드롭 확률 (0.0 ~ 1.0)
+
+**동작:**
+- 학습 시: `output = input * mask * (1/(1-p))` (균등분포 마스크)
+- 추론 시: `output = input` (드롭 없음)
+
+**권장 비율:** 은닉층 0.3~0.5, 입력층 0.1~0.2
 
 ### 활성화 함수
 

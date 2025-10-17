@@ -124,4 +124,28 @@ impl Tensor {
         let shape = layout.get_shape();
         Self::randn(&shape, mean, std)
     }
+
+    pub fn rand_uniform<T: Into<Scalar>>(shape: &[usize], low: T, high: T) -> HoduResult<Self> {
+        let low = low.into();
+        let high = high.into();
+        let device = if is_builder_active() {
+            Device::CPU
+        } else {
+            get_runtime_device()
+        };
+        let dtype = if low.is_float() {
+            low.get_dtype()
+        } else {
+            high.get_dtype()
+        };
+        let layout = Layout::from_shape(shape);
+        let storage = HoduDevice::rand_uniform(&layout, device, dtype, low.to_f64(), high.to_f64())?;
+        Ok(from_storage(storage, layout, !is_builder_active()))
+    }
+
+    pub fn rand_uniform_like<T: Into<Scalar>>(tensor: &Tensor, low: T, high: T) -> HoduResult<Self> {
+        let layout = tensor.get_layout();
+        let shape = layout.get_shape();
+        Self::rand_uniform(&shape, low, high)
+    }
 }

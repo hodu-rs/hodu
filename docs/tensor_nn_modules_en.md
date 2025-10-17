@@ -10,6 +10,47 @@ This document provides a comprehensive overview of neural network modules availa
 2. **Loss Functions**: Training objectives (MSE, CrossEntropy, etc.)
 3. **Optimizers**: Parameter update algorithms (SGD, Adam)
 
+## Training/Evaluation Mode
+
+Macros to switch the behavior mode of neural network modules.
+
+### train!()
+
+Switch to training mode. Regularization layers like Dropout are activated.
+
+```rust
+use hodu::prelude::*;
+
+train!();  // Activate training mode
+```
+
+### eval!()
+
+Switch to evaluation mode. Regularization layers like Dropout are deactivated.
+
+```rust
+use hodu::prelude::*;
+
+eval!();  // Activate evaluation mode
+```
+
+**Usage Example:**
+
+```rust
+use hodu::prelude::*;
+
+let dropout = Dropout::new(0.5);
+let input = Tensor::randn(&[32, 128], 0.0, 1.0)?;
+
+// During training
+train!();
+let output = dropout.forward(&input)?;  // Dropout applied
+
+// During evaluation
+eval!();
+let output = dropout.forward(&input)?;  // Dropout not applied
+```
+
 ## Modules
 
 ### Linear Layers
@@ -263,6 +304,28 @@ let output = conv_t.forward(&input)?;  // [4, 1, 64, 64, 64] (2x upsampled)
 - **padding**: Add zeros around input to control output size
 - **dilation**: Spacing between kernel elements, expands receptive field
 - **output_padding**: Fine-tune output size in ConvTranspose
+
+### Regularization Layers
+
+#### Dropout
+
+Randomly deactivates neurons to prevent overfitting.
+
+```rust
+use hodu::nn::modules::Dropout;
+
+let dropout = Dropout::new(0.5);  // 50% drop probability
+let output = dropout.forward(&input)?;
+```
+
+**Parameters:**
+- `p`: Drop probability (0.0 ~ 1.0)
+
+**Behavior:**
+- Training: `output = input * mask * (1/(1-p))` (uniform distribution mask)
+- Inference: `output = input` (no dropout)
+
+**Recommended rates:** Hidden layers 0.3~0.5, Input layer 0.1~0.2
 
 ### Activation Functions
 

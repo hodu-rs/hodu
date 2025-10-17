@@ -194,6 +194,51 @@ let randn = Tensor::randn_like(&original, 0.0, 1.0)?;
 println!("{}", randn);  // [-0.234, 1.567, 0.891]
 ```
 
+#### Tensor::rand_uniform()
+
+Create a random tensor sampled from uniform distribution:
+
+```rust
+use hodu::prelude::*;
+
+// Uniform distribution in range [0, 1)
+let uniform = Tensor::rand_uniform(&[2, 3], 0.0, 1.0)?;
+println!("{}", uniform);
+// [[0.234, 0.891, 0.456],
+//  [0.123, 0.789, 0.345]]
+
+// Uniform distribution in range [-1, 1)
+let uniform_centered = Tensor::rand_uniform(&[3], -1.0, 1.0)?;
+println!("{}", uniform_centered);  // [-0.234, 0.567, 0.891]
+
+// Uniform distribution in range [0, 10)
+let uniform_scaled = Tensor::rand_uniform(&[2, 2], 0.0, 10.0)?;
+println!("{}", uniform_scaled);
+// [[3.456, 7.891],
+//  [1.234, 9.012]]
+```
+
+**Features:**
+- Uniformly distributed within the specified range [low, high)
+- Result is float type if either low or high is float
+- Useful for Dropout, data augmentation, probabilistic sampling
+
+**Use Cases:**
+- **Dropout**: Generate random masks
+- **Data augmentation**: Random noise, transformation parameters
+- **Reinforcement learning**: Action sampling, exploration noise
+- **Monte Carlo simulation**: Uniform sampling
+
+#### Tensor::rand_uniform_like()
+
+Create a uniform random tensor with same shape as existing tensor:
+
+```rust
+let original = Tensor::new(vec![1.0, 2.0, 3.0])?;
+let uniform = Tensor::rand_uniform_like(&original, 0.0, 1.0)?;
+println!("{}", uniform);  // [0.234, 0.567, 0.891]
+```
+
 ## Operational Tensor Creation
 
 Create new tensors from existing tensors through operations. These methods support gradient propagation for automatic differentiation.
@@ -315,7 +360,9 @@ builder.end()?;
 | `full()` | Fill with specific value | Auto-inferred | User-specified | `Tensor::full(&[2, 3], 3.14)` |
 | `full_like()` | Filled tensor based on existing | Copied | User-specified | `Tensor::full_like(&tensor, val)` |
 | `randn()` | Normal distribution random | Auto-inferred | N(μ, σ²) | `Tensor::randn(&[2, 3], 0., 1.)` |
-| `randn_like()` | Random based on existing | Copied | N(μ, σ²) | `Tensor::randn_like(&tensor, 0., 1.)` |
+| `randn_like()` | Normal random based on existing | Copied | N(μ, σ²) | `Tensor::randn_like(&tensor, 0., 1.)` |
+| `rand_uniform()` | Uniform distribution random | Auto-inferred | U(low, high) | `Tensor::rand_uniform(&[2, 3], 0., 1.)` |
+| `rand_uniform_like()` | Uniform random based on existing | Copied | U(low, high) | `Tensor::rand_uniform_like(&tensor, 0., 1.)` |
 
 ### Operational Creation
 
@@ -502,7 +549,8 @@ let filled = Tensor::full_like(&original, 7.0)?;  // f32 auto-converts to Scalar
 | **Zero initialization** | `zeros()`, `zeros_like()` | Weight, buffer initialization |
 | **Ones initialization** | `ones()`, `ones_like()` | Bias, masks |
 | **Specific value** | `full()`, `full_like()` | When constant tensor is needed |
-| **Random** | `randn()`, `randn_like()` | Neural network weight initialization |
+| **Normal random** | `randn()`, `randn_like()` | Neural network weight initialization |
+| **Uniform random** | `rand_uniform()`, `rand_uniform_like()` | Dropout, data augmentation |
 | **Conditional selection** | `where3_select()` | Select from tensors based on condition |
 | **Placeholder** | `input()` | Define script inputs |
 

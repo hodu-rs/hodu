@@ -101,4 +101,71 @@ impl HoduDeviceT for CpuDevice {
             }),
         }
     }
+
+    fn rand_uniform(layout: &Layout, dtype: DType, low: f64, high: f64) -> HoduResult<CpuStorage> {
+        use rand::prelude::*;
+
+        let elem_count = layout.get_size();
+        let mut rng = rand::rng();
+        match dtype {
+            DType::F8E4M3 => {
+                let mut data = Vec::with_capacity(elem_count);
+                let uniform = rand_distr::Uniform::new(F8E4M3::from_f64(low), F8E4M3::from_f64(high))
+                    .map_err(|e| HoduError::InternalError(format!("Uniform distribution error: {e}")))?;
+                for _i in 0..elem_count {
+                    data.push(uniform.sample(&mut rng))
+                }
+                Ok(CpuStorage::F8E4M3(data))
+            },
+            DType::F8E5M2 => {
+                let mut data = Vec::with_capacity(elem_count);
+                let uniform = rand_distr::Uniform::new(F8E5M2::from_f64(low), F8E5M2::from_f64(high))
+                    .map_err(|e| HoduError::InternalError(format!("Uniform distribution error: {e}")))?;
+                for _i in 0..elem_count {
+                    data.push(uniform.sample(&mut rng))
+                }
+                Ok(CpuStorage::F8E5M2(data))
+            },
+            DType::BF16 => {
+                let mut data = Vec::with_capacity(elem_count);
+                let uniform = rand_distr::Uniform::new(bf16::from_f64(low), bf16::from_f64(high))
+                    .map_err(|e| HoduError::InternalError(format!("Uniform distribution error: {e}")))?;
+                for _i in 0..elem_count {
+                    data.push(uniform.sample(&mut rng))
+                }
+                Ok(CpuStorage::BF16(data))
+            },
+            DType::F16 => {
+                let mut data = Vec::with_capacity(elem_count);
+                let uniform = rand_distr::Uniform::new(f16::from_f64(low), f16::from_f64(high))
+                    .map_err(|e| HoduError::InternalError(format!("Uniform distribution error: {e}")))?;
+                for _i in 0..elem_count {
+                    data.push(uniform.sample(&mut rng))
+                }
+                Ok(CpuStorage::F16(data))
+            },
+            DType::F32 => {
+                let mut data = Vec::with_capacity(elem_count);
+                let uniform = rand_distr::Uniform::new(low as f32, high as f32)
+                    .map_err(|e| HoduError::InternalError(format!("Uniform distribution error: {e}")))?;
+                for _i in 0..elem_count {
+                    data.push(uniform.sample(&mut rng))
+                }
+                Ok(CpuStorage::F32(data))
+            },
+            DType::F64 => {
+                let mut data = Vec::with_capacity(elem_count);
+                let uniform = rand_distr::Uniform::new(low, high)
+                    .map_err(|e| HoduError::InternalError(format!("Uniform distribution error: {e}")))?;
+                for _i in 0..elem_count {
+                    data.push(uniform.sample(&mut rng))
+                }
+                Ok(CpuStorage::F64(data))
+            },
+            _ => Err(HoduError::UnsupportedDType {
+                dtype,
+                op: "rand_uniform".to_string(),
+            }),
+        }
+    }
 }
