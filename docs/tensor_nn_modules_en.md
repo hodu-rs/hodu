@@ -45,6 +45,225 @@ let output = layer.forward(&input)?;  // [32, 128]
 output = input @ weight.T + bias
 ```
 
+### Convolutional Layers
+
+Convolutional layers are used for processing data with spatial structure such as images, time series, and 3D data.
+
+#### Conv1D
+
+1D convolutional layer for time series data or text sequences.
+
+```rust
+use hodu::nn::modules::Conv1D;
+
+// Create Conv1D layer: 16 channels -> 32 channels, kernel_size=3
+let conv = Conv1D::new(
+    16,    // in_channels
+    32,    // out_channels
+    3,     // kernel_size
+    1,     // stride
+    1,     // padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass: [batch, channels, length]
+let input = Tensor::randn(&[8, 16, 100], 0.0, 1.0)?;  // batch=8, in_channels=16, length=100
+let output = conv.forward(&input)?;  // [8, 32, 100]
+```
+
+**Parameters:**
+- `in_channels`: Number of input channels
+- `out_channels`: Number of output channels (number of filters)
+- `kernel_size`: Size of the convolutional kernel
+- `stride`: Stride of the convolution
+- `padding`: Zero-padding added to input
+- `dilation`: Spacing between kernel elements
+- `with_bias`: Whether to include bias term
+- `dtype`: Data type
+
+**Initialization:**
+- Weight: Kaiming initialization, `k = √(2/(in_channels * kernel_size))`
+- Bias: Same initialization
+
+**Output Size:**
+```
+L_out = floor((L_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+```
+
+#### Conv2D
+
+2D convolutional layer, most widely used for image processing.
+
+```rust
+use hodu::nn::modules::Conv2D;
+
+// Create Conv2D layer: 3 channels (RGB) -> 64 channels, 3x3 kernel
+let conv = Conv2D::new(
+    3,     // in_channels
+    64,    // out_channels
+    3,     // kernel_size
+    1,     // stride
+    1,     // padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass: [batch, channels, height, width]
+let input = Tensor::randn(&[16, 3, 224, 224], 0.0, 1.0)?;  // batch=16, RGB image 224x224
+let output = conv.forward(&input)?;  // [16, 64, 224, 224]
+```
+
+**Parameters:** Same as Conv1D but applied in 2D space
+
+**Initialization:**
+- Weight: Kaiming initialization, `k = √(2/(in_channels * kernel_size²))`
+
+**Output Size:**
+```
+H_out = floor((H_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+W_out = floor((W_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+```
+
+#### Conv3D
+
+3D convolutional layer for video or 3D medical imaging.
+
+```rust
+use hodu::nn::modules::Conv3D;
+
+// Create Conv3D layer
+let conv = Conv3D::new(
+    1,     // in_channels (grayscale)
+    32,    // out_channels
+    3,     // kernel_size
+    1,     // stride
+    1,     // padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass: [batch, channels, depth, height, width]
+let input = Tensor::randn(&[4, 1, 64, 64, 64], 0.0, 1.0)?;  // batch=4, 64x64x64 volume
+let output = conv.forward(&input)?;  // [4, 32, 64, 64, 64]
+```
+
+**Initialization:**
+- Weight: Kaiming initialization, `k = √(2/(in_channels * kernel_size³))`
+
+**Output Size:**
+```
+D_out = floor((D_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+H_out = floor((H_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+W_out = floor((W_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+```
+
+#### ConvTranspose1D
+
+Transposed convolution (upsampling) layer for increasing resolution of 1D data.
+
+```rust
+use hodu::nn::modules::ConvTranspose1D;
+
+// Create ConvTranspose1D layer
+let conv_t = ConvTranspose1D::new(
+    32,    // in_channels
+    16,    // out_channels
+    3,     // kernel_size
+    2,     // stride (upsampling factor)
+    1,     // padding
+    0,     // output_padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass
+let input = Tensor::randn(&[8, 32, 50], 0.0, 1.0)?;  // [batch, channels, length]
+let output = conv_t.forward(&input)?;  // [8, 16, 99] (upsampled)
+```
+
+**Output Size:**
+```
+L_out = (L_in - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+```
+
+#### ConvTranspose2D
+
+Transposed convolution layer for image upsampling, decoders, GAN generators, etc.
+
+```rust
+use hodu::nn::modules::ConvTranspose2D;
+
+// Create ConvTranspose2D layer
+let conv_t = ConvTranspose2D::new(
+    64,    // in_channels
+    3,     // out_channels (RGB)
+    4,     // kernel_size
+    2,     // stride (2x upsampling)
+    1,     // padding
+    0,     // output_padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass
+let input = Tensor::randn(&[16, 64, 56, 56], 0.0, 1.0)?;
+let output = conv_t.forward(&input)?;  // [16, 3, 112, 112] (2x upsampled)
+```
+
+**Output Size:**
+```
+H_out = (H_in - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+W_out = (W_in - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+```
+
+#### ConvTranspose3D
+
+3D transposed convolution layer for upsampling 3D data.
+
+```rust
+use hodu::nn::modules::ConvTranspose3D;
+
+// Create ConvTranspose3D layer
+let conv_t = ConvTranspose3D::new(
+    32,    // in_channels
+    1,     // out_channels
+    4,     // kernel_size
+    2,     // stride
+    1,     // padding
+    0,     // output_padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass
+let input = Tensor::randn(&[4, 32, 32, 32, 32], 0.0, 1.0)?;
+let output = conv_t.forward(&input)?;  // [4, 1, 64, 64, 64] (2x upsampled)
+```
+
+### Convolutional Layer Comparison
+
+| Layer | Input Shape | Use Case | Resolution Change |
+|-------|------------|----------|------------------|
+| Conv1D | `[N, C, L]` | Time series, text | Decrease/maintain |
+| Conv2D | `[N, C, H, W]` | Images | Decrease/maintain |
+| Conv3D | `[N, C, D, H, W]` | Video, 3D scans | Decrease/maintain |
+| ConvTranspose1D | `[N, C, L]` | 1D upsampling | Increase |
+| ConvTranspose2D | `[N, C, H, W]` | Image generation | Increase |
+| ConvTranspose3D | `[N, C, D, H, W]` | 3D reconstruction | Increase |
+
+**Key Concepts:**
+- **stride**: Larger values decrease (Conv) or increase (ConvTranspose) output size
+- **padding**: Add zeros around input to control output size
+- **dilation**: Spacing between kernel elements, expands receptive field
+- **output_padding**: Fine-tune output size in ConvTranspose
+
 ### Activation Functions
 
 All activation functions are stateless and have no parameters.

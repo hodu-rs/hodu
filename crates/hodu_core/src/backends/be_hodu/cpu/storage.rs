@@ -4,7 +4,13 @@ use crate::{
             cpu::{device::CpuDevice, utils::*},
             storage::HoduStorageT,
         },
-        op::{BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT},
+        op::{
+            conv::{
+                ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
+                ParamsConvTranspose3D,
+            },
+            BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
+        },
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -2125,6 +2131,666 @@ impl HoduStorageT for CpuStorage {
                 return Err(HoduError::UnsupportedDType {
                     dtype: self.get_dtype(),
                     op: "scatter_min".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv1d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv1D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != weight_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: weight_storage.get_dtype(),
+                op: "conv1d".to_string(),
+            });
+        }
+
+        macro_rules! conv1d_impl {
+            ($input_storage:expr, $weight_storage:expr, $dtype_variant:ident) => {{
+                let result = conv1d_map(
+                    $input_storage,
+                    input_layout,
+                    $weight_storage,
+                    weight_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, weight_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(weight)) => conv1d_impl!(input, weight, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(weight)) => conv1d_impl!(input, weight, F8E5M2),
+            (Self::BF16(input), Self::BF16(weight)) => conv1d_impl!(input, weight, BF16),
+            (Self::F16(input), Self::F16(weight)) => conv1d_impl!(input, weight, F16),
+            (Self::F32(input), Self::F32(weight)) => conv1d_impl!(input, weight, F32),
+            (Self::F64(input), Self::F64(weight)) => conv1d_impl!(input, weight, F64),
+            (Self::I8(input), Self::I8(weight)) => conv1d_impl!(input, weight, I8),
+            (Self::I16(input), Self::I16(weight)) => conv1d_impl!(input, weight, I16),
+            (Self::I32(input), Self::I32(weight)) => conv1d_impl!(input, weight, I32),
+            (Self::I64(input), Self::I64(weight)) => conv1d_impl!(input, weight, I64),
+            (Self::U8(input), Self::U8(weight)) => conv1d_impl!(input, weight, U8),
+            (Self::U16(input), Self::U16(weight)) => conv1d_impl!(input, weight, U16),
+            (Self::U32(input), Self::U32(weight)) => conv1d_impl!(input, weight, U32),
+            (Self::U64(input), Self::U64(weight)) => conv1d_impl!(input, weight, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv1d".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv2d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv2D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != weight_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: weight_storage.get_dtype(),
+                op: "conv2d".to_string(),
+            });
+        }
+
+        macro_rules! conv2d_impl {
+            ($input_storage:expr, $weight_storage:expr, $dtype_variant:ident) => {{
+                let result = conv2d_map(
+                    $input_storage,
+                    input_layout,
+                    $weight_storage,
+                    weight_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, weight_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(weight)) => conv2d_impl!(input, weight, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(weight)) => conv2d_impl!(input, weight, F8E5M2),
+            (Self::BF16(input), Self::BF16(weight)) => conv2d_impl!(input, weight, BF16),
+            (Self::F16(input), Self::F16(weight)) => conv2d_impl!(input, weight, F16),
+            (Self::F32(input), Self::F32(weight)) => conv2d_impl!(input, weight, F32),
+            (Self::F64(input), Self::F64(weight)) => conv2d_impl!(input, weight, F64),
+            (Self::I8(input), Self::I8(weight)) => conv2d_impl!(input, weight, I8),
+            (Self::I16(input), Self::I16(weight)) => conv2d_impl!(input, weight, I16),
+            (Self::I32(input), Self::I32(weight)) => conv2d_impl!(input, weight, I32),
+            (Self::I64(input), Self::I64(weight)) => conv2d_impl!(input, weight, I64),
+            (Self::U8(input), Self::U8(weight)) => conv2d_impl!(input, weight, U8),
+            (Self::U16(input), Self::U16(weight)) => conv2d_impl!(input, weight, U16),
+            (Self::U32(input), Self::U32(weight)) => conv2d_impl!(input, weight, U32),
+            (Self::U64(input), Self::U64(weight)) => conv2d_impl!(input, weight, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv2d".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv3d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv3D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != weight_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: weight_storage.get_dtype(),
+                op: "conv3d".to_string(),
+            });
+        }
+
+        macro_rules! conv3d_impl {
+            ($input_storage:expr, $weight_storage:expr, $dtype_variant:ident) => {{
+                let result = conv3d_map(
+                    $input_storage,
+                    input_layout,
+                    $weight_storage,
+                    weight_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, weight_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(weight)) => conv3d_impl!(input, weight, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(weight)) => conv3d_impl!(input, weight, F8E5M2),
+            (Self::BF16(input), Self::BF16(weight)) => conv3d_impl!(input, weight, BF16),
+            (Self::F16(input), Self::F16(weight)) => conv3d_impl!(input, weight, F16),
+            (Self::F32(input), Self::F32(weight)) => conv3d_impl!(input, weight, F32),
+            (Self::F64(input), Self::F64(weight)) => conv3d_impl!(input, weight, F64),
+            (Self::I8(input), Self::I8(weight)) => conv3d_impl!(input, weight, I8),
+            (Self::I16(input), Self::I16(weight)) => conv3d_impl!(input, weight, I16),
+            (Self::I32(input), Self::I32(weight)) => conv3d_impl!(input, weight, I32),
+            (Self::I64(input), Self::I64(weight)) => conv3d_impl!(input, weight, I64),
+            (Self::U8(input), Self::U8(weight)) => conv3d_impl!(input, weight, U8),
+            (Self::U16(input), Self::U16(weight)) => conv3d_impl!(input, weight, U16),
+            (Self::U32(input), Self::U32(weight)) => conv3d_impl!(input, weight, U32),
+            (Self::U64(input), Self::U64(weight)) => conv3d_impl!(input, weight, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv3d".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv_transpose1d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose1D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != weight_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: weight_storage.get_dtype(),
+                op: "conv_transpose1d".to_string(),
+            });
+        }
+
+        macro_rules! conv_transpose1d_impl {
+            ($input_storage:expr, $weight_storage:expr, $dtype_variant:ident) => {{
+                let result = conv_transpose1d_map(
+                    $input_storage,
+                    input_layout,
+                    $weight_storage,
+                    weight_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, weight_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(weight)) => conv_transpose1d_impl!(input, weight, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(weight)) => conv_transpose1d_impl!(input, weight, F8E5M2),
+            (Self::BF16(input), Self::BF16(weight)) => conv_transpose1d_impl!(input, weight, BF16),
+            (Self::F16(input), Self::F16(weight)) => conv_transpose1d_impl!(input, weight, F16),
+            (Self::F32(input), Self::F32(weight)) => conv_transpose1d_impl!(input, weight, F32),
+            (Self::F64(input), Self::F64(weight)) => conv_transpose1d_impl!(input, weight, F64),
+            (Self::I8(input), Self::I8(weight)) => conv_transpose1d_impl!(input, weight, I8),
+            (Self::I16(input), Self::I16(weight)) => conv_transpose1d_impl!(input, weight, I16),
+            (Self::I32(input), Self::I32(weight)) => conv_transpose1d_impl!(input, weight, I32),
+            (Self::I64(input), Self::I64(weight)) => conv_transpose1d_impl!(input, weight, I64),
+            (Self::U8(input), Self::U8(weight)) => conv_transpose1d_impl!(input, weight, U8),
+            (Self::U16(input), Self::U16(weight)) => conv_transpose1d_impl!(input, weight, U16),
+            (Self::U32(input), Self::U32(weight)) => conv_transpose1d_impl!(input, weight, U32),
+            (Self::U64(input), Self::U64(weight)) => conv_transpose1d_impl!(input, weight, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv_transpose1d".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv_transpose2d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose2D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != weight_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: weight_storage.get_dtype(),
+                op: "conv_transpose2d".to_string(),
+            });
+        }
+
+        macro_rules! conv_transpose2d_impl {
+            ($input_storage:expr, $weight_storage:expr, $dtype_variant:ident) => {{
+                let result = conv_transpose2d_map(
+                    $input_storage,
+                    input_layout,
+                    $weight_storage,
+                    weight_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, weight_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(weight)) => conv_transpose2d_impl!(input, weight, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(weight)) => conv_transpose2d_impl!(input, weight, F8E5M2),
+            (Self::BF16(input), Self::BF16(weight)) => conv_transpose2d_impl!(input, weight, BF16),
+            (Self::F16(input), Self::F16(weight)) => conv_transpose2d_impl!(input, weight, F16),
+            (Self::F32(input), Self::F32(weight)) => conv_transpose2d_impl!(input, weight, F32),
+            (Self::F64(input), Self::F64(weight)) => conv_transpose2d_impl!(input, weight, F64),
+            (Self::I8(input), Self::I8(weight)) => conv_transpose2d_impl!(input, weight, I8),
+            (Self::I16(input), Self::I16(weight)) => conv_transpose2d_impl!(input, weight, I16),
+            (Self::I32(input), Self::I32(weight)) => conv_transpose2d_impl!(input, weight, I32),
+            (Self::I64(input), Self::I64(weight)) => conv_transpose2d_impl!(input, weight, I64),
+            (Self::U8(input), Self::U8(weight)) => conv_transpose2d_impl!(input, weight, U8),
+            (Self::U16(input), Self::U16(weight)) => conv_transpose2d_impl!(input, weight, U16),
+            (Self::U32(input), Self::U32(weight)) => conv_transpose2d_impl!(input, weight, U32),
+            (Self::U64(input), Self::U64(weight)) => conv_transpose2d_impl!(input, weight, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv_transpose2d".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv_transpose3d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != weight_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: weight_storage.get_dtype(),
+                op: "conv_transpose3d".to_string(),
+            });
+        }
+
+        macro_rules! conv_transpose3d_impl {
+            ($input_storage:expr, $weight_storage:expr, $dtype_variant:ident) => {{
+                let result = conv_transpose3d_map(
+                    $input_storage,
+                    input_layout,
+                    $weight_storage,
+                    weight_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, weight_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(weight)) => conv_transpose3d_impl!(input, weight, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(weight)) => conv_transpose3d_impl!(input, weight, F8E5M2),
+            (Self::BF16(input), Self::BF16(weight)) => conv_transpose3d_impl!(input, weight, BF16),
+            (Self::F16(input), Self::F16(weight)) => conv_transpose3d_impl!(input, weight, F16),
+            (Self::F32(input), Self::F32(weight)) => conv_transpose3d_impl!(input, weight, F32),
+            (Self::F64(input), Self::F64(weight)) => conv_transpose3d_impl!(input, weight, F64),
+            (Self::I8(input), Self::I8(weight)) => conv_transpose3d_impl!(input, weight, I8),
+            (Self::I16(input), Self::I16(weight)) => conv_transpose3d_impl!(input, weight, I16),
+            (Self::I32(input), Self::I32(weight)) => conv_transpose3d_impl!(input, weight, I32),
+            (Self::I64(input), Self::I64(weight)) => conv_transpose3d_impl!(input, weight, I64),
+            (Self::U8(input), Self::U8(weight)) => conv_transpose3d_impl!(input, weight, U8),
+            (Self::U16(input), Self::U16(weight)) => conv_transpose3d_impl!(input, weight, U16),
+            (Self::U32(input), Self::U32(weight)) => conv_transpose3d_impl!(input, weight, U32),
+            (Self::U64(input), Self::U64(weight)) => conv_transpose3d_impl!(input, weight, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv_transpose3d".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv1d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv1D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != grad_output_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: grad_output_storage.get_dtype(),
+                op: "conv1d_grad_weight".to_string(),
+            });
+        }
+
+        macro_rules! conv1d_grad_weight_impl {
+            ($input_storage:expr, $grad_output_storage:expr, $dtype_variant:ident) => {{
+                let result = conv1d_grad_weight_map(
+                    $input_storage,
+                    input_layout,
+                    $grad_output_storage,
+                    grad_output_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, grad_output_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F8E5M2),
+            (Self::BF16(input), Self::BF16(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, BF16),
+            (Self::F16(input), Self::F16(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F16),
+            (Self::F32(input), Self::F32(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F32),
+            (Self::F64(input), Self::F64(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F64),
+            (Self::I8(input), Self::I8(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I8),
+            (Self::I16(input), Self::I16(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I16),
+            (Self::I32(input), Self::I32(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I32),
+            (Self::I64(input), Self::I64(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I64),
+            (Self::U8(input), Self::U8(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U8),
+            (Self::U16(input), Self::U16(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U16),
+            (Self::U32(input), Self::U32(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U32),
+            (Self::U64(input), Self::U64(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv1d_grad_weight".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv2d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv2D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != grad_output_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: grad_output_storage.get_dtype(),
+                op: "conv2d_grad_weight".to_string(),
+            });
+        }
+
+        macro_rules! conv2d_grad_weight_impl {
+            ($input_storage:expr, $grad_output_storage:expr, $dtype_variant:ident) => {{
+                let result = conv2d_grad_weight_map(
+                    $input_storage,
+                    input_layout,
+                    $grad_output_storage,
+                    grad_output_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, grad_output_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F8E5M2),
+            (Self::BF16(input), Self::BF16(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, BF16),
+            (Self::F16(input), Self::F16(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F16),
+            (Self::F32(input), Self::F32(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F32),
+            (Self::F64(input), Self::F64(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F64),
+            (Self::I8(input), Self::I8(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I8),
+            (Self::I16(input), Self::I16(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I16),
+            (Self::I32(input), Self::I32(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I32),
+            (Self::I64(input), Self::I64(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I64),
+            (Self::U8(input), Self::U8(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U8),
+            (Self::U16(input), Self::U16(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U16),
+            (Self::U32(input), Self::U32(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U32),
+            (Self::U64(input), Self::U64(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv2d_grad_weight".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv3d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv3D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != grad_output_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: grad_output_storage.get_dtype(),
+                op: "conv3d_grad_weight".to_string(),
+            });
+        }
+
+        macro_rules! conv3d_grad_weight_impl {
+            ($input_storage:expr, $grad_output_storage:expr, $dtype_variant:ident) => {{
+                let result = conv3d_grad_weight_map(
+                    $input_storage,
+                    input_layout,
+                    $grad_output_storage,
+                    grad_output_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, grad_output_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F8E4M3),
+            (Self::F8E5M2(input), Self::F8E5M2(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F8E5M2),
+            (Self::BF16(input), Self::BF16(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, BF16),
+            (Self::F16(input), Self::F16(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F16),
+            (Self::F32(input), Self::F32(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F32),
+            (Self::F64(input), Self::F64(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F64),
+            (Self::I8(input), Self::I8(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I8),
+            (Self::I16(input), Self::I16(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I16),
+            (Self::I32(input), Self::I32(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I32),
+            (Self::I64(input), Self::I64(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I64),
+            (Self::U8(input), Self::U8(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U8),
+            (Self::U16(input), Self::U16(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U16),
+            (Self::U32(input), Self::U32(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U32),
+            (Self::U64(input), Self::U64(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv3d_grad_weight".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv_transpose1d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose1D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != grad_output_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: grad_output_storage.get_dtype(),
+                op: "conv_transpose1d_grad_weight".to_string(),
+            });
+        }
+
+        macro_rules! conv_transpose1d_grad_weight_impl {
+            ($input_storage:expr, $grad_output_storage:expr, $dtype_variant:ident) => {{
+                let result = conv_transpose1d_grad_weight_map(
+                    $input_storage,
+                    input_layout,
+                    $grad_output_storage,
+                    grad_output_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, grad_output_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(grad_out)) => {
+                conv_transpose1d_grad_weight_impl!(input, grad_out, F8E4M3)
+            },
+            (Self::F8E5M2(input), Self::F8E5M2(grad_out)) => {
+                conv_transpose1d_grad_weight_impl!(input, grad_out, F8E5M2)
+            },
+            (Self::BF16(input), Self::BF16(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, BF16),
+            (Self::F16(input), Self::F16(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, F16),
+            (Self::F32(input), Self::F32(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, F32),
+            (Self::F64(input), Self::F64(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, F64),
+            (Self::I8(input), Self::I8(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I8),
+            (Self::I16(input), Self::I16(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I16),
+            (Self::I32(input), Self::I32(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I32),
+            (Self::I64(input), Self::I64(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I64),
+            (Self::U8(input), Self::U8(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U8),
+            (Self::U16(input), Self::U16(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U16),
+            (Self::U32(input), Self::U32(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U32),
+            (Self::U64(input), Self::U64(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv_transpose1d_grad_weight".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv_transpose2d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose2D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != grad_output_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: grad_output_storage.get_dtype(),
+                op: "conv_transpose2d_grad_weight".to_string(),
+            });
+        }
+
+        macro_rules! conv_transpose2d_grad_weight_impl {
+            ($input_storage:expr, $grad_output_storage:expr, $dtype_variant:ident) => {{
+                let result = conv_transpose2d_grad_weight_map(
+                    $input_storage,
+                    input_layout,
+                    $grad_output_storage,
+                    grad_output_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, grad_output_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(grad_out)) => {
+                conv_transpose2d_grad_weight_impl!(input, grad_out, F8E4M3)
+            },
+            (Self::F8E5M2(input), Self::F8E5M2(grad_out)) => {
+                conv_transpose2d_grad_weight_impl!(input, grad_out, F8E5M2)
+            },
+            (Self::BF16(input), Self::BF16(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, BF16),
+            (Self::F16(input), Self::F16(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, F16),
+            (Self::F32(input), Self::F32(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, F32),
+            (Self::F64(input), Self::F64(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, F64),
+            (Self::I8(input), Self::I8(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I8),
+            (Self::I16(input), Self::I16(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I16),
+            (Self::I32(input), Self::I32(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I32),
+            (Self::I64(input), Self::I64(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I64),
+            (Self::U8(input), Self::U8(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U8),
+            (Self::U16(input), Self::U16(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U16),
+            (Self::U32(input), Self::U32(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U32),
+            (Self::U64(input), Self::U64(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv_transpose2d_grad_weight".to_string(),
+                })
+            },
+        };
+
+        Ok(result)
+    }
+
+    fn conv_transpose3d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != grad_output_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: grad_output_storage.get_dtype(),
+                op: "conv_transpose3d_grad_weight".to_string(),
+            });
+        }
+
+        macro_rules! conv_transpose3d_grad_weight_impl {
+            ($input_storage:expr, $grad_output_storage:expr, $dtype_variant:ident) => {{
+                let result = conv_transpose3d_grad_weight_map(
+                    $input_storage,
+                    input_layout,
+                    $grad_output_storage,
+                    grad_output_layout,
+                    params,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, grad_output_storage) {
+            (Self::F8E4M3(input), Self::F8E4M3(grad_out)) => {
+                conv_transpose3d_grad_weight_impl!(input, grad_out, F8E4M3)
+            },
+            (Self::F8E5M2(input), Self::F8E5M2(grad_out)) => {
+                conv_transpose3d_grad_weight_impl!(input, grad_out, F8E5M2)
+            },
+            (Self::BF16(input), Self::BF16(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, BF16),
+            (Self::F16(input), Self::F16(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, F16),
+            (Self::F32(input), Self::F32(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, F32),
+            (Self::F64(input), Self::F64(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, F64),
+            (Self::I8(input), Self::I8(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I8),
+            (Self::I16(input), Self::I16(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I16),
+            (Self::I32(input), Self::I32(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I32),
+            (Self::I64(input), Self::I64(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I64),
+            (Self::U8(input), Self::U8(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U8),
+            (Self::U16(input), Self::U16(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U16),
+            (Self::U32(input), Self::U32(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U32),
+            (Self::U64(input), Self::U64(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: "conv_transpose3d_grad_weight".to_string(),
                 })
             },
         };

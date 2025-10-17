@@ -4,7 +4,13 @@ use crate::{
             cpu::storage::CpuStorage,
             device::{HoduDevice, HoduDeviceT},
         },
-        op::{BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT},
+        op::{
+            conv::{
+                ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
+                ParamsConvTranspose3D,
+            },
+            BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
+        },
     },
     compat::*,
     error::HoduResult,
@@ -43,7 +49,7 @@ pub trait HoduStorageT: Sized {
 
     fn dot(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self>;
 
-    fn reduce(&self, _: crate::backends::op::ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self>;
+    fn reduce(&self, _: ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self>;
 
     fn concat(&self, _: &[&Self], _: &[&Layout], _: usize) -> HoduResult<Self>;
 
@@ -60,6 +66,48 @@ pub trait HoduStorageT: Sized {
     fn scatter_max(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
 
     fn scatter_min(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
+    fn conv1d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv1D) -> HoduResult<Self>;
+
+    fn conv2d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv2D) -> HoduResult<Self>;
+
+    fn conv3d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv3D) -> HoduResult<Self>;
+
+    fn conv_transpose1d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConvTranspose1D) -> HoduResult<Self>;
+
+    fn conv_transpose2d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConvTranspose2D) -> HoduResult<Self>;
+
+    fn conv_transpose3d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConvTranspose3D) -> HoduResult<Self>;
+
+    fn conv1d_grad_weight(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv1D) -> HoduResult<Self>;
+
+    fn conv2d_grad_weight(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv2D) -> HoduResult<Self>;
+
+    fn conv3d_grad_weight(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv3D) -> HoduResult<Self>;
+
+    fn conv_transpose1d_grad_weight(
+        &self,
+        _: &Self,
+        _: &Layout,
+        _: &Layout,
+        _: &ParamsConvTranspose1D,
+    ) -> HoduResult<Self>;
+
+    fn conv_transpose2d_grad_weight(
+        &self,
+        _: &Self,
+        _: &Layout,
+        _: &Layout,
+        _: &ParamsConvTranspose2D,
+    ) -> HoduResult<Self>;
+
+    fn conv_transpose3d_grad_weight(
+        &self,
+        _: &Self,
+        _: &Layout,
+        _: &Layout,
+        _: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: DType) -> HoduResult<Self>;
 
@@ -335,6 +383,189 @@ impl HoduStorage {
         match (self, indices_storage, src_storage) {
             (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => {
                 let result = storage.scatter_min(layout, indices, indices_layout, src, src_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv1d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv1D,
+    ) -> HoduResult<Self> {
+        match (self, weight_storage) {
+            (Self::CPU(input), Self::CPU(weight)) => {
+                let result = input.conv1d(weight, input_layout, weight_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv2d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv2D,
+    ) -> HoduResult<Self> {
+        match (self, weight_storage) {
+            (Self::CPU(input), Self::CPU(weight)) => {
+                let result = input.conv2d(weight, input_layout, weight_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv3d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv3D,
+    ) -> HoduResult<Self> {
+        match (self, weight_storage) {
+            (Self::CPU(input), Self::CPU(weight)) => {
+                let result = input.conv3d(weight, input_layout, weight_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv_transpose1d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose1D,
+    ) -> HoduResult<Self> {
+        match (self, weight_storage) {
+            (Self::CPU(input), Self::CPU(weight)) => {
+                let result = input.conv_transpose1d(weight, input_layout, weight_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv_transpose2d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose2D,
+    ) -> HoduResult<Self> {
+        match (self, weight_storage) {
+            (Self::CPU(input), Self::CPU(weight)) => {
+                let result = input.conv_transpose2d(weight, input_layout, weight_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv_transpose3d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self> {
+        match (self, weight_storage) {
+            (Self::CPU(input), Self::CPU(weight)) => {
+                let result = input.conv_transpose3d(weight, input_layout, weight_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv1d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv1D,
+    ) -> HoduResult<Self> {
+        match (self, grad_output_storage) {
+            (Self::CPU(input), Self::CPU(grad_output)) => {
+                let result = input.conv1d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv2d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv2D,
+    ) -> HoduResult<Self> {
+        match (self, grad_output_storage) {
+            (Self::CPU(input), Self::CPU(grad_output)) => {
+                let result = input.conv2d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv3d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv3D,
+    ) -> HoduResult<Self> {
+        match (self, grad_output_storage) {
+            (Self::CPU(input), Self::CPU(grad_output)) => {
+                let result = input.conv3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv_transpose1d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose1D,
+    ) -> HoduResult<Self> {
+        match (self, grad_output_storage) {
+            (Self::CPU(input), Self::CPU(grad_output)) => {
+                let result =
+                    input.conv_transpose1d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv_transpose2d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose2D,
+    ) -> HoduResult<Self> {
+        match (self, grad_output_storage) {
+            (Self::CPU(input), Self::CPU(grad_output)) => {
+                let result =
+                    input.conv_transpose2d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn conv_transpose3d_grad_weight(
+        &self,
+        grad_output_storage: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self> {
+        match (self, grad_output_storage) {
+            (Self::CPU(input), Self::CPU(grad_output)) => {
+                let result =
+                    input.conv_transpose3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
         }

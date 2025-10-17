@@ -23,7 +23,7 @@ float8 = { version = "0.4.2", default-features = false, features = [
     "num-traits",
     "rand_distr",
 ] }
-half = { version = "2.6.0", default-features = false, features = [
+half = { version = "2.7.1", default-features = false, features = [
     "num-traits",
     "rand_distr",
 ] }
@@ -37,7 +37,7 @@ serde = { version = "1.0.219", default-features = false, features = [
     "alloc",
 ] }
 spin = "0.10"
-hodu_xla = "0.4.2"
+hodu_xla = "0.4.5"
 
 [features]
 default = ["std", "serde"]

@@ -2,8 +2,8 @@ use crate::{
     backends::{
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
-            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, IndexingOp, MatrixOp, MemoryOp, Op, ReduceOp,
-            ShapeOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op,
+            ReduceOp, ShapeOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp,
         },
         script::{ir::ScriptIR, Script},
     },
@@ -1752,6 +1752,603 @@ impl XlaExecutor {
                                 )
                                 .map_err(xla_error_to_hodu_error)
                         }
+                    },
+                }
+            },
+
+            // Convolution operations
+            Op::Conv(conv_op, _, _, params) => {
+                if input_ops.len() != 2 {
+                    return Err(HoduError::InternalError(
+                        "Convolution operation requires exactly 2 inputs (input, weight)".to_string(),
+                    ));
+                }
+
+                match conv_op {
+                    ConvOp::Conv1d => {
+                        // Extract parameters
+                        if params.len() < 8 {
+                            return Err(HoduError::InternalError("Conv1d requires 8 parameters".to_string()));
+                        }
+
+                        let stride = params[6].to_u64() as i64;
+                        let padding = params[5].to_u64() as i64;
+                        let dilation = params[7].to_u64() as i64;
+
+                        // Conv1d: input [N, C, L], kernel [Co, Ci, K]
+                        // XLA dimension numbers:
+                        // - input_batch_dimension: 0 (N)
+                        // - input_feature_dimension: 1 (C)
+                        // - input_spatial_dimensions: [2] (L)
+                        // - kernel_output_feature_dimension: 0 (Co)
+                        // - kernel_input_feature_dimension: 1 (Ci)
+                        // - kernel_spatial_dimensions: [2] (K)
+
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride],             // window strides
+                                &[(padding, padding)], // padding (low, high)
+                                &[],                   // lhs_dilation
+                                &[dilation],           // rhs_dilation
+                                0,                     // input_batch_dimension
+                                1,                     // input_feature_dimension
+                                &[2],                  // input_spatial_dimensions
+                                1,                     // kernel_input_feature_dimension
+                                0,                     // kernel_output_feature_dimension
+                                &[2],                  // kernel_spatial_dimensions
+                                1,                     // feature_group_count
+                                1,                     // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::Conv2d => {
+                        // Extract parameters
+                        if params.len() < 10 {
+                            return Err(HoduError::InternalError("Conv2d requires 10 parameters".to_string()));
+                        }
+
+                        let stride = params[8].to_u64() as i64;
+                        let padding = params[7].to_u64() as i64;
+                        let dilation = params[9].to_u64() as i64;
+
+                        // Conv2d: input [N, C, H, W], kernel [Co, Ci, Kh, Kw]
+                        // XLA dimension numbers:
+                        // - input_batch_dimension: 0 (N)
+                        // - input_feature_dimension: 1 (C)
+                        // - input_spatial_dimensions: [2, 3] (H, W)
+                        // - kernel_output_feature_dimension: 0 (Co)
+                        // - kernel_input_feature_dimension: 1 (Ci)
+                        // - kernel_spatial_dimensions: [2, 3] (Kh, Kw)
+
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride, stride],                         // window strides
+                                &[(padding, padding), (padding, padding)], // padding
+                                &[],                                       // lhs_dilation
+                                &[dilation, dilation],                     // rhs_dilation
+                                0,                                         // input_batch_dimension
+                                1,                                         // input_feature_dimension
+                                &[2, 3],                                   // input_spatial_dimensions
+                                1,                                         // kernel_input_feature_dimension
+                                0,                                         // kernel_output_feature_dimension
+                                &[2, 3],                                   // kernel_spatial_dimensions
+                                1,                                         // feature_group_count
+                                1,                                         // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::Conv3d => {
+                        // Extract parameters
+                        if params.len() < 12 {
+                            return Err(HoduError::InternalError("Conv3d requires 12 parameters".to_string()));
+                        }
+
+                        let stride = params[10].to_u64() as i64;
+                        let padding = params[9].to_u64() as i64;
+                        let dilation = params[11].to_u64() as i64;
+
+                        // Conv3d: input [N, C, D, H, W], kernel [Co, Ci, Kd, Kh, Kw]
+                        // XLA dimension numbers:
+                        // - input_batch_dimension: 0 (N)
+                        // - input_feature_dimension: 1 (C)
+                        // - input_spatial_dimensions: [2, 3, 4] (D, H, W)
+                        // - kernel_output_feature_dimension: 0 (Co)
+                        // - kernel_input_feature_dimension: 1 (Ci)
+                        // - kernel_spatial_dimensions: [2, 3, 4] (Kd, Kh, Kw)
+
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride, stride, stride], // window strides
+                                &[(padding, padding), (padding, padding), (padding, padding)], // padding
+                                &[],                       // lhs_dilation
+                                &[dilation, dilation, dilation], // rhs_dilation
+                                0,                         // input_batch_dimension
+                                1,                         // input_feature_dimension
+                                &[2, 3, 4],                // input_spatial_dimensions
+                                1,                         // kernel_input_feature_dimension
+                                0,                         // kernel_output_feature_dimension
+                                &[2, 3, 4],                // kernel_spatial_dimensions
+                                1,                         // feature_group_count
+                                1,                         // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::ConvTranspose1d => {
+                        // Extract parameters
+                        if params.len() < 9 {
+                            return Err(HoduError::InternalError(
+                                "ConvTranspose1d requires 9 parameters".to_string(),
+                            ));
+                        }
+
+                        let kernel_size = params[4].to_u64() as i64;
+                        let padding = params[5].to_u64() as i64;
+                        let output_padding = params[6].to_u64() as i64;
+                        let stride = params[7].to_u64() as i64;
+                        let dilation = params[8].to_u64() as i64;
+
+                        // ConvTranspose1d: input [N, Ci, L], kernel [Ci, Co, K]
+                        // Transposed convolution padding calculation
+                        // XLA formula: out_len = (in_len - 1) * lhs_dilation + kernel_size - pad_low - pad_high
+                        // HODU formula: out_len = (in_len - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+                        //
+                        // For stride >= 2: use lhs_dilation = stride, padding = (kernel_size-1)/2
+                        // For stride == 1: need to adjust padding to match HODU semantics
+
+                        // For transposed convolution with stride >= 2, use lhs_dilation
+                        // For stride == 1, transposed conv is equivalent to regular conv with adjusted padding
+                        let use_lhs_dilation = stride > 1;
+
+                        let (xla_lhs_dilation, xla_padding_low, xla_padding_high) = if use_lhs_dilation {
+                            // For stride > 1, use lhs_dilation = stride
+                            // XLA with lhs_dilation: out = (in-1)*lhs_dilation + 2 - kernel + pad_total (empirical formula)
+                            // HODU formula: out = (in-1)*stride - 2*padding + dilation*(kernel-1) + output_padding + 1
+                            //              = (in-1)*stride + kernel - 2*padding + output_padding (with dilation=1)
+                            //
+                            // Matching: (in-1)*stride + 2 - kernel + pad_total = (in-1)*stride + kernel - 2*padding + output_padding
+                            //          2 - kernel + pad_total = kernel - 2*padding + output_padding
+                            //          pad_total = 2*kernel - 2 - 2*padding + output_padding
+
+                            let pad_total = (2 * kernel_size - 2 - 2 * padding + output_padding) as i64;
+                            let pad_low = pad_total / 2;
+                            let pad_high = pad_total - pad_low;
+
+                            (vec![stride], pad_low, pad_high)
+                        } else {
+                            // For stride=1, use empty lhs_dilation (regular conv mode)
+                            // Need to adjust padding to match HODU output size
+                            // HODU: out = (in-1)*1 + dilation*(K-1) + 1 - 2*padding + output_padding
+                            //      = in + dilation*(K-1) - 2*padding + output_padding
+                            // XLA (no dilation):  out = (in - K + pad_low + pad_high) / window_stride + 1
+                            //                        = in - K + pad_total + 1  (with window_stride=1)
+                            //
+                            // Matching: in - K + pad_total + 1 = in + dilation*(K-1) - 2*padding + output_padding
+                            //          pad_total = K - 1 + dilation*(K-1) - 2*padding + output_padding
+                            //          pad_total = dilation*K - 1 + K - 1 - 2*padding + output_padding
+                            // For dilation=1: pad_total = K + K - 2 - 2*padding + output_padding
+                            //                = 2*K - 2 - 2*padding + output_padding
+
+                            let pad_total =
+                                (dilation * kernel_size + kernel_size - 2 - 2 * padding + output_padding) as i64;
+                            let pad_low = pad_total / 2;
+                            let pad_high = pad_total - pad_low;
+
+                            (vec![], pad_low, pad_high)
+                        };
+
+                        // Reverse kernel weights for transposed convolution (only for stride=1)
+                        let kernel_op = if use_lhs_dilation {
+                            // For stride > 1, don't reverse (lhs_dilation handles it)
+                            &input_ops[1]
+                        } else {
+                            // For stride = 1, reverse the kernel
+                            &input_ops[1].rev(&[2]).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        input_ops[0]
+                            .conv_general_dilated(
+                                kernel_op,
+                                &[1],                                   // window strides = 1 for transpose
+                                &[(xla_padding_low, xla_padding_high)], // XLA padding
+                                &xla_lhs_dilation,                      // lhs_dilation (empty for stride=1)
+                                &[dilation],                            // rhs_dilation (kernel dilation)
+                                0,                                      // input_batch_dimension
+                                1,                                      // input_feature_dimension
+                                &[2],                                   // input_spatial_dimensions
+                                0,                                      // kernel_input_feature_dimension
+                                1,                                      // kernel_output_feature_dimension
+                                &[2],                                   // kernel_spatial_dimensions
+                                1,                                      // feature_group_count
+                                1,                                      // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::ConvTranspose2d => {
+                        // Extract parameters
+                        if params.len() < 11 {
+                            return Err(HoduError::InternalError(
+                                "ConvTranspose2d requires 11 parameters".to_string(),
+                            ));
+                        }
+
+                        let kernel_height = params[3].to_u64() as i64;
+                        let kernel_width = params[4].to_u64() as i64;
+                        let padding = params[7].to_u64() as i64;
+                        let output_padding = params[8].to_u64() as i64;
+                        let stride = params[9].to_u64() as i64;
+                        let dilation = params[10].to_u64() as i64;
+
+                        // ConvTranspose2d: input [N, Ci, H, W], kernel [Ci, Co, Kh, Kw]
+                        let use_lhs_dilation = stride > 1;
+
+                        let (
+                            xla_lhs_dilation,
+                            xla_padding_h_low,
+                            xla_padding_h_high,
+                            xla_padding_w_low,
+                            xla_padding_w_high,
+                        ) = if use_lhs_dilation {
+                            // For stride > 1
+                            let pad_h_total = (2 * kernel_height - 2 - 2 * padding + output_padding) as i64;
+                            let pad_h_low = pad_h_total / 2;
+                            let pad_h_high = pad_h_total - pad_h_low;
+                            let pad_w_total = (2 * kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_low = pad_w_total / 2;
+                            let pad_w_high = pad_w_total - pad_w_low;
+                            (vec![stride, stride], pad_h_low, pad_h_high, pad_w_low, pad_w_high)
+                        } else {
+                            // For stride = 1
+                            let pad_h_total =
+                                (dilation * kernel_height + kernel_height - 2 - 2 * padding + output_padding) as i64;
+                            let pad_h_low = pad_h_total / 2;
+                            let pad_h_high = pad_h_total - pad_h_low;
+                            let pad_w_total =
+                                (dilation * kernel_width + kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_low = pad_w_total / 2;
+                            let pad_w_high = pad_w_total - pad_w_low;
+                            (vec![], pad_h_low, pad_h_high, pad_w_low, pad_w_high)
+                        };
+
+                        let kernel_op = if use_lhs_dilation {
+                            &input_ops[1]
+                        } else {
+                            &input_ops[1].rev(&[2, 3]).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        input_ops[0]
+                            .conv_general_dilated(
+                                kernel_op,
+                                &[1, 1],
+                                &[
+                                    (xla_padding_h_low, xla_padding_h_high),
+                                    (xla_padding_w_low, xla_padding_w_high),
+                                ],
+                                &xla_lhs_dilation,
+                                &[dilation, dilation],
+                                0,       // input_batch_dimension
+                                1,       // input_feature_dimension
+                                &[2, 3], // input_spatial_dimensions
+                                0,       // kernel_input_feature_dimension
+                                1,       // kernel_output_feature_dimension
+                                &[2, 3], // kernel_spatial_dimensions
+                                1,       // feature_group_count
+                                1,       // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::ConvTranspose3d => {
+                        // Extract parameters
+                        if params.len() < 13 {
+                            return Err(HoduError::InternalError(
+                                "ConvTranspose3d requires 13 parameters".to_string(),
+                            ));
+                        }
+
+                        let kernel_depth = params[4].to_u64() as i64;
+                        let kernel_height = params[5].to_u64() as i64;
+                        let kernel_width = params[6].to_u64() as i64;
+                        let padding = params[9].to_u64() as i64;
+                        let output_padding = params[10].to_u64() as i64;
+                        let stride = params[11].to_u64() as i64;
+                        let dilation = params[12].to_u64() as i64;
+
+                        // ConvTranspose3d: input [N, Ci, D, H, W], kernel [Ci, Co, Kd, Kh, Kw]
+                        let use_lhs_dilation = stride > 1;
+
+                        let (
+                            xla_lhs_dilation,
+                            xla_padding_d_low,
+                            xla_padding_d_high,
+                            xla_padding_h_low,
+                            xla_padding_h_high,
+                            xla_padding_w_low,
+                            xla_padding_w_high,
+                        ) = if use_lhs_dilation {
+                            // For stride > 1
+                            let pad_d_total = (2 * kernel_depth - 2 - 2 * padding + output_padding) as i64;
+                            let pad_d_low = pad_d_total / 2;
+                            let pad_d_high = pad_d_total - pad_d_low;
+                            let pad_h_total = (2 * kernel_height - 2 - 2 * padding + output_padding) as i64;
+                            let pad_h_low = pad_h_total / 2;
+                            let pad_h_high = pad_h_total - pad_h_low;
+                            let pad_w_total = (2 * kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_low = pad_w_total / 2;
+                            let pad_w_high = pad_w_total - pad_w_low;
+                            (
+                                vec![stride, stride, stride],
+                                pad_d_low,
+                                pad_d_high,
+                                pad_h_low,
+                                pad_h_high,
+                                pad_w_low,
+                                pad_w_high,
+                            )
+                        } else {
+                            // For stride = 1
+                            let pad_d_total =
+                                (dilation * kernel_depth + kernel_depth - 2 - 2 * padding + output_padding) as i64;
+                            let pad_d_low = pad_d_total / 2;
+                            let pad_d_high = pad_d_total - pad_d_low;
+                            let pad_h_total =
+                                (dilation * kernel_height + kernel_height - 2 - 2 * padding + output_padding) as i64;
+                            let pad_h_low = pad_h_total / 2;
+                            let pad_h_high = pad_h_total - pad_h_low;
+                            let pad_w_total =
+                                (dilation * kernel_width + kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_low = pad_w_total / 2;
+                            let pad_w_high = pad_w_total - pad_w_low;
+                            (
+                                vec![],
+                                pad_d_low,
+                                pad_d_high,
+                                pad_h_low,
+                                pad_h_high,
+                                pad_w_low,
+                                pad_w_high,
+                            )
+                        };
+
+                        let kernel_op = if use_lhs_dilation {
+                            &input_ops[1]
+                        } else {
+                            &input_ops[1].rev(&[2, 3, 4]).map_err(xla_error_to_hodu_error)?
+                        };
+
+                        input_ops[0]
+                            .conv_general_dilated(
+                                kernel_op,
+                                &[1, 1, 1],
+                                &[
+                                    (xla_padding_d_low, xla_padding_d_high),
+                                    (xla_padding_h_low, xla_padding_h_high),
+                                    (xla_padding_w_low, xla_padding_w_high),
+                                ],
+                                &xla_lhs_dilation,
+                                &[dilation, dilation, dilation],
+                                0,          // input_batch_dimension
+                                1,          // input_feature_dimension
+                                &[2, 3, 4], // input_spatial_dimensions
+                                0,          // kernel_input_feature_dimension
+                                1,          // kernel_output_feature_dimension
+                                &[2, 3, 4], // kernel_spatial_dimensions
+                                1,          // feature_group_count
+                                1,          // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::Conv1dGradWeight => {
+                        // Extract parameters
+                        if params.len() < 8 {
+                            return Err(HoduError::InternalError(
+                                "Conv1dGradWeight requires 8 parameters".to_string(),
+                            ));
+                        }
+
+                        let stride = params[6].to_u64() as i64;
+                        let padding = params[5].to_u64() as i64;
+                        let dilation = params[7].to_u64() as i64;
+
+                        // Conv1dGradWeight computes weight gradient
+                        // input: [N, Ci, L], grad_output: [N, Co, L_out]
+                        // output: [Co, Ci, K]
+                        // This is a convolution with special dimension configuration
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride],             // window strides
+                                &[(padding, padding)], // padding (low, high)
+                                &[],                   // lhs_dilation
+                                &[dilation],           // rhs_dilation
+                                1,                     // input_batch_dimension -> feature
+                                0,                     // input_feature_dimension -> batch
+                                &[2],                  // input_spatial_dimensions
+                                0,                     // kernel_input_feature_dimension -> batch
+                                1,                     // kernel_output_feature_dimension -> feature
+                                &[2],                  // kernel_spatial_dimensions
+                                1,                     // feature_group_count
+                                1,                     // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::Conv2dGradWeight => {
+                        // Extract parameters
+                        if params.len() < 10 {
+                            return Err(HoduError::InternalError(
+                                "Conv2dGradWeight requires 10 parameters".to_string(),
+                            ));
+                        }
+
+                        let stride = params[8].to_u64() as i64;
+                        let padding = params[7].to_u64() as i64;
+                        let dilation = params[9].to_u64() as i64;
+
+                        // Conv2dGradWeight computes weight gradient
+                        // input: [N, Ci, H, W], grad_output: [N, Co, H_out, W_out]
+                        // output: [Co, Ci, Kh, Kw]
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride, stride],                         // window strides
+                                &[(padding, padding), (padding, padding)], // padding
+                                &[],                                       // lhs_dilation
+                                &[dilation, dilation],                     // rhs_dilation
+                                1,                                         // input_batch_dimension -> feature
+                                0,                                         // input_feature_dimension -> batch
+                                &[2, 3],                                   // input_spatial_dimensions
+                                0,                                         // kernel_input_feature_dimension -> batch
+                                1,                                         // kernel_output_feature_dimension -> feature
+                                &[2, 3],                                   // kernel_spatial_dimensions
+                                1,                                         // feature_group_count
+                                1,                                         // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::Conv3dGradWeight => {
+                        // Extract parameters
+                        if params.len() < 12 {
+                            return Err(HoduError::InternalError(
+                                "Conv3dGradWeight requires 12 parameters".to_string(),
+                            ));
+                        }
+
+                        let stride = params[10].to_u64() as i64;
+                        let padding = params[9].to_u64() as i64;
+                        let dilation = params[11].to_u64() as i64;
+
+                        // Conv3dGradWeight computes weight gradient
+                        // input: [N, Ci, D, H, W], grad_output: [N, Co, D_out, H_out, W_out]
+                        // output: [Co, Ci, Kd, Kh, Kw]
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride, stride, stride], // window strides
+                                &[(padding, padding), (padding, padding), (padding, padding)], // padding
+                                &[],                       // lhs_dilation
+                                &[dilation, dilation, dilation], // rhs_dilation
+                                1,                         // input_batch_dimension -> feature
+                                0,                         // input_feature_dimension -> batch
+                                &[2, 3, 4],                // input_spatial_dimensions
+                                0,                         // kernel_input_feature_dimension -> batch
+                                1,                         // kernel_output_feature_dimension -> feature
+                                &[2, 3, 4],                // kernel_spatial_dimensions
+                                1,                         // feature_group_count
+                                1,                         // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::ConvTranspose1dGradWeight => {
+                        // Extract parameters
+                        if params.len() < 9 {
+                            return Err(HoduError::InternalError(
+                                "ConvTranspose1dGradWeight requires 9 parameters".to_string(),
+                            ));
+                        }
+
+                        let stride = params[7].to_u64() as i64;
+                        let padding = params[5].to_u64() as i64;
+                        let output_padding = params[6].to_u64() as i64;
+                        let dilation = params[8].to_u64() as i64;
+
+                        // ConvTranspose1dGradWeight: similar to Conv1dGradWeight but with special handling
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride],
+                                &[(padding, padding + output_padding)],
+                                &[],
+                                &[dilation],
+                                1,    // input_batch_dimension -> feature
+                                0,    // input_feature_dimension -> batch
+                                &[2], // input_spatial_dimensions
+                                0,    // kernel_input_feature_dimension -> batch
+                                1,    // kernel_output_feature_dimension -> feature
+                                &[2], // kernel_spatial_dimensions
+                                1,    // feature_group_count
+                                1,    // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::ConvTranspose2dGradWeight => {
+                        // Extract parameters
+                        if params.len() < 11 {
+                            return Err(HoduError::InternalError(
+                                "ConvTranspose2dGradWeight requires 11 parameters".to_string(),
+                            ));
+                        }
+
+                        let stride = params[9].to_u64() as i64;
+                        let padding = params[7].to_u64() as i64;
+                        let output_padding = params[8].to_u64() as i64;
+                        let dilation = params[10].to_u64() as i64;
+
+                        // ConvTranspose2dGradWeight: similar to Conv2dGradWeight but with special handling
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride, stride],
+                                &[(padding, padding + output_padding), (padding, padding + output_padding)],
+                                &[],
+                                &[dilation, dilation],
+                                1,       // input_batch_dimension -> feature
+                                0,       // input_feature_dimension -> batch
+                                &[2, 3], // input_spatial_dimensions
+                                0,       // kernel_input_feature_dimension -> batch
+                                1,       // kernel_output_feature_dimension -> feature
+                                &[2, 3], // kernel_spatial_dimensions
+                                1,       // feature_group_count
+                                1,       // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
+                    },
+
+                    ConvOp::ConvTranspose3dGradWeight => {
+                        // Extract parameters
+                        if params.len() < 13 {
+                            return Err(HoduError::InternalError(
+                                "ConvTranspose3dGradWeight requires 13 parameters".to_string(),
+                            ));
+                        }
+
+                        let stride = params[11].to_u64() as i64;
+                        let padding = params[9].to_u64() as i64;
+                        let output_padding = params[10].to_u64() as i64;
+                        let dilation = params[12].to_u64() as i64;
+
+                        // ConvTranspose3dGradWeight: similar to Conv3dGradWeight but with special handling
+                        input_ops[0]
+                            .conv_general_dilated(
+                                &input_ops[1],
+                                &[stride, stride, stride],
+                                &[
+                                    (padding, padding + output_padding),
+                                    (padding, padding + output_padding),
+                                    (padding, padding + output_padding),
+                                ],
+                                &[],
+                                &[dilation, dilation, dilation],
+                                1,          // input_batch_dimension -> feature
+                                0,          // input_feature_dimension -> batch
+                                &[2, 3, 4], // input_spatial_dimensions
+                                0,          // kernel_input_feature_dimension -> batch
+                                1,          // kernel_output_feature_dimension -> feature
+                                &[2, 3, 4], // kernel_spatial_dimensions
+                                1,          // feature_group_count
+                                1,          // batch_group_count
+                            )
+                            .map_err(xla_error_to_hodu_error)
                     },
                 }
             },

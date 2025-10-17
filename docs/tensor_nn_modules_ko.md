@@ -45,6 +45,225 @@ let output = layer.forward(&input)?;  // [32, 128]
 output = input @ weight.T + bias
 ```
 
+### 합성곱 레이어 (Convolutional Layers)
+
+합성곱 레이어는 이미지, 시계열, 3D 데이터 등의 공간적 구조를 가진 데이터 처리에 사용됩니다.
+
+#### Conv1D
+
+1차원 합성곱 레이어로 시계열 데이터나 텍스트 시퀀스 처리에 사용됩니다.
+
+```rust
+use hodu::nn::modules::Conv1D;
+
+// Conv1D 레이어 생성: 16 channels -> 32 channels, kernel_size=3
+let conv = Conv1D::new(
+    16,    // in_channels
+    32,    // out_channels
+    3,     // kernel_size
+    1,     // stride
+    1,     // padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass: [batch, channels, length]
+let input = Tensor::randn(&[8, 16, 100], 0.0, 1.0)?;  // batch=8, in_channels=16, length=100
+let output = conv.forward(&input)?;  // [8, 32, 100]
+```
+
+**파라미터:**
+- `in_channels`: 입력 채널 수
+- `out_channels`: 출력 채널 수 (필터 개수)
+- `kernel_size`: 커널 크기
+- `stride`: 이동 보폭
+- `padding`: 패딩 크기
+- `dilation`: 확장(dilation) 비율
+- `with_bias`: 바이어스 항 포함 여부
+- `dtype`: 데이터 타입
+
+**초기화:**
+- Weight: Kaiming 초기화, `k = √(2/(in_channels * kernel_size))`
+- Bias: 동일한 초기화
+
+**출력 크기:**
+```
+L_out = floor((L_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+```
+
+#### Conv2D
+
+2차원 합성곱 레이어로 이미지 처리에 가장 널리 사용됩니다.
+
+```rust
+use hodu::nn::modules::Conv2D;
+
+// Conv2D 레이어 생성: 3 channels (RGB) -> 64 channels, 3x3 kernel
+let conv = Conv2D::new(
+    3,     // in_channels
+    64,    // out_channels
+    3,     // kernel_size
+    1,     // stride
+    1,     // padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass: [batch, channels, height, width]
+let input = Tensor::randn(&[16, 3, 224, 224], 0.0, 1.0)?;  // batch=16, RGB image 224x224
+let output = conv.forward(&input)?;  // [16, 64, 224, 224]
+```
+
+**파라미터:** Conv1D와 동일하지만 2D 공간에 적용
+
+**초기화:**
+- Weight: Kaiming 초기화, `k = √(2/(in_channels * kernel_size²))`
+
+**출력 크기:**
+```
+H_out = floor((H_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+W_out = floor((W_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+```
+
+#### Conv3D
+
+3차원 합성곱 레이어로 비디오나 3D 의료 이미지 처리에 사용됩니다.
+
+```rust
+use hodu::nn::modules::Conv3D;
+
+// Conv3D 레이어 생성
+let conv = Conv3D::new(
+    1,     // in_channels (grayscale)
+    32,    // out_channels
+    3,     // kernel_size
+    1,     // stride
+    1,     // padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass: [batch, channels, depth, height, width]
+let input = Tensor::randn(&[4, 1, 64, 64, 64], 0.0, 1.0)?;  // batch=4, 64x64x64 volume
+let output = conv.forward(&input)?;  // [4, 32, 64, 64, 64]
+```
+
+**초기화:**
+- Weight: Kaiming 초기화, `k = √(2/(in_channels * kernel_size³))`
+
+**출력 크기:**
+```
+D_out = floor((D_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+H_out = floor((H_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+W_out = floor((W_in + 2*padding - dilation*(kernel_size-1) - 1) / stride + 1)
+```
+
+#### ConvTranspose1D
+
+전치 합성곱(업샘플링) 레이어로 1D 데이터의 해상도를 높입니다.
+
+```rust
+use hodu::nn::modules::ConvTranspose1D;
+
+// ConvTranspose1D 레이어 생성
+let conv_t = ConvTranspose1D::new(
+    32,    // in_channels
+    16,    // out_channels
+    3,     // kernel_size
+    2,     // stride (upsampling factor)
+    1,     // padding
+    0,     // output_padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass
+let input = Tensor::randn(&[8, 32, 50], 0.0, 1.0)?;  // [batch, channels, length]
+let output = conv_t.forward(&input)?;  // [8, 16, 99] (upsampled)
+```
+
+**출력 크기:**
+```
+L_out = (L_in - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+```
+
+#### ConvTranspose2D
+
+전치 합성곱 레이어로 이미지 업샘플링, 디코더, GAN 생성기 등에 사용됩니다.
+
+```rust
+use hodu::nn::modules::ConvTranspose2D;
+
+// ConvTranspose2D 레이어 생성
+let conv_t = ConvTranspose2D::new(
+    64,    // in_channels
+    3,     // out_channels (RGB)
+    4,     // kernel_size
+    2,     // stride (2x upsampling)
+    1,     // padding
+    0,     // output_padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass
+let input = Tensor::randn(&[16, 64, 56, 56], 0.0, 1.0)?;
+let output = conv_t.forward(&input)?;  // [16, 3, 112, 112] (2배 업샘플링)
+```
+
+**출력 크기:**
+```
+H_out = (H_in - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+W_out = (W_in - 1) * stride - 2*padding + dilation*(kernel_size-1) + output_padding + 1
+```
+
+#### ConvTranspose3D
+
+3D 전치 합성곱 레이어로 3D 데이터의 업샘플링에 사용됩니다.
+
+```rust
+use hodu::nn::modules::ConvTranspose3D;
+
+// ConvTranspose3D 레이어 생성
+let conv_t = ConvTranspose3D::new(
+    32,    // in_channels
+    1,     // out_channels
+    4,     // kernel_size
+    2,     // stride
+    1,     // padding
+    0,     // output_padding
+    1,     // dilation
+    true,  // with_bias
+    DType::F32
+)?;
+
+// Forward pass
+let input = Tensor::randn(&[4, 32, 32, 32, 32], 0.0, 1.0)?;
+let output = conv_t.forward(&input)?;  // [4, 1, 64, 64, 64] (2배 업샘플링)
+```
+
+### 합성곱 레이어 비교
+
+| 레이어 | 입력 형태 | 사용 사례 | 해상도 변화 |
+|--------|----------|----------|------------|
+| Conv1D | `[N, C, L]` | 시계열, 텍스트 | 감소/유지 |
+| Conv2D | `[N, C, H, W]` | 이미지 | 감소/유지 |
+| Conv3D | `[N, C, D, H, W]` | 비디오, 3D 스캔 | 감소/유지 |
+| ConvTranspose1D | `[N, C, L]` | 1D 업샘플링 | 증가 |
+| ConvTranspose2D | `[N, C, H, W]` | 이미지 생성 | 증가 |
+| ConvTranspose3D | `[N, C, D, H, W]` | 3D 재구성 | 증가 |
+
+**주요 개념:**
+- **stride**: 큰 값일수록 출력 크기가 작아짐 (Conv) 또는 커짐 (ConvTranspose)
+- **padding**: 입력 주변에 0을 추가하여 출력 크기 조절
+- **dilation**: 커널 요소 사이의 간격, 수용 영역(receptive field)을 확장
+- **output_padding**: ConvTranspose에서 출력 크기를 미세 조정
+
 ### 활성화 함수
 
 모든 활성화 함수는 상태가 없으며 파라미터를 가지지 않습니다.

@@ -23,11 +23,7 @@ impl CrossEntropyLoss {
 
         // Normalize dim to positive index
         let rank = log_probs.get_layout().get_shape().len() as i32;
-        let gather_dim = if self.dim < 0 {
-            rank + self.dim
-        } else {
-            self.dim
-        };
+        let gather_dim = if self.dim < 0 { rank + self.dim } else { self.dim };
 
         // Gather the log probabilities for the correct classes
         // target shape: [...] -> unsqueeze to [..., 1] at gather_dim

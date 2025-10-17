@@ -3,7 +3,7 @@ use crate::{
         be_hodu::storage::{HoduStorage, HoduStorageT},
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
-            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
+            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
             UnaryLogicalOp, UnaryOp, UnaryScalarOp,
         },
         script::{
@@ -701,6 +701,25 @@ impl HoduExecutor {
                     },
                 }
             },
+            Op::Conv(conv_op, input_id, weight_id, params) => {
+                let input_storage = tensor_storage
+                    .get(input_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {input_id:?} not found")))?;
+                let weight_storage = tensor_storage
+                    .get(weight_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Weight tensor {weight_id:?} not found")))?;
+                let input_layout = &compiled_node.input_layouts[0];
+                let weight_layout = &compiled_node.input_layouts[1];
+
+                self.execute_conv_op(
+                    *conv_op,
+                    input_storage,
+                    weight_storage,
+                    input_layout,
+                    weight_layout,
+                    params,
+                )
+            },
             Op::Shape(shape_op, tensor_id) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)
@@ -890,6 +909,261 @@ impl HoduExecutor {
         match matrix_op {
             MatrixOp::Matmul => lhs_storage.matmul(rhs_storage, lhs_layout, rhs_layout),
             MatrixOp::Dot => lhs_storage.dot(rhs_storage, lhs_layout, rhs_layout),
+        }
+    }
+
+    fn execute_conv_op(
+        &self,
+        conv_op: ConvOp,
+        input_storage: &SharedStorage,
+        weight_storage: &SharedStorage,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &[Scalar],
+    ) -> HoduResult<HoduStorage> {
+        use crate::backends::op::conv::*;
+
+        match conv_op {
+            ConvOp::Conv1d => {
+                if params.len() < 8 {
+                    return Err(HoduError::InternalError("Conv1d requires 8 parameters".to_string()));
+                }
+                let conv_params = ParamsConv1D {
+                    batch_size: params[0].to_u64() as usize,
+                    length_input: params[1].to_u64() as usize,
+                    channels_output: params[2].to_u64() as usize,
+                    channels_input: params[3].to_u64() as usize,
+                    kernel_size: params[4].to_u64() as usize,
+                    padding: params[5].to_u64() as usize,
+                    stride: params[6].to_u64() as usize,
+                    dilation: params[7].to_u64() as usize,
+                };
+                input_storage.conv1d(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::Conv2d => {
+                if params.len() < 10 {
+                    return Err(HoduError::InternalError("Conv2d requires 10 parameters".to_string()));
+                }
+                let conv_params = ParamsConv2D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_height: params[1].to_u64() as usize,
+                    input_width: params[2].to_u64() as usize,
+                    kernel_height: params[3].to_u64() as usize,
+                    kernel_width: params[4].to_u64() as usize,
+                    channels_output: params[5].to_u64() as usize,
+                    channels_input: params[6].to_u64() as usize,
+                    padding: params[7].to_u64() as usize,
+                    stride: params[8].to_u64() as usize,
+                    dilation: params[9].to_u64() as usize,
+                };
+                input_storage.conv2d(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::Conv3d => {
+                if params.len() < 12 {
+                    return Err(HoduError::InternalError("Conv3d requires 12 parameters".to_string()));
+                }
+                let conv_params = ParamsConv3D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_depth: params[1].to_u64() as usize,
+                    input_height: params[2].to_u64() as usize,
+                    input_width: params[3].to_u64() as usize,
+                    kernel_depth: params[4].to_u64() as usize,
+                    kernel_height: params[5].to_u64() as usize,
+                    kernel_width: params[6].to_u64() as usize,
+                    channels_output: params[7].to_u64() as usize,
+                    channels_input: params[8].to_u64() as usize,
+                    padding: params[9].to_u64() as usize,
+                    stride: params[10].to_u64() as usize,
+                    dilation: params[11].to_u64() as usize,
+                };
+                input_storage.conv3d(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::ConvTranspose1d => {
+                if params.len() < 9 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose1d requires 9 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConvTranspose1D {
+                    batch_size: params[0].to_u64() as usize,
+                    length_input: params[1].to_u64() as usize,
+                    channels_output: params[2].to_u64() as usize,
+                    channels_input: params[3].to_u64() as usize,
+                    kernel_size: params[4].to_u64() as usize,
+                    padding: params[5].to_u64() as usize,
+                    output_padding: params[6].to_u64() as usize,
+                    stride: params[7].to_u64() as usize,
+                    dilation: params[8].to_u64() as usize,
+                };
+                input_storage.conv_transpose1d(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::ConvTranspose2d => {
+                if params.len() < 11 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose2d requires 11 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConvTranspose2D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_height: params[1].to_u64() as usize,
+                    input_width: params[2].to_u64() as usize,
+                    kernel_height: params[3].to_u64() as usize,
+                    kernel_width: params[4].to_u64() as usize,
+                    channels_output: params[5].to_u64() as usize,
+                    channels_input: params[6].to_u64() as usize,
+                    padding: params[7].to_u64() as usize,
+                    output_padding: params[8].to_u64() as usize,
+                    stride: params[9].to_u64() as usize,
+                    dilation: params[10].to_u64() as usize,
+                };
+                input_storage.conv_transpose2d(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::ConvTranspose3d => {
+                if params.len() < 13 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose3d requires 13 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConvTranspose3D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_depth: params[1].to_u64() as usize,
+                    input_height: params[2].to_u64() as usize,
+                    input_width: params[3].to_u64() as usize,
+                    kernel_depth: params[4].to_u64() as usize,
+                    kernel_height: params[5].to_u64() as usize,
+                    kernel_width: params[6].to_u64() as usize,
+                    channels_output: params[7].to_u64() as usize,
+                    channels_input: params[8].to_u64() as usize,
+                    padding: params[9].to_u64() as usize,
+                    output_padding: params[10].to_u64() as usize,
+                    stride: params[11].to_u64() as usize,
+                    dilation: params[12].to_u64() as usize,
+                };
+                input_storage.conv_transpose3d(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::Conv1dGradWeight => {
+                if params.len() < 8 {
+                    return Err(HoduError::InternalError(
+                        "Conv1dGradWeight requires 8 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConv1D {
+                    batch_size: params[0].to_u64() as usize,
+                    length_input: params[1].to_u64() as usize,
+                    channels_output: params[2].to_u64() as usize,
+                    channels_input: params[3].to_u64() as usize,
+                    kernel_size: params[4].to_u64() as usize,
+                    padding: params[5].to_u64() as usize,
+                    stride: params[6].to_u64() as usize,
+                    dilation: params[7].to_u64() as usize,
+                };
+                input_storage.conv1d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::Conv2dGradWeight => {
+                if params.len() < 10 {
+                    return Err(HoduError::InternalError(
+                        "Conv2dGradWeight requires 10 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConv2D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_height: params[1].to_u64() as usize,
+                    input_width: params[2].to_u64() as usize,
+                    kernel_height: params[3].to_u64() as usize,
+                    kernel_width: params[4].to_u64() as usize,
+                    channels_output: params[5].to_u64() as usize,
+                    channels_input: params[6].to_u64() as usize,
+                    padding: params[7].to_u64() as usize,
+                    stride: params[8].to_u64() as usize,
+                    dilation: params[9].to_u64() as usize,
+                };
+                input_storage.conv2d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::Conv3dGradWeight => {
+                if params.len() < 12 {
+                    return Err(HoduError::InternalError(
+                        "Conv3dGradWeight requires 12 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConv3D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_depth: params[1].to_u64() as usize,
+                    input_height: params[2].to_u64() as usize,
+                    input_width: params[3].to_u64() as usize,
+                    kernel_depth: params[4].to_u64() as usize,
+                    kernel_height: params[5].to_u64() as usize,
+                    kernel_width: params[6].to_u64() as usize,
+                    channels_output: params[7].to_u64() as usize,
+                    channels_input: params[8].to_u64() as usize,
+                    padding: params[9].to_u64() as usize,
+                    stride: params[10].to_u64() as usize,
+                    dilation: params[11].to_u64() as usize,
+                };
+                input_storage.conv3d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::ConvTranspose1dGradWeight => {
+                if params.len() < 9 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose1dGradWeight requires 9 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConvTranspose1D {
+                    batch_size: params[0].to_u64() as usize,
+                    length_input: params[1].to_u64() as usize,
+                    channels_output: params[2].to_u64() as usize,
+                    channels_input: params[3].to_u64() as usize,
+                    kernel_size: params[4].to_u64() as usize,
+                    padding: params[5].to_u64() as usize,
+                    stride: params[6].to_u64() as usize,
+                    output_padding: params[7].to_u64() as usize,
+                    dilation: params[8].to_u64() as usize,
+                };
+                input_storage.conv_transpose1d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::ConvTranspose2dGradWeight => {
+                if params.len() < 11 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose2dGradWeight requires 11 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConvTranspose2D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_height: params[1].to_u64() as usize,
+                    input_width: params[2].to_u64() as usize,
+                    kernel_height: params[3].to_u64() as usize,
+                    kernel_width: params[4].to_u64() as usize,
+                    channels_output: params[5].to_u64() as usize,
+                    channels_input: params[6].to_u64() as usize,
+                    padding: params[7].to_u64() as usize,
+                    stride: params[8].to_u64() as usize,
+                    output_padding: params[9].to_u64() as usize,
+                    dilation: params[10].to_u64() as usize,
+                };
+                input_storage.conv_transpose2d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
+            },
+            ConvOp::ConvTranspose3dGradWeight => {
+                if params.len() < 13 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose3dGradWeight requires 13 parameters".to_string(),
+                    ));
+                }
+                let conv_params = ParamsConvTranspose3D {
+                    batch_size: params[0].to_u64() as usize,
+                    input_depth: params[1].to_u64() as usize,
+                    input_height: params[2].to_u64() as usize,
+                    input_width: params[3].to_u64() as usize,
+                    kernel_depth: params[4].to_u64() as usize,
+                    kernel_height: params[5].to_u64() as usize,
+                    kernel_width: params[6].to_u64() as usize,
+                    channels_output: params[7].to_u64() as usize,
+                    channels_input: params[8].to_u64() as usize,
+                    padding: params[9].to_u64() as usize,
+                    output_padding: params[10].to_u64() as usize,
+                    stride: params[11].to_u64() as usize,
+                    dilation: params[12].to_u64() as usize,
+                };
+                input_storage.conv_transpose3d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
+            },
         }
     }
 

@@ -1,4 +1,4 @@
-use hodu::prelude::*;
+use hodu::{nn::SGD, prelude::*};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

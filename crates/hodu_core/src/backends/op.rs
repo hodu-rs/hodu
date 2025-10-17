@@ -4,6 +4,8 @@
 // BinaryLogicalOp -> binary_logical_and (not binary_logical_logical_and)
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
+pub mod conv;
+
 use crate::{compat::*, scalar::Scalar, tensor::TensorId};
 
 use float8::{F8E4M3, F8E5M2};
@@ -323,6 +325,24 @@ pub enum IndexingOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum ConvOp {
+    Conv1d,
+    Conv2d,
+    Conv3d,
+    ConvTranspose1d,
+    ConvTranspose2d,
+    ConvTranspose3d,
+    Conv1dGradWeight,
+    Conv2dGradWeight,
+    Conv3dGradWeight,
+    ConvTranspose1dGradWeight,
+    ConvTranspose2dGradWeight,
+    ConvTranspose3dGradWeight,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ShapeOp {
     Reshape,
     Flatten,
@@ -363,6 +383,7 @@ pub enum Op {
     Concat(ConcatOp, Vec<TensorId>, Vec<Scalar>),
     Split(SplitOp, TensorId, Vec<Scalar>, usize),
     Indexing(IndexingOp, Vec<TensorId>, Vec<Scalar>),
+    Conv(ConvOp, TensorId, TensorId, Vec<Scalar>),
     Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
     Memory(MemoryOp, TensorId),
@@ -384,6 +405,7 @@ impl Op {
             Op::Concat(_, tt, _) => tt.clone(),
             Op::Split(_, t, _, _) => vec![*t],
             Op::Indexing(_, tt, _) => tt.clone(),
+            Op::Conv(_, input, weight, _) => vec![*input, *weight],
             Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
             Op::Memory(_, t) => vec![*t],

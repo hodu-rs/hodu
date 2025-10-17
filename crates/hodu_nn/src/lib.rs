@@ -16,7 +16,11 @@ pub use losses::{
     mse::MSE,
     nll::NLLLoss,
 };
-pub use modules::{activation::*, linear::Linear};
+pub use modules::{
+    activation::*,
+    conv::{Conv1D, Conv2D, Conv3D, ConvTranspose1D, ConvTranspose2D, ConvTranspose3D},
+    linear::Linear,
+};
 pub use optimizers::{
     adam::{Adam, AdamW},
     sgd::SGD,

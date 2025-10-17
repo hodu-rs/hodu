@@ -2,8 +2,8 @@ mod utils;
 
 use crate::{
     backends::op::{
-        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, IndexingOp, MatrixOp, Op, ReduceOp, ShapeOp, SplitOp,
-        UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+        BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, ConvOp, IndexingOp, MatrixOp, Op, ReduceOp, ShapeOp,
+        SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp,
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -32,6 +32,18 @@ pub trait VjpCompute {
     ) -> HoduResult<Vec<TensorId>> {
         Err(HoduError::VjpFunctionNotFound(format!(
             "compute_vjp_with_scalar not implemented"
+        )))
+    }
+
+    fn compute_vjp_with_scalars(
+        &self,
+        _inputs: &[TensorId],
+        _output: TensorId,
+        _grad_output: TensorId,
+        _scalars: &[Scalar],
+    ) -> HoduResult<Vec<TensorId>> {
+        Err(HoduError::VjpFunctionNotFound(format!(
+            "compute_vjp_with_scalars not implemented"
         )))
     }
 
@@ -637,7 +649,7 @@ impl VjpCompute for ConcatOp {
             .iter()
             .map(|&id| {
                 let tensor = tensor_from_id(id);
-                tensor.get_layout().get_shape()[dim.to_u64() as usize]
+                tensor.get_layout().get_shape()[dim.to_u32() as usize]
             })
             .collect();
 
@@ -666,8 +678,8 @@ impl VjpCompute for SplitOp {
         let input_shape = input_layout.get_shape();
         let dtype = input_tensor.get_dtype();
 
-        let dim = params[0].to_u64() as usize;
-        let sizes: Vec<usize> = params[1..].iter().map(|s| s.to_u64() as usize).collect();
+        let dim = params[0].to_u32() as usize;
+        let sizes: Vec<usize> = params[1..].iter().map(|s| s.to_u32() as usize).collect();
 
         // Create zero tensors for all splits
         let mut grad_pieces = Vec::new();
@@ -704,7 +716,7 @@ impl VjpCompute for IndexingOp {
                 "Indexing operation requires dimension parameter".to_string(),
             ));
         }
-        let dim = params[0].to_u64() as usize;
+        let dim = params[0].to_u32() as usize;
 
         match self {
             IndexingOp::IndexSelect => {
@@ -864,6 +876,287 @@ impl VjpCompute for IndexingOp {
 
                 Ok(vec![grad_self_final.id(), grad_src.id()])
             },
+        }
+    }
+}
+
+impl VjpCompute for ConvOp {
+    fn compute_vjp_with_scalars(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        scalars: &[Scalar],
+    ) -> HoduResult<Vec<TensorId>> {
+        match self {
+            ConvOp::Conv1d => {
+                // inputs: [input, weight]
+                // Conv1d: input [N, Ci, L], weight [Co, Ci, K]
+                // scalars: [batch_size, length_input, channels_output, channels_input, kernel_size, padding, stride, dilation]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError("Conv1d requires 2 inputs".to_string()));
+                }
+                if scalars.len() < 8 {
+                    return Err(HoduError::InternalError("Conv1d requires 8 parameters".to_string()));
+                }
+
+                let input = tensor_from_id(inputs[0]);
+                let weight = tensor_from_id(inputs[1]);
+                let grad_output_tensor = tensor_from_id(grad_output);
+
+                let channels_output = scalars[2].to_u32() as usize;
+                let channels_input = scalars[3].to_u32() as usize;
+                let kernel_size = scalars[4].to_u32() as usize;
+                let padding = scalars[5].to_u32() as usize;
+                let stride = scalars[6].to_u32() as usize;
+                let dilation = scalars[7].to_u32() as usize;
+
+                // Gradient w.r.t. input: use transposed convolution
+                // For conv1d: y = conv1d(x, w), grad_x = conv_transpose1d(grad_y, w, same params)
+                // Weight for conv_transpose needs to be transposed: [Co, Ci, K] -> [Ci, Co, K]
+                let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
+
+                let grad_input =
+                    grad_output_tensor.conv_transpose1d(&weight_transposed, stride, padding, 0, dilation)?;
+
+                // Gradient w.r.t. weight: conv1d_grad_weight(input, grad_output, weight_shape)
+                let weight_shape = vec![channels_output, channels_input, kernel_size];
+                let grad_weight =
+                    input.conv1d_grad_weight(&grad_output_tensor, &weight_shape, stride, padding, dilation)?;
+
+                Ok(vec![grad_input.id(), grad_weight.id()])
+            },
+            ConvOp::Conv2d => {
+                // inputs: [input, weight]
+                // Conv2d: input [N, Ci, H, W], weight [Co, Ci, Kh, Kw]
+                // scalars: [batch_size, input_height, input_width, kernel_height, kernel_width, channels_output, channels_input, padding, stride, dilation]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError("Conv2d requires 2 inputs".to_string()));
+                }
+                if scalars.len() < 10 {
+                    return Err(HoduError::InternalError("Conv2d requires 10 parameters".to_string()));
+                }
+
+                let input = tensor_from_id(inputs[0]);
+                let weight = tensor_from_id(inputs[1]);
+                let grad_output_tensor = tensor_from_id(grad_output);
+
+                let kernel_height = scalars[3].to_u32() as usize;
+                let kernel_width = scalars[4].to_u32() as usize;
+                let channels_output = scalars[5].to_u32() as usize;
+                let channels_input = scalars[6].to_u32() as usize;
+                let padding = scalars[7].to_u32() as usize;
+                let stride = scalars[8].to_u32() as usize;
+                let dilation = scalars[9].to_u32() as usize;
+
+                // Gradient w.r.t. input: use transposed convolution
+                // For conv2d: y = conv2d(x, w), grad_x = conv_transpose2d(grad_y, w, same params)
+                // Weight for conv_transpose needs to be transposed: [Co, Ci, Kh, Kw] -> [Ci, Co, Kh, Kw]
+                let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
+
+                let grad_input =
+                    grad_output_tensor.conv_transpose2d(&weight_transposed, stride, padding, 0, dilation)?;
+
+                // Gradient w.r.t. weight: conv2d_grad_weight(input, grad_output, weight_shape)
+                let weight_shape_vec = vec![channels_output, channels_input, kernel_height, kernel_width];
+                let grad_weight =
+                    input.conv2d_grad_weight(&grad_output_tensor, &weight_shape_vec, stride, padding, dilation)?;
+
+                Ok(vec![grad_input.id(), grad_weight.id()])
+            },
+            ConvOp::Conv3d => {
+                // inputs: [input, weight]
+                // Conv3d: input [N, Ci, D, H, W], weight [Co, Ci, Kd, Kh, Kw]
+                // scalars: [batch_size, input_depth, input_height, input_width, kernel_depth, kernel_height, kernel_width, channels_output, channels_input, padding, stride, dilation]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError("Conv3d requires 2 inputs".to_string()));
+                }
+                if scalars.len() < 12 {
+                    return Err(HoduError::InternalError("Conv3d requires 12 parameters".to_string()));
+                }
+
+                let input = tensor_from_id(inputs[0]);
+                let weight = tensor_from_id(inputs[1]);
+                let grad_output_tensor = tensor_from_id(grad_output);
+
+                let kernel_depth = scalars[4].to_u32() as usize;
+                let kernel_height = scalars[5].to_u32() as usize;
+                let kernel_width = scalars[6].to_u32() as usize;
+                let channels_output = scalars[7].to_u32() as usize;
+                let channels_input = scalars[8].to_u32() as usize;
+                let padding = scalars[9].to_u32() as usize;
+                let stride = scalars[10].to_u32() as usize;
+                let dilation = scalars[11].to_u32() as usize;
+
+                // Gradient w.r.t. input: use transposed convolution
+                // For conv3d: y = conv3d(x, w), grad_x = conv_transpose3d(grad_y, w, same params)
+                // Weight for conv_transpose needs to be transposed: [Co, Ci, Kd, Kh, Kw] -> [Ci, Co, Kd, Kh, Kw]
+                let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
+
+                let grad_input =
+                    grad_output_tensor.conv_transpose3d(&weight_transposed, stride, padding, 0, dilation)?;
+
+                // Gradient w.r.t. weight: conv3d_grad_weight(input, grad_output, weight_shape)
+                let weight_shape = vec![
+                    channels_output,
+                    channels_input,
+                    kernel_depth,
+                    kernel_height,
+                    kernel_width,
+                ];
+                let grad_weight =
+                    input.conv3d_grad_weight(&grad_output_tensor, &weight_shape, stride, padding, dilation)?;
+
+                Ok(vec![grad_input.id(), grad_weight.id()])
+            },
+            ConvOp::ConvTranspose1d => {
+                // inputs: [input, weight]
+                // ConvTranspose1d: input [N, Ci, L_in], weight [Ci, Co, K]
+                // scalars: [batch_size, length_input, channels_output, channels_input, kernel_size, padding, output_padding, stride, dilation]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose1d requires 2 inputs".to_string(),
+                    ));
+                }
+                if scalars.len() < 9 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose1d requires 9 parameters".to_string(),
+                    ));
+                }
+
+                let input = tensor_from_id(inputs[0]);
+                let weight = tensor_from_id(inputs[1]);
+                let grad_output_tensor = tensor_from_id(grad_output);
+
+                let channels_output = scalars[2].to_u32() as usize;
+                let channels_input = scalars[3].to_u32() as usize;
+                let kernel_size = scalars[4].to_u32() as usize;
+                let padding = scalars[5].to_u32() as usize;
+                let _output_padding = scalars[6].to_u32() as usize;
+                let stride = scalars[7].to_u32() as usize;
+                let dilation = scalars[8].to_u32() as usize;
+
+                // Gradient w.r.t. input: Use regular Conv1d
+                // weight shape for conv1d is [Co, Ci, K], but we need to transpose channels
+                let grad_input = grad_output_tensor.conv1d(&weight, stride, padding, dilation)?;
+
+                // Gradient w.r.t. weight: conv_transpose1d_grad_weight(input, grad_output, weight_shape)
+                let weight_shape = vec![channels_input, channels_output, kernel_size];
+                let grad_weight = input.conv_transpose1d_grad_weight(
+                    &grad_output_tensor,
+                    &weight_shape,
+                    stride,
+                    padding,
+                    _output_padding,
+                    dilation,
+                )?;
+
+                Ok(vec![grad_input.id(), grad_weight.id()])
+            },
+            ConvOp::ConvTranspose2d => {
+                // inputs: [input, weight]
+                // ConvTranspose2d: input [N, Ci, H_in, W_in], weight [Ci, Co, Kh, Kw]
+                // scalars: [batch_size, input_height, input_width, kernel_height, kernel_width, channels_output, channels_input, padding, output_padding, stride, dilation]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose2d requires 2 inputs".to_string(),
+                    ));
+                }
+                if scalars.len() < 11 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose2d requires 11 parameters".to_string(),
+                    ));
+                }
+
+                let input = tensor_from_id(inputs[0]);
+                let weight = tensor_from_id(inputs[1]);
+                let grad_output_tensor = tensor_from_id(grad_output);
+
+                let kernel_height = scalars[3].to_u32() as usize;
+                let kernel_width = scalars[4].to_u32() as usize;
+                let channels_output = scalars[5].to_u32() as usize;
+                let channels_input = scalars[6].to_u32() as usize;
+                let padding = scalars[7].to_u32() as usize;
+                let output_padding = scalars[8].to_u32() as usize;
+                let stride = scalars[9].to_u32() as usize;
+                let dilation = scalars[10].to_u32() as usize;
+
+                // Gradient w.r.t. input: Use regular Conv2d
+                let grad_input = grad_output_tensor.conv2d(&weight, stride, padding, dilation)?;
+
+                // Gradient w.r.t. weight: conv_transpose2d_grad_weight
+                let weight_shape = vec![channels_input, channels_output, kernel_height, kernel_width];
+                let grad_weight = input.conv_transpose2d_grad_weight(
+                    &grad_output_tensor,
+                    &weight_shape,
+                    stride,
+                    padding,
+                    output_padding,
+                    dilation,
+                )?;
+
+                Ok(vec![grad_input.id(), grad_weight.id()])
+            },
+            ConvOp::ConvTranspose3d => {
+                // inputs: [input, weight]
+                // ConvTranspose3d: input [N, Ci, D_in, H_in, W_in], weight [Ci, Co, Kd, Kh, Kw]
+                // scalars: [batch_size, input_depth, input_height, input_width, kernel_depth, kernel_height, kernel_width, channels_output, channels_input, padding, output_padding, stride, dilation]
+                if inputs.len() != 2 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose3d requires 2 inputs".to_string(),
+                    ));
+                }
+                if scalars.len() < 13 {
+                    return Err(HoduError::InternalError(
+                        "ConvTranspose3d requires 13 parameters".to_string(),
+                    ));
+                }
+
+                let input = tensor_from_id(inputs[0]);
+                let weight = tensor_from_id(inputs[1]);
+                let grad_output_tensor = tensor_from_id(grad_output);
+
+                let kernel_depth = scalars[4].to_u32() as usize;
+                let kernel_height = scalars[5].to_u32() as usize;
+                let kernel_width = scalars[6].to_u32() as usize;
+                let channels_output = scalars[7].to_u32() as usize;
+                let channels_input = scalars[8].to_u32() as usize;
+                let padding = scalars[9].to_u32() as usize;
+                let output_padding = scalars[10].to_u32() as usize;
+                let stride = scalars[11].to_u32() as usize;
+                let dilation = scalars[12].to_u32() as usize;
+
+                // Gradient w.r.t. input: Use regular Conv3d
+                let grad_input = grad_output_tensor.conv3d(&weight, stride, padding, dilation)?;
+
+                // Gradient w.r.t. weight: conv_transpose3d_grad_weight
+                let weight_shape = vec![
+                    channels_input,
+                    channels_output,
+                    kernel_depth,
+                    kernel_height,
+                    kernel_width,
+                ];
+                let grad_weight = input.conv_transpose3d_grad_weight(
+                    &grad_output_tensor,
+                    &weight_shape,
+                    stride,
+                    padding,
+                    output_padding,
+                    dilation,
+                )?;
+
+                Ok(vec![grad_input.id(), grad_weight.id()])
+            },
+            // GradWeight operations don't need gradients (gradient of gradient not needed)
+            ConvOp::Conv1dGradWeight
+            | ConvOp::Conv2dGradWeight
+            | ConvOp::Conv3dGradWeight
+            | ConvOp::ConvTranspose1dGradWeight
+            | ConvOp::ConvTranspose2dGradWeight
+            | ConvOp::ConvTranspose3dGradWeight => Err(HoduError::InternalError(
+                "Gradient of gradient weight operation not supported".to_string(),
+            )),
         }
     }
 }
@@ -1318,6 +1611,7 @@ fn compute_vjp_for_op(
             split_op.compute_vjp_with_split_info(inputs, output, grad_output, params, *output_index)
         },
         Op::Indexing(indexing_op, _, params) => indexing_op.compute_vjp_with_dims(inputs, output, grad_output, params),
+        Op::Conv(conv_op, _, _, params) => conv_op.compute_vjp_with_scalars(inputs, output, grad_output, params),
         Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output),
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }
