@@ -33,6 +33,8 @@ ConvTranspose2D
 ConvTranspose3D
 /// dropout
 Dropout
+/// embedding
+Embedding
 /// linear
 Linear
 /// norm

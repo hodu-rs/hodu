@@ -451,6 +451,127 @@ let output = pool.forward(&input)?;
 - **Classification head**: AdaptiveAvgPool2d((1, 1)) (Global Average Pooling)
 - **Variable-sized inputs**: Adaptive variants
 
+### Embedding Layers
+
+#### Embedding
+
+Embedding layer converts integer indices to dense vectors. Primarily used in natural language processing to represent words as vectors.
+
+```rust
+use hodu::nn::modules::Embedding;
+
+// Create Embedding layer: vocabulary size 10000, embedding dimension 256
+let embedding = Embedding::new(
+    10000,      // num_embeddings (vocabulary size)
+    256,        // embedding_dim
+    None,       // padding_idx (optional)
+    None,       // max_norm (optional)
+    2.0,        // norm_type (L2 norm)
+    DType::F32
+)?;
+
+// Forward pass
+let indices = Tensor::new(vec![5, 142, 8, 99])?;  // [batch_size]
+let embedded = embedding.forward(&indices)?;  // [4, 256]
+
+// For sequences
+let indices = Tensor::new(vec![/* ... */])?.reshape(&[32, 50])?;  // [batch, seq_len]
+let embedded = embedding.forward(&indices)?;  // [32, 50, 256]
+```
+
+**Parameters:**
+- `num_embeddings`: Size of the embedding table (vocabulary size)
+- `embedding_dim`: Dimension of each embedding vector
+- `padding_idx`: Embeddings at this index are initialized to zeros and gradients are not updated (optional)
+- `max_norm`: If specified, embedding vectors with norm exceeding this value are normalized (optional)
+- `norm_type`: Norm type to use for max_norm (typically 2.0 for L2)
+- `dtype`: Data type
+
+**Initialization:**
+- Weight: Xavier/Glorot initialization scaled by `k = 1/√embedding_dim`
+- If padding_idx is specified, that embedding is initialized to zeros
+
+**Shape:**
+```
+Input:  [batch_size] or [batch_size, seq_len] or any shape
+Output: [...input_shape..., embedding_dim]
+Weight: [num_embeddings, embedding_dim]
+```
+
+**Loading Pretrained Embeddings:**
+
+```rust
+// Create Embedding from pretrained weights
+let pretrained_weight = Tensor::randn(&[10000, 256], 0.0, 1.0)?;
+let embedding = Embedding::from_pretrained(
+    pretrained_weight,
+    false  // freeze: if true, weights are not updated
+)?;
+```
+
+**Padding Handling:**
+
+```rust
+// Using padding_idx to handle padding tokens
+let embedding = Embedding::new(
+    10000,
+    256,
+    Some(0),    // Use index 0 as padding
+    None,
+    2.0,
+    DType::F32
+)?;
+
+// Sequence with padding
+let indices = Tensor::new(vec![5, 142, 0, 0, 8, 99])?;  // 0 is padding
+let embedded = embedding.forward(&indices)?;  // Padding positions are zero vectors
+```
+
+**Max Norm Constraint:**
+
+```rust
+// Limit L2 norm of embedding vectors
+let embedding = Embedding::new(
+    10000,
+    256,
+    None,
+    Some(1.0),  // max_norm: normalize if vector norm exceeds 1.0
+    2.0,        // Use L2 norm
+    DType::F32
+)?;
+```
+
+**Features:**
+- Efficient lookup of embedding vectors from indices (gather operation)
+- Gradients for padding_idx are automatically set to zero
+- max_norm prevents embeddings from growing too large (regularization effect)
+- Can load pretrained embeddings (e.g., Word2Vec, GloVe)
+
+**Use Cases:**
+- Natural Language Processing: word, character, subword embeddings
+- Recommendation systems: user/item embeddings
+- Categorical feature encoding
+- Knowledge Graph embeddings
+
+**Example: Simple Text Classifier:**
+
+```rust
+use hodu::prelude::*;
+use hodu::nn::modules::{Embedding, Linear, ReLU};
+
+// Model setup
+let embedding = Embedding::new(10000, 128, Some(0), None, 2.0, DType::F32)?;
+let linear = Linear::new(128, 10, true, DType::F32)?;
+
+// Forward pass
+let input_ids = Tensor::new(vec![45, 123, 8, 0, 0])?.reshape(&[1, 5])?;  // [1, 5]
+let embedded = embedding.forward(&input_ids)?;  // [1, 5, 128]
+
+// Average pooling
+let pooled = embedded.mean(&[1], false)?;  // [1, 128]
+let logits = linear.forward(&pooled)?;  // [1, 10]
+```
+
 ### Regularization Layers
 
 #### Dropout

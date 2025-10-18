@@ -20,6 +20,7 @@ pub use modules::{
     activation::*,
     conv::{Conv1D, Conv2D, Conv3D, ConvTranspose1D, ConvTranspose2D, ConvTranspose3D},
     dropout::Dropout,
+    embedding::Embedding,
     linear::Linear,
     norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, LayerNorm},
     pooling::{

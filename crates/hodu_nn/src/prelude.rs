@@ -11,6 +11,7 @@ pub use crate::modules::{
     activation::*,
     conv::Conv2D,
     dropout::Dropout,
+    embedding::Embedding,
     linear::Linear,
     norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, LayerNorm},
     pooling::{AdaptiveAvgPool2D, AdaptiveMaxPool2D, AvgPool2D, MaxPool2D},

@@ -451,6 +451,127 @@ let output = pool.forward(&input)?;
 - **분류 헤드**: AdaptiveAvgPool2d((1, 1)) (Global Average Pooling)
 - **가변 크기 입력**: Adaptive 변형
 
+### 임베딩 레이어
+
+#### Embedding
+
+임베딩 레이어는 정수 인덱스를 밀집 벡터로 변환합니다. 자연어 처리에서 단어를 벡터로 표현하는 데 주로 사용됩니다.
+
+```rust
+use hodu::nn::modules::Embedding;
+
+// Embedding 레이어 생성: 어휘 크기 10000, 임베딩 차원 256
+let embedding = Embedding::new(
+    10000,      // num_embeddings (어휘 크기)
+    256,        // embedding_dim
+    None,       // padding_idx (선택적)
+    None,       // max_norm (선택적)
+    2.0,        // norm_type (L2 norm)
+    DType::F32
+)?;
+
+// Forward pass
+let indices = Tensor::new(vec![5, 142, 8, 99])?;  // [batch_size]
+let embedded = embedding.forward(&indices)?;  // [4, 256]
+
+// 시퀀스의 경우
+let indices = Tensor::new(vec![/* ... */])?.reshape(&[32, 50])?;  // [batch, seq_len]
+let embedded = embedding.forward(&indices)?;  // [32, 50, 256]
+```
+
+**파라미터:**
+- `num_embeddings`: 임베딩 테이블의 크기 (어휘 크기)
+- `embedding_dim`: 각 임베딩 벡터의 차원
+- `padding_idx`: 이 인덱스의 임베딩은 0으로 초기화되고 gradient가 업데이트되지 않음 (선택적)
+- `max_norm`: 지정된 경우, 임베딩 벡터의 norm이 이 값을 초과하면 정규화됨 (선택적)
+- `norm_type`: max_norm 적용 시 사용할 norm 타입 (일반적으로 2.0 for L2)
+- `dtype`: 데이터 타입
+
+**초기화:**
+- Weight: Xavier/Glorot 초기화, `k = 1/√embedding_dim`로 스케일링
+- padding_idx가 지정된 경우 해당 임베딩은 0으로 초기화
+
+**Shape:**
+```
+입력:  [batch_size] 또는 [batch_size, seq_len] 또는 임의 shape
+출력:  [...input_shape..., embedding_dim]
+Weight: [num_embeddings, embedding_dim]
+```
+
+**사전 학습된 임베딩 로드:**
+
+```rust
+// 사전 학습된 가중치에서 Embedding 생성
+let pretrained_weight = Tensor::randn(&[10000, 256], 0.0, 1.0)?;
+let embedding = Embedding::from_pretrained(
+    pretrained_weight,
+    false  // freeze: true면 가중치 업데이트 안됨
+)?;
+```
+
+**Padding 처리:**
+
+```rust
+// padding_idx를 사용하여 패딩 토큰 처리
+let embedding = Embedding::new(
+    10000,
+    256,
+    Some(0),    // 인덱스 0을 패딩으로 사용
+    None,
+    2.0,
+    DType::F32
+)?;
+
+// 패딩이 포함된 시퀀스
+let indices = Tensor::new(vec![5, 142, 0, 0, 8, 99])?;  // 0은 패딩
+let embedded = embedding.forward(&indices)?;  // 패딩 위치는 0 벡터
+```
+
+**Max Norm 제약:**
+
+```rust
+// 임베딩 벡터의 L2 norm을 제한
+let embedding = Embedding::new(
+    10000,
+    256,
+    None,
+    Some(1.0),  // max_norm: 벡터 norm이 1.0을 초과하면 정규화
+    2.0,        // L2 norm 사용
+    DType::F32
+)?;
+```
+
+**특징:**
+- 인덱스에서 임베딩 벡터를 효율적으로 조회 (gather 연산)
+- padding_idx의 gradient는 자동으로 0으로 설정됨
+- max_norm은 임베딩이 너무 커지는 것을 방지 (정규화 효과)
+- 사전 학습된 임베딩(예: Word2Vec, GloVe)을 로드할 수 있음
+
+**사용 사례:**
+- 자연어 처리: 단어, 문자, 서브워드 임베딩
+- 추천 시스템: 사용자/아이템 임베딩
+- 범주형 특징 인코딩
+- Knowledge Graph 임베딩
+
+**예제: 간단한 텍스트 분류기:**
+
+```rust
+use hodu::prelude::*;
+use hodu::nn::modules::{Embedding, Linear, ReLU};
+
+// 모델 구성
+let embedding = Embedding::new(10000, 128, Some(0), None, 2.0, DType::F32)?;
+let linear = Linear::new(128, 10, true, DType::F32)?;
+
+// Forward pass
+let input_ids = Tensor::new(vec![45, 123, 8, 0, 0])?.reshape(&[1, 5])?;  // [1, 5]
+let embedded = embedding.forward(&input_ids)?;  // [1, 5, 128]
+
+// 평균 풀링
+let pooled = embedded.mean(&[1], false)?;  // [1, 128]
+let logits = linear.forward(&pooled)?;  // [1, 10]
+```
+
 ### 정규화 레이어
 
 #### Dropout
