@@ -36,18 +36,18 @@ Dropout
 /// linear
 Linear
 /// pooling
-AdaptiveAvgPool1d
-AdaptiveAvgPool2d
-AdaptiveAvgPool3d
-AdaptiveMaxPool1d
-AdaptiveMaxPool2d
-AdaptiveMaxPool3d
-AvgPool1d
-AvgPool2d
-AvgPool3d
-MaxPool1d
-MaxPool2d
-MaxPool3d
+ADaptiveAvgPool1D
+ADaptiveAvgPool2D
+ADaptiveAvgPool3D
+ADaptiveMaxPool1D
+ADaptiveMaxPool2D
+ADaptiveMaxPool3D
+AvgPool1D
+AvgPool2D
+AvgPool3D
+MaxPool1D
+MaxPool2D
+MaxPool3D
 // optimizers
 /// adam
 Adam

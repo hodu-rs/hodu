@@ -22,8 +22,8 @@ pub use modules::{
     dropout::Dropout,
     linear::Linear,
     pooling::{
-        AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d, AdaptiveMaxPool1d, AdaptiveMaxPool2d,
-        AdaptiveMaxPool3d, AvgPool1d, AvgPool2d, AvgPool3d, MaxPool1d, MaxPool2d, MaxPool3d,
+        AdaptiveAvgPool1D, AdaptiveAvgPool2D, AdaptiveAvgPool3D, AdaptiveMaxPool1D, AdaptiveMaxPool2D,
+        AdaptiveMaxPool3D, AvgPool1D, AvgPool2D, AvgPool3D, MaxPool1D, MaxPool2D, MaxPool3D,
     },
 };
 pub use optimizers::{

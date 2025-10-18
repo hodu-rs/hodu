@@ -12,7 +12,7 @@ pub use crate::modules::{
     conv::Conv2D,
     dropout::Dropout,
     linear::Linear,
-    pooling::{AdaptiveAvgPool2d, AdaptiveMaxPool2d, AvgPool2d, MaxPool2d},
+    pooling::{AdaptiveAvgPool2D, AdaptiveMaxPool2D, AvgPool2D, MaxPool2D},
 };
 pub use crate::optimizer::Optimizer;
 pub use crate::optimizers::adam::{Adam, AdamW};
