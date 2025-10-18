@@ -4,7 +4,7 @@ use crate::{
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
             BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
-            UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+            UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
         },
         script::{
             ir::{NodeId, ScriptIR},
@@ -620,7 +620,7 @@ impl HoduExecutor {
                             .ok_or_else(|| {
                                 HoduError::InternalError(format!("{:?} requires dimension parameter", indexing_op))
                             })?
-                            .to_u64() as usize;
+                            .to_u32() as usize;
 
                         match indexing_op {
                             IndexingOp::IndexSelect => {
@@ -661,7 +661,7 @@ impl HoduExecutor {
                             .ok_or_else(|| {
                                 HoduError::InternalError(format!("{:?} requires dimension parameter", indexing_op))
                             })?
-                            .to_u64() as usize;
+                            .to_u32() as usize;
 
                         match indexing_op {
                             IndexingOp::Scatter => self_storage.scatter(
@@ -719,6 +719,14 @@ impl HoduExecutor {
                     weight_layout,
                     params,
                 )
+            },
+            Op::Windowing(windowing_op, tensor_id, params) => {
+                let input_storage = tensor_storage
+                    .get(tensor_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
+                let input_layout = &compiled_node.input_layouts[0];
+
+                self.execute_windowing_op(*windowing_op, input_storage, input_layout, params)
             },
             Op::Shape(shape_op, tensor_id) => {
                 let input_storage = tensor_storage
@@ -929,14 +937,14 @@ impl HoduExecutor {
                     return Err(HoduError::InternalError("Conv1d requires 8 parameters".to_string()));
                 }
                 let conv_params = ParamsConv1D {
-                    batch_size: params[0].to_u64() as usize,
-                    length_input: params[1].to_u64() as usize,
-                    channels_output: params[2].to_u64() as usize,
-                    channels_input: params[3].to_u64() as usize,
-                    kernel_size: params[4].to_u64() as usize,
-                    padding: params[5].to_u64() as usize,
-                    stride: params[6].to_u64() as usize,
-                    dilation: params[7].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    length_input: params[1].to_u32() as usize,
+                    channels_output: params[2].to_u32() as usize,
+                    channels_input: params[3].to_u32() as usize,
+                    kernel_size: params[4].to_u32() as usize,
+                    padding: params[5].to_u32() as usize,
+                    stride: params[6].to_u32() as usize,
+                    dilation: params[7].to_u32() as usize,
                 };
                 input_storage.conv1d(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -945,16 +953,16 @@ impl HoduExecutor {
                     return Err(HoduError::InternalError("Conv2d requires 10 parameters".to_string()));
                 }
                 let conv_params = ParamsConv2D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_height: params[1].to_u64() as usize,
-                    input_width: params[2].to_u64() as usize,
-                    kernel_height: params[3].to_u64() as usize,
-                    kernel_width: params[4].to_u64() as usize,
-                    channels_output: params[5].to_u64() as usize,
-                    channels_input: params[6].to_u64() as usize,
-                    padding: params[7].to_u64() as usize,
-                    stride: params[8].to_u64() as usize,
-                    dilation: params[9].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_height: params[1].to_u32() as usize,
+                    input_width: params[2].to_u32() as usize,
+                    kernel_height: params[3].to_u32() as usize,
+                    kernel_width: params[4].to_u32() as usize,
+                    channels_output: params[5].to_u32() as usize,
+                    channels_input: params[6].to_u32() as usize,
+                    padding: params[7].to_u32() as usize,
+                    stride: params[8].to_u32() as usize,
+                    dilation: params[9].to_u32() as usize,
                 };
                 input_storage.conv2d(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -963,18 +971,18 @@ impl HoduExecutor {
                     return Err(HoduError::InternalError("Conv3d requires 12 parameters".to_string()));
                 }
                 let conv_params = ParamsConv3D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_depth: params[1].to_u64() as usize,
-                    input_height: params[2].to_u64() as usize,
-                    input_width: params[3].to_u64() as usize,
-                    kernel_depth: params[4].to_u64() as usize,
-                    kernel_height: params[5].to_u64() as usize,
-                    kernel_width: params[6].to_u64() as usize,
-                    channels_output: params[7].to_u64() as usize,
-                    channels_input: params[8].to_u64() as usize,
-                    padding: params[9].to_u64() as usize,
-                    stride: params[10].to_u64() as usize,
-                    dilation: params[11].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_depth: params[1].to_u32() as usize,
+                    input_height: params[2].to_u32() as usize,
+                    input_width: params[3].to_u32() as usize,
+                    kernel_depth: params[4].to_u32() as usize,
+                    kernel_height: params[5].to_u32() as usize,
+                    kernel_width: params[6].to_u32() as usize,
+                    channels_output: params[7].to_u32() as usize,
+                    channels_input: params[8].to_u32() as usize,
+                    padding: params[9].to_u32() as usize,
+                    stride: params[10].to_u32() as usize,
+                    dilation: params[11].to_u32() as usize,
                 };
                 input_storage.conv3d(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -985,15 +993,15 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConvTranspose1D {
-                    batch_size: params[0].to_u64() as usize,
-                    length_input: params[1].to_u64() as usize,
-                    channels_output: params[2].to_u64() as usize,
-                    channels_input: params[3].to_u64() as usize,
-                    kernel_size: params[4].to_u64() as usize,
-                    padding: params[5].to_u64() as usize,
-                    output_padding: params[6].to_u64() as usize,
-                    stride: params[7].to_u64() as usize,
-                    dilation: params[8].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    length_input: params[1].to_u32() as usize,
+                    channels_output: params[2].to_u32() as usize,
+                    channels_input: params[3].to_u32() as usize,
+                    kernel_size: params[4].to_u32() as usize,
+                    padding: params[5].to_u32() as usize,
+                    output_padding: params[6].to_u32() as usize,
+                    stride: params[7].to_u32() as usize,
+                    dilation: params[8].to_u32() as usize,
                 };
                 input_storage.conv_transpose1d(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1004,17 +1012,17 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConvTranspose2D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_height: params[1].to_u64() as usize,
-                    input_width: params[2].to_u64() as usize,
-                    kernel_height: params[3].to_u64() as usize,
-                    kernel_width: params[4].to_u64() as usize,
-                    channels_output: params[5].to_u64() as usize,
-                    channels_input: params[6].to_u64() as usize,
-                    padding: params[7].to_u64() as usize,
-                    output_padding: params[8].to_u64() as usize,
-                    stride: params[9].to_u64() as usize,
-                    dilation: params[10].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_height: params[1].to_u32() as usize,
+                    input_width: params[2].to_u32() as usize,
+                    kernel_height: params[3].to_u32() as usize,
+                    kernel_width: params[4].to_u32() as usize,
+                    channels_output: params[5].to_u32() as usize,
+                    channels_input: params[6].to_u32() as usize,
+                    padding: params[7].to_u32() as usize,
+                    output_padding: params[8].to_u32() as usize,
+                    stride: params[9].to_u32() as usize,
+                    dilation: params[10].to_u32() as usize,
                 };
                 input_storage.conv_transpose2d(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1025,19 +1033,19 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConvTranspose3D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_depth: params[1].to_u64() as usize,
-                    input_height: params[2].to_u64() as usize,
-                    input_width: params[3].to_u64() as usize,
-                    kernel_depth: params[4].to_u64() as usize,
-                    kernel_height: params[5].to_u64() as usize,
-                    kernel_width: params[6].to_u64() as usize,
-                    channels_output: params[7].to_u64() as usize,
-                    channels_input: params[8].to_u64() as usize,
-                    padding: params[9].to_u64() as usize,
-                    output_padding: params[10].to_u64() as usize,
-                    stride: params[11].to_u64() as usize,
-                    dilation: params[12].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_depth: params[1].to_u32() as usize,
+                    input_height: params[2].to_u32() as usize,
+                    input_width: params[3].to_u32() as usize,
+                    kernel_depth: params[4].to_u32() as usize,
+                    kernel_height: params[5].to_u32() as usize,
+                    kernel_width: params[6].to_u32() as usize,
+                    channels_output: params[7].to_u32() as usize,
+                    channels_input: params[8].to_u32() as usize,
+                    padding: params[9].to_u32() as usize,
+                    output_padding: params[10].to_u32() as usize,
+                    stride: params[11].to_u32() as usize,
+                    dilation: params[12].to_u32() as usize,
                 };
                 input_storage.conv_transpose3d(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1048,14 +1056,14 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConv1D {
-                    batch_size: params[0].to_u64() as usize,
-                    length_input: params[1].to_u64() as usize,
-                    channels_output: params[2].to_u64() as usize,
-                    channels_input: params[3].to_u64() as usize,
-                    kernel_size: params[4].to_u64() as usize,
-                    padding: params[5].to_u64() as usize,
-                    stride: params[6].to_u64() as usize,
-                    dilation: params[7].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    length_input: params[1].to_u32() as usize,
+                    channels_output: params[2].to_u32() as usize,
+                    channels_input: params[3].to_u32() as usize,
+                    kernel_size: params[4].to_u32() as usize,
+                    padding: params[5].to_u32() as usize,
+                    stride: params[6].to_u32() as usize,
+                    dilation: params[7].to_u32() as usize,
                 };
                 input_storage.conv1d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1066,16 +1074,16 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConv2D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_height: params[1].to_u64() as usize,
-                    input_width: params[2].to_u64() as usize,
-                    kernel_height: params[3].to_u64() as usize,
-                    kernel_width: params[4].to_u64() as usize,
-                    channels_output: params[5].to_u64() as usize,
-                    channels_input: params[6].to_u64() as usize,
-                    padding: params[7].to_u64() as usize,
-                    stride: params[8].to_u64() as usize,
-                    dilation: params[9].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_height: params[1].to_u32() as usize,
+                    input_width: params[2].to_u32() as usize,
+                    kernel_height: params[3].to_u32() as usize,
+                    kernel_width: params[4].to_u32() as usize,
+                    channels_output: params[5].to_u32() as usize,
+                    channels_input: params[6].to_u32() as usize,
+                    padding: params[7].to_u32() as usize,
+                    stride: params[8].to_u32() as usize,
+                    dilation: params[9].to_u32() as usize,
                 };
                 input_storage.conv2d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1086,18 +1094,18 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConv3D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_depth: params[1].to_u64() as usize,
-                    input_height: params[2].to_u64() as usize,
-                    input_width: params[3].to_u64() as usize,
-                    kernel_depth: params[4].to_u64() as usize,
-                    kernel_height: params[5].to_u64() as usize,
-                    kernel_width: params[6].to_u64() as usize,
-                    channels_output: params[7].to_u64() as usize,
-                    channels_input: params[8].to_u64() as usize,
-                    padding: params[9].to_u64() as usize,
-                    stride: params[10].to_u64() as usize,
-                    dilation: params[11].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_depth: params[1].to_u32() as usize,
+                    input_height: params[2].to_u32() as usize,
+                    input_width: params[3].to_u32() as usize,
+                    kernel_depth: params[4].to_u32() as usize,
+                    kernel_height: params[5].to_u32() as usize,
+                    kernel_width: params[6].to_u32() as usize,
+                    channels_output: params[7].to_u32() as usize,
+                    channels_input: params[8].to_u32() as usize,
+                    padding: params[9].to_u32() as usize,
+                    stride: params[10].to_u32() as usize,
+                    dilation: params[11].to_u32() as usize,
                 };
                 input_storage.conv3d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1108,15 +1116,15 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConvTranspose1D {
-                    batch_size: params[0].to_u64() as usize,
-                    length_input: params[1].to_u64() as usize,
-                    channels_output: params[2].to_u64() as usize,
-                    channels_input: params[3].to_u64() as usize,
-                    kernel_size: params[4].to_u64() as usize,
-                    padding: params[5].to_u64() as usize,
-                    stride: params[6].to_u64() as usize,
-                    output_padding: params[7].to_u64() as usize,
-                    dilation: params[8].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    length_input: params[1].to_u32() as usize,
+                    channels_output: params[2].to_u32() as usize,
+                    channels_input: params[3].to_u32() as usize,
+                    kernel_size: params[4].to_u32() as usize,
+                    padding: params[5].to_u32() as usize,
+                    stride: params[6].to_u32() as usize,
+                    output_padding: params[7].to_u32() as usize,
+                    dilation: params[8].to_u32() as usize,
                 };
                 input_storage.conv_transpose1d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1127,17 +1135,17 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConvTranspose2D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_height: params[1].to_u64() as usize,
-                    input_width: params[2].to_u64() as usize,
-                    kernel_height: params[3].to_u64() as usize,
-                    kernel_width: params[4].to_u64() as usize,
-                    channels_output: params[5].to_u64() as usize,
-                    channels_input: params[6].to_u64() as usize,
-                    padding: params[7].to_u64() as usize,
-                    stride: params[8].to_u64() as usize,
-                    output_padding: params[9].to_u64() as usize,
-                    dilation: params[10].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_height: params[1].to_u32() as usize,
+                    input_width: params[2].to_u32() as usize,
+                    kernel_height: params[3].to_u32() as usize,
+                    kernel_width: params[4].to_u32() as usize,
+                    channels_output: params[5].to_u32() as usize,
+                    channels_input: params[6].to_u32() as usize,
+                    padding: params[7].to_u32() as usize,
+                    stride: params[8].to_u32() as usize,
+                    output_padding: params[9].to_u32() as usize,
+                    dilation: params[10].to_u32() as usize,
                 };
                 input_storage.conv_transpose2d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1148,19 +1156,19 @@ impl HoduExecutor {
                     ));
                 }
                 let conv_params = ParamsConvTranspose3D {
-                    batch_size: params[0].to_u64() as usize,
-                    input_depth: params[1].to_u64() as usize,
-                    input_height: params[2].to_u64() as usize,
-                    input_width: params[3].to_u64() as usize,
-                    kernel_depth: params[4].to_u64() as usize,
-                    kernel_height: params[5].to_u64() as usize,
-                    kernel_width: params[6].to_u64() as usize,
-                    channels_output: params[7].to_u64() as usize,
-                    channels_input: params[8].to_u64() as usize,
-                    padding: params[9].to_u64() as usize,
-                    output_padding: params[10].to_u64() as usize,
-                    stride: params[11].to_u64() as usize,
-                    dilation: params[12].to_u64() as usize,
+                    batch_size: params[0].to_u32() as usize,
+                    input_depth: params[1].to_u32() as usize,
+                    input_height: params[2].to_u32() as usize,
+                    input_width: params[3].to_u32() as usize,
+                    kernel_depth: params[4].to_u32() as usize,
+                    kernel_height: params[5].to_u32() as usize,
+                    kernel_width: params[6].to_u32() as usize,
+                    channels_output: params[7].to_u32() as usize,
+                    channels_input: params[8].to_u32() as usize,
+                    padding: params[9].to_u32() as usize,
+                    output_padding: params[10].to_u32() as usize,
+                    stride: params[11].to_u32() as usize,
+                    dilation: params[12].to_u32() as usize,
                 };
                 input_storage.conv_transpose3d_grad_weight(weight_storage, input_layout, weight_layout, &conv_params)
             },
@@ -1223,6 +1231,79 @@ impl HoduExecutor {
 
                 // Execute contiguous operation on storage
                 input_storage.contiguous(input_layout)
+            },
+        }
+    }
+
+    fn execute_windowing_op(
+        &self,
+        windowing_op: WindowingOp,
+        input_storage: &SharedStorage,
+        input_layout: &Layout,
+        params: &[Scalar],
+    ) -> HoduResult<HoduStorage> {
+        use crate::backends::op::window_reduction::WindowReduction;
+
+        match windowing_op {
+            WindowingOp::ReduceWindow => {
+                // Parse parameters: window_shape, strides, padding, reduction_type
+                // Parameters are packed as: [rank, window_shape..., strides..., padding_lo..., padding_hi..., reduction_type]
+                if params.is_empty() {
+                    return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
+                }
+
+                let rank = params[0].to_u32() as usize;
+                let expected_len = 1 + rank + rank + rank + rank + 1; // rank + window_shape + strides + padding_lo + padding_hi + reduction_type
+
+                if params.len() != expected_len {
+                    return Err(HoduError::InternalError(format!(
+                        "ReduceWindow requires {} parameters, got {}",
+                        expected_len,
+                        params.len()
+                    )));
+                }
+
+                let mut offset = 1;
+
+                // Extract window_shape
+                let window_shape: Vec<usize> = params[offset..offset + rank]
+                    .iter()
+                    .map(|s| s.to_u32() as usize)
+                    .collect();
+                offset += rank;
+
+                // Extract strides
+                let strides: Vec<usize> = params[offset..offset + rank]
+                    .iter()
+                    .map(|s| s.to_u32() as usize)
+                    .collect();
+                offset += rank;
+
+                // Extract padding (interleaved: lo, hi, lo, hi, ...)
+                let mut padding: Vec<(usize, usize)> = Vec::with_capacity(rank);
+                for _ in 0..rank {
+                    let pad_lo = params[offset].to_u32() as usize;
+                    let pad_hi = params[offset + 1].to_u32() as usize;
+                    padding.push((pad_lo, pad_hi));
+                    offset += 2;
+                }
+
+                // Extract reduction type
+                let reduction_type_val = params[offset].to_u32();
+                let reduction = match reduction_type_val {
+                    0 => WindowReduction::Max,
+                    1 => WindowReduction::Mean,
+                    2 => WindowReduction::Sum,
+                    3 => WindowReduction::Min,
+                    _ => {
+                        return Err(HoduError::InternalError(format!(
+                            "Invalid reduction type: {}",
+                            reduction_type_val
+                        )))
+                    },
+                };
+
+                input_storage.reduce_window(input_layout, &window_shape, &strides, &padding, reduction)
             },
         }
     }

@@ -1,6 +1,7 @@
 # ! <- no-backprop op
 # ? <- combination of other ops
 # @ <- alias
+# {} <- group
 
 // binary
 add
@@ -116,6 +117,8 @@ conv3d
 conv_transpose1d
 conv_transpose2d
 conv_transpose3d
+// windowing
+{reduce_window} max!, mean, sum, min!
 // shape
 reshape
 view@

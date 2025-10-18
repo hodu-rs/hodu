@@ -3,12 +3,13 @@ use crate::{
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
             BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op,
-            ReduceOp, ShapeOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+            ReduceOp, ShapeOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
         },
         script::{ir::ScriptIR, Script},
     },
     compat::*,
     error::{HoduError, HoduResult},
+    scalar::Scalar,
     tensor::{from_storage, Tensor, TensorId},
     types::{device::Device, dtype::DType, layout::Layout},
 };
@@ -2349,6 +2350,215 @@ impl XlaExecutor {
                                 1,          // batch_group_count
                             )
                             .map_err(xla_error_to_hodu_error)
+                    },
+                }
+            },
+
+            // Windowing Operations
+            Op::Windowing(op, _, params) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "Windowing operation requires exactly 1 input".to_string(),
+                    ));
+                }
+
+                match op {
+                    WindowingOp::ReduceWindow => {
+                        // Unpack parameters: rank, window_shape[rank], strides[rank], padding[rank*2], reduction_type
+                        if params.is_empty() {
+                            return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
+                        }
+
+                        let rank = match params[0] {
+                            Scalar::U32(r) => r as usize,
+                            _ => return Err(HoduError::InternalError("Expected U32 for rank".to_string())),
+                        };
+
+                        let expected_len = 1 + rank + rank + (rank * 2) + 1;
+                        if params.len() != expected_len {
+                            return Err(HoduError::InternalError(format!(
+                                "ReduceWindow requires {} parameters, got {}",
+                                expected_len,
+                                params.len()
+                            )));
+                        }
+
+                        // Extract window_shape
+                        let mut window_shape = Vec::with_capacity(rank);
+                        for i in 0..rank {
+                            match params[1 + i] {
+                                Scalar::U32(v) => window_shape.push(v as usize),
+                                _ => return Err(HoduError::InternalError("Expected U32 for window_shape".to_string())),
+                            }
+                        }
+
+                        // Extract strides
+                        let mut strides = Vec::with_capacity(rank);
+                        for i in 0..rank {
+                            match params[1 + rank + i] {
+                                Scalar::U32(v) => strides.push(v as usize),
+                                _ => return Err(HoduError::InternalError("Expected U32 for strides".to_string())),
+                            }
+                        }
+
+                        // Extract padding
+                        let mut padding = Vec::with_capacity(rank);
+                        for i in 0..rank {
+                            let pad_lo = match params[1 + rank + rank + (i * 2)] {
+                                Scalar::U32(v) => v as usize,
+                                _ => return Err(HoduError::InternalError("Expected U32 for padding low".to_string())),
+                            };
+                            let pad_hi = match params[1 + rank + rank + (i * 2) + 1] {
+                                Scalar::U32(v) => v as usize,
+                                _ => return Err(HoduError::InternalError("Expected U32 for padding high".to_string())),
+                            };
+                            padding.push((pad_lo, pad_hi));
+                        }
+
+                        // Extract reduction type
+                        let reduction_type = match params[1 + rank + rank + (rank * 2)] {
+                            Scalar::U32(v) => v,
+                            _ => return Err(HoduError::InternalError("Expected U32 for reduction type".to_string())),
+                        };
+
+                        // Get dtype from input tensor
+                        if current_node.input_tensors.is_empty() {
+                            return Err(HoduError::InternalError(
+                                "ReduceWindow requires input tensor".to_string(),
+                            ));
+                        }
+                        let input_tensor_id = current_node.input_tensors[0];
+                        let input_dtype = _compiled_script
+                            .tensor_dtypes
+                            .get(&input_tensor_id)
+                            .copied()
+                            .unwrap_or(DType::F32); // Default to F32 if not specified
+                        let dtype = Self::dtype_to_element_type(input_dtype)?;
+
+                        let input = &input_ops[0];
+
+                        // Create initial value and reduction computation based on reduction type
+                        let (init_value, reduction_comp) = match reduction_type {
+                            0 => {
+                                // Max
+                                let init = builder.min_value(dtype).map_err(xla_error_to_hodu_error)?;
+                                let max_builder = hodu_xla::XlaBuilder::new("Max");
+                                let x = max_builder
+                                    .parameter(0, dtype, &[], "x")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let y = max_builder
+                                    .parameter(1, dtype, &[], "y")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let comp = x
+                                    .max(&y)
+                                    .map_err(xla_error_to_hodu_error)?
+                                    .build()
+                                    .map_err(xla_error_to_hodu_error)?;
+                                (init, comp)
+                            },
+                            1 => {
+                                // Mean - use sum and divide later
+                                let init = builder.zero(dtype).map_err(xla_error_to_hodu_error)?;
+                                let add_builder = hodu_xla::XlaBuilder::new("Add");
+                                let x = add_builder
+                                    .parameter(0, dtype, &[], "x")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let y = add_builder
+                                    .parameter(1, dtype, &[], "y")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let comp = x
+                                    .add_(&y)
+                                    .map_err(xla_error_to_hodu_error)?
+                                    .build()
+                                    .map_err(xla_error_to_hodu_error)?;
+                                (init, comp)
+                            },
+                            2 => {
+                                // Sum
+                                let init = builder.zero(dtype).map_err(xla_error_to_hodu_error)?;
+                                let add_builder = hodu_xla::XlaBuilder::new("Add");
+                                let x = add_builder
+                                    .parameter(0, dtype, &[], "x")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let y = add_builder
+                                    .parameter(1, dtype, &[], "y")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let comp = x
+                                    .add_(&y)
+                                    .map_err(xla_error_to_hodu_error)?
+                                    .build()
+                                    .map_err(xla_error_to_hodu_error)?;
+                                (init, comp)
+                            },
+                            3 => {
+                                // Min
+                                let init = builder.max_value(dtype).map_err(xla_error_to_hodu_error)?;
+                                let min_builder = hodu_xla::XlaBuilder::new("Min");
+                                let x = min_builder
+                                    .parameter(0, dtype, &[], "x")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let y = min_builder
+                                    .parameter(1, dtype, &[], "y")
+                                    .map_err(xla_error_to_hodu_error)?;
+                                let comp = x
+                                    .min(&y)
+                                    .map_err(xla_error_to_hodu_error)?
+                                    .build()
+                                    .map_err(xla_error_to_hodu_error)?;
+                                (init, comp)
+                            },
+                            _ => {
+                                return Err(HoduError::InternalError(format!(
+                                    "Unknown reduction type: {}",
+                                    reduction_type
+                                )));
+                            },
+                        };
+
+                        // Convert to i64 for XLA API
+                        let window_shape_i64: Vec<i64> = window_shape.iter().map(|&v| v as i64).collect();
+                        let strides_i64: Vec<i64> = strides.iter().map(|&v| v as i64).collect();
+                        let padding_i64: Vec<(i64, i64)> =
+                            padding.iter().map(|&(lo, hi)| (lo as i64, hi as i64)).collect();
+
+                        // Apply reduce_window
+                        let result = input
+                            .reduce_window(
+                                init_value,
+                                reduction_comp,
+                                &window_shape_i64,
+                                &strides_i64,
+                                &padding_i64,
+                            )
+                            .map_err(xla_error_to_hodu_error)?;
+
+                        // For mean reduction, divide by window size
+                        if reduction_type == 1 {
+                            let window_size: usize = window_shape.iter().product();
+                            let window_size_scalar = match dtype {
+                                hodu_xla::ElementType::F16 => builder
+                                    .constant_r0(half::f16::from_f32(window_size as f32))
+                                    .map_err(xla_error_to_hodu_error)?,
+                                hodu_xla::ElementType::Bf16 => builder
+                                    .constant_r0(half::bf16::from_f32(window_size as f32))
+                                    .map_err(xla_error_to_hodu_error)?,
+                                hodu_xla::ElementType::F32 => builder
+                                    .constant_r0(window_size as f32)
+                                    .map_err(xla_error_to_hodu_error)?,
+                                hodu_xla::ElementType::F64 => builder
+                                    .constant_r0(window_size as f64)
+                                    .map_err(xla_error_to_hodu_error)?,
+                                _ => {
+                                    return Err(HoduError::UnsupportedDType {
+                                        dtype: input_dtype,
+                                        op: "reduce_window with Mean reduction".to_string(),
+                                    });
+                                },
+                            };
+                            (result / window_size_scalar).map_err(xla_error_to_hodu_error)
+                        } else {
+                            Ok(result)
+                        }
                     },
                 }
             },

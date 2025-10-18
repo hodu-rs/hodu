@@ -262,6 +262,20 @@ Neural network convolution operations with support for stride, padding, and dila
 | `conv_transpose2d` | `[B, C_in, H, W]` | `[C_in, C_out, K_h, K_w]` | `[B, C_out, H_out, W_out]` | 2D transposed convolution |
 | `conv_transpose3d` | `[B, C_in, D, H, W]` | `[C_in, C_out, K_d, K_h, K_w]` | `[B, C_out, D_out, H_out, W_out]` | 3D transposed convolution |
 
+## Windowing Operations
+
+Sliding window reduction operations, commonly used for pooling.
+
+| Operation | Description |
+|-----------|-------------|
+| `reduce_window` | Apply reduction function over sliding windows |
+
+**Parameters:**
+- `window_shape`: Size of the sliding window for each dimension
+- `strides`: Step size for sliding the window (default: 1 for each dim)
+- `padding`: Padding applied before windowing
+- `reduction`: Reduction type - `'max'`, `'mean'`, `'sum'`, `'min'`
+
 ## Shape Operations
 
 Operations that manipulate tensor shape and layout.

@@ -9,6 +9,7 @@ use crate::{
                 ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
                 ParamsConvTranspose3D,
             },
+            window_reduction::WindowReduction,
             BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
         },
     },
@@ -107,6 +108,15 @@ pub trait HoduStorageT: Sized {
         _: &Layout,
         _: &Layout,
         _: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self>;
+
+    fn reduce_window(
+        &self,
+        _: &Layout,
+        _: &[usize],
+        _: &[usize],
+        _: &[(usize, usize)],
+        _: WindowReduction,
     ) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: DType) -> HoduResult<Self>;
@@ -566,6 +576,22 @@ impl HoduStorage {
             (Self::CPU(input), Self::CPU(grad_output)) => {
                 let result =
                     input.conv_transpose3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn reduce_window(
+        &self,
+        input_layout: &Layout,
+        window_shape: &[usize],
+        strides: &[usize],
+        padding: &[(usize, usize)],
+        reduction: WindowReduction,
+    ) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => {
+                let result = storage.reduce_window(input_layout, window_shape, strides, padding, reduction)?;
                 Ok(Self::CPU(result))
             },
         }

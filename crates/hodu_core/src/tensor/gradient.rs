@@ -3,7 +3,7 @@ mod utils;
 use crate::{
     backends::op::{
         BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, ConvOp, IndexingOp, MatrixOp, Op, ReduceOp, ShapeOp,
-        SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp,
+        SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -1161,6 +1161,74 @@ impl VjpCompute for ConvOp {
     }
 }
 
+impl VjpCompute for WindowingOp {
+    fn compute_vjp_with_scalars(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        scalars: &[Scalar],
+    ) -> HoduResult<Vec<TensorId>> {
+        match self {
+            WindowingOp::ReduceWindow => {
+                // Parameters: rank, window_shape[rank], strides[rank], padding[rank*2], reduction_type
+                if scalars.is_empty() {
+                    return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
+                }
+
+                let rank = scalars[0].to_u32() as usize;
+                if scalars.len() < 1 + rank * 4 + 1 {
+                    return Err(HoduError::InternalError(
+                        "ReduceWindow requires sufficient parameters".to_string(),
+                    ));
+                }
+
+                // Extract window_shape
+                let window_shape: Vec<usize> = (0..rank).map(|i| scalars[1 + i].to_u32() as usize).collect();
+
+                let reduction_type = scalars[1 + rank * 4].to_u32();
+
+                let input = inputs[0];
+                let input_tensor = tensor_from_id(input);
+                let input_layout = input_tensor.get_layout();
+                let input_shape = input_layout.get_shape();
+                let dtype = input_tensor.get_dtype();
+
+                // Check reduction type
+                match reduction_type {
+                    0 | 3 => {
+                        // Max (0) or Min (3) - not differentiable
+                        Err(HoduError::InternalError(
+                            "Max and Min reductions are not differentiable (discrete operations)".to_string(),
+                        ))
+                    },
+                    1 | 2 => {
+                        // Mean (1) or Sum (2) - differentiable
+                        // For pooling gradient, we need to broadcast the gradient back to input shape
+                        let grad_tensor = tensor_from_id(grad_output);
+                        let broadcasted_grad = grad_tensor.broadcast(input_shape)?;
+
+                        if reduction_type == 1 {
+                            // Mean: divide by window size
+                            let window_size: usize = window_shape.iter().product();
+                            let scale = Scalar::from_f32(1.0 / window_size as f32, dtype);
+                            let scaled_grad = broadcasted_grad.mul_scalar(scale)?;
+                            Ok(vec![scaled_grad.id()])
+                        } else {
+                            // Sum: just broadcast
+                            Ok(vec![broadcasted_grad.id()])
+                        }
+                    },
+                    _ => Err(HoduError::InternalError(format!(
+                        "Unknown reduction type: {}",
+                        reduction_type
+                    ))),
+                }
+            },
+        }
+    }
+}
+
 impl VjpCompute for ShapeOp {
     fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
         let input = inputs[0];
@@ -1612,6 +1680,9 @@ fn compute_vjp_for_op(
         },
         Op::Indexing(indexing_op, _, params) => indexing_op.compute_vjp_with_dims(inputs, output, grad_output, params),
         Op::Conv(conv_op, _, _, params) => conv_op.compute_vjp_with_scalars(inputs, output, grad_output, params),
+        Op::Windowing(windowing_op, _, params) => {
+            windowing_op.compute_vjp_with_scalars(inputs, output, grad_output, params)
+        },
         Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output),
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }

@@ -5,6 +5,7 @@
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
 pub mod conv;
+pub mod window_reduction;
 
 use crate::{compat::*, scalar::Scalar, tensor::TensorId};
 
@@ -347,6 +348,13 @@ pub enum ConvOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum WindowingOp {
+    ReduceWindow,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ShapeOp {
     Reshape,
     Flatten,
@@ -388,6 +396,7 @@ pub enum Op {
     Split(SplitOp, TensorId, Vec<Scalar>, usize),
     Indexing(IndexingOp, Vec<TensorId>, Vec<Scalar>),
     Conv(ConvOp, TensorId, TensorId, Vec<Scalar>),
+    Windowing(WindowingOp, TensorId, Vec<Scalar>),
     Shape(ShapeOp, TensorId),
     Cast(CastOp, TensorId),
     Memory(MemoryOp, TensorId),
@@ -410,6 +419,7 @@ impl Op {
             Op::Split(_, t, _, _) => vec![*t],
             Op::Indexing(_, tt, _) => tt.clone(),
             Op::Conv(_, input, weight, _) => vec![*input, *weight],
+            Op::Windowing(_, t, _) => vec![*t],
             Op::Shape(_, t) => vec![*t],
             Op::Cast(_, t) => vec![*t],
             Op::Memory(_, t) => vec![*t],
