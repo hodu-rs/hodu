@@ -305,6 +305,152 @@ let output = conv_t.forward(&input)?;  // [4, 1, 64, 64, 64] (2배 업샘플링)
 - **dilation**: 커널 요소 사이의 간격, 수용 영역(receptive field)을 확장
 - **output_padding**: ConvTranspose에서 출력 크기를 미세 조정
 
+### 풀링 레이어 (Pooling Layers)
+
+풀링 레이어는 공간 차원을 다운샘플링하고 평행 이동 불변성(translation invariance)을 제공합니다.
+
+#### MaxPool1D, MaxPool2D, MaxPool3D
+
+최대 풀링은 각 윈도우에서 최대값을 선택합니다.
+
+```rust
+use hodu::nn::modules::{MaxPool1d, MaxPool2d, MaxPool3d};
+
+// MaxPool1D: 시계열 데이터
+let pool1d = MaxPool1d::new(
+    2,  // kernel_size
+    2,  // stride
+    0,  // padding
+);
+let input = Tensor::randn(&[8, 16, 100], 0.0, 1.0)?;  // [batch, channels, length]
+let output = pool1d.forward(&input)?;  // [8, 16, 50]
+
+// MaxPool2D: 이미지
+let pool2d = MaxPool2d::new(
+    2,  // kernel_size
+    2,  // stride
+    0,  // padding
+);
+let input = Tensor::randn(&[16, 64, 224, 224], 0.0, 1.0)?;  // [batch, channels, H, W]
+let output = pool2d.forward(&input)?;  // [16, 64, 112, 112]
+
+// MaxPool3D: 3D 데이터
+let pool3d = MaxPool3d::new(
+    2,  // kernel_size
+    2,  // stride
+    0,  // padding
+);
+let input = Tensor::randn(&[4, 32, 64, 64, 64], 0.0, 1.0)?;  // [batch, channels, D, H, W]
+let output = pool3d.forward(&input)?;  // [4, 32, 32, 32, 32]
+```
+
+**파라미터:**
+- `kernel_size`: 풀링 윈도우 크기
+- `stride`: 이동 보폭
+- `padding`: 패딩 크기
+
+**특성:**
+- 최대값만 보존 (특징 검출에 유용)
+- 역전파 불가능 (최대값 위치만 기록)
+- 공간 차원 축소
+
+#### AvgPool1D, AvgPool2D, AvgPool3D
+
+평균 풀링은 각 윈도우의 평균을 계산합니다.
+
+```rust
+use hodu::nn::modules::{AvgPool1d, AvgPool2d, AvgPool3d};
+
+// AvgPool1D
+let pool = AvgPool1d::new(2, 2, 0);
+let output = pool.forward(&input)?;
+
+// AvgPool2D
+let pool = AvgPool2d::new(2, 2, 0);
+let output = pool.forward(&input)?;
+
+// AvgPool3D
+let pool = AvgPool3d::new(2, 2, 0);
+let output = pool.forward(&input)?;
+```
+
+**특성:**
+- 윈도우의 모든 값을 평균화
+- 부드러운 다운샘플링
+- MaxPool보다 정보 손실이 적음
+
+#### AdaptiveMaxPool1D, AdaptiveMaxPool2D, AdaptiveMaxPool3D
+
+적응형 최대 풀링은 입력 크기와 관계없이 고정된 출력 크기를 생성합니다.
+
+```rust
+use hodu::nn::modules::{AdaptiveMaxPool1d, AdaptiveMaxPool2d, AdaptiveMaxPool3d};
+
+// AdaptiveMaxPool1D
+let pool = AdaptiveMaxPool1d::new(50);  // output_size
+let input = Tensor::randn(&[8, 16, 100], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [8, 16, 50]
+
+// AdaptiveMaxPool2D
+let pool = AdaptiveMaxPool2d::new((7, 7));  // output_size (H, W)
+let input = Tensor::randn(&[16, 512, 14, 14], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [16, 512, 7, 7]
+
+// AdaptiveMaxPool3D
+let pool = AdaptiveMaxPool3d::new((4, 4, 4));  // output_size (D, H, W)
+let input = Tensor::randn(&[4, 64, 16, 16, 16], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [4, 64, 4, 4, 4]
+```
+
+**파라미터:**
+- `output_size`: 원하는 출력 크기 (1D의 경우 usize, 2D/3D의 경우 튜플)
+
+**특성:**
+- 입력 크기와 무관하게 고정된 출력 크기
+- 커널 크기와 stride를 자동으로 계산
+- 가변 크기 입력을 처리하는 네트워크에 유용
+
+#### AdaptiveAvgPool1D, AdaptiveAvgPool2D, AdaptiveAvgPool3D
+
+적응형 평균 풀링은 적응형 최대 풀링과 동일하지만 평균을 사용합니다.
+
+```rust
+use hodu::nn::modules::{AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d};
+
+// AdaptiveAvgPool1D
+let pool = AdaptiveAvgPool1d::new(50);
+let output = pool.forward(&input)?;
+
+// AdaptiveAvgPool2D (ResNet의 Global Average Pooling 등)
+let pool = AdaptiveAvgPool2d::new((1, 1));  // Global pooling
+let input = Tensor::randn(&[16, 2048, 7, 7], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [16, 2048, 1, 1]
+
+// AdaptiveAvgPool3D
+let pool = AdaptiveAvgPool3d::new((1, 1, 1));  // Global pooling
+let output = pool.forward(&input)?;
+```
+
+**사용 사례:**
+- Global Average Pooling (출력 크기 = 1x1)
+- 분류 네트워크의 최종 레이어
+- 가변 크기 입력 처리
+
+### 풀링 레이어 비교
+
+| 레이어 | 연산 | 출력 크기 | 역전파 | 사용 사례 |
+|--------|------|----------|--------|----------|
+| MaxPool | Max | 계산됨 | 제한적 | 특징 검출, CNN |
+| AvgPool | Mean | 계산됨 | 가능 | 부드러운 다운샘플링 |
+| AdaptiveMaxPool | Max | 고정됨 | 제한적 | 가변 크기 입력 |
+| AdaptiveAvgPool | Mean | 고정됨 | 가능 | Global pooling, 분류 |
+
+**선택 가이드:**
+- **CNN 중간층**: MaxPool2d (특징 검출)
+- **부드러운 다운샘플링**: AvgPool
+- **분류 헤드**: AdaptiveAvgPool2d((1, 1)) (Global Average Pooling)
+- **가변 크기 입력**: Adaptive 변형
+
 ### 정규화 레이어
 
 #### Dropout

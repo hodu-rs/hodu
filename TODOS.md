@@ -21,7 +21,7 @@ Items may be added at any time.
 
 ## hodu_nn
 
-- [ ] Implement pooling layers
+- [x] Implement pooling layers
 - [ ] Implement normalization layers
 - [ ] Implement attention layers
 

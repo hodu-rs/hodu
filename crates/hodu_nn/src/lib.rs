@@ -21,6 +21,10 @@ pub use modules::{
     conv::{Conv1D, Conv2D, Conv3D, ConvTranspose1D, ConvTranspose2D, ConvTranspose3D},
     dropout::Dropout,
     linear::Linear,
+    pooling::{
+        AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d, AdaptiveMaxPool1d, AdaptiveMaxPool2d,
+        AdaptiveMaxPool3d, AvgPool1d, AvgPool2d, AvgPool3d, MaxPool1d, MaxPool2d, MaxPool3d,
+    },
 };
 pub use optimizers::{
     adam::{Adam, AdamW},

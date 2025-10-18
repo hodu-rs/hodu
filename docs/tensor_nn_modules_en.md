@@ -305,6 +305,152 @@ let output = conv_t.forward(&input)?;  // [4, 1, 64, 64, 64] (2x upsampled)
 - **dilation**: Spacing between kernel elements, expands receptive field
 - **output_padding**: Fine-tune output size in ConvTranspose
 
+### Pooling Layers
+
+Pooling layers downsample spatial dimensions and provide translation invariance.
+
+#### MaxPool1D, MaxPool2D, MaxPool3D
+
+Max pooling selects the maximum value in each window.
+
+```rust
+use hodu::nn::modules::{MaxPool1d, MaxPool2d, MaxPool3d};
+
+// MaxPool1D: Time series data
+let pool1d = MaxPool1d::new(
+    2,  // kernel_size
+    2,  // stride
+    0,  // padding
+);
+let input = Tensor::randn(&[8, 16, 100], 0.0, 1.0)?;  // [batch, channels, length]
+let output = pool1d.forward(&input)?;  // [8, 16, 50]
+
+// MaxPool2D: Images
+let pool2d = MaxPool2d::new(
+    2,  // kernel_size
+    2,  // stride
+    0,  // padding
+);
+let input = Tensor::randn(&[16, 64, 224, 224], 0.0, 1.0)?;  // [batch, channels, H, W]
+let output = pool2d.forward(&input)?;  // [16, 64, 112, 112]
+
+// MaxPool3D: 3D data
+let pool3d = MaxPool3d::new(
+    2,  // kernel_size
+    2,  // stride
+    0,  // padding
+);
+let input = Tensor::randn(&[4, 32, 64, 64, 64], 0.0, 1.0)?;  // [batch, channels, D, H, W]
+let output = pool3d.forward(&input)?;  // [4, 32, 32, 32, 32]
+```
+
+**Parameters:**
+- `kernel_size`: Size of the pooling window
+- `stride`: Stride of the pooling operation
+- `padding`: Padding size
+
+**Properties:**
+- Preserves only maximum values (useful for feature detection)
+- Limited backpropagation (only max positions recorded)
+- Reduces spatial dimensions
+
+#### AvgPool1D, AvgPool2D, AvgPool3D
+
+Average pooling computes the average of each window.
+
+```rust
+use hodu::nn::modules::{AvgPool1d, AvgPool2d, AvgPool3d};
+
+// AvgPool1D
+let pool = AvgPool1d::new(2, 2, 0);
+let output = pool.forward(&input)?;
+
+// AvgPool2D
+let pool = AvgPool2d::new(2, 2, 0);
+let output = pool.forward(&input)?;
+
+// AvgPool3D
+let pool = AvgPool3d::new(2, 2, 0);
+let output = pool.forward(&input)?;
+```
+
+**Properties:**
+- Averages all values in the window
+- Smooth downsampling
+- Less information loss than MaxPool
+
+#### AdaptiveMaxPool1D, AdaptiveMaxPool2D, AdaptiveMaxPool3D
+
+Adaptive max pooling produces fixed output size regardless of input size.
+
+```rust
+use hodu::nn::modules::{AdaptiveMaxPool1d, AdaptiveMaxPool2d, AdaptiveMaxPool3d};
+
+// AdaptiveMaxPool1D
+let pool = AdaptiveMaxPool1d::new(50);  // output_size
+let input = Tensor::randn(&[8, 16, 100], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [8, 16, 50]
+
+// AdaptiveMaxPool2D
+let pool = AdaptiveMaxPool2d::new((7, 7));  // output_size (H, W)
+let input = Tensor::randn(&[16, 512, 14, 14], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [16, 512, 7, 7]
+
+// AdaptiveMaxPool3D
+let pool = AdaptiveMaxPool3d::new((4, 4, 4));  // output_size (D, H, W)
+let input = Tensor::randn(&[4, 64, 16, 16, 16], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [4, 64, 4, 4, 4]
+```
+
+**Parameters:**
+- `output_size`: Desired output size (usize for 1D, tuple for 2D/3D)
+
+**Properties:**
+- Fixed output size regardless of input size
+- Automatically calculates kernel size and stride
+- Useful for networks that handle variable-sized inputs
+
+#### AdaptiveAvgPool1D, AdaptiveAvgPool2D, AdaptiveAvgPool3D
+
+Adaptive average pooling is the same as adaptive max pooling but uses averaging.
+
+```rust
+use hodu::nn::modules::{AdaptiveAvgPool1d, AdaptiveAvgPool2d, AdaptiveAvgPool3d};
+
+// AdaptiveAvgPool1D
+let pool = AdaptiveAvgPool1d::new(50);
+let output = pool.forward(&input)?;
+
+// AdaptiveAvgPool2D (e.g., Global Average Pooling in ResNet)
+let pool = AdaptiveAvgPool2d::new((1, 1));  // Global pooling
+let input = Tensor::randn(&[16, 2048, 7, 7], 0.0, 1.0)?;
+let output = pool.forward(&input)?;  // [16, 2048, 1, 1]
+
+// AdaptiveAvgPool3D
+let pool = AdaptiveAvgPool3d::new((1, 1, 1));  // Global pooling
+let output = pool.forward(&input)?;
+```
+
+**Use Cases:**
+- Global Average Pooling (output size = 1x1)
+- Final layer in classification networks
+- Variable-sized input handling
+
+### Pooling Layer Comparison
+
+| Layer | Operation | Output Size | Backprop | Use Case |
+|-------|-----------|-------------|----------|----------|
+| MaxPool | Max | Computed | Limited | Feature detection, CNN |
+| AvgPool | Mean | Computed | Full | Smooth downsampling |
+| AdaptiveMaxPool | Max | Fixed | Limited | Variable-sized input |
+| AdaptiveAvgPool | Mean | Fixed | Full | Global pooling, classification |
+
+**Selection Guide:**
+- **CNN intermediate layers**: MaxPool2d (feature detection)
+- **Smooth downsampling**: AvgPool
+- **Classification head**: AdaptiveAvgPool2d((1, 1)) (Global Average Pooling)
+- **Variable-sized inputs**: Adaptive variants
+
 ### Regularization Layers
 
 #### Dropout
