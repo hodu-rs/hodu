@@ -111,20 +111,20 @@ impl XlaExecutor {
     /// Convert DType to XLA ElementType
     fn dtype_to_element_type(dtype: DType) -> HoduResult<ElementType> {
         match dtype {
+            DType::BOOL => Ok(ElementType::Pred),
+            DType::BF16 => Ok(ElementType::Bf16),
+            DType::F16 => Ok(ElementType::F16),
             DType::F32 => Ok(ElementType::F32),
             DType::F64 => Ok(ElementType::F64),
-            DType::I32 => Ok(ElementType::S32),
-            DType::I64 => Ok(ElementType::S64),
-            DType::U32 => Ok(ElementType::U32),
-            DType::U64 => Ok(ElementType::U64),
-            DType::BOOL => Ok(ElementType::Pred),
-            DType::F16 => Ok(ElementType::F16),
-            DType::BF16 => Ok(ElementType::Bf16),
-            DType::I8 => Ok(ElementType::S8),
-            DType::I16 => Ok(ElementType::S16),
             DType::U8 => Ok(ElementType::U8),
             DType::U16 => Ok(ElementType::U16),
-            DType::F8E4M3 | DType::F8E5M2 => Err(HoduError::InternalError(format!(
+            DType::U32 => Ok(ElementType::U32),
+            DType::U64 => Ok(ElementType::U64),
+            DType::I8 => Ok(ElementType::S8),
+            DType::I16 => Ok(ElementType::S16),
+            DType::I32 => Ok(ElementType::S32),
+            DType::I64 => Ok(ElementType::S64),
+            _ => Err(HoduError::InternalError(format!(
                 "XLA does not support {:?} dtype",
                 dtype
             ))),
@@ -395,6 +395,12 @@ impl XlaExecutor {
                     UnaryOp::Abs => input_ops[0].abs(),
                     UnaryOp::Sign => input_ops[0].sign(),
                     UnaryOp::Square => input_ops[0].mul_(&input_ops[0]),
+                    UnaryOp::Sqrt => input_ops[0].sqrt(),
+                    UnaryOp::Recip => {
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+                        one.div_(&input_ops[0])
+                    },
+
                     UnaryOp::Relu => {
                         let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
                         input_ops[0].max(&zero)
@@ -424,43 +430,6 @@ impl XlaExecutor {
                         let one_plus_tanh = one.add_(&tanh_result).map_err(xla_error_to_hodu_error)?;
                         half.mul_(x).map_err(xla_error_to_hodu_error)?.mul_(&one_plus_tanh)
                     },
-                    UnaryOp::Sin => input_ops[0].sin(),
-                    UnaryOp::Cos => input_ops[0].cos(),
-                    UnaryOp::Tan => {
-                        let sin_val = input_ops[0].sin().map_err(xla_error_to_hodu_error)?;
-                        let cos_val = input_ops[0].cos().map_err(xla_error_to_hodu_error)?;
-                        sin_val.div_(&cos_val)
-                    },
-                    UnaryOp::Ln => input_ops[0].log(),
-                    UnaryOp::Log10 => {
-                        let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
-                        let ln_10 = builder
-                            .constant_r0(2.302585092994046f32)
-                            .map_err(xla_error_to_hodu_error)?; // ln(10)
-                        ln_val.div_(&ln_10)
-                    },
-                    UnaryOp::Log2 => {
-                        let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
-                        let ln_2 = builder
-                            .constant_r0(0.6931471805599453f32)
-                            .map_err(xla_error_to_hodu_error)?; // ln(2)
-                        ln_val.div_(&ln_2)
-                    },
-                    UnaryOp::Exp => input_ops[0].exp(),
-                    UnaryOp::Exp10 => {
-                        let ln_10 = builder
-                            .constant_r0(2.302585092994046f32)
-                            .map_err(xla_error_to_hodu_error)?; // ln(10)
-                        let scaled = input_ops[0].mul_(&ln_10).map_err(xla_error_to_hodu_error)?;
-                        scaled.exp()
-                    },
-                    UnaryOp::Exp2 => {
-                        let ln_2 = builder
-                            .constant_r0(0.6931471805599453f32)
-                            .map_err(xla_error_to_hodu_error)?; // ln(2)
-                        let scaled = input_ops[0].mul_(&ln_2).map_err(xla_error_to_hodu_error)?;
-                        scaled.exp()
-                    },
                     UnaryOp::Softplus => {
                         // softplus(x) = log(1 + exp(x))
                         let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
@@ -468,11 +437,45 @@ impl XlaExecutor {
                         let one_plus_exp = one.add_(&exp_x).map_err(xla_error_to_hodu_error)?;
                         one_plus_exp.log()
                     },
-                    UnaryOp::Recip => {
-                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
-                        one.div_(&input_ops[0])
+
+                    UnaryOp::Sin => input_ops[0].sin(),
+                    UnaryOp::Cos => input_ops[0].cos(),
+                    UnaryOp::Tan => {
+                        let sin_val = input_ops[0].sin().map_err(xla_error_to_hodu_error)?;
+                        let cos_val = input_ops[0].cos().map_err(xla_error_to_hodu_error)?;
+                        sin_val.div_(&cos_val)
                     },
-                    UnaryOp::Sqrt => input_ops[0].sqrt(),
+
+                    UnaryOp::Exp => input_ops[0].exp(),
+                    UnaryOp::Exp2 => {
+                        let ln_2 = builder
+                            .constant_r0(0.6931471805599453f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(2)
+                        let scaled = input_ops[0].mul_(&ln_2).map_err(xla_error_to_hodu_error)?;
+                        scaled.exp()
+                    },
+                    UnaryOp::Exp10 => {
+                        let ln_10 = builder
+                            .constant_r0(2.302585092994046f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(10)
+                        let scaled = input_ops[0].mul_(&ln_10).map_err(xla_error_to_hodu_error)?;
+                        scaled.exp()
+                    },
+                    UnaryOp::Ln => input_ops[0].log(),
+                    UnaryOp::Log2 => {
+                        let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
+                        let ln_2 = builder
+                            .constant_r0(0.6931471805599453f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(2)
+                        ln_val.div_(&ln_2)
+                    },
+                    UnaryOp::Log10 => {
+                        let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
+                        let ln_10 = builder
+                            .constant_r0(2.302585092994046f32)
+                            .map_err(xla_error_to_hodu_error)?; // ln(10)
+                        ln_val.div_(&ln_10)
+                    },
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
@@ -509,6 +512,7 @@ impl XlaExecutor {
                     UnaryScalarOp::PowScalar => input_ops[0].pow(&scalar_op),
                     UnaryScalarOp::MaximumScalar => input_ops[0].max(&scalar_op),
                     UnaryScalarOp::MinimumScalar => input_ops[0].min(&scalar_op),
+
                     UnaryScalarOp::LeakyRelu => {
                         let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
                         let positive_part = input_ops[0].max(&zero).map_err(xla_error_to_hodu_error)?;
@@ -1052,7 +1056,181 @@ impl XlaExecutor {
                         // Use XLA's take operation for index_select
                         input_ops[0].take(&input_ops[1], dim).map_err(xla_error_to_hodu_error)
                     },
+                    IndexingOp::IndexPut => {
+                        // input_ops: [self, indices, values]
+                        if input_ops.len() != 3 {
+                            return Err(HoduError::InternalError("IndexPut requires 3 inputs".to_string()));
+                        }
 
+                        // Extract dim from params
+                        let dim = params
+                            .first()
+                            .ok_or_else(|| {
+                                HoduError::InternalError("IndexPut requires dimension parameter".to_string())
+                            })?
+                            .to_u64() as i64;
+
+                        // Create update computation that replaces values
+                        let element_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
+                        let element_type = Self::element_type_to_element_type(element_type)?;
+
+                        let update_builder = XlaBuilder::new("index_put_update");
+                        let _old = update_builder
+                            .parameter(0, element_type, &[], "old")
+                            .map_err(xla_error_to_hodu_error)?;
+                        let new = update_builder
+                            .parameter(1, element_type, &[], "new")
+                            .map_err(xla_error_to_hodu_error)?;
+                        let update_computation = new.build().map_err(xla_error_to_hodu_error)?;
+
+                        // Get shapes for scatter configuration
+                        let base_shape = input_ops[0].array_shape().map_err(xla_error_to_hodu_error)?;
+                        let indices_shape = input_ops[1].array_shape().map_err(xla_error_to_hodu_error)?;
+                        let values_shape = input_ops[2].array_shape().map_err(xla_error_to_hodu_error)?;
+
+                        let base_rank = base_shape.dims().len();
+                        let indices_rank = indices_shape.dims().len();
+                        let base_dims = base_shape.dims();
+                        let indices_dims = indices_shape.dims();
+                        let _values_dims = values_shape.dims();
+
+                        // For multidimensional index_put, convert PyTorch semantics to XLA
+                        if indices_rank > 1 && base_rank > 1 {
+                            // PyTorch: values[i,j,...] -> input[indices[i,j,...], j, ...]
+                            // XLA: requires flattened indices with proper offset calculation
+
+                            // Flatten base, indices, values
+                            let base_size: i64 = base_dims.iter().product();
+                            let indices_size: i64 = indices_dims.iter().product();
+
+                            let base_flat = input_ops[0].reshape(&[base_size]).map_err(xla_error_to_hodu_error)?;
+                            let indices_flat =
+                                input_ops[1].reshape(&[indices_size]).map_err(xla_error_to_hodu_error)?;
+                            let values_flat = input_ops[2].reshape(&[indices_size]).map_err(xla_error_to_hodu_error)?;
+
+                            // Calculate strides for mapping positions
+                            let base_strides: Vec<i64> = {
+                                let mut strides = vec![1i64; base_rank];
+                                for i in (0..base_rank - 1).rev() {
+                                    strides[i] = strides[i + 1] * base_dims[i + 1];
+                                }
+                                strides
+                            };
+
+                            // Strides in indices tensor (for decomposing position p)
+                            let indices_strides: Vec<i64> = {
+                                let mut strides = vec![1i64; indices_rank];
+                                for i in (0..indices_rank - 1).rev() {
+                                    strides[i] = strides[i + 1] * indices_dims[i + 1];
+                                }
+                                strides
+                            };
+
+                            // For each position p, compute coordinates in indices tensor,
+                            // then map to flat index in base
+                            let positions: Vec<i64> = (0..indices_size).collect();
+                            let positions_op = builder.constant_r1(&positions).map_err(xla_error_to_hodu_error)?;
+                            let positions_i32 = positions_op
+                                .convert(PrimitiveType::S32)
+                                .map_err(xla_error_to_hodu_error)?;
+                            let indices_i32 = indices_flat
+                                .convert(PrimitiveType::S32)
+                                .map_err(xla_error_to_hodu_error)?;
+
+                            // Build flat index calculation step by step
+                            let zero_i32 = builder.constant_r0(0i32).map_err(xla_error_to_hodu_error)?;
+                            let mut flat_indices_i32 =
+                                zero_i32.broadcast(&[indices_size]).map_err(xla_error_to_hodu_error)?;
+
+                            for d in 0..base_rank {
+                                if d == dim as usize {
+                                    // Use indices[p] for this dimension
+                                    let base_stride_i32 = builder
+                                        .constant_r0(base_strides[d] as i32)
+                                        .map_err(xla_error_to_hodu_error)?;
+                                    let contribution =
+                                        indices_i32.mul_(&base_stride_i32).map_err(xla_error_to_hodu_error)?;
+                                    flat_indices_i32 =
+                                        flat_indices_i32.add_(&contribution).map_err(xla_error_to_hodu_error)?;
+                                } else {
+                                    // Extract coordinate from position p
+                                    let indices_stride_i32 = builder
+                                        .constant_r0(indices_strides[d] as i32)
+                                        .map_err(xla_error_to_hodu_error)?;
+                                    let indices_dim_i32 = builder
+                                        .constant_r0(indices_dims[d] as i32)
+                                        .map_err(xla_error_to_hodu_error)?;
+
+                                    let coord_quotient = positions_i32
+                                        .div_(&indices_stride_i32)
+                                        .map_err(xla_error_to_hodu_error)?;
+                                    let coord_remainder_quotient =
+                                        coord_quotient.div_(&indices_dim_i32).map_err(xla_error_to_hodu_error)?;
+                                    let coord = coord_quotient
+                                        .sub_(
+                                            &coord_remainder_quotient
+                                                .mul_(&indices_dim_i32)
+                                                .map_err(xla_error_to_hodu_error)?,
+                                        )
+                                        .map_err(xla_error_to_hodu_error)?;
+
+                                    let base_stride_i32 = builder
+                                        .constant_r0(base_strides[d] as i32)
+                                        .map_err(xla_error_to_hodu_error)?;
+                                    let contribution = coord.mul_(&base_stride_i32).map_err(xla_error_to_hodu_error)?;
+                                    flat_indices_i32 =
+                                        flat_indices_i32.add_(&contribution).map_err(xla_error_to_hodu_error)?;
+                                }
+                            }
+                            let flat_indices_reshaped = flat_indices_i32
+                                .reshape(&[indices_size, 1])
+                                .map_err(xla_error_to_hodu_error)?;
+
+                            // Perform 1D scatter
+                            let result_flat = base_flat
+                                .scatter(
+                                    &flat_indices_reshaped,
+                                    &values_flat,
+                                    update_computation,
+                                    &[],
+                                    &[0],
+                                    &[0],
+                                    Some(1),
+                                    false,
+                                    false,
+                                )
+                                .map_err(xla_error_to_hodu_error)?;
+
+                            // Reshape back to original shape
+                            result_flat.reshape(base_dims).map_err(xla_error_to_hodu_error)
+                        } else {
+                            // 1D case - simple scatter
+                            let update_window_dims: Vec<i64> = (0..base_rank as i64).filter(|x| *x != dim).collect();
+                            let inserted_window_dims = vec![dim];
+                            let scatter_dims_to_operand_dims = vec![dim];
+                            let index_vector_dim = Some(indices_rank as i64);
+
+                            let mut indices_dims_plus_1 = indices_shape.dims().to_vec();
+                            indices_dims_plus_1.push(1);
+                            let indices_reshaped = input_ops[1]
+                                .reshape(&indices_dims_plus_1)
+                                .map_err(xla_error_to_hodu_error)?;
+
+                            input_ops[0]
+                                .scatter(
+                                    &indices_reshaped,
+                                    &input_ops[2],
+                                    update_computation,
+                                    &update_window_dims,
+                                    &inserted_window_dims,
+                                    &scatter_dims_to_operand_dims,
+                                    index_vector_dim,
+                                    false,
+                                    false,
+                                )
+                                .map_err(xla_error_to_hodu_error)
+                        }
+                    },
                     IndexingOp::Gather => {
                         // input_ops: [self, indices]
                         if input_ops.len() != 2 {
@@ -1171,7 +1349,6 @@ impl XlaExecutor {
                             input_ops[0].take(&input_ops[1], dim).map_err(xla_error_to_hodu_error)
                         }
                     },
-
                     IndexingOp::Scatter => {
                         // input_ops: [self, indices, src]
                         if input_ops.len() != 3 {
@@ -1357,7 +1534,6 @@ impl XlaExecutor {
                                 .map_err(xla_error_to_hodu_error)
                         }
                     },
-
                     IndexingOp::ScatterAdd => {
                         // input_ops: [self, indices, src]
                         if input_ops.len() != 3 {
@@ -1524,7 +1700,6 @@ impl XlaExecutor {
                                 .map_err(xla_error_to_hodu_error)
                         }
                     },
-
                     IndexingOp::ScatterMax => {
                         // input_ops: [self, indices, src]
                         if input_ops.len() != 3 {
@@ -1688,7 +1863,6 @@ impl XlaExecutor {
                                 .map_err(xla_error_to_hodu_error)
                         }
                     },
-
                     IndexingOp::ScatterMin => {
                         // input_ops: [self, indices, src]
                         if input_ops.len() != 3 {
@@ -1852,182 +2026,6 @@ impl XlaExecutor {
                                 .map_err(xla_error_to_hodu_error)
                         }
                     },
-
-                    IndexingOp::IndexPut => {
-                        // input_ops: [self, indices, values]
-                        if input_ops.len() != 3 {
-                            return Err(HoduError::InternalError("IndexPut requires 3 inputs".to_string()));
-                        }
-
-                        // Extract dim from params
-                        let dim = params
-                            .first()
-                            .ok_or_else(|| {
-                                HoduError::InternalError("IndexPut requires dimension parameter".to_string())
-                            })?
-                            .to_u64() as i64;
-
-                        // Create update computation that replaces values
-                        let element_type = input_ops[0].ty().map_err(xla_error_to_hodu_error)?;
-                        let element_type = Self::element_type_to_element_type(element_type)?;
-
-                        let update_builder = XlaBuilder::new("index_put_update");
-                        let _old = update_builder
-                            .parameter(0, element_type, &[], "old")
-                            .map_err(xla_error_to_hodu_error)?;
-                        let new = update_builder
-                            .parameter(1, element_type, &[], "new")
-                            .map_err(xla_error_to_hodu_error)?;
-                        let update_computation = new.build().map_err(xla_error_to_hodu_error)?;
-
-                        // Get shapes for scatter configuration
-                        let base_shape = input_ops[0].array_shape().map_err(xla_error_to_hodu_error)?;
-                        let indices_shape = input_ops[1].array_shape().map_err(xla_error_to_hodu_error)?;
-                        let values_shape = input_ops[2].array_shape().map_err(xla_error_to_hodu_error)?;
-
-                        let base_rank = base_shape.dims().len();
-                        let indices_rank = indices_shape.dims().len();
-                        let base_dims = base_shape.dims();
-                        let indices_dims = indices_shape.dims();
-                        let _values_dims = values_shape.dims();
-
-                        // For multidimensional index_put, convert PyTorch semantics to XLA
-                        if indices_rank > 1 && base_rank > 1 {
-                            // PyTorch: values[i,j,...] -> input[indices[i,j,...], j, ...]
-                            // XLA: requires flattened indices with proper offset calculation
-
-                            // Flatten base, indices, values
-                            let base_size: i64 = base_dims.iter().product();
-                            let indices_size: i64 = indices_dims.iter().product();
-
-                            let base_flat = input_ops[0].reshape(&[base_size]).map_err(xla_error_to_hodu_error)?;
-                            let indices_flat =
-                                input_ops[1].reshape(&[indices_size]).map_err(xla_error_to_hodu_error)?;
-                            let values_flat = input_ops[2].reshape(&[indices_size]).map_err(xla_error_to_hodu_error)?;
-
-                            // Calculate strides for mapping positions
-                            let base_strides: Vec<i64> = {
-                                let mut strides = vec![1i64; base_rank];
-                                for i in (0..base_rank - 1).rev() {
-                                    strides[i] = strides[i + 1] * base_dims[i + 1];
-                                }
-                                strides
-                            };
-
-                            // Strides in indices tensor (for decomposing position p)
-                            let indices_strides: Vec<i64> = {
-                                let mut strides = vec![1i64; indices_rank];
-                                for i in (0..indices_rank - 1).rev() {
-                                    strides[i] = strides[i + 1] * indices_dims[i + 1];
-                                }
-                                strides
-                            };
-
-                            // For each position p, compute coordinates in indices tensor,
-                            // then map to flat index in base
-                            let positions: Vec<i64> = (0..indices_size).collect();
-                            let positions_op = builder.constant_r1(&positions).map_err(xla_error_to_hodu_error)?;
-                            let positions_i32 = positions_op
-                                .convert(PrimitiveType::S32)
-                                .map_err(xla_error_to_hodu_error)?;
-                            let indices_i32 = indices_flat
-                                .convert(PrimitiveType::S32)
-                                .map_err(xla_error_to_hodu_error)?;
-
-                            // Build flat index calculation step by step
-                            let zero_i32 = builder.constant_r0(0i32).map_err(xla_error_to_hodu_error)?;
-                            let mut flat_indices_i32 =
-                                zero_i32.broadcast(&[indices_size]).map_err(xla_error_to_hodu_error)?;
-
-                            for d in 0..base_rank {
-                                if d == dim as usize {
-                                    // Use indices[p] for this dimension
-                                    let base_stride_i32 = builder
-                                        .constant_r0(base_strides[d] as i32)
-                                        .map_err(xla_error_to_hodu_error)?;
-                                    let contribution =
-                                        indices_i32.mul_(&base_stride_i32).map_err(xla_error_to_hodu_error)?;
-                                    flat_indices_i32 =
-                                        flat_indices_i32.add_(&contribution).map_err(xla_error_to_hodu_error)?;
-                                } else {
-                                    // Extract coordinate from position p
-                                    let indices_stride_i32 = builder
-                                        .constant_r0(indices_strides[d] as i32)
-                                        .map_err(xla_error_to_hodu_error)?;
-                                    let indices_dim_i32 = builder
-                                        .constant_r0(indices_dims[d] as i32)
-                                        .map_err(xla_error_to_hodu_error)?;
-
-                                    let coord_quotient = positions_i32
-                                        .div_(&indices_stride_i32)
-                                        .map_err(xla_error_to_hodu_error)?;
-                                    let coord_remainder_quotient =
-                                        coord_quotient.div_(&indices_dim_i32).map_err(xla_error_to_hodu_error)?;
-                                    let coord = coord_quotient
-                                        .sub_(
-                                            &coord_remainder_quotient
-                                                .mul_(&indices_dim_i32)
-                                                .map_err(xla_error_to_hodu_error)?,
-                                        )
-                                        .map_err(xla_error_to_hodu_error)?;
-
-                                    let base_stride_i32 = builder
-                                        .constant_r0(base_strides[d] as i32)
-                                        .map_err(xla_error_to_hodu_error)?;
-                                    let contribution = coord.mul_(&base_stride_i32).map_err(xla_error_to_hodu_error)?;
-                                    flat_indices_i32 =
-                                        flat_indices_i32.add_(&contribution).map_err(xla_error_to_hodu_error)?;
-                                }
-                            }
-                            let flat_indices_reshaped = flat_indices_i32
-                                .reshape(&[indices_size, 1])
-                                .map_err(xla_error_to_hodu_error)?;
-
-                            // Perform 1D scatter
-                            let result_flat = base_flat
-                                .scatter(
-                                    &flat_indices_reshaped,
-                                    &values_flat,
-                                    update_computation,
-                                    &[],
-                                    &[0],
-                                    &[0],
-                                    Some(1),
-                                    false,
-                                    false,
-                                )
-                                .map_err(xla_error_to_hodu_error)?;
-
-                            // Reshape back to original shape
-                            result_flat.reshape(base_dims).map_err(xla_error_to_hodu_error)
-                        } else {
-                            // 1D case - simple scatter
-                            let update_window_dims: Vec<i64> = (0..base_rank as i64).filter(|x| *x != dim).collect();
-                            let inserted_window_dims = vec![dim];
-                            let scatter_dims_to_operand_dims = vec![dim];
-                            let index_vector_dim = Some(indices_rank as i64);
-
-                            let mut indices_dims_plus_1 = indices_shape.dims().to_vec();
-                            indices_dims_plus_1.push(1);
-                            let indices_reshaped = input_ops[1]
-                                .reshape(&indices_dims_plus_1)
-                                .map_err(xla_error_to_hodu_error)?;
-
-                            input_ops[0]
-                                .scatter(
-                                    &indices_reshaped,
-                                    &input_ops[2],
-                                    update_computation,
-                                    &update_window_dims,
-                                    &inserted_window_dims,
-                                    &scatter_dims_to_operand_dims,
-                                    index_vector_dim,
-                                    false,
-                                    false,
-                                )
-                                .map_err(xla_error_to_hodu_error)
-                        }
-                    },
                 }
             },
 
@@ -2077,7 +2075,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::Conv2d => {
                         // Extract parameters
                         if params.len() < 10 {
@@ -2115,7 +2112,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::Conv3d => {
                         // Extract parameters
                         if params.len() < 12 {
@@ -2153,7 +2149,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::ConvTranspose1d => {
                         // Extract parameters
                         if params.len() < 9 {
@@ -2244,7 +2239,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::ConvTranspose2d => {
                         // Extract parameters
                         if params.len() < 11 {
@@ -2318,7 +2312,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::ConvTranspose3d => {
                         // Extract parameters
                         if params.len() < 13 {
@@ -2419,7 +2412,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::Conv1dGradWeight => {
                         // Extract parameters
                         if params.len() < 8 {
@@ -2454,7 +2446,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::Conv2dGradWeight => {
                         // Extract parameters
                         if params.len() < 10 {
@@ -2488,7 +2479,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::Conv3dGradWeight => {
                         // Extract parameters
                         if params.len() < 12 {
@@ -2522,7 +2512,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::ConvTranspose1dGradWeight => {
                         // Extract parameters
                         if params.len() < 9 {
@@ -2555,7 +2544,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::ConvTranspose2dGradWeight => {
                         // Extract parameters
                         if params.len() < 11 {
@@ -2588,7 +2576,6 @@ impl XlaExecutor {
                             )
                             .map_err(xla_error_to_hodu_error)
                     },
-
                     ConvOp::ConvTranspose3dGradWeight => {
                         // Extract parameters
                         if params.len() < 13 {

@@ -2,6 +2,7 @@
 # ? <- combination of other ops
 # @ <- alias
 # {} <- group
+# ^ <- non public
 
 // binary
 add
@@ -120,6 +121,12 @@ conv3d
 conv_transpose1d
 conv_transpose2d
 conv_transpose3d
+conv1d_grad_weight^
+conv2d_grad_weight^
+conv3d_grad_weight^
+conv_transpose1d_grad_weight^
+conv_transpose2d_grad_weight^
+conv_transpose3d_grad_weight^
 // windowing
 {reduce_window} max!, mean, sum, min!
 // shape
@@ -134,7 +141,7 @@ broadcast_left@
 transpose
 t@
 permute
-// type
+// cast
 to_dtype!
 // memory
 contiguous!

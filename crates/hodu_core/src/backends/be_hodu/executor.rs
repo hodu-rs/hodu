@@ -1185,66 +1185,6 @@ impl HoduExecutor {
         }
     }
 
-    fn execute_shape_op(&self, _shape_op: ShapeOp, input_storage: &SharedStorage) -> HoduResult<HoduStorage> {
-        // All shape operations (Reshape, Flatten, Squeeze, Unsqueeze, Broadcast, Transpose)
-        // simply return the same storage as the layout changes are handled at the tensor level
-        match input_storage.as_ref() {
-            HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-        }
-    }
-
-    fn execute_cast_op(
-        &self,
-        cast_op: CastOp,
-        input_storage: &SharedStorage,
-        compiled_node: &CompiledNode,
-        compiled: &HoduCompiledScript,
-    ) -> HoduResult<HoduStorage> {
-        match cast_op {
-            CastOp::ToDType => {
-                // Get the output tensor ID to find its dtype
-                let output_tensor_id = compiled_node
-                    .output_tensors
-                    .first()
-                    .ok_or_else(|| HoduError::InternalError("Cast operation has no output tensor".to_string()))?;
-
-                // Get target dtype from compiled tensor_dtypes
-                let target_dtype = compiled
-                    .tensor_dtypes
-                    .get(output_tensor_id)
-                    .copied()
-                    .unwrap_or(DType::F32); // Default to F32 if no dtype specified
-
-                match input_storage.as_ref() {
-                    HoduStorage::CPU(cpu_storage) => {
-                        let converted_storage = cpu_storage.to_dtype(target_dtype)?;
-                        Ok(HoduStorage::CPU(converted_storage))
-                    },
-                }
-            },
-        }
-    }
-
-    fn execute_memory_op(
-        &self,
-        memory_op: MemoryOp,
-        input_storage: &SharedStorage,
-        compiled_node: &CompiledNode,
-    ) -> HoduResult<HoduStorage> {
-        match memory_op {
-            MemoryOp::Contiguous => {
-                // Get the input layout from compiled node
-                let input_layout = compiled_node
-                    .input_layouts
-                    .first()
-                    .ok_or_else(|| HoduError::InternalError("Contiguous operation has no input layout".to_string()))?;
-
-                // Execute contiguous operation on storage
-                input_storage.contiguous(input_layout)
-            },
-        }
-    }
-
     fn execute_windowing_op(
         &self,
         windowing_op: WindowingOp,
@@ -1314,6 +1254,66 @@ impl HoduExecutor {
                 };
 
                 input_storage.reduce_window(input_layout, &window_shape, &strides, &padding, reduction)
+            },
+        }
+    }
+
+    fn execute_shape_op(&self, _shape_op: ShapeOp, input_storage: &SharedStorage) -> HoduResult<HoduStorage> {
+        // All shape operations (Reshape, Flatten, Squeeze, Unsqueeze, Broadcast, Transpose)
+        // simply return the same storage as the layout changes are handled at the tensor level
+        match input_storage.as_ref() {
+            HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+        }
+    }
+
+    fn execute_cast_op(
+        &self,
+        cast_op: CastOp,
+        input_storage: &SharedStorage,
+        compiled_node: &CompiledNode,
+        compiled: &HoduCompiledScript,
+    ) -> HoduResult<HoduStorage> {
+        match cast_op {
+            CastOp::ToDType => {
+                // Get the output tensor ID to find its dtype
+                let output_tensor_id = compiled_node
+                    .output_tensors
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Cast operation has no output tensor".to_string()))?;
+
+                // Get target dtype from compiled tensor_dtypes
+                let target_dtype = compiled
+                    .tensor_dtypes
+                    .get(output_tensor_id)
+                    .copied()
+                    .unwrap_or(DType::F32); // Default to F32 if no dtype specified
+
+                match input_storage.as_ref() {
+                    HoduStorage::CPU(cpu_storage) => {
+                        let converted_storage = cpu_storage.to_dtype(target_dtype)?;
+                        Ok(HoduStorage::CPU(converted_storage))
+                    },
+                }
+            },
+        }
+    }
+
+    fn execute_memory_op(
+        &self,
+        memory_op: MemoryOp,
+        input_storage: &SharedStorage,
+        compiled_node: &CompiledNode,
+    ) -> HoduResult<HoduStorage> {
+        match memory_op {
+            MemoryOp::Contiguous => {
+                // Get the input layout from compiled node
+                let input_layout = compiled_node
+                    .input_layouts
+                    .first()
+                    .ok_or_else(|| HoduError::InternalError("Contiguous operation has no input layout".to_string()))?;
+
+                // Execute contiguous operation on storage
+                input_storage.contiguous(input_layout)
             },
         }
     }

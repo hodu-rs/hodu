@@ -375,22 +375,25 @@ impl Tensor {
     unary_op!(abs, Abs);
     unary_op!(sign, Sign);
     unary_op!(square, Square);
+    unary_op!(sqrt, Sqrt);
+    unary_op!(recip, Recip);
+
     unary_op!(relu, Relu);
     unary_op!(sigmoid, Sigmoid);
     unary_op!(tanh, Tanh);
     unary_op!(gelu, Gelu);
+    unary_op!(softplus, Softplus);
+
     unary_op!(sin, Sin);
     unary_op!(cos, Cos);
     unary_op!(tan, Tan);
-    unary_op!(ln, Ln);
-    unary_op!(log10, Log10);
-    unary_op!(log2, Log2);
+
     unary_op!(exp, Exp);
-    unary_op!(exp10, Exp10);
     unary_op!(exp2, Exp2);
-    unary_op!(softplus, Softplus);
-    unary_op!(recip, Recip);
-    unary_op!(sqrt, Sqrt);
+    unary_op!(exp10, Exp10);
+    unary_op!(ln, Ln);
+    unary_op!(log2, Log2);
+    unary_op!(log10, Log10);
 
     // Unary logical operations
     unary_logical_op!(logical_not, LogicalNot);
@@ -403,6 +406,7 @@ impl Tensor {
     unary_scalar_op!(pow_scalar, PowScalar);
     unary_scalar_op!(maximum_scalar, MaximumScalar);
     unary_scalar_op!(minimum_scalar, MinimumScalar);
+
     unary_scalar_op!(leaky_relu, LeakyRelu);
     unary_scalar_op!(elu, Elu);
 
