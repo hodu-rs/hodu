@@ -2,7 +2,7 @@
 //!
 //! Usage: `use hodu_core::prelude::*;`
 
-// Re-export core library types and functions
+// Re-export
 pub use crate::backends::{builder::Builder, script::Script};
 pub use crate::error::HoduResult;
 pub use crate::scalar::Scalar;

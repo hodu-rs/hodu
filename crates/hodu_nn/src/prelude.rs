@@ -2,7 +2,7 @@
 //!
 //! Usage: `use hodu_nn::prelude::*;`
 
-// Re-export core library types and functions
+// Re-export
 pub use crate::losses::{
     binary_cross_entropy::BCEWithLogitsLoss, cross_entropy::CrossEntropyLoss, mae::MAELoss, mse::MSELoss,
 };
