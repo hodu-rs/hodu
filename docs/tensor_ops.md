@@ -174,6 +174,8 @@ Operations that reduce tensor dimensions.
 | `norm` | Lp norm with parameter `p` (p=1: L1, p=2: L2, other: Lp) | `l2_norm`, `l1_norm` |
 | `argmax` | Indices of maximum values along dimension | - |
 | `argmin` | Indices of minimum values along dimension | - |
+| `any` | Check if any element is true (logical reduction) | - |
+| `all` | Check if all elements are true (logical reduction) | - |
 
 **Notes**:
 - `norm(p, dims, keep_dim)` computes the Lp norm: `(sum(|x|^p))^(1/p)`
@@ -218,12 +220,19 @@ Operations for selecting and gathering tensor elements.
 
 | Operation | Description |
 |-----------|-------------|
-| `index_select` | Select elements along dimension |
+| `index_select` | Select elements along dimension using indices |
+| `index_put` | Put values at specified indices along dimension |
 | `gather` | Gather elements along dimension |
 | `scatter` | Scatter elements along dimension |
 | `scatter_add` | Scatter elements along dimension and add |
 | `scatter_max` | Scatter elements along dimension and take max |
 | `scatter_min` | Scatter elements along dimension and take min |
+
+**Examples:**
+- `index_select(dim, indices)`: Select rows/columns at given indices
+  - Input: `[3, 4, 5]`, indices: `[0, 2]`, dim: 0 → Output: `[2, 4, 5]` (selects 1st and 3rd elements)
+- `index_put(dim, indices, values)`: Put values at given indices
+  - Input: `[3, 4, 5]`, indices: `[1]`, values: `[4]`, dim: 0 → Output: `[3, 4, 5]` with 2nd element set to values
 
 ## Selection Operations
 

@@ -87,6 +87,8 @@ l2_norm
 l1_norm?
 argmax!
 argmin!
+any!
+all!
 // concat
 concat
 cat@
@@ -99,6 +101,7 @@ softmax?
 log_softmax?
 // indexing
 index_select
+index_put
 gather
 scatter
 scatter_add

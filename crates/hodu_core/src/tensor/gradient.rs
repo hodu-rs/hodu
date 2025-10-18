@@ -769,6 +769,39 @@ impl VjpCompute for IndexingOp {
                 Ok(vec![result.id()])
             },
 
+            IndexingOp::IndexPut => {
+                // inputs: [self, values, indices]
+                if inputs.len() != 3 {
+                    return Err(HoduError::InternalError("IndexPut requires 3 inputs".to_string()));
+                }
+
+                let self_id = inputs[0];
+                let _values_id = inputs[1];
+                let indices_id = inputs[2];
+
+                let self_tensor = tensor_from_id(self_id);
+                let dtype = self_tensor.get_dtype();
+
+                let indices_tensor = tensor_from_id(indices_id);
+                let grad_tensor = tensor_from_id(grad_output);
+
+                // Gradient w.r.t. self: everywhere except indexed positions
+                // Create a mask: 1 everywhere, 0 at indexed positions
+                let ones = tensor::Tensor::ones(self_tensor.get_layout().get_shape(), dtype)?;
+                let zeros_at_indices = ones.index_put(
+                    dim,
+                    &indices_tensor,
+                    &tensor::Tensor::zeros(indices_tensor.get_layout().get_shape(), dtype)?,
+                )?;
+                let grad_self = grad_tensor.mul(&zeros_at_indices)?;
+
+                // Gradient w.r.t. values: gather from grad_output at indices
+                let grad_values = grad_tensor.gather(dim, &indices_tensor)?;
+
+                // IndexPut doesn't have gradient w.r.t. indices
+                Ok(vec![grad_self.id(), grad_values.id()])
+            },
+
             IndexingOp::Scatter => {
                 // inputs: [self, src, indices]
                 if inputs.len() != 3 {
@@ -1671,7 +1704,7 @@ fn compute_vjp_for_op(
             unary_scalar_op.compute_vjp_with_scalar(inputs, output, grad_output, *scalar)
         },
         Op::Matrix(matrix_op, _, _) => matrix_op.compute_vjp(inputs, output, grad_output),
-        Op::Reduce(reduce_op, _, dims_scalars) => {
+        Op::Reduce(reduce_op, _, _, dims_scalars) => {
             reduce_op.compute_vjp_with_dims(inputs, output, grad_output, dims_scalars)
         },
         Op::Concat(concat_op, _, params) => concat_op.compute_vjp_with_dims(inputs, output, grad_output, params),

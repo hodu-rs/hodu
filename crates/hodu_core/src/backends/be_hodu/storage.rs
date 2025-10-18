@@ -58,6 +58,8 @@ pub trait HoduStorageT: Sized {
 
     fn index_select(&self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
 
+    fn index_put(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
+
     fn gather(&self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
 
     fn scatter(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self>;
@@ -310,6 +312,23 @@ impl HoduStorage {
         match (self, indices_storage) {
             (Self::CPU(storage), Self::CPU(indices)) => {
                 let result = storage.index_select(layout, indices, indices_layout, dim)?;
+                Ok(Self::CPU(result))
+            },
+        }
+    }
+
+    pub(crate) fn index_put(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        values_storage: &Self,
+        values_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        match (self, indices_storage, values_storage) {
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(values)) => {
+                let result = storage.index_put(layout, indices, indices_layout, values, values_layout, dim)?;
                 Ok(Self::CPU(result))
             },
         }

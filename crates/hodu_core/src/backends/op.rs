@@ -280,6 +280,8 @@ pub enum ReduceOp {
     Norm,
     ArgMax, // no-backprop
     ArgMin, // no-backprop
+    Any,    // no-backprop
+    All,    // no-backprop
 }
 
 impl ReduceOp {
@@ -295,6 +297,8 @@ impl ReduceOp {
             ReduceOp::Norm => "norm".to_string(),
             ReduceOp::ArgMax => "argmax".to_string(),
             ReduceOp::ArgMin => "argmin".to_string(),
+            ReduceOp::Any => "any".to_string(),
+            ReduceOp::All => "all".to_string(),
         }
     }
 }
@@ -320,6 +324,7 @@ pub enum SplitOp {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum IndexingOp {
     IndexSelect,
+    IndexPut,
     Gather,
     Scatter,
     ScatterAdd,
@@ -391,7 +396,7 @@ pub enum Op {
     UnaryLogical(UnaryLogicalOp, TensorId),
     UnaryScalar(UnaryScalarOp, TensorId, Scalar),
     Matrix(MatrixOp, TensorId, TensorId),
-    Reduce(ReduceOp, TensorId, Vec<Scalar>),
+    Reduce(ReduceOp, TensorId, bool, Vec<Scalar>),
     Concat(ConcatOp, Vec<TensorId>, Vec<Scalar>),
     Split(SplitOp, TensorId, Vec<Scalar>, usize),
     Indexing(IndexingOp, Vec<TensorId>, Vec<Scalar>),
@@ -414,7 +419,7 @@ impl Op {
             Op::UnaryLogical(_, t) => vec![*t],
             Op::UnaryScalar(_, t, _) => vec![*t],
             Op::Matrix(_, t1, t2) => vec![*t1, *t2],
-            Op::Reduce(_, t, _) => vec![*t],
+            Op::Reduce(_, t, _, _) => vec![*t],
             Op::Concat(_, tt, _) => tt.clone(),
             Op::Split(_, t, _, _) => vec![*t],
             Op::Indexing(_, tt, _) => tt.clone(),

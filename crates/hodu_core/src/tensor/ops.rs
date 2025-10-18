@@ -842,6 +842,14 @@ impl Tensor {
         self.reduce_operation(op::ReduceOp::ArgMin, dims, keep_dim)
     }
 
+    pub fn any(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        self.reduce_operation(op::ReduceOp::Any, dims, keep_dim)
+    }
+
+    pub fn all(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        self.reduce_operation(op::ReduceOp::All, dims, keep_dim)
+    }
+
     fn reduce_operation(&self, reduce_op: op::ReduceOp, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
         if builder::is_builder_active() {
             let layout = self.get_layout();
@@ -865,9 +873,6 @@ impl Tensor {
             }
             if !keep_dim {
                 output_shape.retain(|&size| size != 0);
-                if output_shape.is_empty() {
-                    output_shape = vec![1];
-                }
             }
 
             let result_layout = Layout::from_shape(&output_shape);
@@ -875,7 +880,7 @@ impl Tensor {
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
-            let op = Op::Reduce(reduce_op, self.id(), dims_scalars);
+            let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars);
             register_operation_in_builder(op.clone(), vec![result_id], vec![layout.clone()], vec![result_layout]);
 
             if self.is_requires_grad() {
@@ -906,9 +911,6 @@ impl Tensor {
             }
             if !keep_dim {
                 output_shape.retain(|&size| size != 0);
-                if output_shape.is_empty() {
-                    output_shape = vec![1];
-                }
             }
 
             let result_layout = Layout::from_shape(&output_shape);
@@ -917,7 +919,7 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && self.is_requires_grad() {
                 let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
-                let op = Op::Reduce(reduce_op, self.id(), dims_scalars);
+                let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id()])?;
             }
 
@@ -1195,6 +1197,70 @@ impl Tensor {
                     vec![dim_scalar],
                 );
                 gradient::record_operation(result.id(), op, vec![self.id(), indices.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
+    pub fn index_put<D: Into<Scalar>>(&self, dim: D, indices: &Self, values: &Self) -> HoduResult<Self> {
+        let dim_scalar = dim.into();
+        let dim_usize = dim_scalar.to_u64() as usize;
+
+        if builder::is_builder_active() {
+            let layout = self.get_layout();
+            let indices_layout = indices.get_layout();
+            let values_layout = values.get_layout();
+
+            // Output has same shape as input
+            let result_layout = layout.clone();
+            let requires_grad = self.is_requires_grad() || values.is_requires_grad();
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+            let op = Op::Indexing(
+                op::IndexingOp::IndexPut,
+                vec![self.id(), indices.id(), values.id()],
+                vec![dim_scalar],
+            );
+            register_operation_in_builder(
+                op.clone(),
+                vec![result_id],
+                vec![layout.clone(), indices_layout.clone(), values_layout.clone()],
+                vec![result_layout],
+            );
+
+            if requires_grad {
+                gradient::record_operation(result_id, op, vec![self.id(), values.id(), indices.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                indices.with_storage(|indices_storage| {
+                    values.with_storage(|values_storage| {
+                        storage.index_put(
+                            &self.get_layout(),
+                            indices_storage,
+                            &indices.get_layout(),
+                            values_storage,
+                            &values.get_layout(),
+                            dim_usize,
+                        )
+                    })
+                })
+            })?;
+
+            let result_layout = self.get_layout();
+            let requires_grad = self.is_requires_grad() || values.is_requires_grad();
+            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(
+                    op::IndexingOp::IndexPut,
+                    vec![self.id(), indices.id(), values.id()],
+                    vec![dim_scalar],
+                );
+                gradient::record_operation(result.id(), op, vec![self.id(), values.id(), indices.id()])?;
             }
 
             Ok(result)

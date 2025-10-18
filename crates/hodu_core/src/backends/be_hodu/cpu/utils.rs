@@ -1629,6 +1629,266 @@ pub fn reduce_argmin<T: Copy + PartialOrd>(
     Ok((result, output_shape))
 }
 
+pub fn reduce_any<T>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<bool>, Vec<usize>)>
+where
+    T: Copy + Default + PartialEq,
+{
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    // Handle empty dims (reduce all)
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0; // Mark for removal
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        // If all dimensions are reduced, output_shape becomes empty (scalar)
+    }
+
+    let output_size = if output_shape.is_empty() {
+        1 // Scalar has size 1
+    } else {
+        output_shape.iter().product::<usize>()
+    };
+    let mut result = vec![false; output_size];
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            // Check if value is truthy (non-zero/non-default)
+            if storage[flat_index] != T::default() {
+                result[0] = true;
+                return Ok((result, output_shape));
+            }
+        }
+
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional reduction
+    for output_idx in 0..output_size {
+        // Generate indices for the output tensor
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        // Map output indices back to input indices
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0; // Will iterate over this
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        // Iterate over reduced dimensions
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            // Set the reduced dimension indices
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            // Calculate flat index
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            // Check if value is truthy
+            if storage[flat_index] != T::default() {
+                result[output_idx] = true;
+                break; // Early exit for any
+            }
+        }
+    }
+
+    Ok((result, output_shape))
+}
+
+pub fn reduce_all<T>(
+    storage: &[T],
+    layout: &Layout,
+    dims: &[usize],
+    keep_dim: bool,
+) -> HoduResult<(Vec<bool>, Vec<usize>)>
+where
+    T: Copy + Default + PartialEq,
+{
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    // Handle empty dims (reduce all)
+    let reduce_dims: Vec<usize> = if dims.is_empty() {
+        (0..ndim).collect()
+    } else {
+        dims.to_vec()
+    };
+
+    // Calculate output shape
+    let mut output_shape = shape.to_vec();
+    for &dim in &reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0; // Mark for removal
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        // If all dimensions are reduced, output_shape becomes empty (scalar)
+    }
+
+    let output_size = if output_shape.is_empty() {
+        1 // Scalar has size 1
+    } else {
+        output_shape.iter().product::<usize>()
+    };
+    let mut result = vec![true; output_size]; // Start with true for all
+
+    // Simple case: reduce all dimensions
+    if reduce_dims.len() == ndim {
+        let total_elements = shape.iter().product::<usize>();
+
+        for i in 0..total_elements {
+            let mut temp_indices = Vec::with_capacity(ndim);
+            let mut temp = i;
+            for &dim_size in shape.iter().rev() {
+                temp_indices.push(temp % dim_size);
+                temp /= dim_size;
+            }
+            temp_indices.reverse();
+
+            let mut flat_index = offset;
+            for (j, &idx) in temp_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            // Check if value is falsy (zero/default)
+            if storage[flat_index] == T::default() {
+                result[0] = false;
+                return Ok((result, output_shape));
+            }
+        }
+
+        return Ok((result, output_shape));
+    }
+
+    // Multi-dimensional reduction
+    for output_idx in 0..output_size {
+        // Generate indices for the output tensor
+        let mut output_indices = Vec::with_capacity(output_shape.len());
+        let mut temp = output_idx;
+        for &dim_size in output_shape.iter().rev() {
+            output_indices.push(temp % dim_size);
+            temp /= dim_size;
+        }
+        output_indices.reverse();
+
+        // Map output indices back to input indices
+        let mut input_indices = vec![0; ndim];
+        let mut output_dim_idx = 0;
+        for input_dim in 0..ndim {
+            if reduce_dims.contains(&input_dim) {
+                input_indices[input_dim] = 0; // Will iterate over this
+            } else {
+                if output_dim_idx < output_indices.len() {
+                    input_indices[input_dim] = output_indices[output_dim_idx];
+                }
+                output_dim_idx += 1;
+            }
+        }
+
+        // Iterate over reduced dimensions
+        let reduced_sizes: Vec<usize> = reduce_dims.iter().map(|&d| shape[d]).collect();
+        let total_reduced = reduced_sizes.iter().product::<usize>();
+
+        for reduced_idx in 0..total_reduced {
+            let mut temp_reduced_indices = Vec::new();
+            let mut temp = reduced_idx;
+            for &size in reduced_sizes.iter().rev() {
+                temp_reduced_indices.push(temp % size);
+                temp /= size;
+            }
+            temp_reduced_indices.reverse();
+
+            // Set the reduced dimension indices
+            for (i, &dim) in reduce_dims.iter().enumerate() {
+                input_indices[dim] = temp_reduced_indices[i];
+            }
+
+            // Calculate flat index
+            let mut flat_index = offset;
+            for (j, &idx) in input_indices.iter().enumerate() {
+                flat_index += idx * strides[j];
+            }
+
+            // Check if value is falsy
+            if storage[flat_index] == T::default() {
+                result[output_idx] = false;
+                break; // Early exit for all
+            }
+        }
+    }
+
+    Ok((result, output_shape))
+}
+
 pub fn concat_map<T: Copy>(
     first_storage: &[T],
     other_storages: &[&[T]],
@@ -1821,6 +2081,107 @@ pub fn index_select_map<T: Copy>(
         for i in (0..ndim).rev() {
             output_indices[i] += 1;
             if output_indices[i] < output_shape[i] {
+                break;
+            }
+            output_indices[i] = 0;
+        }
+    }
+
+    Ok(result)
+}
+
+pub fn index_put_map<T: Copy>(
+    storage: &[T],
+    layout: &Layout,
+    indices_storage: &[i32],
+    indices_layout: &Layout,
+    values_storage: &[T],
+    values_layout: &Layout,
+    dim: usize,
+) -> HoduResult<Vec<T>> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    if dim >= ndim {
+        return Err(HoduError::InternalError(format!(
+            "index_put - dimension {} out of range for {}-dimensional tensor",
+            dim, ndim
+        )));
+    }
+
+    let indices_offset = indices_layout.get_offset();
+    let indices_size = indices_layout.get_size();
+    let indices_strides = indices_layout.get_strides();
+    let indices_shape = indices_layout.get_shape();
+
+    let values_shape = values_layout.get_shape();
+    let values_strides = values_layout.get_strides();
+    let values_offset = values_layout.get_offset();
+
+    // Create a copy of the input storage
+    let mut result = storage.to_vec();
+
+    // Expected values shape: replace indexed dimension with indices size
+    let mut expected_values_shape = shape.to_vec();
+    expected_values_shape[dim] = indices_size;
+
+    if values_shape != expected_values_shape {
+        return Err(HoduError::InternalError(format!(
+            "index_put - values shape {:?} does not match expected shape {:?}",
+            values_shape, expected_values_shape
+        )));
+    }
+
+    let values_size: usize = expected_values_shape.iter().product();
+    let mut output_indices = vec![0; ndim];
+
+    for _ in 0..values_size {
+        // Calculate which index to use
+        let index_pos = output_indices[dim];
+
+        // Get the actual index value from indices tensor
+        let mut indices_idx = indices_offset;
+        if indices_layout.is_contiguous() {
+            indices_idx += index_pos;
+        } else {
+            let mut tmp_pos = index_pos;
+            for d in (0..indices_shape.len()).rev() {
+                let i_dim = tmp_pos % indices_shape[d];
+                indices_idx += i_dim * indices_strides[d];
+                tmp_pos /= indices_shape[d];
+            }
+        }
+
+        let idx = indices_storage[indices_idx];
+        if idx < 0 || idx >= shape[dim] as i32 {
+            return Err(HoduError::InternalError(format!(
+                "index {} out of bounds for dimension {} with size {}",
+                idx, dim, shape[dim]
+            )));
+        }
+
+        // Calculate flat index in result tensor
+        let mut flat_index = offset;
+        for i in 0..ndim {
+            let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+            flat_index += actual_idx * strides[i];
+        }
+
+        // Calculate flat index in values tensor
+        let mut values_flat_index = values_offset;
+        for i in 0..ndim {
+            values_flat_index += output_indices[i] * values_strides[i];
+        }
+
+        // Put the value
+        result[flat_index] = values_storage[values_flat_index];
+
+        // Increment output indices
+        for i in (0..ndim).rev() {
+            output_indices[i] += 1;
+            if output_indices[i] < expected_values_shape[i] {
                 break;
             }
             output_indices[i] = 0;

@@ -934,6 +934,20 @@ impl HoduStorageT for CpuStorage {
 
     fn reduce(&self, reduce_op: ReduceOp, layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
         match self {
+            Self::BOOL(storage) => match reduce_op {
+                ReduceOp::Any => {
+                    let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                    Ok(Self::BOOL(bools))
+                },
+                ReduceOp::All => {
+                    let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                    Ok(Self::BOOL(bools))
+                },
+                _ => Err(HoduError::UnsupportedDType {
+                    dtype: self.get_dtype(),
+                    op: reduce_op.to_string(),
+                }),
+            },
             Self::F8E4M3(storage) => {
                 let (data, _shape) = match reduce_op {
                     ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
@@ -953,6 +967,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                 };
                 Ok(Self::F8E4M3(data))
@@ -977,6 +999,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                 };
                 Ok(Self::F8E5M2(data))
             },
@@ -999,6 +1029,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                 };
                 Ok(Self::BF16(data))
@@ -1023,6 +1061,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                 };
                 Ok(Self::F16(data))
             },
@@ -1045,6 +1091,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                 };
                 Ok(Self::F32(data))
@@ -1069,6 +1123,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                 };
                 Ok(Self::F64(data))
             },
@@ -1087,6 +1149,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
@@ -1113,6 +1183,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
                             dtype: self.get_dtype(),
@@ -1137,6 +1215,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
@@ -1163,6 +1249,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
                             dtype: self.get_dtype(),
@@ -1187,6 +1281,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
@@ -1213,6 +1315,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
                             dtype: self.get_dtype(),
@@ -1237,6 +1347,14 @@ impl HoduStorageT for CpuStorage {
                         let dim = if dims.is_empty() { 0 } else { dims[0] as i32 };
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
+                    },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
                     },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
@@ -1263,6 +1381,14 @@ impl HoduStorageT for CpuStorage {
                         let (indices, _) = reduce_argmin(storage, layout, dim, keep_dim)?;
                         return Ok(Self::I32(indices));
                     },
+                    ReduceOp::Any => {
+                        let (bools, _) = reduce_any(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
+                    ReduceOp::All => {
+                        let (bools, _) = reduce_all(storage, layout, dims, keep_dim)?;
+                        return Ok(Self::BOOL(bools));
+                    },
                     _ => {
                         return Err(HoduError::UnsupportedDType {
                             dtype: self.get_dtype(),
@@ -1272,10 +1398,6 @@ impl HoduStorageT for CpuStorage {
                 };
                 Ok(Self::I64(data))
             },
-            _ => Err(HoduError::UnsupportedDType {
-                dtype: self.get_dtype(),
-                op: "reduce".to_string(),
-            }),
         }
     }
 
@@ -1491,6 +1613,147 @@ impl HoduStorageT for CpuStorage {
             Self::I16(storage) => index_select_impl!(storage, I16),
             Self::I32(storage) => index_select_impl!(storage, I32),
             Self::I64(storage) => index_select_impl!(storage, I64),
+        };
+
+        Ok(result)
+    }
+
+    fn index_put(
+        &self,
+        layout: &Layout,
+        indices_storage: &Self,
+        indices_layout: &Layout,
+        values_storage: &Self,
+        values_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        if self.get_dtype() != values_storage.get_dtype() {
+            return Err(HoduError::DTypeConflictInOp {
+                left: self.get_dtype(),
+                right: values_storage.get_dtype(),
+                op: "index_put".to_string(),
+            });
+        }
+
+        let indices_i32 = match indices_storage {
+            Self::I32(data) => data.as_slice(),
+            Self::I64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            Self::U32(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            Self::U64(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            Self::I8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            Self::I16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            Self::U8(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            Self::U16(data) => {
+                let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                return self.index_put(
+                    layout,
+                    &Self::I32(converted),
+                    indices_layout,
+                    values_storage,
+                    values_layout,
+                    dim,
+                );
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: indices_storage.get_dtype(),
+                    op: "index_put - indices must be integer type".to_string(),
+                })
+            },
+        };
+
+        macro_rules! index_put_impl {
+            ($storage:expr, $values_storage:expr, $dtype_variant:ident) => {{
+                let result = index_put_map(
+                    $storage,
+                    layout,
+                    indices_i32,
+                    indices_layout,
+                    $values_storage,
+                    values_layout,
+                    dim,
+                )?;
+                Self::$dtype_variant(result)
+            }};
+        }
+
+        let result = match (self, values_storage) {
+            (Self::BOOL(storage), Self::BOOL(values)) => index_put_impl!(storage, values, BOOL),
+            (Self::F8E4M3(storage), Self::F8E4M3(values)) => index_put_impl!(storage, values, F8E4M3),
+            (Self::F8E5M2(storage), Self::F8E5M2(values)) => index_put_impl!(storage, values, F8E5M2),
+            (Self::BF16(storage), Self::BF16(values)) => index_put_impl!(storage, values, BF16),
+            (Self::F16(storage), Self::F16(values)) => index_put_impl!(storage, values, F16),
+            (Self::F32(storage), Self::F32(values)) => index_put_impl!(storage, values, F32),
+            (Self::F64(storage), Self::F64(values)) => index_put_impl!(storage, values, F64),
+            (Self::U8(storage), Self::U8(values)) => index_put_impl!(storage, values, U8),
+            (Self::U16(storage), Self::U16(values)) => index_put_impl!(storage, values, U16),
+            (Self::U32(storage), Self::U32(values)) => index_put_impl!(storage, values, U32),
+            (Self::U64(storage), Self::U64(values)) => index_put_impl!(storage, values, U64),
+            (Self::I8(storage), Self::I8(values)) => index_put_impl!(storage, values, I8),
+            (Self::I16(storage), Self::I16(values)) => index_put_impl!(storage, values, I16),
+            (Self::I32(storage), Self::I32(values)) => index_put_impl!(storage, values, I32),
+            (Self::I64(storage), Self::I64(values)) => index_put_impl!(storage, values, I64),
+            _ => unreachable!(),
         };
 
         Ok(result)

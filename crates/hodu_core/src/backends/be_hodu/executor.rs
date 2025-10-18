@@ -481,7 +481,7 @@ impl HoduExecutor {
 
                 self.execute_matrix_op(*matrix_op, lhs_storage, rhs_storage, lhs_layout, rhs_layout)
             },
-            Op::Reduce(reduce_op, tensor_id, dims_scalars) => {
+            Op::Reduce(reduce_op, tensor_id, keep_dim, dims_scalars) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)
                     .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
@@ -494,9 +494,7 @@ impl HoduExecutor {
                 // Extract dimensions from scalar array
                 let dims: Vec<usize> = dims_scalars.iter().map(|scalar| scalar.to_u32() as usize).collect();
 
-                let keep_dim = false; // Default keep_dim behavior
-
-                input_storage.reduce(*reduce_op, input_layout, &dims, keep_dim)
+                input_storage.reduce(*reduce_op, input_layout, &dims, *keep_dim)
             },
             Op::Concat(_concat_op, input_tensor_ids, params) => {
                 // Extract dimension from params
@@ -632,7 +630,11 @@ impl HoduExecutor {
                             _ => unreachable!(),
                         }
                     },
-                    IndexingOp::Scatter | IndexingOp::ScatterAdd | IndexingOp::ScatterMax | IndexingOp::ScatterMin => {
+                    IndexingOp::IndexPut
+                    | IndexingOp::Scatter
+                    | IndexingOp::ScatterAdd
+                    | IndexingOp::ScatterMax
+                    | IndexingOp::ScatterMin => {
                         if tensor_ids.len() != 3 {
                             return Err(HoduError::InternalError(format!(
                                 "{:?} requires 3 tensors, got {}",
@@ -664,6 +666,14 @@ impl HoduExecutor {
                             .to_u32() as usize;
 
                         match indexing_op {
+                            IndexingOp::IndexPut => self_storage.index_put(
+                                self_layout,
+                                indices_storage,
+                                indices_layout,
+                                src_storage,
+                                src_layout,
+                                dim,
+                            ),
                             IndexingOp::Scatter => self_storage.scatter(
                                 self_layout,
                                 indices_storage,
