@@ -473,6 +473,120 @@ let output = dropout.forward(&input)?;
 
 **권장 비율:** 은닉층 0.3~0.5, 입력층 0.1~0.2
 
+#### BatchNorm1D, BatchNorm2D, BatchNorm3D
+
+배치 정규화는 미니배치의 통계를 사용하여 입력을 정규화합니다.
+
+```rust
+use hodu::nn::modules::{BatchNorm1D, BatchNorm2D, BatchNorm3D};
+
+// BatchNorm1D: [N, C] 또는 [N, C, L] 입력
+let bn1d = BatchNorm1D::new(
+    128,    // num_features (채널 수)
+    1e-5,   // eps (수치 안정성)
+    0.1,    // momentum (running stats 업데이트)
+    true,   // affine (학습 가능한 gamma, beta)
+    DType::F32
+)?;
+
+// BatchNorm2D: [N, C, H, W] 입력 (이미지)
+let bn2d = BatchNorm2D::new(64, 1e-5, 0.1, true, DType::F32)?;
+let input = Tensor::randn(&[16, 64, 32, 32], 0.0, 1.0)?;
+let output = bn2d.forward(&input)?;
+
+// BatchNorm3D: [N, C, D, H, W] 입력 (3D 데이터)
+let bn3d = BatchNorm3D::new(32, 1e-5, 0.1, true, DType::F32)?;
+```
+
+**파라미터:**
+- `num_features`: 정규화할 특징(채널) 수
+- `eps`: 분모에 더해지는 작은 값 (0 나눗셈 방지)
+- `momentum`: running statistics의 EMA 계수
+- `affine`: 학습 가능한 affine 변환 사용 여부
+- `dtype`: 데이터 타입
+
+**동작:**
+- **학습 모드**: 배치 통계로 정규화하고 running statistics 업데이트
+  ```
+  output = (input - batch_mean) / sqrt(batch_var + eps)
+  output = gamma * output + beta  // affine=true인 경우
+  running_mean = momentum * running_mean + (1 - momentum) * batch_mean
+  running_var = momentum * running_var + (1 - momentum) * batch_var
+  ```
+- **평가 모드**: 누적된 running statistics로 정규화
+
+**특징:**
+- 학습 안정화 및 가속화
+- Internal Covariate Shift 감소
+- 더 높은 학습률 사용 가능
+- 일부 정규화 효과 (Dropout 대체 가능)
+
+**사용 위치:**
+- 일반적으로 활성화 함수 전에 배치
+- `Conv -> BatchNorm -> ReLU` 패턴이 일반적
+
+#### LayerNorm
+
+레이어 정규화는 각 샘플의 특징 차원에 대해 정규화합니다.
+
+```rust
+use hodu::nn::modules::LayerNorm;
+
+// LayerNorm: 마지막 차원들을 정규화
+let ln = LayerNorm::new(
+    vec![512],  // normalized_shape (정규화할 차원들)
+    1e-5,       // eps
+    true,       // elementwise_affine
+    DType::F32
+)?;
+
+// Transformer의 경우
+let input = Tensor::randn(&[32, 128, 512], 0.0, 1.0)?;  // [batch, seq_len, hidden]
+let output = ln.forward(&input)?;
+
+// 여러 차원 정규화
+let ln2d = LayerNorm::new(vec![64, 64], 1e-5, true, DType::F32)?;
+let input = Tensor::randn(&[16, 64, 64], 0.0, 1.0)?;  // [batch, H, W]
+let output = ln2d.forward(&input)?;
+```
+
+**파라미터:**
+- `normalized_shape`: 정규화할 마지막 차원들의 크기
+- `eps`: 수치 안정성을 위한 작은 값
+- `elementwise_affine`: 학습 가능한 affine 변환 사용 여부
+- `dtype`: 데이터 타입
+
+**동작:**
+```
+mean = mean(input, dim=normalized_dims)
+var = var(input, dim=normalized_dims)
+output = (input - mean) / sqrt(var + eps)
+output = gamma * output + beta  // elementwise_affine=true인 경우
+```
+
+**특징:**
+- 배치 크기와 무관
+- Training/Evaluation 모드 구분 없음 (항상 동일하게 동작)
+- RNN과 Transformer에서 선호됨
+- 각 샘플이 독립적으로 정규화됨
+
+**BatchNorm vs LayerNorm:**
+
+| 특성 | BatchNorm | LayerNorm |
+|------|-----------|-----------|
+| 정규화 축 | Batch 차원 | Feature 차원 |
+| 배치 의존성 | 있음 | 없음 |
+| Train/Eval 차이 | 있음 | 없음 |
+| Running stats | 있음 | 없음 |
+| 주 사용처 | CNN | RNN, Transformer |
+| 작은 배치 | 불안정 | 안정적 |
+
+**선택 가이드:**
+- **CNN (이미지)**: BatchNorm2D
+- **RNN/Transformer**: LayerNorm
+- **작은 배치**: LayerNorm
+- **배치 크기가 일정하지 않음**: LayerNorm
+
 ### 활성화 함수
 
 모든 활성화 함수는 상태가 없으며 파라미터를 가지지 않습니다.

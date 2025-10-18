@@ -21,6 +21,7 @@ pub use modules::{
     conv::{Conv1D, Conv2D, Conv3D, ConvTranspose1D, ConvTranspose2D, ConvTranspose3D},
     dropout::Dropout,
     linear::Linear,
+    norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, LayerNorm},
     pooling::{
         AdaptiveAvgPool1D, AdaptiveAvgPool2D, AdaptiveAvgPool3D, AdaptiveMaxPool1D, AdaptiveMaxPool2D,
         AdaptiveMaxPool3D, AvgPool1D, AvgPool2D, AvgPool3D, MaxPool1D, MaxPool2D, MaxPool3D,

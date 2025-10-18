@@ -35,6 +35,11 @@ ConvTranspose3D
 Dropout
 /// linear
 Linear
+/// norm
+BatchNorm1D
+BatchNorm2D
+BatchNorm3D
+LayerNorm
 /// pooling
 ADaptiveAvgPool1D
 ADaptiveAvgPool2D

@@ -473,6 +473,200 @@ let output = dropout.forward(&input)?;
 
 **Recommended rates:** Hidden layers 0.3~0.5, Input layer 0.1~0.2
 
+### Normalization Layers
+
+Normalization layers stabilize training by normalizing layer inputs, enabling higher learning rates and faster convergence.
+
+#### BatchNorm1D, BatchNorm2D, BatchNorm3D
+
+Batch Normalization normalizes inputs using mini-batch statistics, reducing internal covariate shift.
+
+```rust
+use hodu::nn::modules::{BatchNorm1D, BatchNorm2D, BatchNorm3D};
+
+// BatchNorm1D: For 2D inputs [N, C] or 3D inputs [N, C, L]
+let bn1d = BatchNorm1D::new(
+    128,        // num_features (number of channels)
+    1e-5,       // eps (numerical stability)
+    0.1,        // momentum (for running stats update)
+    true,       // affine (learnable gamma/beta)
+    DType::F32
+)?;
+
+// BatchNorm2D: For 4D inputs [N, C, H, W] (images)
+let bn2d = BatchNorm2D::new(
+    64,         // num_features
+    1e-5,       // eps
+    0.1,        // momentum
+    true,       // affine
+    DType::F32
+)?;
+
+// BatchNorm3D: For 5D inputs [N, C, D, H, W] (videos)
+let bn3d = BatchNorm3D::new(
+    32,         // num_features
+    1e-5,       // eps
+    0.1,        // momentum
+    true,       // affine
+    DType::F32
+)?;
+
+// Usage example
+let input = Tensor::randn(&[16, 64, 32, 32], 0.0, 1.0)?;  // [N, C, H, W]
+let output = bn2d.forward(&input)?;
+```
+
+**Parameters:**
+- `num_features`: Number of channels (C dimension)
+- `eps`: Small constant for numerical stability (default: 1e-5)
+- `momentum`: Momentum for running statistics update (default: 0.1)
+- `affine`: If true, learnable affine parameters (gamma, beta) are applied
+- `dtype`: Data type
+
+**Behavior:**
+
+- **Training mode**: Normalizes using batch statistics and updates running statistics
+  ```
+  output = (input - batch_mean) / sqrt(batch_var + eps)
+  output = gamma * output + beta  // if affine=true
+
+  // Running statistics update (exponential moving average)
+  running_mean = momentum * running_mean + (1 - momentum) * batch_mean
+  running_var = momentum * running_var + (1 - momentum) * batch_var
+  ```
+
+- **Evaluation mode**: Normalizes using accumulated running statistics
+  ```
+  output = (input - running_mean) / sqrt(running_var + eps)
+  output = gamma * output + beta  // if affine=true
+  ```
+
+**Input Shapes:**
+- BatchNorm1D: `[N, C]` or `[N, C, L]`
+  - Normalizes over N dimension (or [N, L] for 3D input)
+- BatchNorm2D: `[N, C, H, W]`
+  - Normalizes over [N, H, W] for each channel
+- BatchNorm3D: `[N, C, D, H, W]`
+  - Normalizes over [N, D, H, W] for each channel
+
+**Use Cases:**
+- CNN intermediate layers
+- Stabilizing training in deep networks
+- Enabling higher learning rates
+- Reducing sensitivity to initialization
+
+#### LayerNorm
+
+Layer Normalization normalizes over feature dimensions instead of the batch dimension.
+
+```rust
+use hodu::nn::modules::LayerNorm;
+
+// Single dimension
+let ln = LayerNorm::new(
+    vec![768],  // normalized_shape
+    1e-5,       // eps
+    true,       // elementwise_affine
+    DType::F32
+)?;
+
+// Multiple dimensions (e.g., for images)
+let ln_2d = LayerNorm::new(
+    vec![64, 32, 32],  // normalized_shape: [C, H, W]
+    1e-5,              // eps
+    true,              // elementwise_affine
+    DType::F32
+)?;
+
+// Usage example: Transformer
+let input = Tensor::randn(&[32, 128, 768], 0.0, 1.0)?;  // [batch, seq_len, hidden_dim]
+let output = ln.forward(&input)?;  // Normalizes over the last dimension (768)
+```
+
+**Parameters:**
+- `normalized_shape`: Shape of dimensions to normalize over (Vec<usize>)
+- `eps`: Small constant for numerical stability (default: 1e-5)
+- `elementwise_affine`: If true, learnable affine parameters are applied
+- `dtype`: Data type
+
+**Behavior:**
+
+LayerNorm always computes statistics from the current input (no running statistics).
+
+```
+mean = mean(input, dims=normalized_shape)
+var = var(input, dims=normalized_shape)
+output = (input - mean) / sqrt(var + eps)
+output = gamma * output + beta  // if elementwise_affine=true
+```
+
+**Normalization axes:**
+If `normalized_shape = [d1, d2, ..., dk]` and input shape is `[N, ..., d1, d2, ..., dk]`, normalization is performed over the last k dimensions.
+
+**Example:**
+```rust
+// Input: [batch=32, seq_len=100, hidden=512]
+// LayerNorm with normalized_shape=[512]
+// -> Normalizes over the last dimension for each (batch, seq_len) position
+let ln = LayerNorm::new(vec![512], 1e-5, true, DType::F32)?;
+```
+
+**Characteristics:**
+- Batch-size independent
+- No distinction between training/evaluation modes
+- Preferred for RNNs and Transformers
+- Suitable for small batch sizes or online learning
+
+**Use Cases:**
+- Transformer models (BERT, GPT, etc.)
+- Recurrent Neural Networks (RNNs, LSTMs)
+- Situations with variable batch sizes
+- Small batch training
+
+### Normalization Comparison
+
+| Feature | BatchNorm | LayerNorm |
+|---------|-----------|-----------|
+| Normalization Axis | Batch dimension | Feature dimensions |
+| Batch Dependency | Yes | No |
+| Train/Eval Difference | Yes | No |
+| Running Statistics | Yes | No |
+| Best For | CNNs, fixed batch sizes | RNNs, Transformers, variable batch |
+| Computational Cost | Lower | Higher |
+
+**Selection Guide:**
+- **CNN image processing**: BatchNorm2D
+- **Transformers/NLP**: LayerNorm
+- **RNNs/sequence modeling**: LayerNorm
+- **Small or variable batch sizes**: LayerNorm
+- **Large fixed batch sizes**: BatchNorm
+- **Training stability issues**: Try LayerNorm
+
+**Complete Example:**
+
+```rust
+use hodu::prelude::*;
+
+// CNN with BatchNorm
+let conv = Conv2D::new(3, 64, 3, 1, 1, 1, true, DType::F32)?;
+let bn = BatchNorm2D::new(64, 1e-5, 0.1, true, DType::F32)?;
+let relu = ReLU::new();
+
+train!();  // Training mode
+let x = Tensor::randn(&[16, 3, 224, 224], 0.0, 1.0)?;
+let x = conv.forward(&x)?;
+let x = bn.forward(&x)?;       // Uses batch statistics
+let x = relu.forward(&x)?;
+
+eval!();   // Evaluation mode
+let x = bn.forward(&x)?;       // Uses running statistics
+
+// Transformer with LayerNorm
+let ln = LayerNorm::new(vec![512], 1e-5, true, DType::F32)?;
+let x = Tensor::randn(&[32, 100, 512], 0.0, 1.0)?;
+let x = ln.forward(&x)?;       // Same behavior in train/eval
+```
+
 ### Activation Functions
 
 All activation functions are stateless and have no parameters.
