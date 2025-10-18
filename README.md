@@ -197,6 +197,7 @@ Building with the `xla` feature requires:
 Guide
 - [Tensor Creation Guide (Korean)](docs/tensor_creation_ko.md) - 텐서 생성 가이드
 - [Tensor Creation Guide (English)](docs/tensor_creation_en.md) - Tensor creation guide
+- [Tensor Data Type Guide](docs/tensor_dtype.md) - Tensor data type guide
 - [Tensor Operations Guide](docs/tensor_ops.md) - Tensor operations guide (only English)
 - [Neural Network Modules Guide (Korean)](docs/tensor_nn_modules_ko.md) - 신경망 모듈 가이드
 - [Neural Network Modules Guide (English)](docs/tensor_nn_modules_en.md) - Neural network modules guide
