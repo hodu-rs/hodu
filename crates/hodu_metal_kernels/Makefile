@@ -11,8 +11,8 @@ UTILS = $(KERNEL_DIR)/utils.metal
 UTILS_AIR = $(OUTPUT_DIR)/utils.air
 
 # Source files
-SOURCES = $(KERNEL_DIR)/binary.metal \
-          $(KERNEL_DIR)/unary.metal
+SOURCES = $(KERNEL_DIR)/ops_binary.metal \
+          $(KERNEL_DIR)/ops_unary.metal
 
 # Derived .air file paths
 AIR_FILES = $(patsubst $(KERNEL_DIR)/%.metal,$(OUTPUT_DIR)/%.air,$(SOURCES))
