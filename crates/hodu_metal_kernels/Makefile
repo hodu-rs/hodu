@@ -14,6 +14,7 @@ UTILS_AIR = $(OUTPUT_DIR)/utils.air
 
 # Source files
 SOURCES = $(KERNEL_DIR)/ops_binary.metal \
+		  $(KERNEL_DIR)/ops_concat_split.metal \
 		  $(KERNEL_DIR)/ops_reduce.metal \
           $(KERNEL_DIR)/ops_unary.metal
 
