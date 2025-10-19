@@ -13,12 +13,15 @@ HEADERS = $(KERNEL_DIR)/atomic.metal \
 
 # Source files
 SOURCES = $(KERNEL_DIR)/ops_binary.metal \
+          $(KERNEL_DIR)/ops_cast.metal \
 		  $(KERNEL_DIR)/ops_concat_split.metal \
 		  $(KERNEL_DIR)/ops_conv.metal \
 		  $(KERNEL_DIR)/ops_indexing.metal \
 		  $(KERNEL_DIR)/ops_matrix.metal \
+		  $(KERNEL_DIR)/ops_memory.metal \
 		  $(KERNEL_DIR)/ops_reduce.metal \
-          $(KERNEL_DIR)/ops_unary.metal
+          $(KERNEL_DIR)/ops_unary.metal \
+          $(KERNEL_DIR)/ops_windowing.metal
 
 # Derived .air file paths
 AIR_FILES = $(patsubst $(KERNEL_DIR)/%.metal,$(OUTPUT_DIR)/%.air,$(SOURCES))
