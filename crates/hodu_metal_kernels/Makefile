@@ -6,15 +6,15 @@ INCLUDE_DIR = $(KERNEL_DIR)
 # Output files
 KERNEL_LIB = $(OUTPUT_DIR)/kernels.metallib
 
-# Utility files
-CONSTANTS = $(KERNEL_DIR)/constants.metal
-CONSTANTS_AIR = $(OUTPUT_DIR)/constants.air
-UTILS = $(KERNEL_DIR)/utils.metal
-UTILS_AIR = $(OUTPUT_DIR)/utils.air
+# Header files (not compiled directly)
+HEADERS = $(KERNEL_DIR)/atomic.metal \
+          $(KERNEL_DIR)/constants.metal \
+          $(KERNEL_DIR)/utils.metal
 
 # Source files
 SOURCES = $(KERNEL_DIR)/ops_binary.metal \
 		  $(KERNEL_DIR)/ops_concat_split.metal \
+		  $(KERNEL_DIR)/ops_indexing.metal \
 		  $(KERNEL_DIR)/ops_matrix.metal \
 		  $(KERNEL_DIR)/ops_reduce.metal \
           $(KERNEL_DIR)/ops_unary.metal
@@ -34,18 +34,12 @@ all: prepare $(KERNEL_LIB)
 prepare:
 	@mkdir -p $(OUTPUT_DIR)
 
-# Compile utility files
-$(CONSTANTS_AIR): $(CONSTANTS) | prepare
-	$(METAL) $(METAL_FLAGS) -c $< -o $@
-$(UTILS_AIR): $(UTILS) | prepare
-	$(METAL) $(METAL_FLAGS) -c $< -o $@
-
-# Compile source files to .air
-$(OUTPUT_DIR)/%.air: $(KERNEL_DIR)/%.metal $(CONSTANTS_AIR) $(UTILS_AIR) | prepare
+# Compile source files to .air (depends on headers)
+$(OUTPUT_DIR)/%.air: $(KERNEL_DIR)/%.metal $(HEADERS) | prepare
 	$(METAL) $(METAL_FLAGS) -c $< -o $@
 
 # Link all .air files into metallib
-$(KERNEL_LIB): $(UTILS_AIR) $(CONSTANTS_AIR) $(AIR_FILES) | prepare
+$(KERNEL_LIB): $(AIR_FILES) | prepare
 	$(METALLIB) $^ -o $@
 
 # Cleanup
