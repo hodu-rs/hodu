@@ -1,6 +1,6 @@
 [package]
 name = "hodu_nn"
-version = "0.1.7"
+version = "0.1.0-dev"
 description = "hodu nn"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -13,5 +13,5 @@ std = ["hodu_core/std"]
 serde = ["hodu_core/serde"]
 
 [dependencies]
-hodu_core = { path = "../hodu_core", version = "0.1.7" }
-hodu_nn_macros = { path = "macros", version = "0.1.7" }
+hodu_core = { path = "../hodu_core", version = "0.1.0-dev" }
+hodu_nn_macros = { path = "macros", version = "0.1.0-dev" }

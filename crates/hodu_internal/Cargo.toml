@@ -1,6 +1,6 @@
 [package]
 name = "hodu_internal"
-version = "0.1.7"
+version = "0.1.0-dev"
 description = "hodu internal"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -18,5 +18,5 @@ metal = ["hodu_core/metal"]
 xla = ["hodu_core/xla"]
 
 [dependencies]
-hodu_core = { path = "../hodu_core", version = "0.1.7" }
-hodu_nn = { path = "../hodu_nn", version = "0.1.7" }
+hodu_core = { path = "../hodu_core", version = "0.1.0-dev" }
+hodu_nn = { path = "../hodu_nn", version = "0.1.0-dev" }
