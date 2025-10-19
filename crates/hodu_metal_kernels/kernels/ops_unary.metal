@@ -72,7 +72,7 @@ float m_exp10(float x) {
 }
 
 #define UNARY_OP_OUTPUT(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                  \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
@@ -96,7 +96,7 @@ float m_exp10(float x) {
 #define UNARY_OP(TYPENAME, FN_NAME, FUNC) UNARY_OP_OUTPUT(TYPENAME, TYPENAME, FN_NAME, FUNC)
 
 #define UNARY_OP_WITH_CONSTANT(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                           \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant IN_TYPENAME &const_val [[buffer(5)]],    \

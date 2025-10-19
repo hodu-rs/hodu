@@ -12,7 +12,7 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 
 // Helper macro for reduction operations
 #define REDUCE_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, INIT_VAL, ACCUMULATE)                        \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
@@ -139,7 +139,7 @@ REDUCE_OP(uint64_t, uint64_t, reduce_prod_u64, 1u, acc *= val)
 // ============================================================================
 
 #define REDUCE_MEAN_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                         \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
@@ -201,7 +201,7 @@ REDUCE_MEAN_OP(float, float, reduce_mean_f32)
 // ============================================================================
 
 #define REDUCE_NORM_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                         \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
@@ -264,7 +264,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
 // ============================================================================
 
 #define REDUCE_ARGMAX_OP(IN_TYPENAME, FN_NAME)                                                     \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device int32_t *output [[buffer(1)]],       \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
@@ -325,7 +325,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
     }
 
 #define REDUCE_ARGMIN_OP(IN_TYPENAME, FN_NAME)                                                     \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device int32_t *output [[buffer(1)]],       \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
@@ -417,7 +417,7 @@ REDUCE_ARGMIN_OP(uint64_t, reduce_argmin_u64)
 template <typename T> inline bool is_nonzero(T val) { return val != T(0); }
 
 #define REDUCE_ANY_OP(IN_TYPENAME, FN_NAME)                                                        \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device bool *output [[buffer(1)]],          \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
@@ -474,7 +474,7 @@ template <typename T> inline bool is_nonzero(T val) { return val != T(0); }
     }
 
 #define REDUCE_ALL_OP(IN_TYPENAME, FN_NAME)                                                        \
-    kernel void metal_##FN_NAME##_kernel(                                                          \
+    kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device bool *output [[buffer(1)]],          \
         constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], constant size_t &reduce_size [[buffer(5)]],       \
