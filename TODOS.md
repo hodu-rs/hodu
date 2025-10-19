@@ -12,7 +12,7 @@ Items may be added at any time.
 **Backend:** (🔴 Critical)
 - [ ] CPU SIMD support
 - [ ] CUDA support
-- [ ] Metal support
+- [x] Metal support
 
 **Scripting:** (🟢 Nice-to-have)
 - [ ] XLA optimization

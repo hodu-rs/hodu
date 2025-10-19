@@ -45,7 +45,6 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 >
 > **Current Development Status**:
 > - CUDA GPU support is not yet fully implemented and is under active development
-> - Metal GPU support is not yet fully implemented and is under active development
 > - SIMD optimizations are not yet implemented and are under active development
 
 ## Get started
@@ -151,7 +150,7 @@ let mut script = builder.build()?;
 | Feature | Description | Dependencies | Required Features |
 |---------|-------------|--------------|-------------------|
 | `cuda` | NVIDIA CUDA GPU support | CUDA toolkit | - |
-| `metal` | Apple Metal GPU support | Metal framework (macOS) | - |
+| `metal` | Apple Metal GPU support | Metal framework | - |
 | `xla` | Google XLA compiler backend | XLA libraries | `std` |
 
 #### XLA Feature Requirements
@@ -174,10 +173,9 @@ Building with the `xla` feature requires:
 | aarch64-unknown-linux-gnu | HODU | CPU | `std` | ✅ Stable |
 | | XLA | CPU | `std`, `xla` | ✅ Stable |
 | x86_64-apple-darwin | HODU | CPU | `std` | 🧪 Experimental |
-| | HODU | Metal | `std`, `metal` | 🚧 In Development |
 | | XLA | CPU | `std`, `xla` | 🚧 In Development |
 | aarch64-apple-darwin | HODU | CPU | `std` | ✅ Stable |
-| | HODU | Metal | `std`, `metal` | 🚧 In Development |
+| | HODU | Metal | `std`, `metal` | ✅ Stable |
 | | XLA | CPU | `std`, `xla` | ✅ Stable |
 | x86_64-pc-windows-msvc | HODU | CPU | `std` | ✅ Stable |
 | | HODU | CUDA | `std`, `cuda` | 🚧 In Development |

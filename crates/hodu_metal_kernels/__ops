@@ -1,0 +1,2 @@
+binary.metal <- binary, binary logical, cmp
+unary.metal <- unary, unary logical, unary with scalar, cmp with scalar
