@@ -279,7 +279,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
             const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
             const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
                                                                                                    \
-            IN_TYPENAME max_val = (IN_TYPENAME)(-INFINITY);                                        \
+            IN_TYPENAME max_val;                                                                   \
             int32_t max_idx = 0;                                                                   \
             bool first = true;                                                                     \
                                                                                                    \
@@ -307,6 +307,9 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                     temp_reduced /= dims[dim];                                                     \
                 }                                                                                  \
                                                                                                    \
+                /* Extract the actual index in the reduced dimension */                            \
+                size_t actual_dim_idx = input_indices[reduce_dims[0]];                             \
+                                                                                                   \
                 size_t flat_index = offset;                                                        \
                 for (size_t i = 0; i < num_dims; i++) {                                            \
                     flat_index += input_indices[i] * strides[i];                                   \
@@ -315,7 +318,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                 IN_TYPENAME val = input[flat_index];                                               \
                 if (first || val > max_val) {                                                      \
                     max_val = val;                                                                 \
-                    max_idx = (int32_t)reduced_idx;                                                \
+                    max_idx = (int32_t)actual_dim_idx;                                             \
                     first = false;                                                                 \
                 }                                                                                  \
             }                                                                                      \
@@ -340,7 +343,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
             const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
             const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
                                                                                                    \
-            IN_TYPENAME min_val = (IN_TYPENAME)(INFINITY);                                         \
+            IN_TYPENAME min_val;                                                                   \
             int32_t min_idx = 0;                                                                   \
             bool first = true;                                                                     \
                                                                                                    \
@@ -368,6 +371,9 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                     temp_reduced /= dims[dim];                                                     \
                 }                                                                                  \
                                                                                                    \
+                /* Extract the actual index in the reduced dimension */                            \
+                size_t actual_dim_idx = input_indices[reduce_dims[0]];                             \
+                                                                                                   \
                 size_t flat_index = offset;                                                        \
                 for (size_t i = 0; i < num_dims; i++) {                                            \
                     flat_index += input_indices[i] * strides[i];                                   \
@@ -376,7 +382,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                 IN_TYPENAME val = input[flat_index];                                               \
                 if (first || val < min_val) {                                                      \
                     min_val = val;                                                                 \
-                    min_idx = (int32_t)reduced_idx;                                                \
+                    min_idx = (int32_t)actual_dim_idx;                                             \
                     first = false;                                                                 \
                 }                                                                                  \
             }                                                                                      \

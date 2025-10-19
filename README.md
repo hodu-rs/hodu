@@ -150,7 +150,7 @@ let mut script = builder.build()?;
 | Feature | Description | Dependencies | Required Features |
 |---------|-------------|--------------|-------------------|
 | `cuda` | NVIDIA CUDA GPU support | CUDA toolkit | - |
-| `metal` | Apple Metal GPU support | Metal framework | - |
+| `metal` | Apple Metal GPU support | Metal framework | `std` |
 | `xla` | Google XLA compiler backend | XLA libraries | `std` |
 
 #### XLA Feature Requirements

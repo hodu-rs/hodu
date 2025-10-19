@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Test all feature combinations for hodu
-
 set -e
 
 # Modern color palette
@@ -15,9 +14,36 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
+# Parse command line arguments
+ADDITIONAL_FEATURES=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -f|--features)
+            shift
+            while [[ $# -gt 0 ]] && [[ ! $1 =~ ^- ]]; do
+                ADDITIONAL_FEATURES+=("$1")
+                shift
+            done
+            ;;
+        *)
+            echo -e "${BRIGHT_RED}✗${NC} Unknown option: $1"
+            echo "Usage: $0 [-f|--features feature1 feature2 ...]"
+            exit 1
+            ;;
+    esac
+done
+
+# Check if metal is in additional features
+HAS_METAL=false
+for feature in "${ADDITIONAL_FEATURES[@]}"; do
+    if [ "$feature" = "metal" ]; then
+        HAS_METAL=true
+        break
+    fi
+done
+
 # Check Metal kernel syntax
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Metal] Checking kernel syntax...${NC}"
-
 if ! command -v xcrun &> /dev/null
 then
     echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} xcrun is not available"
@@ -60,7 +86,7 @@ echo ""
 # Test Cargo feature combinations
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Cargo] Testing feature combinations...${NC}"
 
-# Test cases: "features|description"
+# Base test cases: "features|description"
 tests=(
     "|no features (no-std)"
     "serde|serde only (no-std)"
@@ -69,6 +95,17 @@ tests=(
     "std,xla|xla only (std)"
     "std,serde,xla|serde, xla (std)"
 )
+
+# Add metal features only to std combinations
+if [ "$HAS_METAL" = true ]; then
+    # Add metal to std-based combinations
+    tests+=(
+        "std,metal|std + metal"
+        "std,serde,metal|std + serde + metal"
+        "std,xla,metal|std + xla + metal"
+        "std,serde,xla,metal|std + serde + xla + metal"
+    )
+fi
 
 passed=0
 total=${#tests[@]}

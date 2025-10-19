@@ -1,6 +1,8 @@
 #!/bin/bash
 
 crates=(
+    hodu_metal_kernels
+
     hodu_core
     hodu_nn/macros
     hodu_nn
