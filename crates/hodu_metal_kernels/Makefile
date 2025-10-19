@@ -14,6 +14,7 @@ HEADERS = $(KERNEL_DIR)/atomic.metal \
 # Source files
 SOURCES = $(KERNEL_DIR)/ops_binary.metal \
 		  $(KERNEL_DIR)/ops_concat_split.metal \
+		  $(KERNEL_DIR)/ops_conv.metal \
 		  $(KERNEL_DIR)/ops_indexing.metal \
 		  $(KERNEL_DIR)/ops_matrix.metal \
 		  $(KERNEL_DIR)/ops_reduce.metal \
