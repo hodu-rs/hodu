@@ -1,0 +1,142 @@
+// U: unsigned int
+// I: signed int
+
+// device not supported dtype
+metal: f8e4m3, f8e5m2, f64
+// backend not supported dtype
+xla: f8e4m3, f8e5m2
+
+// binary
+add: bool
+sub: bool
+mul: bool
+div: bool, U, I
+pow: bool, U, I
+maximum: bool
+minimum: bool
+
+// binary logical
+logical_and: -
+logical_or: -
+logical_xor: -
+
+// cmp
+eq: -
+ne: -
+lt: bool
+le: bool
+gt: bool
+ge: bool
+
+// cmp with scalar
+eq_scalar: -
+ne_scalar: -
+lt_scalar: bool
+le_scalar: bool
+gt_scalar: bool
+ge_scalar: bool
+
+// unary - basic
+neg: bool, U
+abs: bool, U
+sign: bool, U
+square: bool
+sqrt: bool, U, I
+recip: bool, U, I
+
+// unary - activation
+relu: bool, U
+sigmoid: bool, U, I
+tanh: bool, U, I
+gelu: bool, U, I
+softplus: bool, U, I
+
+// unary - trigonometric
+sin: bool, U, I
+cos: bool, U, I
+tan: bool, U, I
+
+// unary - exp
+exp: bool, U, I
+exp2: bool, U, I
+exp10: bool, U, I
+ln: bool, U, I
+log2: bool, U, I
+log10: bool, U, I
+
+// unary logical
+logical_not: -
+
+// unary with scalar - arithmetic
+add_scalar: bool
+sub_scalar: bool
+mul_scalar: bool
+div_scalar: bool, U, I
+pow_scalar: bool, U, I
+maximum_scalar: bool
+minimum_scalar: bool
+
+// unary with scalar - activation
+leaky_relu: bool, U, I
+elu: bool, U, I
+
+// matrix
+matmul: bool, U, I
+dot: bool, U, I
+
+// reduce
+sum: bool
+sum_all: bool
+sum_to_shape: bool
+mean: bool, U, I
+max: bool
+min: bool
+prod: bool
+std: bool, U, I
+var: bool, U, I
+l2_norm: bool, U, I
+argmax: -
+argmin: -
+any: -
+all: -
+
+// concat
+concat: -
+
+// split
+split: -
+
+// indexing
+index_select: -
+index_put: -
+gather: -
+scatter: -
+scatter_add: bool
+scatter_max: bool
+scatter_min: bool
+
+// conv
+conv1d: bool, U, I
+conv2d: bool, U, I
+conv3d: bool, U, I
+conv_transpose1d: bool, U, I
+conv_transpose2d: bool, U, I
+conv_transpose3d: bool, U, I
+conv1d_grad_weight: bool, U, I
+conv2d_grad_weight: bool, U, I
+conv3d_grad_weight: bool, U, I
+conv_transpose1d_grad_weight: bool, U, I
+conv_transpose2d_grad_weight: bool, U, I
+conv_transpose3d_grad_weight: bool, U, I
+
+// windowing - reduce_window
+max: bool
+mean: bool, U, I
+sum: bool
+min: bool
+
+// cast
+to_dtype: -
+
+// memory
+contiguous: -

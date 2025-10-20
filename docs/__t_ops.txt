@@ -93,10 +93,10 @@ all!
 // concat
 concat
 cat@
-stack
+stack?
 // split
 split
-chunk
+chunk?
 // normalization
 softmax?
 log_softmax?
