@@ -1,4 +1,4 @@
-#include "./utils.metal"
+#include "./headers/utils.metal"
 #include <metal_math>
 #include <metal_stdlib>
 

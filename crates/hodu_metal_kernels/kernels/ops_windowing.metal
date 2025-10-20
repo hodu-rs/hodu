@@ -1,5 +1,5 @@
-#include "./constants.metal"
-#include "./utils.metal"
+#include "./headers/constants.metal"
+#include "./headers/utils.metal"
 #include <metal_stdlib>
 
 using namespace metal;

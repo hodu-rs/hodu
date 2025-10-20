@@ -7,9 +7,9 @@ INCLUDE_DIR = $(KERNEL_DIR)
 KERNEL_LIB = $(OUTPUT_DIR)/kernels.metallib
 
 # Header files (not compiled directly)
-HEADERS = $(KERNEL_DIR)/atomic.metal \
-          $(KERNEL_DIR)/constants.metal \
-          $(KERNEL_DIR)/utils.metal
+HEADERS = $(KERNEL_DIR)/headers/atomic.metal \
+          $(KERNEL_DIR)/headers/constants.metal \
+          $(KERNEL_DIR)/headers/utils.metal
 
 # Source files
 SOURCES = $(KERNEL_DIR)/ops_binary.metal \
@@ -21,7 +21,8 @@ SOURCES = $(KERNEL_DIR)/ops_binary.metal \
 		  $(KERNEL_DIR)/ops_memory.metal \
 		  $(KERNEL_DIR)/ops_reduce.metal \
           $(KERNEL_DIR)/ops_unary.metal \
-          $(KERNEL_DIR)/ops_windowing.metal
+          $(KERNEL_DIR)/ops_windowing.metal \
+          $(KERNEL_DIR)/storage.metal
 
 # Derived .air file paths
 AIR_FILES = $(patsubst $(KERNEL_DIR)/%.metal,$(OUTPUT_DIR)/%.air,$(SOURCES))

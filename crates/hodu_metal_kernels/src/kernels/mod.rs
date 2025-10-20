@@ -7,6 +7,7 @@ pub mod macros;
 mod matrix;
 mod memory;
 mod reduce;
+mod storage;
 mod unary;
 mod windowing;
 
@@ -22,5 +23,6 @@ pub use indexing::*;
 pub use matrix::*;
 pub use memory::*;
 pub use reduce::*;
+pub use storage::*;
 pub use unary::*;
 pub use windowing::*;

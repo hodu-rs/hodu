@@ -76,6 +76,7 @@ impl Kernels {
 
     fn get_library_source(&self, source: Source) -> &'static str {
         match source {
+            Source::Storage => crate::source::get_storage(),
             Source::Binary => crate::source::get_binary(),
             Source::Cast => crate::source::get_cast(),
             Source::ConcatSplit => crate::source::get_concat_split(),

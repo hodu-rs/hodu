@@ -1,4 +1,4 @@
-use half::{bf16, f16};
+use half::bf16;
 use hodu_metal_kernels::{
     kernel::Kernels,
     kernels::{call_reduce, reduce_argmax, reduce_argmin, reduce_max, reduce_mean, reduce_min, reduce_sum, Kernel},

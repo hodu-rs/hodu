@@ -1,8 +1,10 @@
 use std::sync::OnceLock;
 
-const ATOMIC: &str = include_str!("../kernels/atomic.metal");
-const CONSTANTS: &str = include_str!("../kernels/constants.metal");
-const UTILS: &str = include_str!("../kernels/utils.metal");
+const ATOMIC: &str = include_str!("../kernels/headers/atomic.metal");
+const CONSTANTS: &str = include_str!("../kernels/headers/constants.metal");
+const UTILS: &str = include_str!("../kernels/headers/utils.metal");
+
+const STORAGE_SRC: &str = include_str!("../kernels/storage.metal");
 
 const BINARY_SRC: &str = include_str!("../kernels/ops_binary.metal");
 const CAST_SRC: &str = include_str!("../kernels/ops_cast.metal");
@@ -17,9 +19,15 @@ const WINDOWING_SRC: &str = include_str!("../kernels/ops_windowing.metal");
 
 fn combine_source(src: &str) -> String {
     // Replace all include directives with actual content
-    src.replace("#include \"./atomic.metal\"", ATOMIC)
-        .replace("#include \"./constants.metal\"", CONSTANTS)
-        .replace("#include \"./utils.metal\"", UTILS)
+    src.replace("#include \"./headers/atomic.metal\"", ATOMIC)
+        .replace("#include \"./headers/constants.metal\"", CONSTANTS)
+        .replace("#include \"./headers/utils.metal\"", UTILS)
+}
+
+static STORAGE: OnceLock<String> = OnceLock::new();
+
+pub fn get_storage() -> &'static str {
+    STORAGE.get_or_init(|| combine_source(STORAGE_SRC))
 }
 
 static BINARY: OnceLock<String> = OnceLock::new();
@@ -75,6 +83,7 @@ pub fn get_windowing() -> &'static str {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Source {
+    Storage,
     Binary,
     Cast,
     ConcatSplit,

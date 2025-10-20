@@ -1,5 +1,5 @@
-#include "./atomic.metal"
-#include "./utils.metal"
+#include "./headers/atomic.metal"
+#include "./headers/utils.metal"
 #include <metal_stdlib>
 
 using namespace metal;
