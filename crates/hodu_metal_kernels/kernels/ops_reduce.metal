@@ -20,34 +20,58 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
         uint threads_per_grid [[threads_per_grid]]) {                                              \
         for (uint output_idx = thread_index; output_idx < num_els;                                 \
              output_idx += threads_per_grid) {                                                     \
+            /* Metadata layout: dims, strides, offset, output_shape_len, output_shape,             \
+               num_reduce_dims, reduce_dims, keep_dim */                                           \
             const constant size_t *dims = metadata;                                                \
             const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
-            const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const size_t offset = metadata[2 * num_dims];                                          \
+            const size_t output_shape_len = metadata[2 * num_dims + 1];                            \
+            const constant size_t *output_shape = metadata + 2 * num_dims + 2;                     \
+            const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];          \
+            const constant size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;   \
+            const bool keep_dim =                                                                  \
+                metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims] != 0;              \
                                                                                                    \
             OUT_TYPENAME acc = INIT_VAL;                                                           \
                                                                                                    \
             /* Generate output indices */                                                          \
             size_t output_indices[16];                                                             \
             size_t temp = output_idx;                                                              \
-            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
-                if (output_shape[d] > 0) {                                                         \
-                    output_indices[d] = temp % output_shape[d];                                    \
-                    temp /= output_shape[d];                                                       \
-                } else {                                                                           \
-                    output_indices[d] = 0;                                                         \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Map output indices to input indices */                                              \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                /* keep_dim=true: output_shape has same ndim as input, just with 1s */             \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                /* keep_dim=false: output_shape has reduced dimensions removed */                  \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0; /* Will iterate */                              \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
                 }                                                                                  \
             }                                                                                      \
                                                                                                    \
             /* Iterate over reduced dimensions */                                                  \
             for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
-                size_t input_indices[16];                                                          \
-                for (size_t i = 0; i < num_dims; i++) {                                            \
-                    input_indices[i] = output_indices[i];                                          \
-                }                                                                                  \
-                                                                                                   \
                 /* Compute indices for reduced dimensions */                                       \
                 size_t temp_reduced = reduced_idx;                                                 \
                 for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
@@ -147,32 +171,55 @@ REDUCE_OP(uint64_t, uint64_t, reduce_prod_u64, 1u, acc *= val)
         uint threads_per_grid [[threads_per_grid]]) {                                              \
         for (uint output_idx = thread_index; output_idx < num_els;                                 \
              output_idx += threads_per_grid) {                                                     \
+            /* Metadata layout: dims, strides, offset, output_shape_len, output_shape,             \
+               num_reduce_dims, reduce_dims, keep_dim */                                           \
             const constant size_t *dims = metadata;                                                \
             const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
-            const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const size_t offset = metadata[2 * num_dims];                                          \
+            const size_t output_shape_len = metadata[2 * num_dims + 1];                            \
+            const constant size_t *output_shape = metadata + 2 * num_dims + 2;                     \
+            const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];          \
+            const constant size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;   \
+            const bool keep_dim =                                                                  \
+                metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims] != 0;              \
                                                                                                    \
             OUT_TYPENAME sum = 0;                                                                  \
                                                                                                    \
+            /* Generate output indices */                                                          \
             size_t output_indices[16];                                                             \
             size_t temp = output_idx;                                                              \
-            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
-                if (output_shape[d] > 0) {                                                         \
-                    output_indices[d] = temp % output_shape[d];                                    \
-                    temp /= output_shape[d];                                                       \
-                } else {                                                                           \
-                    output_indices[d] = 0;                                                         \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Map output indices to input indices */                                              \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
                 }                                                                                  \
             }                                                                                      \
                                                                                                    \
             for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
-                size_t input_indices[16];                                                          \
-                for (size_t i = 0; i < num_dims; i++) {                                            \
-                    input_indices[i] = output_indices[i];                                          \
-                }                                                                                  \
-                                                                                                   \
                 size_t temp_reduced = reduced_idx;                                                 \
                 for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
                     size_t dim = reduce_dims[i];                                                   \
@@ -213,8 +260,8 @@ REDUCE_MEAN_OP(float, float, reduce_mean_f32)
             const constant size_t *strides = metadata + num_dims;                                  \
             const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
             const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const constant size_t *reduce_dims = metadata + 3 * num_dims + 2;                      \
+            const size_t num_reduce_dims = metadata[3 * num_dims + 1];                             \
                                                                                                    \
             OUT_TYPENAME sum_squares = 0;                                                          \
                                                                                                    \
@@ -274,10 +321,13 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
              output_idx += threads_per_grid) {                                                     \
             const constant size_t *dims = metadata;                                                \
             const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
-            const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const size_t offset = metadata[2 * num_dims];                                          \
+            const size_t output_shape_len = metadata[2 * num_dims + 1];                            \
+            const constant size_t *output_shape = metadata + 2 * num_dims + 2;                     \
+            const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];          \
+            const constant size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;   \
+            const bool keep_dim =                                                                  \
+                metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims] != 0;              \
                                                                                                    \
             IN_TYPENAME max_val;                                                                   \
             int32_t max_idx = 0;                                                                   \
@@ -285,7 +335,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                                                                                                    \
             size_t output_indices[16];                                                             \
             size_t temp = output_idx;                                                              \
-            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
                 if (output_shape[d] > 0) {                                                         \
                     output_indices[d] = temp % output_shape[d];                                    \
                     temp /= output_shape[d];                                                       \
@@ -294,12 +344,33 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                 }                                                                                  \
             }                                                                                      \
                                                                                                    \
-            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
-                size_t input_indices[16];                                                          \
+            /* Map output indices to input indices */                                              \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
                 for (size_t i = 0; i < num_dims; i++) {                                            \
                     input_indices[i] = output_indices[i];                                          \
                 }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
                                                                                                    \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
                 size_t temp_reduced = reduced_idx;                                                 \
                 for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
                     size_t dim = reduce_dims[i];                                                   \
@@ -338,10 +409,13 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
              output_idx += threads_per_grid) {                                                     \
             const constant size_t *dims = metadata;                                                \
             const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
-            const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const size_t offset = metadata[2 * num_dims];                                          \
+            const size_t output_shape_len = metadata[2 * num_dims + 1];                            \
+            const constant size_t *output_shape = metadata + 2 * num_dims + 2;                     \
+            const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];          \
+            const constant size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;   \
+            const bool keep_dim =                                                                  \
+                metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims] != 0;              \
                                                                                                    \
             IN_TYPENAME min_val;                                                                   \
             int32_t min_idx = 0;                                                                   \
@@ -349,7 +423,7 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                                                                                                    \
             size_t output_indices[16];                                                             \
             size_t temp = output_idx;                                                              \
-            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
                 if (output_shape[d] > 0) {                                                         \
                     output_indices[d] = temp % output_shape[d];                                    \
                     temp /= output_shape[d];                                                       \
@@ -358,12 +432,33 @@ REDUCE_NORM_OP(float, float, reduce_norm_f32)
                 }                                                                                  \
             }                                                                                      \
                                                                                                    \
-            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
-                size_t input_indices[16];                                                          \
+            /* Map output indices to input indices */                                              \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
                 for (size_t i = 0; i < num_dims; i++) {                                            \
                     input_indices[i] = output_indices[i];                                          \
                 }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
                                                                                                    \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
                 size_t temp_reduced = reduced_idx;                                                 \
                 for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
                     size_t dim = reduce_dims[i];                                                   \
@@ -435,8 +530,8 @@ template <typename T> inline bool is_nonzero(T val) { return val != T(0); }
             const constant size_t *strides = metadata + num_dims;                                  \
             const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
             const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const constant size_t *reduce_dims = metadata + 3 * num_dims + 2;                      \
+            const size_t num_reduce_dims = metadata[3 * num_dims + 1];                             \
                                                                                                    \
             bool result = false;                                                                   \
                                                                                                    \
@@ -492,8 +587,8 @@ template <typename T> inline bool is_nonzero(T val) { return val != T(0); }
             const constant size_t *strides = metadata + num_dims;                                  \
             const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
             const constant size_t *output_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *reduce_dims = metadata + 3 * num_dims + 1;                      \
-            const size_t num_reduce_dims = metadata[4 * num_dims + 1];                             \
+            const constant size_t *reduce_dims = metadata + 3 * num_dims + 2;                      \
+            const size_t num_reduce_dims = metadata[3 * num_dims + 1];                             \
                                                                                                    \
             bool result = true;                                                                    \
                                                                                                    \

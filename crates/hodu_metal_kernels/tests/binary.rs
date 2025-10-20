@@ -31,11 +31,6 @@ fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
     v.iter().map(|t| f32::round(t * b) / b).collect()
 }
 
-fn approx_f16(v: Vec<f16>, digits: i32) -> Vec<f32> {
-    let b = 10f32.powi(digits);
-    v.iter().map(|t| f32::round(t.to_f32() * b) / b).collect()
-}
-
 fn run_binary<T: Clone>(x: &[T], y: &[T], name: Kernel) -> Vec<T> {
     let device = device();
     let kernels = Kernels::new();
@@ -69,7 +64,7 @@ fn run_binary<T: Clone>(x: &[T], y: &[T], name: Kernel) -> Vec<T> {
     read_to_vec(&output, x.len())
 }
 
-fn run_binary_cmp<T: Clone, O: Clone>(x: &[T], y: &[T], name: Kernel) -> Vec<O> {
+fn run_binary_logical<T: Clone, O: Clone>(x: &[T], y: &[T], name: Kernel) -> Vec<O> {
     let device = device();
     let kernels = Kernels::new();
     let command_queue = device.new_command_queue().unwrap();
@@ -103,19 +98,34 @@ fn run_binary_cmp<T: Clone, O: Clone>(x: &[T], y: &[T], name: Kernel) -> Vec<O> 
 }
 
 #[test]
-fn binary_add_f32() {
-    let left = vec![1.0f32, 2.0, 3.0];
-    let right = vec![2.0f32, 3.1, 4.2];
-    let results = run_binary(&left, &right, add::F32);
-    let expected: Vec<_> = left.iter().zip(right.iter()).map(|(&x, &y)| x + y).collect();
-    assert_eq!(approx(results, 4), vec![3.0f32, 5.1, 7.2]);
-    assert_eq!(approx(expected, 4), vec![3.0f32, 5.1, 7.2]);
+fn binary_ops_bool() {
+    let lhs: Vec<bool> = vec![false, true, false, true];
+    let rhs: Vec<bool> = vec![false, true, true, false];
+
+    macro_rules! binary_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results = run_binary(&lhs, &rhs, $opname::BOOL);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&bool, &bool)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    binary_op!(add, |x, y| x || y);
+    binary_op!(sub, |x, y| x ^ y);
+    binary_op!(mul, |x, y| x && y);
+    binary_op!(div, |x, y| x && y);
+    binary_op!(minimum, |x: bool, y| x && y);
+    binary_op!(maximum, |x: bool, y| x || y);
 }
 
 #[test]
 fn binary_ops_bf16() {
-    let lhs: Vec<bf16> = [1.1f32, 2.2, 3.3].into_iter().map(bf16::from_f32).collect();
-    let rhs: Vec<bf16> = [4.2f32, 5.5f32, 6.91f32].into_iter().map(bf16::from_f32).collect();
+    let lhs: Vec<bf16> = vec![1.1f32, 2.2, 3.3].into_iter().map(bf16::from_f32).collect();
+    let rhs: Vec<bf16> = vec![4.2f32, 5.5f32, 6.91f32].into_iter().map(bf16::from_f32).collect();
 
     macro_rules! binary_op {
         ($opname:ident, $opexpr:expr) => {{
@@ -138,121 +148,245 @@ fn binary_ops_bf16() {
 }
 
 #[test]
-fn binary_add_f16() {
-    let left: Vec<f16> = [1.0f32, 2.0, 3.0].into_iter().map(f16::from_f32).collect();
-    let right: Vec<f16> = [2.0f32, 3.1, 4.2].into_iter().map(f16::from_f32).collect();
-    let results = run_binary(&left, &right, add::F16);
-    assert_eq!(approx_f16(results, 1), vec![3.0f32, 5.1, 7.2]);
+fn binary_ops_f16() {
+    let lhs: Vec<f16> = vec![1.1f32, 2.2, 3.3].into_iter().map(f16::from_f32).collect();
+    let rhs: Vec<f16> = vec![4.2f32, 5.5f32, 6.91f32].into_iter().map(f16::from_f32).collect();
+
+    macro_rules! binary_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results = run_binary(&lhs, &rhs, $opname::F16);
+            let expected: Vec<f16> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&f16, &f16)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    binary_op!(add, |x, y| x + y);
+    binary_op!(sub, |x, y| x - y);
+    binary_op!(mul, |x, y| x * y);
+    binary_op!(div, |x, y| x / y);
+    binary_op!(minimum, |x: f16, y| x.min(y));
+    binary_op!(maximum, |x: f16, y| x.max(y));
 }
 
 #[test]
-fn binary_sub_f32() {
-    let left = vec![5.0f32, 10.0, 15.0];
-    let right = vec![2.0f32, 3.0, 5.0];
-    let results = run_binary(&left, &right, sub::F32);
-    assert_eq!(approx(results, 4), vec![3.0f32, 7.0, 10.0]);
+fn binary_ops_f32() {
+    let lhs: Vec<f32> = vec![1.1f32, 2.2, 3.3];
+    let rhs: Vec<f32> = vec![4.2f32, 5.5f32, 6.91f32];
+
+    macro_rules! binary_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results = run_binary(&lhs, &rhs, $opname::F32);
+            let expected: Vec<f32> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&f32, &f32)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(approx(results, 6), approx(expected, 6));
+        }};
+    }
+
+    binary_op!(add, |x, y| x + y);
+    binary_op!(sub, |x, y| x - y);
+    binary_op!(mul, |x, y| x * y);
+    binary_op!(div, |x, y| x / y);
+    binary_op!(minimum, |x: f32, y| x.min(y));
+    binary_op!(maximum, |x: f32, y| x.max(y));
 }
 
 #[test]
-fn binary_mul_f32() {
-    let left = vec![2.0f32, 3.0, 4.0];
-    let right = vec![5.0f32, 6.0, 7.0];
-    let results = run_binary(&left, &right, mul::F32);
-    assert_eq!(approx(results, 4), vec![10.0f32, 18.0, 28.0]);
+fn binary_logical_ops_bool() {
+    let lhs: Vec<bool> = vec![true, false, true, false];
+    let rhs: Vec<bool> = vec![true, true, false, true];
+
+    macro_rules! binary_logical_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::BOOL);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&bool, &bool)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    binary_logical_op!(logical_and, |x, y| x && y);
+    binary_logical_op!(logical_or, |x, y| x || y);
+    binary_logical_op!(logical_xor, |x, y| x ^ y);
 }
 
 #[test]
-fn binary_div_f32() {
-    let left = vec![10.0f32, 20.0, 30.0];
-    let right = vec![2.0f32, 4.0, 5.0];
-    let results = run_binary(&left, &right, div::F32);
-    assert_eq!(approx(results, 4), vec![5.0f32, 5.0, 6.0]);
+fn binary_logical_ops_bf16() {
+    let lhs: Vec<bf16> = vec![1.0f32, 0.0, 1.0, 0.0].into_iter().map(bf16::from_f32).collect();
+    let rhs: Vec<bf16> = vec![1.0f32, 1.0, 0.0, 1.0].into_iter().map(bf16::from_f32).collect();
+
+    macro_rules! binary_logical_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::BF16);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&bf16, &bf16)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    binary_logical_op!(logical_and, |x, y| (x != bf16::from_f32(0.0))
+        && (y != bf16::from_f32(0.0)));
+    binary_logical_op!(logical_or, |x, y| (x != bf16::from_f32(0.0))
+        || (y != bf16::from_f32(0.0)));
+    binary_logical_op!(logical_xor, |x, y| (x != bf16::from_f32(0.0))
+        ^ (y != bf16::from_f32(0.0)));
 }
 
 #[test]
-fn binary_maximum_f32() {
-    let left = vec![1.0f32, 5.0, 3.0];
-    let right = vec![2.0f32, 4.0, 6.0];
-    let results = run_binary(&left, &right, maximum::F32);
-    assert_eq!(approx(results, 4), vec![2.0f32, 5.0, 6.0]);
+fn binary_logical_ops_f16() {
+    let lhs: Vec<f16> = vec![1.0f32, 0.0, 1.0, 0.0].into_iter().map(f16::from_f32).collect();
+    let rhs: Vec<f16> = vec![1.0f32, 1.0, 0.0, 1.0].into_iter().map(f16::from_f32).collect();
+
+    macro_rules! binary_logical_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::F16);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&f16, &f16)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    binary_logical_op!(logical_and, |x, y| (x != f16::from_f32(0.0))
+        && (y != f16::from_f32(0.0)));
+    binary_logical_op!(logical_or, |x, y| (x != f16::from_f32(0.0))
+        || (y != f16::from_f32(0.0)));
+    binary_logical_op!(logical_xor, |x, y| (x != f16::from_f32(0.0))
+        ^ (y != f16::from_f32(0.0)));
 }
 
 #[test]
-fn binary_minimum_f32() {
-    let left = vec![1.0f32, 5.0, 3.0];
-    let right = vec![2.0f32, 4.0, 6.0];
-    let results = run_binary(&left, &right, minimum::F32);
-    assert_eq!(approx(results, 4), vec![1.0f32, 4.0, 3.0]);
+fn binary_logical_ops_f32() {
+    let lhs: Vec<f32> = vec![1.0f32, 0.0, 1.0, 0.0];
+    let rhs: Vec<f32> = vec![1.0f32, 1.0, 0.0, 1.0];
+
+    macro_rules! binary_logical_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::F32);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&f32, &f32)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    binary_logical_op!(logical_and, |x, y| (x != 0.0) && (y != 0.0));
+    binary_logical_op!(logical_or, |x, y| (x != 0.0) || (y != 0.0));
+    binary_logical_op!(logical_xor, |x, y| (x != 0.0) ^ (y != 0.0));
 }
 
 #[test]
-fn binary_eq_f32() {
-    let left = vec![1.0f32, 2.0, 3.0, 4.0];
-    let right = vec![1.0f32, 3.0, 3.0, 5.0];
-    let results: Vec<u8> = run_binary_cmp(&left, &right, eq::F32);
-    assert_eq!(results, vec![1u8, 0, 1, 0]);
+fn cmp_ops_bool() {
+    let lhs: Vec<bool> = vec![true, false, true, false];
+    let rhs: Vec<bool> = vec![true, true, false, true];
+
+    macro_rules! cmp_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::BOOL);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&bool, &bool)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    cmp_op!(eq, |x, y| x == y);
+    cmp_op!(ne, |x, y| x != y);
+    cmp_op!(lt, |x, y| x < y);
+    cmp_op!(le, |x, y| x <= y);
+    cmp_op!(gt, |x, y| x > y);
+    cmp_op!(ge, |x, y| x >= y);
 }
 
 #[test]
-fn binary_ne_f32() {
-    let left = vec![1.0f32, 2.0, 3.0, 4.0];
-    let right = vec![1.0f32, 3.0, 3.0, 5.0];
-    let results: Vec<u8> = run_binary_cmp(&left, &right, ne::F32);
-    assert_eq!(results, vec![0u8, 1, 0, 1]);
+fn cmp_ops_bf16() {
+    let lhs: Vec<bf16> = vec![1.0f32, 2.0, 3.0, 4.0].into_iter().map(bf16::from_f32).collect();
+    let rhs: Vec<bf16> = vec![1.0f32, 3.0, 3.0, 5.0].into_iter().map(bf16::from_f32).collect();
+
+    macro_rules! cmp_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::BF16);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&bf16, &bf16)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    cmp_op!(eq, |x, y| x == y);
+    cmp_op!(ne, |x, y| x != y);
+    cmp_op!(lt, |x, y| x < y);
+    cmp_op!(le, |x, y| x <= y);
+    cmp_op!(gt, |x, y| x > y);
+    cmp_op!(ge, |x, y| x >= y);
 }
 
 #[test]
-fn binary_lt_f32() {
-    let left = vec![1.0f32, 2.0, 3.0, 4.0];
-    let right = vec![2.0f32, 2.0, 2.0, 5.0];
-    let results: Vec<u8> = run_binary_cmp(&left, &right, lt::F32);
-    assert_eq!(results, vec![1u8, 0, 0, 1]);
+fn cmp_ops_f16() {
+    let lhs: Vec<f16> = vec![1.0f32, 2.0, 3.0, 4.0].into_iter().map(f16::from_f32).collect();
+    let rhs: Vec<f16> = vec![1.0f32, 3.0, 3.0, 5.0].into_iter().map(f16::from_f32).collect();
+
+    macro_rules! cmp_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::F16);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&f16, &f16)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
+
+    cmp_op!(eq, |x, y| x == y);
+    cmp_op!(ne, |x, y| x != y);
+    cmp_op!(lt, |x, y| x < y);
+    cmp_op!(le, |x, y| x <= y);
+    cmp_op!(gt, |x, y| x > y);
+    cmp_op!(ge, |x, y| x >= y);
 }
 
 #[test]
-fn binary_le_f32() {
-    let left = vec![1.0f32, 2.0, 3.0, 4.0];
-    let right = vec![2.0f32, 2.0, 2.0, 5.0];
-    let results: Vec<u8> = run_binary_cmp(&left, &right, le::F32);
-    assert_eq!(results, vec![1u8, 1, 0, 1]);
-}
+fn cmp_ops_f32() {
+    let lhs: Vec<f32> = vec![1.0f32, 2.0, 3.0, 4.0];
+    let rhs: Vec<f32> = vec![1.0f32, 3.0, 3.0, 5.0];
 
-#[test]
-fn binary_gt_f32() {
-    let left = vec![1.0f32, 2.0, 3.0, 4.0];
-    let right = vec![2.0f32, 2.0, 2.0, 5.0];
-    let results: Vec<u8> = run_binary_cmp(&left, &right, gt::F32);
-    assert_eq!(results, vec![0u8, 0, 1, 0]);
-}
+    macro_rules! cmp_op {
+        ($opname:ident, $opexpr:expr) => {{
+            let results: Vec<bool> = run_binary_logical(&lhs, &rhs, $opname::F32);
+            let expected: Vec<bool> = lhs
+                .iter()
+                .zip(rhs.iter())
+                .map(|(x, y): (&f32, &f32)| $opexpr(*x, *y))
+                .collect();
+            assert_eq!(results, expected);
+        }};
+    }
 
-#[test]
-fn binary_ge_f32() {
-    let left = vec![1.0f32, 2.0, 3.0, 4.0];
-    let right = vec![2.0f32, 2.0, 2.0, 5.0];
-    let results: Vec<u8> = run_binary_cmp(&left, &right, ge::F32);
-    assert_eq!(results, vec![0u8, 1, 1, 0]);
-}
-
-#[test]
-fn binary_logical_and_u8() {
-    let left = vec![0u8, 0, 1, 1];
-    let right = vec![0u8, 1, 0, 1];
-    let results: Vec<u8> = run_binary(&left, &right, logical_and::U8);
-    assert_eq!(results, vec![0u8, 0, 0, 1]);
-}
-
-#[test]
-fn binary_logical_or_u8() {
-    let left = vec![0u8, 0, 1, 1];
-    let right = vec![0u8, 1, 0, 1];
-    let results: Vec<u8> = run_binary(&left, &right, logical_or::U8);
-    assert_eq!(results, vec![0u8, 1, 1, 1]);
-}
-
-#[test]
-fn binary_logical_xor_u8() {
-    let left = vec![0u8, 0, 1, 1];
-    let right = vec![0u8, 1, 0, 1];
-    let results: Vec<u8> = run_binary(&left, &right, logical_xor::U8);
-    assert_eq!(results, vec![0u8, 1, 1, 0]);
+    cmp_op!(eq, |x, y| x == y);
+    cmp_op!(ne, |x, y| x != y);
+    cmp_op!(lt, |x, y| x < y);
+    cmp_op!(le, |x, y| x <= y);
+    cmp_op!(gt, |x, y| x > y);
+    cmp_op!(ge, |x, y| x >= y);
 }

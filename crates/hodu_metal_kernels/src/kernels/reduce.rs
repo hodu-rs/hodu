@@ -32,25 +32,45 @@ pub fn call_reduce(
     input: BufferOffset,
     input_strides: &[usize],
     input_offset: usize,
-    output_shape: &[usize],
     reduce_dims: &[usize],
     reduce_size: usize,
+    keep_dim: bool,
     output: &Buffer,
 ) -> Result<(), MetalKernelError> {
     let pipeline = kernels.load_pipeline(device, Source::Reduce, kernel_name.0)?;
 
     let num_dims = shape.len();
-    let num_els: usize = output_shape.iter().product();
     let num_reduce_dims = reduce_dims.len();
 
-    // Prepare metadata: dims, strides, offset, output_shape, reduce_dims, num_reduce_dims
-    let mut metadata = Vec::with_capacity(num_dims * 4 + 2 + num_reduce_dims);
+    // Calculate output shape based on keep_dim
+    let mut output_shape = shape.to_vec();
+    for &dim in reduce_dims {
+        if keep_dim {
+            output_shape[dim] = 1;
+        } else {
+            output_shape[dim] = 0; // Mark for removal
+        }
+    }
+    if !keep_dim {
+        output_shape.retain(|&size| size != 0);
+        if output_shape.is_empty() {
+            output_shape = vec![1]; // Scalar result
+        }
+    }
+
+    let num_els: usize = output_shape.iter().product();
+
+    // Prepare metadata: dims, strides, offset, output_shape_len, output_shape, num_reduce_dims, reduce_dims, keep_dim
+    let output_shape_len = output_shape.len();
+    let mut metadata = Vec::with_capacity(num_dims * 2 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
     metadata.extend_from_slice(shape);
     metadata.extend_from_slice(input_strides);
     metadata.push(input_offset);
-    metadata.extend_from_slice(output_shape);
-    metadata.extend_from_slice(reduce_dims);
+    metadata.push(output_shape_len);
+    metadata.extend_from_slice(&output_shape);
     metadata.push(num_reduce_dims);
+    metadata.extend_from_slice(reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
 
     let encoder = ep.encoder();
     let encoder: &ComputeCommandEncoder = encoder.as_ref();
