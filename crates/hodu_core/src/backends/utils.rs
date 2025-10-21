@@ -3,6 +3,7 @@ pub use crate::{
         window_reduction::WindowReduction, BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConcatOp, IndexingOp,
         MatrixOp, MemoryOp, Op, ReduceOp, ShapeOp, SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
     },
+    compat::*,
     error::{HoduError, HoduResult},
     types::{backend::Backend, device::Device, dtype::DType},
 };
@@ -11,7 +12,7 @@ pub fn validate_dtype_for_device(dtype: DType, device: &Device) -> HoduResult<()
     match device {
         Device::CPU => Ok(()),
         Device::CUDA(_) => Ok(()),
-        Device::METAL(_) => {
+        Device::METAL => {
             // metal: f8e4m3, f8e5m2, f64 not supported
             match dtype {
                 DType::F8E4M3 | DType::F8E5M2 | DType::F64 => Err(HoduError::UnsupportedDTypeForDevice {

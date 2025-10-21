@@ -7,6 +7,18 @@ template <typename T> T sub_with_clamp(T x, T y) { return (x > y) ? (x - y) : 0;
 template <typename T> T maximum(T x, T y) { return (x > y) ? x : y; }
 template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 
+// Integer power function
+template <typename T> T ipow(T base, T exp) {
+    T result = 1;
+    while (exp > 0) {
+        if (exp & 1)
+            result *= base;
+        base *= base;
+        exp >>= 1;
+    }
+    return result;
+}
+
 #define BINARY_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                        \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *lhs [[buffer(0)]], const device IN_TYPENAME *rhs [[buffer(1)]],  \
@@ -89,6 +101,8 @@ BINARY_OP(bfloat, bfloat, add_bf16, x + y);
 BINARY_OP(bfloat, bfloat, sub_bf16, x - y);
 BINARY_OP(bfloat, bfloat, mul_bf16, x *y);
 BINARY_OP(bfloat, bfloat, div_bf16, x / y);
+BINARY_OP(bfloat, bfloat, pow_bf16,
+          static_cast<bfloat>(pow(static_cast<float>(x), static_cast<float>(y))));
 BINARY_OP(bfloat, bfloat, maximum_bf16, maximum(x, y));
 BINARY_OP(bfloat, bfloat, minimum_bf16, minimum(x, y));
 
@@ -108,6 +122,7 @@ BINARY_OP(half, half, add_f16, x + y);
 BINARY_OP(half, half, sub_f16, x - y);
 BINARY_OP(half, half, mul_f16, x *y);
 BINARY_OP(half, half, div_f16, x / y);
+BINARY_OP(half, half, pow_f16, pow(x, y));
 BINARY_OP(half, half, maximum_f16, maximum(x, y));
 BINARY_OP(half, half, minimum_f16, minimum(x, y));
 
@@ -127,6 +142,7 @@ BINARY_OP(float, float, add_f32, x + y);
 BINARY_OP(float, float, sub_f32, x - y);
 BINARY_OP(float, float, mul_f32, x *y);
 BINARY_OP(float, float, div_f32, x / y);
+BINARY_OP(float, float, pow_f32, pow(x, y));
 BINARY_OP(float, float, maximum_f32, maximum(x, y));
 BINARY_OP(float, float, minimum_f32, minimum(x, y));
 
@@ -146,6 +162,7 @@ BINARY_OP(uint8_t, uint8_t, add_u8, x + y);
 BINARY_OP(uint8_t, uint8_t, sub_u8, sub_with_clamp(x, y));
 BINARY_OP(uint8_t, uint8_t, mul_u8, x *y);
 BINARY_OP(uint8_t, uint8_t, div_u8, x / y);
+BINARY_OP(uint8_t, uint8_t, pow_u8, ipow(x, y));
 BINARY_OP(uint8_t, uint8_t, maximum_u8, maximum(x, y));
 BINARY_OP(uint8_t, uint8_t, minimum_u8, minimum(x, y));
 
@@ -165,6 +182,7 @@ BINARY_OP(uint16_t, uint16_t, add_u16, x + y);
 BINARY_OP(uint16_t, uint16_t, sub_u16, sub_with_clamp(x, y));
 BINARY_OP(uint16_t, uint16_t, mul_u16, x *y);
 BINARY_OP(uint16_t, uint16_t, div_u16, x / y);
+BINARY_OP(uint16_t, uint16_t, pow_u16, ipow(x, y));
 BINARY_OP(uint16_t, uint16_t, maximum_u16, maximum(x, y));
 BINARY_OP(uint16_t, uint16_t, minimum_u16, minimum(x, y));
 
@@ -184,6 +202,7 @@ BINARY_OP(uint32_t, uint32_t, add_u32, x + y);
 BINARY_OP(uint32_t, uint32_t, sub_u32, sub_with_clamp(x, y));
 BINARY_OP(uint32_t, uint32_t, mul_u32, x *y);
 BINARY_OP(uint32_t, uint32_t, div_u32, x / y);
+BINARY_OP(uint32_t, uint32_t, pow_u32, ipow(x, y));
 BINARY_OP(uint32_t, uint32_t, maximum_u32, maximum(x, y));
 BINARY_OP(uint32_t, uint32_t, minimum_u32, minimum(x, y));
 
@@ -203,6 +222,7 @@ BINARY_OP(uint64_t, uint64_t, add_u64, x + y);
 BINARY_OP(uint64_t, uint64_t, sub_u64, sub_with_clamp(x, y));
 BINARY_OP(uint64_t, uint64_t, mul_u64, x *y);
 BINARY_OP(uint64_t, uint64_t, div_u64, x / y);
+BINARY_OP(uint64_t, uint64_t, pow_u64, ipow(x, y));
 BINARY_OP(uint64_t, uint64_t, maximum_u64, maximum(x, y));
 BINARY_OP(uint64_t, uint64_t, minimum_u64, minimum(x, y));
 
@@ -222,6 +242,7 @@ BINARY_OP(int8_t, int8_t, add_i8, x + y);
 BINARY_OP(int8_t, int8_t, sub_i8, x - y);
 BINARY_OP(int8_t, int8_t, mul_i8, x *y);
 BINARY_OP(int8_t, int8_t, div_i8, x / y);
+BINARY_OP(int8_t, int8_t, pow_i8, ipow(x, y));
 BINARY_OP(int8_t, int8_t, maximum_i8, maximum(x, y));
 BINARY_OP(int8_t, int8_t, minimum_i8, minimum(x, y));
 
@@ -241,6 +262,7 @@ BINARY_OP(int16_t, int16_t, add_i16, x + y);
 BINARY_OP(int16_t, int16_t, sub_i16, x - y);
 BINARY_OP(int16_t, int16_t, mul_i16, x *y);
 BINARY_OP(int16_t, int16_t, div_i16, x / y);
+BINARY_OP(int16_t, int16_t, pow_i16, ipow(x, y));
 BINARY_OP(int16_t, int16_t, maximum_i16, maximum(x, y));
 BINARY_OP(int16_t, int16_t, minimum_i16, minimum(x, y));
 
@@ -260,6 +282,7 @@ BINARY_OP(int32_t, int32_t, add_i32, x + y);
 BINARY_OP(int32_t, int32_t, sub_i32, x - y);
 BINARY_OP(int32_t, int32_t, mul_i32, x *y);
 BINARY_OP(int32_t, int32_t, div_i32, x / y);
+BINARY_OP(int32_t, int32_t, pow_i32, ipow(x, y));
 BINARY_OP(int32_t, int32_t, maximum_i32, maximum(x, y));
 BINARY_OP(int32_t, int32_t, minimum_i32, minimum(x, y));
 
@@ -279,6 +302,7 @@ BINARY_OP(int64_t, int64_t, add_i64, x + y);
 BINARY_OP(int64_t, int64_t, sub_i64, x - y);
 BINARY_OP(int64_t, int64_t, mul_i64, x *y);
 BINARY_OP(int64_t, int64_t, div_i64, x / y);
+BINARY_OP(int64_t, int64_t, pow_i64, ipow(x, y));
 BINARY_OP(int64_t, int64_t, maximum_i64, maximum(x, y));
 BINARY_OP(int64_t, int64_t, minimum_i64, minimum(x, y));
 

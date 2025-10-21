@@ -16,7 +16,7 @@ impl Backend {
     pub fn is_supported(&self, device: Device) -> bool {
         match self {
             Backend::HODU => {
-                matches!(device, Device::CPU | Device::CUDA(_) | Device::METAL(_))
+                matches!(device, Device::CPU | Device::CUDA(_) | Device::METAL)
             },
             Backend::XLA => {
                 matches!(device, Device::CPU | Device::CUDA(_))

@@ -14,6 +14,7 @@ ops!(
     sub,
     mul,
     div,
+    pow,
     minimum,
     maximum,
     eq,

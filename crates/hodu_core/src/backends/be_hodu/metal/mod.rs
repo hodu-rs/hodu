@@ -8,7 +8,11 @@ pub mod device;
 #[cfg(not(feature = "metal"))]
 mod dummy;
 #[cfg(feature = "metal")]
+pub mod error;
+#[cfg(feature = "metal")]
 pub mod storage;
+#[cfg(feature = "metal")]
+pub mod utils;
 
 #[cfg(not(feature = "metal"))]
 pub use dummy::*;

@@ -1,4 +1,5 @@
 use crate::{
+    backends::be_hodu::metal::error::MetalError,
     compat::*,
     tensor::TensorId,
     types::{backend::Backend, device::Device, dtype::DType},
@@ -82,6 +83,10 @@ pub enum HoduError {
     SerializationError(String),
     // Internal
     InternalError(String),
+    // Metal
+    Metal(MetalError),
+    // Ug
+    Ug(ug::Error),
 }
 
 impl fmt::Display for HoduError {
@@ -198,6 +203,8 @@ impl fmt::Display for HoduError {
             Self::IoError(msg) => write!(f, "IO error - {msg}"),
             Self::SerializationError(msg) => write!(f, "Serialization error - {msg}"),
             Self::InternalError(msg) => write!(f, "Internal error - {msg}"),
+            Self::Metal(e) => write!(f, "Metal error {}", e),
+            Self::Ug(e) => write!(f, "{}", e),
         }
     }
 }
@@ -210,5 +217,24 @@ impl fmt::Debug for HoduError {
 
 #[cfg(feature = "std")]
 impl std::error::Error for HoduError {}
+
+#[cfg(feature = "std")]
+impl From<std::string::FromUtf8Error> for HoduError {
+    fn from(e: std::string::FromUtf8Error) -> Self {
+        HoduError::InternalError(format!("UTF-8 conversion error: {}", e))
+    }
+}
+
+impl From<MetalError> for HoduError {
+    fn from(e: MetalError) -> Self {
+        HoduError::Metal(e)
+    }
+}
+
+impl From<ug::Error> for HoduError {
+    fn from(e: ug::Error) -> Self {
+        HoduError::Ug(e)
+    }
+}
 
 pub type HoduResult<T> = Result<T, HoduError>;

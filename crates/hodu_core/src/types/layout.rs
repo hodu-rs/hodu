@@ -53,6 +53,10 @@ impl Layout {
         self.shape.iter().product()
     }
 
+    pub fn get_buffer_size(&self) -> usize {
+        self.get_offset() + self.get_size()
+    }
+
     pub fn set_shape(&mut self, shape: &[usize]) {
         self.shape = shape.to_vec();
     }

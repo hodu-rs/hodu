@@ -245,8 +245,8 @@ impl HoduStorageT for CpuStorage {
         Device::CPU
     }
 
-    fn get_hodu_device(&self) -> CpuDevice {
-        CpuDevice
+    fn get_hodu_device(&self) -> &CpuDevice {
+        &CpuDevice
     }
 
     fn to_cpu_storage(&self) -> HoduResult<CpuStorage> {
@@ -3320,12 +3320,10 @@ impl HoduStorageT for CpuStorage {
                     Self::BF16(storage) => impl_reduce_window!(storage, bf16, bf16::ZERO, |a, b| a + b, BF16),
                     Self::F32(storage) => impl_reduce_window!(storage, f32, 0.0f32, |a, b| a + b, F32),
                     Self::F64(storage) => impl_reduce_window!(storage, f64, 0.0f64, |a, b| a + b, F64),
-                    _ => {
-                        return Err(HoduError::UnsupportedDType {
-                            dtype: self.get_dtype(),
-                            op: "reduce_window with Mean reduction".to_string(),
-                        })
-                    },
+                    _ => Err(HoduError::UnsupportedDType {
+                        dtype: self.get_dtype(),
+                        op: "reduce_window with Mean reduction".to_string(),
+                    }),
                 }?;
                 // Then divide by window size
                 let window_size: usize = window_shape.iter().product();

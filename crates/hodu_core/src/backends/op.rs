@@ -28,7 +28,6 @@ pub enum BinaryOp {
 
 pub trait BinaryOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool, v2: bool) -> bool;
     fn f8e4m3(v1: F8E4M3, v2: F8E4M3) -> F8E4M3;
@@ -58,7 +57,6 @@ pub enum BinaryLogicalOp {
 
 pub trait BinaryLogicalOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool, v2: bool) -> bool;
     fn f8e4m3(v1: F8E4M3, v2: F8E4M3) -> bool;
@@ -91,7 +89,6 @@ pub enum CmpOp {
 
 pub trait CmpOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool, v2: bool) -> bool;
     fn f8e4m3(v1: F8E4M3, v2: F8E4M3) -> bool;
@@ -124,7 +121,6 @@ pub enum CmpScalarOp {
 
 pub trait CmpScalarOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool, scalar: Scalar) -> bool;
     fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> bool;
@@ -174,7 +170,6 @@ pub enum UnaryOp {
 
 pub trait UnaryOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool) -> bool;
     fn f8e4m3(v1: F8E4M3) -> F8E4M3;
@@ -202,7 +197,6 @@ pub enum UnaryLogicalOp {
 
 pub trait UnaryLogicalOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool) -> bool;
     fn f8e4m3(v1: F8E4M3) -> bool;
@@ -239,7 +233,6 @@ pub enum UnaryScalarOp {
 
 pub trait UnaryScalarOpT {
     const NAME: &'static str;
-    const KERNEL: &'static str;
 
     fn bool(v1: bool, scalar: Scalar) -> bool;
     fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3;
@@ -445,7 +438,6 @@ macro_rules! binary_op {
     ($op:ident, $name: literal, $e: expr) => {
         impl BinaryOpT for $op {
             const NAME: &'static str = $name;
-            const KERNEL: &'static str = concat!("binary_", $name);
 
             #[inline(always)]
             fn bool(_: bool, _: bool) -> bool {
@@ -517,7 +509,6 @@ binary_op!(Mul, "mul", |v1, v2| v1 * v2);
 binary_op!(Div, "div", |v1, v2| v1 / v2);
 impl BinaryOpT for Pow {
     const NAME: &'static str = "pow";
-    const KERNEL: &'static str = "binary_pow";
 
     #[inline(always)]
     fn bool(_: bool, _: bool) -> bool {
@@ -589,7 +580,6 @@ pub(crate) struct LogicalXor;
 
 impl BinaryLogicalOpT for LogicalAnd {
     const NAME: &'static str = "logical_and";
-    const KERNEL: &'static str = "binary_logical_and";
 
     #[inline(always)]
     fn bool(v1: bool, v2: bool) -> bool {
@@ -654,7 +644,6 @@ impl BinaryLogicalOpT for LogicalAnd {
 }
 impl BinaryLogicalOpT for LogicalOr {
     const NAME: &'static str = "logical_or";
-    const KERNEL: &'static str = "binary_logical_or";
 
     #[inline(always)]
     fn bool(v1: bool, v2: bool) -> bool {
@@ -719,7 +708,6 @@ impl BinaryLogicalOpT for LogicalOr {
 }
 impl BinaryLogicalOpT for LogicalXor {
     const NAME: &'static str = "logical_xor";
-    const KERNEL: &'static str = "binary_logical_xor";
 
     #[inline(always)]
     fn bool(v1: bool, v2: bool) -> bool {
@@ -794,7 +782,6 @@ macro_rules! cmp_op {
     ($op:ident, $name:literal, $e:expr) => {
         impl CmpOpT for $op {
             const NAME: &'static str = $name;
-            const KERNEL: &'static str = concat!("cmp_", $name);
 
             #[inline(always)]
             fn bool(v1: bool, v2: bool) -> bool {
@@ -878,7 +865,6 @@ macro_rules! cmp_scalar_op {
     ($op:ident, $name:literal, $e:expr) => {
         impl CmpScalarOpT for $op {
             const NAME: &'static str = $name;
-            const KERNEL: &'static str = concat!("cmp_scalar_", $name);
 
             #[inline(always)]
             fn bool(v1: bool, scalar: Scalar) -> bool {
@@ -976,7 +962,6 @@ macro_rules! unary_op {
     ($op:ident, $name: literal, $a: ident, $e: expr) => {
         impl UnaryOpT for $op {
             const NAME: &'static str = $name;
-            const KERNEL: &'static str = concat!("unary_", $name);
 
             #[inline(always)]
             fn bool(_: bool) -> bool {
@@ -1046,7 +1031,6 @@ unary_op!(Neg, "neg", v, -v);
 unary_op!(Abs, "abs", v, v.abs());
 impl UnaryOpT for Sign {
     const NAME: &'static str = "sign";
-    const KERNEL: &'static str = "unary_sign";
 
     #[inline(always)]
     fn bool(_: bool) -> bool {
@@ -1112,7 +1096,6 @@ impl UnaryOpT for Sign {
 unary_op!(Square, "square", v, v * v);
 impl UnaryOpT for Relu {
     const NAME: &'static str = "relu";
-    const KERNEL: &'static str = "unary_relu";
 
     #[inline(always)]
     fn bool(_: bool) -> bool {
@@ -1206,7 +1189,6 @@ unary_op!(Sigmoid, "sigmoid", v, {
 unary_op!(Tanh, "tanh", v, v.tanh());
 impl UnaryOpT for Gelu {
     const NAME: &'static str = "gelu";
-    const KERNEL: &'static str = "unary_gelu";
 
     #[inline(always)]
     fn bool(_: bool) -> bool {
@@ -1308,7 +1290,6 @@ unary_op!(Log2, "log2", v, v.log2());
 unary_op!(Exp, "exp", v, v.exp());
 impl UnaryOpT for Exp10 {
     const NAME: &'static str = "exp10";
-    const KERNEL: &'static str = "unary_exp10";
 
     #[inline(always)]
     fn bool(_: bool) -> bool {
@@ -1386,7 +1367,6 @@ pub(crate) struct LogicalNot;
 
 impl UnaryLogicalOpT for LogicalNot {
     const NAME: &'static str = "logical_not";
-    const KERNEL: &'static str = "unary_logical_not";
 
     #[inline(always)]
     fn bool(v1: bool) -> bool {
@@ -1464,7 +1444,6 @@ macro_rules! unary_scalar_op {
     ($op:ident, $name: literal, $e: expr) => {
         impl UnaryScalarOpT for $op {
             const NAME: &'static str = $name;
-            const KERNEL: &'static str = concat!("unary_scalar_", $name);
 
             #[inline(always)]
             fn bool(_: bool, _: Scalar) -> bool {
@@ -1536,7 +1515,6 @@ unary_scalar_op!(MulScalar, "mul_scalar", |v1, v2| v1 * v2);
 unary_scalar_op!(DivScalar, "div_scalar", |v1, v2| v1 / v2);
 impl UnaryScalarOpT for PowScalar {
     const NAME: &'static str = "pow_scalar";
-    const KERNEL: &'static str = "unary_scalar_pow_scalar";
 
     #[inline(always)]
     fn bool(_: bool, _: Scalar) -> bool {
@@ -1603,7 +1581,6 @@ unary_scalar_op!(MaximumScalar, "maximum_scalar", |v1, v2| if v1 < v2 { v2 } els
 unary_scalar_op!(MinimumScalar, "minimum_scalar", |v1, v2| if v1 > v2 { v2 } else { v1 });
 impl UnaryScalarOpT for LeakyRelu {
     const NAME: &'static str = "leaky_relu";
-    const KERNEL: &'static str = "unary_scalar_leaky_relu";
 
     #[inline(always)]
     fn bool(_: bool, _: Scalar) -> bool {
@@ -1698,7 +1675,6 @@ impl UnaryScalarOpT for LeakyRelu {
 }
 impl UnaryScalarOpT for Elu {
     const NAME: &'static str = "elu";
-    const KERNEL: &'static str = "unary_scalar_elu";
 
     #[inline(always)]
     fn bool(_: bool, _: Scalar) -> bool {
