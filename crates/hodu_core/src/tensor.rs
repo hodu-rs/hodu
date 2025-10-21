@@ -195,6 +195,33 @@ impl Tensor {
         with_tensor(self.0, |t| t.layout.clone()).unwrap_or_else(|| Layout::from_shape(&[]))
     }
 
+    pub fn get_shape(&self) -> Vec<usize> {
+        let layout = self.get_layout();
+        layout.get_shape().to_vec()
+    }
+
+    pub fn get_strides(&self) -> Vec<usize> {
+        let layout = self.get_layout();
+        layout.get_strides().to_vec()
+    }
+
+    pub fn get_offset(&self) -> usize {
+        let layout = self.get_layout();
+        layout.get_offset()
+    }
+
+    pub fn get_ndim(&self) -> usize {
+        self.get_shape().len()
+    }
+
+    pub fn get_dim_size(&self, dim: usize) -> usize {
+        self.get_shape()[dim]
+    }
+
+    pub fn get_size(&self) -> usize {
+        self.get_shape().iter().product()
+    }
+
     pub fn get_device(&self) -> Device {
         self.with_storage(|storage| Ok(storage.get_device()))
             .unwrap_or(Device::CPU)
