@@ -1,6 +1,6 @@
 [package]
 name = "hodu_metal_kernels"
-version = "0.1.0-dev"
+version = "0.1.8"
 description = "hodu metal kernels"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
