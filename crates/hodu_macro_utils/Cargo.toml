@@ -1,25 +1,16 @@
 [package]
-name = "hodu_nn_macros"
+name = "hodu_macro_utils"
 version = "0.1.8"
-description = "hodu nn macros"
+description = "hodu macro utils"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
-[lib]
-proc-macro = true
-
-[features]
-std = []
-serde = []
-
 [dependencies]
-hodu_macro_utils = { path = "../../hodu_macro_utils", version = "0.1.8" }
 proc-macro2 = "1.0"
 quote = "1.0"
-spin = { workspace = true }
 syn = { version = "2.0", features = ["full"] }
 toml_edit = { version = "0.23.6", default-features = false, features = [
     "parse",

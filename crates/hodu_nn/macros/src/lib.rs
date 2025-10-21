@@ -1,7 +1,6 @@
 extern crate proc_macro;
 
 mod derive;
-pub(crate) mod manifest;
 
 use proc_macro::TokenStream;
 
