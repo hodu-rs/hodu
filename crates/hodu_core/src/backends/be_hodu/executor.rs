@@ -750,7 +750,13 @@ impl HoduExecutor {
                     .get(tensor_id)
                     .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
 
-                self.execute_cast_op(*cast_op, input_storage, compiled_node, compiled)
+                self.execute_cast_op(
+                    *cast_op,
+                    input_storage,
+                    &compiled_node.input_layouts[0],
+                    compiled_node,
+                    compiled,
+                )
             },
             Op::Memory(memory_op, tensor_id) => {
                 let input_storage = tensor_storage
@@ -1271,6 +1277,7 @@ impl HoduExecutor {
         &self,
         cast_op: CastOp,
         input_storage: &SharedStorage,
+        input_layout: &Layout,
         compiled_node: &CompiledNode,
         compiled: &HoduCompiledScript,
     ) -> HoduResult<HoduStorage> {
@@ -1291,11 +1298,11 @@ impl HoduExecutor {
 
                 match input_storage.as_ref() {
                     HoduStorage::CPU(cpu_storage) => {
-                        let converted_storage = cpu_storage.to_dtype(target_dtype)?;
+                        let converted_storage = cpu_storage.to_dtype(target_dtype, input_layout)?;
                         Ok(HoduStorage::CPU(converted_storage))
                     },
                     HoduStorage::METAL(metal_storage) => {
-                        let converted_storage = metal_storage.to_dtype(target_dtype)?;
+                        let converted_storage = metal_storage.to_dtype(target_dtype, input_layout)?;
                         Ok(HoduStorage::METAL(converted_storage))
                     },
                 }

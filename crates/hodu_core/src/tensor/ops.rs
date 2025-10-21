@@ -3601,7 +3601,7 @@ impl Tensor {
     // Cast Operations
     pub fn to_dtype(&self, dtype: DType) -> HoduResult<Self> {
         if builder::is_builder_active() {
-            let result_layout = self.get_layout().clone();
+            let result_layout = Layout::from_shape(self.get_layout().get_shape());
             let requires_grad = self.is_requires_grad() && dtype.is_float();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
@@ -3615,8 +3615,8 @@ impl Tensor {
 
             Ok(result_tensor)
         } else {
-            let storage = self.with_storage(|storage| storage.to_dtype(dtype))?;
-            let layout = self.get_layout().clone();
+            let layout = Layout::from_shape(self.get_layout().get_shape());
+            let storage = self.with_storage(|storage| storage.to_dtype(dtype, &self.get_layout()))?;
             let requires_grad = self.is_requires_grad() && dtype.is_float();
             let result = from_storage_with_grad(storage, layout, true, requires_grad);
 

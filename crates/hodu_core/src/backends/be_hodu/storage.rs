@@ -122,7 +122,7 @@ pub trait HoduStorageT: Sized {
         _: WindowReduction,
     ) -> HoduResult<Self>;
 
-    fn to_dtype(&self, _: DType) -> HoduResult<Self>;
+    fn to_dtype(&self, _: DType, _: &Layout) -> HoduResult<Self>;
 
     fn contiguous(&self, _: &Layout) -> HoduResult<Self>;
 }
@@ -877,14 +877,14 @@ impl HoduStorage {
         }
     }
 
-    pub(crate) fn to_dtype(&self, dtype: DType) -> HoduResult<Self> {
+    pub(crate) fn to_dtype(&self, dtype: DType, input_layout: &Layout) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => {
-                let converted_storage = storage.to_dtype(dtype)?;
+                let converted_storage = storage.to_dtype(dtype, input_layout)?;
                 Ok(Self::CPU(converted_storage))
             },
             Self::METAL(storage) => {
-                let converted_storage = storage.to_dtype(dtype)?;
+                let converted_storage = storage.to_dtype(dtype, input_layout)?;
                 Ok(Self::METAL(converted_storage))
             },
         }

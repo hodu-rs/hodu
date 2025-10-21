@@ -3334,15 +3334,14 @@ impl HoduStorageT for CpuStorage {
         }
     }
 
-    fn to_dtype(&self, target_dtype: DType) -> HoduResult<Self> {
+    fn to_dtype(&self, target_dtype: DType, input_layout: &Layout) -> HoduResult<Self> {
         if self.get_dtype() == target_dtype {
             return Ok(self.clone());
         }
 
         macro_rules! convert_storage {
             ($storage:expr, $convert_fn:expr) => {{
-                let layout = Layout::from_shape(&[$storage.len()]);
-                let data = unary_map($storage, &layout, $convert_fn);
+                let data = unary_map($storage, input_layout, $convert_fn);
                 data
             }};
         }

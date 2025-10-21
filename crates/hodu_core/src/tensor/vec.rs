@@ -226,7 +226,7 @@ fn extract_vec_from_cpu_storage<T: Clone + 'static>(cpu_storage: &CpuStorage, la
         .ok_or_else(|| HoduError::InternalError("Unsupported type for extraction".to_string()))?;
 
     let cpu_storage = if cpu_storage.get_dtype() != target_dtype {
-        cpu_storage.to_dtype(target_dtype)?
+        cpu_storage.to_dtype(target_dtype, layout)?
     } else {
         cpu_storage.clone()
     };

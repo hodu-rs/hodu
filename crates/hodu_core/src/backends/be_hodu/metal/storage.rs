@@ -18,23 +18,8 @@ use crate::{
     scalar::Scalar,
     types::{dtype::DType, layout::Layout},
 };
-use hodu_metal_kernels::{
-    kernel::Kernels,
-    metal::{Buffer, Commands, Device},
-    utils::BufferOffset,
-    RESOURCE_OPTIONS,
-};
-use objc2_foundation::NSRange;
-use std::collections::HashMap;
-use std::ffi::c_void;
-use std::sync::{Arc, Mutex, PoisonError, RwLock, TryLockError};
-
-pub fn buffer_o<'a>(buffer: &'a Buffer, l: &Layout, dtype: DType) -> BufferOffset<'a> {
-    BufferOffset {
-        buffer,
-        offset_in_bytes: l.get_offset() * dtype.get_size_in_bytes(),
-    }
-}
+use hodu_metal_kernels::metal::Buffer;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct MetalStorage {
@@ -337,129 +322,223 @@ impl HoduStorageT for MetalStorage {
         }
     }
 
-    fn reduce(&self, _: ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn reduce(&self, reduce_op: ReduceOp, layout: &Layout, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        reduce_map(self, layout, reduce_op, dims, keep_dim)
     }
 
-    fn concat(&self, _: &[&Self], _: &[&Layout], _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn concat(&self, others: &[&Self], layouts: &[&Layout], dim: usize) -> HoduResult<Self> {
+        concat_map(self, others, layouts, dim)
     }
 
-    fn split(&self, _: &Layout, _: usize, _: &[usize]) -> HoduResult<Vec<Self>> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn split(&self, layout: &Layout, dim: usize, sizes: &[usize]) -> HoduResult<Vec<Self>> {
+        split_map(self, layout, dim, sizes)
     }
 
-    fn index_select(&self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn index_select(&self, layout: &Layout, indices: &Self, indices_layout: &Layout, dim: usize) -> HoduResult<Self> {
+        index_select_map(self, layout, indices, indices_layout, dim)
     }
 
-    fn index_put(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn index_put(
+        &self,
+        layout: &Layout,
+        indices: &Self,
+        indices_layout: &Layout,
+        values: &Self,
+        values_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        index_put_map(self, layout, indices, indices_layout, values, values_layout, dim)
     }
 
-    fn gather(&self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn gather(&self, layout: &Layout, indices: &Self, indices_layout: &Layout, dim: usize) -> HoduResult<Self> {
+        gather_map(self, layout, indices, indices_layout, dim)
     }
 
-    fn scatter(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn scatter(
+        &self,
+        layout: &Layout,
+        indices: &Self,
+        indices_layout: &Layout,
+        src: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        scatter_map(self, layout, indices, indices_layout, src, src_layout, dim)
     }
 
-    fn scatter_add(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn scatter_add(
+        &self,
+        layout: &Layout,
+        indices: &Self,
+        indices_layout: &Layout,
+        src: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        scatter_add_map(self, layout, indices, indices_layout, src, src_layout, dim)
     }
 
-    fn scatter_max(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn scatter_max(
+        &self,
+        layout: &Layout,
+        indices: &Self,
+        indices_layout: &Layout,
+        src: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        scatter_max_map(self, layout, indices, indices_layout, src, src_layout, dim)
     }
 
-    fn scatter_min(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: usize) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn scatter_min(
+        &self,
+        layout: &Layout,
+        indices: &Self,
+        indices_layout: &Layout,
+        src: &Self,
+        src_layout: &Layout,
+        dim: usize,
+    ) -> HoduResult<Self> {
+        scatter_min_map(self, layout, indices, indices_layout, src, src_layout, dim)
     }
 
-    fn conv1d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv1D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv1d(
+        &self,
+        weight: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv1D,
+    ) -> HoduResult<Self> {
+        conv1d_map(self, weight, input_layout, weight_layout, params)
     }
 
-    fn conv2d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv2D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv2d(
+        &self,
+        weight: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv2D,
+    ) -> HoduResult<Self> {
+        conv2d_map(self, weight, input_layout, weight_layout, params)
     }
 
-    fn conv3d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv3D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv3d(
+        &self,
+        weight: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConv3D,
+    ) -> HoduResult<Self> {
+        conv3d_map(self, weight, input_layout, weight_layout, params)
     }
 
-    fn conv_transpose1d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConvTranspose1D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv_transpose1d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose1D,
+    ) -> HoduResult<Self> {
+        conv_transpose1d_map(self, input_layout, weight_storage, weight_layout, params)
     }
 
-    fn conv_transpose2d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConvTranspose2D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv_transpose2d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose2D,
+    ) -> HoduResult<Self> {
+        conv_transpose2d_map(self, input_layout, weight_storage, weight_layout, params)
     }
 
-    fn conv_transpose3d(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConvTranspose3D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv_transpose3d(
+        &self,
+        weight_storage: &Self,
+        input_layout: &Layout,
+        weight_layout: &Layout,
+        params: &ParamsConvTranspose3D,
+    ) -> HoduResult<Self> {
+        conv_transpose3d_map(self, input_layout, weight_storage, weight_layout, params)
     }
 
-    fn conv1d_grad_weight(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv1D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv1d_grad_weight(
+        &self,
+        grad_output: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv1D,
+    ) -> HoduResult<Self> {
+        conv1d_grad_weight_map(self, grad_output, input_layout, grad_output_layout, params)
     }
 
-    fn conv2d_grad_weight(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv2D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv2d_grad_weight(
+        &self,
+        grad_output: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv2D,
+    ) -> HoduResult<Self> {
+        conv2d_grad_weight_map(self, grad_output, input_layout, grad_output_layout, params)
     }
 
-    fn conv3d_grad_weight(&self, _: &Self, _: &Layout, _: &Layout, _: &ParamsConv3D) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn conv3d_grad_weight(
+        &self,
+        grad_output: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConv3D,
+    ) -> HoduResult<Self> {
+        conv3d_grad_weight_map(self, grad_output, input_layout, grad_output_layout, params)
     }
 
     fn conv_transpose1d_grad_weight(
         &self,
-        _: &Self,
-        _: &Layout,
-        _: &Layout,
-        _: &ParamsConvTranspose1D,
+        grad_output: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose1D,
     ) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+        conv_transpose1d_grad_weight_map(self, grad_output, input_layout, grad_output_layout, params)
     }
 
     fn conv_transpose2d_grad_weight(
         &self,
-        _: &Self,
-        _: &Layout,
-        _: &Layout,
-        _: &ParamsConvTranspose2D,
+        grad_output: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose2D,
     ) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+        conv_transpose2d_grad_weight_map(self, grad_output, input_layout, grad_output_layout, params)
     }
 
     fn conv_transpose3d_grad_weight(
         &self,
-        _: &Self,
-        _: &Layout,
-        _: &Layout,
-        _: &ParamsConvTranspose3D,
+        grad_output: &Self,
+        input_layout: &Layout,
+        grad_output_layout: &Layout,
+        params: &ParamsConvTranspose3D,
     ) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+        conv_transpose3d_grad_weight_map(self, grad_output, input_layout, grad_output_layout, params)
     }
 
     fn reduce_window(
         &self,
-        _: &Layout,
-        _: &[usize],
-        _: &[usize],
-        _: &[(usize, usize)],
-        _: WindowReduction,
+        input_layout: &Layout,
+        window_shape: &[usize],
+        strides: &[usize],
+        padding: &[(usize, usize)],
+        reduction: WindowReduction,
     ) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+        reduce_window_map(self, input_layout, window_shape, strides, padding, reduction)
     }
 
-    fn to_dtype(&self, _: DType) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn to_dtype(&self, target_dtype: DType, input_layout: &Layout) -> HoduResult<Self> {
+        to_dtype_map(self, input_layout, target_dtype)
     }
 
-    fn contiguous(&self, _: &Layout) -> HoduResult<Self> {
-        panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
+    fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
+        contiguous_map(self, layout)
     }
 }
 

@@ -276,7 +276,7 @@ pub mod storage {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn to_dtype(&self, _: DType) -> HoduResult<Self> {
+        fn to_dtype(&self, _: DType, _: &Layout) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 

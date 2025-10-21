@@ -175,7 +175,7 @@ Building with the `xla` feature requires:
 | x86_64-apple-darwin | HODU | CPU | `std` | 🧪 Experimental |
 | | XLA | CPU | `std`, `xla` | 🚧 In Development |
 | aarch64-apple-darwin | HODU | CPU | `std` | ✅ Stable |
-| | HODU | Metal | `std`, `metal` | ✅ Stable |
+| | HODU | Metal | `std`, `metal` | 🧪 Experimental |
 | | XLA | CPU | `std`, `xla` | ✅ Stable |
 | x86_64-pc-windows-msvc | HODU | CPU | `std` | ✅ Stable |
 | | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
