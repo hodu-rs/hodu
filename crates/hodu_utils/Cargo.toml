@@ -1,0 +1,15 @@
+[package]
+name = "hodu_utils"
+version = "0.1.8"
+description = "hodu utils"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu"
+
+[features]
+std = []
+
+[dependencies]
+hodu_core = { path = "../hodu_core", version = "0.1.8" }

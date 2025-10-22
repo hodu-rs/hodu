@@ -8,6 +8,8 @@ crates=(
     hodu_core
     hodu_nn/macros
     hodu_nn
+    hodu_utils/macros
+    hodu_utils
 
     hodu_internal
 )

@@ -9,7 +9,7 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
-std = ["hodu_core/std", "hodu_nn/std"]
+std = ["hodu_core/std", "hodu_nn/std", "hodu_utils/std"]
 serde = ["hodu_core/serde", "hodu_nn/serde"]
 
 cuda = ["hodu_core/cuda"]
@@ -20,3 +20,4 @@ xla = ["hodu_core/xla"]
 [dependencies]
 hodu_core = { path = "../hodu_core", version = "0.1.8" }
 hodu_nn = { path = "../hodu_nn", version = "0.1.8" }
+hodu_utils = { path = "../hodu_utils", version = "0.1.8" }

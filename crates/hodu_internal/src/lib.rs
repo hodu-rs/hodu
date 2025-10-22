@@ -4,6 +4,7 @@ pub mod prelude;
 
 pub use hodu_core as core;
 pub use hodu_nn as nn;
+pub use hodu_utils as utils;
 
 pub use hodu_core::types::dtype::{
     bf16, bfloat16, bool, f16, f32, f64, f8e4m3, f8e5m2, float16, float32, float64, half, i16, i32, i64, i8, int16,
