@@ -43,12 +43,12 @@ BatchNorm2D
 BatchNorm3D
 LayerNorm
 /// pooling
-ADaptiveAvgPool1D
-ADaptiveAvgPool2D
-ADaptiveAvgPool3D
-ADaptiveMaxPool1D
-ADaptiveMaxPool2D
-ADaptiveMaxPool3D
+AdaptiveAvgPool1D
+AdaptiveAvgPool2D
+AdaptiveAvgPool3D
+AdaptiveMaxPool1D
+AdaptiveMaxPool2D
+AdaptiveMaxPool3D
 AvgPool1D
 AvgPool2D
 AvgPool3D
