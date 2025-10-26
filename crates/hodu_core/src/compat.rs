@@ -7,6 +7,7 @@
 // Basic types and formatting
 #[cfg(not(feature = "std"))]
 pub use alloc::{
+    boxed::Box,
     format,
     string::{String, ToString},
     vec,
@@ -15,6 +16,7 @@ pub use alloc::{
 
 #[cfg(feature = "std")]
 pub use std::{
+    boxed::Box,
     format,
     string::{String, ToString},
     vec,

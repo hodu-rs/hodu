@@ -1,6 +1,9 @@
 use crate::{
     backends::{
-        be_hodu::storage::{HoduStorage, HoduStorageT},
+        be_hodu::{
+            metal::storage::MetalStorage,
+            storage::{HoduStorage, HoduStorageT},
+        },
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
             BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
@@ -184,11 +187,10 @@ impl HoduExecutor {
                         "CUDA constant conversion not implemented".to_string(),
                     ));
                 },
-                Device::METAL => {
-                    // TODO: Convert to Metal storage
-                    return Err(HoduError::InternalError(
-                        "Metal constant conversion not implemented".to_string(),
-                    ));
+                Device::Metal => {
+                    let cpu_storage = self.convert_constant_to_cpu_storage(constant_node)?;
+                    let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
+                    constant_storage.insert(*tensor_id, Arc::new(HoduStorage::Metal(metal_storage)));
                 },
             }
         }
@@ -388,7 +390,7 @@ impl HoduExecutor {
             (Device::CUDA(_), _) => Err(HoduError::InternalError(
                 "CUDA tensor conversion not implemented".to_string(),
             )),
-            (Device::METAL, _) => Err(HoduError::InternalError(
+            (Device::Metal, _) => Err(HoduError::InternalError(
                 "Metal tensor conversion not implemented".to_string(),
             )),
         })
@@ -1269,7 +1271,7 @@ impl HoduExecutor {
         // simply return the same storage as the layout changes are handled at the tensor level
         match input_storage.as_ref() {
             HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
-            HoduStorage::METAL(metal_storage) => Ok(HoduStorage::METAL(metal_storage.clone())),
+            HoduStorage::Metal(metal_storage) => Ok(HoduStorage::Metal(metal_storage.clone())),
         }
     }
 
@@ -1301,9 +1303,9 @@ impl HoduExecutor {
                         let converted_storage = cpu_storage.to_dtype(target_dtype, input_layout)?;
                         Ok(HoduStorage::CPU(converted_storage))
                     },
-                    HoduStorage::METAL(metal_storage) => {
+                    HoduStorage::Metal(metal_storage) => {
                         let converted_storage = metal_storage.to_dtype(target_dtype, input_layout)?;
-                        Ok(HoduStorage::METAL(converted_storage))
+                        Ok(HoduStorage::Metal(converted_storage))
                     },
                 }
             },
@@ -1427,7 +1429,7 @@ impl ExecutorT for HoduExecutor {
                         Ok(storage) => storage,
                         Err(shared_storage) => match shared_storage.as_ref() {
                             HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
-                            HoduStorage::METAL(metal_storage) => HoduStorage::METAL(metal_storage.clone()),
+                            HoduStorage::Metal(metal_storage) => HoduStorage::Metal(metal_storage.clone()),
                         },
                     };
                     let output_tensor = from_storage(output_storage, layout.clone(), false);

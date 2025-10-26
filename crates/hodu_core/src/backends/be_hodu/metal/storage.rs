@@ -94,7 +94,7 @@ impl HoduStorageT for MetalStorage {
     }
 
     fn get_device(&self) -> crate::types::device::Device {
-        crate::types::device::Device::METAL
+        crate::types::device::Device::Metal
     }
 
     fn get_hodu_device(&self) -> &MetalDevice {

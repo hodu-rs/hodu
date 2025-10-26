@@ -4,7 +4,7 @@ use crate::compat::*;
 pub enum Device {
     CPU,
     CUDA(usize),
-    METAL,
+    Metal,
 }
 
 impl Default for Device {
@@ -18,7 +18,7 @@ impl fmt::Display for Device {
         match self {
             Device::CPU => write!(f, "cpu"),
             Device::CUDA(id) => write!(f, "cuda::{id}"),
-            Device::METAL => write!(f, "metal"),
+            Device::Metal => write!(f, "Metal"),
         }
     }
 }
@@ -39,6 +39,6 @@ impl Device {
     }
 
     pub fn is_metal(&self) -> bool {
-        matches!(self, Device::METAL)
+        matches!(self, Device::Metal)
     }
 }

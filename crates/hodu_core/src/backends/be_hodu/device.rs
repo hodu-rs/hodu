@@ -21,17 +21,17 @@ pub trait HoduDeviceT: Sized {
 
 pub enum HoduDevice {
     CPU(CpuDevice),
-    METAL(MetalDevice),
+    Metal(MetalDevice),
 }
 
 impl HoduDevice {
     pub fn storage_from_flatten<T: IntoFlattened>(data: T, device: Device) -> HoduResult<HoduStorage> {
         match device {
             Device::CPU => Ok(HoduStorage::CPU(data.to_cpu_storage())),
-            Device::METAL => {
+            Device::Metal => {
                 let cpu_storage = data.to_cpu_storage();
                 let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                Ok(HoduStorage::METAL(metal_storage))
+                Ok(HoduStorage::Metal(metal_storage))
             },
             _ => panic!("Unsupported device: {:?}", device),
         }
@@ -40,10 +40,10 @@ impl HoduDevice {
     pub(crate) fn zeros(layout: &Layout, device: Device, dtype: DType) -> HoduResult<HoduStorage> {
         match device {
             Device::CPU => Ok(HoduStorage::CPU(CpuDevice::zeros(layout, dtype)?)),
-            Device::METAL => {
+            Device::Metal => {
                 let cpu_storage = CpuDevice::zeros(layout, dtype)?;
                 let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                Ok(HoduStorage::METAL(metal_storage))
+                Ok(HoduStorage::Metal(metal_storage))
             },
             _ => panic!("Unsupported device: {:?}", device),
         }
@@ -52,10 +52,10 @@ impl HoduDevice {
     pub(crate) fn randn(layout: &Layout, device: Device, dtype: DType, mean: f64, std: f64) -> HoduResult<HoduStorage> {
         match device {
             Device::CPU => Ok(HoduStorage::CPU(CpuDevice::randn(layout, dtype, mean, std)?)),
-            Device::METAL => {
+            Device::Metal => {
                 let cpu_storage = CpuDevice::randn(layout, dtype, mean, std)?;
                 let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                Ok(HoduStorage::METAL(metal_storage))
+                Ok(HoduStorage::Metal(metal_storage))
             },
             _ => panic!("Unsupported device: {:?}", device),
         }
@@ -70,10 +70,10 @@ impl HoduDevice {
     ) -> HoduResult<HoduStorage> {
         match device {
             Device::CPU => Ok(HoduStorage::CPU(CpuDevice::rand_uniform(layout, dtype, low, high)?)),
-            Device::METAL => {
+            Device::Metal => {
                 let cpu_storage = CpuDevice::rand_uniform(layout, dtype, low, high)?;
                 let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                Ok(HoduStorage::METAL(metal_storage))
+                Ok(HoduStorage::Metal(metal_storage))
             },
             _ => panic!("Unsupported device: {:?}", device),
         }

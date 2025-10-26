@@ -130,42 +130,42 @@ pub trait HoduStorageT: Sized {
 #[derive(Debug, Clone)]
 pub enum HoduStorage {
     CPU(CpuStorage),
-    METAL(MetalStorage),
+    Metal(MetalStorage),
 }
 
 impl HoduStorage {
     pub fn get_dtype(&self) -> DType {
         match self {
             Self::CPU(storage) => storage.get_dtype(),
-            Self::METAL(storage) => storage.get_dtype(),
+            Self::Metal(storage) => storage.get_dtype(),
         }
     }
 
     pub fn get_device(&self) -> Device {
         match self {
             Self::CPU(storage) => storage.get_device(),
-            Self::METAL(storage) => storage.get_device(),
+            Self::Metal(storage) => storage.get_device(),
         }
     }
 
     pub fn get_hodu_device(&self) -> HoduDevice {
         match self {
             Self::CPU(storage) => HoduDevice::CPU(storage.get_hodu_device().clone()),
-            Self::METAL(storage) => HoduDevice::METAL(storage.get_hodu_device().clone()),
+            Self::Metal(storage) => HoduDevice::Metal(storage.get_hodu_device().clone()),
         }
     }
 
     pub fn to_cpu_storage(&self) -> HoduResult<CpuStorage> {
         match self {
             Self::CPU(storage) => storage.to_cpu_storage(),
-            Self::METAL(storage) => storage.to_cpu_storage(),
+            Self::Metal(storage) => storage.to_cpu_storage(),
         }
     }
 
     pub(crate) fn const_set(&mut self, scalar: Scalar, layout: &Layout) -> HoduResult<()> {
         match self {
             Self::CPU(storage) => storage.const_set(scalar, layout),
-            Self::METAL(storage) => storage.const_set(scalar, layout),
+            Self::Metal(storage) => storage.const_set(scalar, layout),
         }
     }
 
@@ -180,9 +180,9 @@ impl HoduStorage {
                 let storage = lhs_storage.binary_impl::<B>(rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(Self::CPU(storage))
             },
-            (Self::METAL(lhs_storage), Self::METAL(rhs_storage)) => {
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => {
                 let storage = lhs_storage.binary_impl::<B>(rhs_storage, lhs_layout, rhs_layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
             (lhs_storage, rhs_storage) => Err(HoduError::DeviceConflictInOp {
                 left: lhs_storage.get_device(),
@@ -203,9 +203,9 @@ impl HoduStorage {
                 let storage = lhs_storage.binary_logical_impl::<B>(rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(Self::CPU(storage))
             },
-            (Self::METAL(lhs_storage), Self::METAL(rhs_storage)) => {
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => {
                 let storage = lhs_storage.binary_logical_impl::<B>(rhs_storage, lhs_layout, rhs_layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
             (lhs_storage, rhs_storage) => Err(HoduError::DeviceConflictInOp {
                 left: lhs_storage.get_device(),
@@ -226,9 +226,9 @@ impl HoduStorage {
                 let storage = lhs_storage.cmp_impl::<C>(rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(Self::CPU(storage))
             },
-            (Self::METAL(lhs_storage), Self::METAL(rhs_storage)) => {
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => {
                 let storage = lhs_storage.cmp_impl::<C>(rhs_storage, lhs_layout, rhs_layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
             (lhs_storage, rhs_storage) => Err(HoduError::DeviceConflictInOp {
                 left: lhs_storage.get_device(),
@@ -244,9 +244,9 @@ impl HoduStorage {
                 let storage = storage.cmp_scalar_impl::<C>(layout, scalar)?;
                 Ok(Self::CPU(storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let storage = storage.cmp_scalar_impl::<C>(layout, scalar)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
         }
     }
@@ -257,9 +257,9 @@ impl HoduStorage {
                 let storage = storage.unary_impl::<U>(layout)?;
                 Ok(Self::CPU(storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let storage = storage.unary_impl::<U>(layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
         }
     }
@@ -270,9 +270,9 @@ impl HoduStorage {
                 let storage = storage.unary_logical_impl::<U>(layout)?;
                 Ok(Self::CPU(storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let storage = storage.unary_logical_impl::<U>(layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
         }
     }
@@ -283,9 +283,9 @@ impl HoduStorage {
                 let storage = storage.unary_scalar_impl::<U>(layout, scalar)?;
                 Ok(Self::CPU(storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let storage = storage.unary_scalar_impl::<U>(layout, scalar)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
         }
     }
@@ -296,9 +296,9 @@ impl HoduStorage {
                 let storage = lhs_storage.matmul(rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(Self::CPU(storage))
             },
-            (Self::METAL(lhs_storage), Self::METAL(rhs_storage)) => {
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => {
                 let storage = lhs_storage.matmul(rhs_storage, lhs_layout, rhs_layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
             (lhs_storage, rhs_storage) => Err(HoduError::DeviceConflictInOp {
                 left: lhs_storage.get_device(),
@@ -314,9 +314,9 @@ impl HoduStorage {
                 let storage = lhs_storage.dot(rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(Self::CPU(storage))
             },
-            (Self::METAL(lhs_storage), Self::METAL(rhs_storage)) => {
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => {
                 let storage = lhs_storage.dot(rhs_storage, lhs_layout, rhs_layout)?;
-                Ok(Self::METAL(storage))
+                Ok(Self::Metal(storage))
             },
             (lhs_storage, rhs_storage) => Err(HoduError::DeviceConflictInOp {
                 left: lhs_storage.get_device(),
@@ -338,9 +338,9 @@ impl HoduStorage {
                 let reduced_storage = storage.reduce(reduce_op, layout, dims, keep_dim)?;
                 Ok(Self::CPU(reduced_storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let reduced_storage = storage.reduce(reduce_op, layout, dims, keep_dim)?;
-                Ok(Self::METAL(reduced_storage))
+                Ok(Self::Metal(reduced_storage))
             },
         }
     }
@@ -358,16 +358,16 @@ impl HoduStorage {
                 let result = first_storage.concat(&other_cpu_storages, layouts, dim)?;
                 Ok(Self::CPU(result))
             },
-            Self::METAL(first_storage) => {
+            Self::Metal(first_storage) => {
                 let other_metal_storages: Vec<&MetalStorage> = others
                     .iter()
                     .map(|s| match s {
-                        Self::METAL(storage) => storage,
+                        Self::Metal(storage) => storage,
                         _ => panic!("Device mismatch in concat"),
                     })
                     .collect();
                 let result = first_storage.concat(&other_metal_storages, layouts, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
         }
     }
@@ -378,9 +378,9 @@ impl HoduStorage {
                 let results = storage.split(layout, dim, sizes)?;
                 Ok(results.into_iter().map(Self::CPU).collect())
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let results = storage.split(layout, dim, sizes)?;
-                Ok(results.into_iter().map(Self::METAL).collect())
+                Ok(results.into_iter().map(Self::Metal).collect())
             },
         }
     }
@@ -397,9 +397,9 @@ impl HoduStorage {
                 let result = storage.index_select(layout, indices, indices_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices)) => {
+            (Self::Metal(storage), Self::Metal(indices)) => {
                 let result = storage.index_select(layout, indices, indices_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (storage, indices) => Err(HoduError::DeviceConflictInOp {
                 left: storage.get_device(),
@@ -423,9 +423,9 @@ impl HoduStorage {
                 let result = storage.index_put(layout, indices, indices_layout, values, values_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices), Self::METAL(values)) => {
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(values)) => {
                 let result = storage.index_put(layout, indices, indices_layout, values, values_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             _ => Err(HoduError::DeviceConflictInOp {
                 left: self.get_device(),
@@ -447,9 +447,9 @@ impl HoduStorage {
                 let result = storage.gather(layout, indices, indices_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices)) => {
+            (Self::Metal(storage), Self::Metal(indices)) => {
                 let result = storage.gather(layout, indices, indices_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (storage, indices) => Err(HoduError::DeviceConflictInOp {
                 left: storage.get_device(),
@@ -473,9 +473,9 @@ impl HoduStorage {
                 let result = storage.scatter(layout, indices, indices_layout, src, src_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices), Self::METAL(src)) => {
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => {
                 let result = storage.scatter(layout, indices, indices_layout, src, src_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             _ => Err(HoduError::DeviceConflictInOp {
                 left: self.get_device(),
@@ -499,9 +499,9 @@ impl HoduStorage {
                 let result = storage.scatter_add(layout, indices, indices_layout, src, src_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices), Self::METAL(src)) => {
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => {
                 let result = storage.scatter_add(layout, indices, indices_layout, src, src_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             _ => Err(HoduError::DeviceConflictInOp {
                 left: self.get_device(),
@@ -525,9 +525,9 @@ impl HoduStorage {
                 let result = storage.scatter_max(layout, indices, indices_layout, src, src_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices), Self::METAL(src)) => {
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => {
                 let result = storage.scatter_max(layout, indices, indices_layout, src, src_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             _ => Err(HoduError::DeviceConflictInOp {
                 left: self.get_device(),
@@ -551,9 +551,9 @@ impl HoduStorage {
                 let result = storage.scatter_min(layout, indices, indices_layout, src, src_layout, dim)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(storage), Self::METAL(indices), Self::METAL(src)) => {
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => {
                 let result = storage.scatter_min(layout, indices, indices_layout, src, src_layout, dim)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             _ => Err(HoduError::DeviceConflictInOp {
                 left: self.get_device(),
@@ -575,9 +575,9 @@ impl HoduStorage {
                 let result = input.conv1d(weight, input_layout, weight_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(weight)) => {
+            (Self::Metal(input), Self::Metal(weight)) => {
                 let result = input.conv1d(weight, input_layout, weight_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, weight) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -599,9 +599,9 @@ impl HoduStorage {
                 let result = input.conv2d(weight, input_layout, weight_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(weight)) => {
+            (Self::Metal(input), Self::Metal(weight)) => {
                 let result = input.conv2d(weight, input_layout, weight_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, weight) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -623,9 +623,9 @@ impl HoduStorage {
                 let result = input.conv3d(weight, input_layout, weight_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(weight)) => {
+            (Self::Metal(input), Self::Metal(weight)) => {
                 let result = input.conv3d(weight, input_layout, weight_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, weight) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -647,9 +647,9 @@ impl HoduStorage {
                 let result = input.conv_transpose1d(weight, input_layout, weight_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(weight)) => {
+            (Self::Metal(input), Self::Metal(weight)) => {
                 let result = input.conv_transpose1d(weight, input_layout, weight_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, weight) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -671,9 +671,9 @@ impl HoduStorage {
                 let result = input.conv_transpose2d(weight, input_layout, weight_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(weight)) => {
+            (Self::Metal(input), Self::Metal(weight)) => {
                 let result = input.conv_transpose2d(weight, input_layout, weight_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, weight) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -695,9 +695,9 @@ impl HoduStorage {
                 let result = input.conv_transpose3d(weight, input_layout, weight_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(weight)) => {
+            (Self::Metal(input), Self::Metal(weight)) => {
                 let result = input.conv_transpose3d(weight, input_layout, weight_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, weight) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -719,9 +719,9 @@ impl HoduStorage {
                 let result = input.conv1d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(grad_output)) => {
+            (Self::Metal(input), Self::Metal(grad_output)) => {
                 let result = input.conv1d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, grad_output) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -743,9 +743,9 @@ impl HoduStorage {
                 let result = input.conv2d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(grad_output)) => {
+            (Self::Metal(input), Self::Metal(grad_output)) => {
                 let result = input.conv2d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, grad_output) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -767,9 +767,9 @@ impl HoduStorage {
                 let result = input.conv3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(grad_output)) => {
+            (Self::Metal(input), Self::Metal(grad_output)) => {
                 let result = input.conv3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, grad_output) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -792,10 +792,10 @@ impl HoduStorage {
                     input.conv_transpose1d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(grad_output)) => {
+            (Self::Metal(input), Self::Metal(grad_output)) => {
                 let result =
                     input.conv_transpose1d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, grad_output) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -818,10 +818,10 @@ impl HoduStorage {
                     input.conv_transpose2d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(grad_output)) => {
+            (Self::Metal(input), Self::Metal(grad_output)) => {
                 let result =
                     input.conv_transpose2d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, grad_output) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -844,10 +844,10 @@ impl HoduStorage {
                     input.conv_transpose3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
                 Ok(Self::CPU(result))
             },
-            (Self::METAL(input), Self::METAL(grad_output)) => {
+            (Self::Metal(input), Self::Metal(grad_output)) => {
                 let result =
                     input.conv_transpose3d_grad_weight(grad_output, input_layout, grad_output_layout, params)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
             (input, grad_output) => Err(HoduError::DeviceConflictInOp {
                 left: input.get_device(),
@@ -870,9 +870,9 @@ impl HoduStorage {
                 let result = storage.reduce_window(input_layout, window_shape, strides, padding, reduction)?;
                 Ok(Self::CPU(result))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let result = storage.reduce_window(input_layout, window_shape, strides, padding, reduction)?;
-                Ok(Self::METAL(result))
+                Ok(Self::Metal(result))
             },
         }
     }
@@ -883,9 +883,9 @@ impl HoduStorage {
                 let converted_storage = storage.to_dtype(dtype, input_layout)?;
                 Ok(Self::CPU(converted_storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let converted_storage = storage.to_dtype(dtype, input_layout)?;
-                Ok(Self::METAL(converted_storage))
+                Ok(Self::Metal(converted_storage))
             },
         }
     }
@@ -896,9 +896,9 @@ impl HoduStorage {
                 let contiguous_storage = storage.contiguous(layout)?;
                 Ok(Self::CPU(contiguous_storage))
             },
-            Self::METAL(storage) => {
+            Self::Metal(storage) => {
                 let contiguous_storage = storage.contiguous(layout)?;
-                Ok(Self::METAL(contiguous_storage))
+                Ok(Self::Metal(contiguous_storage))
             },
         }
     }
