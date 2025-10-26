@@ -1,0 +1,17 @@
+[package]
+name = "benchmarks"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "hodu"
+path = "_hodu.rs"
+
+[dependencies]
+hodu = { path = "../../", version = "0.1.8" }
+
+[features]
+default = []
+metal = ["hodu/metal"]
+xla = ["hodu/xla"]
