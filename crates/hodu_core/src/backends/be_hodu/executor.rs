@@ -390,9 +390,7 @@ impl HoduExecutor {
             (Device::CUDA(_), _) => Err(HoduError::InternalError(
                 "CUDA tensor conversion not implemented".to_string(),
             )),
-            (Device::Metal, _) => Err(HoduError::InternalError(
-                "Metal tensor conversion not implemented".to_string(),
-            )),
+            (Device::Metal, storage) => storage.to_cpu_storage().map(HoduStorage::CPU),
         })
     }
 
