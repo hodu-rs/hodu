@@ -69,6 +69,43 @@ def parse_benchmark_output(output):
     return mode, results
 
 
+def run_candle_benchmark(mode):
+    """Run Candle (Rust) benchmark."""
+    print_color(CYAN, f"\n--- Running Candle {mode} ---")
+
+    # Build first
+    build_cmd = ["cargo", "build", "--release", "--bin", "candle"]
+    if "metal" in mode:
+        build_cmd.append("--features=metal")
+    elif "cuda" in mode:
+        build_cmd.append("--features=cuda")
+
+    print_color(YELLOW, f"Building: {' '.join(build_cmd)}")
+    build_result = run_command(build_cmd, cwd=Path(__file__).parent)
+
+    if build_result and build_result.returncode != 0:
+        print_color(RED, f"Candle build failed: {build_result.stderr}")
+        return None, {}
+
+    # Run benchmark
+    run_cmd = ["cargo", "run", "--release", "--bin", "candle", "--"]
+    if "metal" in mode:
+        run_cmd.insert(3, "--features=metal")
+    elif "cuda" in mode:
+        run_cmd.insert(3, "--features=cuda")
+    run_cmd.append(mode)
+
+    print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
+    result = run_command(run_cmd, cwd=Path(__file__).parent)
+
+    if result and result.returncode == 0:
+        return parse_benchmark_output(result.stdout)
+    else:
+        error_msg = result.stderr if result else "Unknown error"
+        print_color(RED, f"Candle benchmark failed: {error_msg}")
+        return None, {}
+
+
 def run_hodu_benchmark(mode):
     """Run Hodu (Rust) benchmark."""
     print_color(CYAN, f"\n--- Running Hodu {mode} ---")
@@ -112,8 +149,6 @@ def run_python_benchmark(script, mode):
     print_color(CYAN, f"\n--- Running {script_name.upper()} {mode} ---")
 
     # Determine which Python executable to use
-    import os
-
     base_path = Path(__file__).parent.parent
 
     if script == "_jax.py":
@@ -162,16 +197,23 @@ def run_python_benchmark(script, mode):
         return None, {}
 
 
-def get_speedup_color(ratio):
-    """Get color based on speedup ratio (lower is better)."""
-    if ratio < 0.8:
-        return GREEN  # Much faster
-    elif ratio < 1.2:
-        return YELLOW  # Similar speed
-    elif ratio < 2.0:
-        return NC  # Moderately slower
+def get_ratio_color(ratio):
+    """Get color based on ratio relative to baseline (1.0).
+
+    Returns colors:
+    - ratio < 1.0 (faster): Green
+    - ratio = 1.0 (same): Blue
+    - ratio > 1.0 (slower): Red
+    """
+    if ratio < 1.0:
+        # Faster than baseline - Green
+        return GREEN
+    elif ratio > 1.0:
+        # Slower than baseline - Red
+        return RED
     else:
-        return RED  # Much slower
+        # Same as baseline - Blue
+        return BLUE
 
 
 def print_comparison_table(all_results, baseline_name):
@@ -200,7 +242,7 @@ def print_comparison_table(all_results, baseline_name):
     for size in sizes:
         print(f"\n[{size}]")
         print(
-            f"{'Implementation':<25} {'Mode':<15} {'Time (ms)':>12} {'vs Baseline':>12}"
+            f"{'Framework':<25} {'Mode':<15} {'Time (ms)':>12} {'Faster than':>12}"
         )
         print("-" * 80)
 
@@ -242,7 +284,7 @@ def print_comparison_table(all_results, baseline_name):
                     ratio_str = "TIMEOUT"
 
                 # Color for framework name
-                fw_color = GREEN if impl_name == baseline_name else BLUE
+                fw_color = BLUE if impl_name == baseline_name else CYAN
 
                 framework_str = f"{framework:<25}"
                 mode_str = f"{mode:<15}"
@@ -257,7 +299,7 @@ def print_comparison_table(all_results, baseline_name):
             # Handle ERROR cases
             if time_ms == "ERROR":
                 # Color for framework name
-                fw_color = GREEN if impl_name == baseline_name else BLUE
+                fw_color = BLUE if impl_name == baseline_name else CYAN
 
                 framework_str = f"{framework:<25}"
                 mode_str = f"{mode:<15}"
@@ -282,13 +324,13 @@ def print_comparison_table(all_results, baseline_name):
             ):
                 ratio = time_ms / baseline_time
                 ratio_str = f"{ratio:.2f}x"
-                ratio_color = get_speedup_color(ratio)
+                ratio_color = get_ratio_color(ratio)
             elif impl_name == baseline_name:
                 ratio_str = "baseline"
-                ratio_color = GREEN
+                ratio_color = BLUE
 
             # Color for framework name
-            fw_color = GREEN if impl_name == baseline_name else BLUE
+            fw_color = BLUE if impl_name == baseline_name else CYAN
 
             framework_str = f"{framework:<25}"
             mode_str = f"{mode:<15}"
@@ -312,18 +354,25 @@ def main():
         sys.exit(1)
 
     # Parse command line arguments
+    enable_cpu = "--cpu" in sys.argv
     enable_metal = "--metal" in sys.argv
     enable_cuda = "--cuda" in sys.argv
     enable_xla = "--xla" in sys.argv
 
     # Determine which modes to test
-    test_modes = [
-        ("dynamic-cpu", "CPU"),
-        ("static-cpu", "CPU"),
-    ]
-    hodu_modes = ["dynamic-cpu", "static-cpu"]
+    test_modes = []
+    hodu_modes = []
+    jax_modes = []
 
-    jax_modes = [("dynamic-cpu", "CPU"), ("static-cpu", "CPU")]
+    # Add CPU modes if requested
+    if enable_cpu:
+        print_color(YELLOW, "CPU benchmarks enabled\n")
+        test_modes.extend([
+            ("dynamic-cpu", "CPU"),
+            ("static-cpu", "CPU"),
+        ])
+        hodu_modes.extend(["dynamic-cpu", "static-cpu"])
+        jax_modes.extend([("dynamic-cpu", "CPU"), ("static-cpu", "CPU")])
 
     # Add GPU modes if requested
     if sys.platform == "darwin" and enable_metal:
@@ -352,7 +401,22 @@ def main():
         print_color(YELLOW, "XLA benchmarks enabled\n")
         hodu_modes.append("static-xla")
 
+    # Determine Candle modes (dynamic only)
+    candle_modes = []
+    if enable_cpu:
+        candle_modes.append("dynamic-cpu")
+    if sys.platform == "darwin" and enable_metal:
+        candle_modes.append("dynamic-metal")
+    elif sys.platform != "darwin" and enable_cuda:
+        candle_modes.append("dynamic-cuda")
+
     all_results = {}
+
+    # Run Candle benchmarks
+    for mode in candle_modes:
+        mode_name, results = run_candle_benchmark(mode)
+        if results:
+            all_results[f"Candle - {mode_name or mode}"] = results
 
     # Run Hodu benchmarks
     for mode in hodu_modes:
@@ -383,10 +447,10 @@ def main():
     # Print comparison table
     print_color(BLUE, "\n===== Benchmark Results =====")
 
-    # Use Hodu Static CPU as baseline if available, otherwise first result
+    # Use Candle Dynamic CPU as baseline if available, otherwise first result
     baseline = None
     for key in all_results.keys():
-        if "Hodu" in key and "Static CPU" in key:
+        if "Candle" in key and "Dynamic CPU" in key:
             baseline = key
             break
     if not baseline and all_results:

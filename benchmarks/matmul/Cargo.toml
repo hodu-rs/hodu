@@ -5,13 +5,19 @@ edition = "2021"
 publish = false
 
 [[bin]]
+name = "candle"
+path = "_candle.rs"
+
+[[bin]]
 name = "hodu"
 path = "_hodu.rs"
 
 [dependencies]
+candle-core = "0.9.1"
 hodu = { path = "../../", version = "0.1.8" }
 
 [features]
 default = []
-metal = ["hodu/metal"]
+metal = ["candle-core/metal", "hodu/metal"]
+cuda = ["candle-core/cuda"]
 xla = ["hodu/xla"]
