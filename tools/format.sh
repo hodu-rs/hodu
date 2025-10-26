@@ -61,7 +61,7 @@ else
         echo -e "  ${CYAN}→${NC} ${DIM}$file${NC}"
         ruff format "$file"
         ((py_count++))
-    done < <(find . -type f -name "*.py" -not -path "*/.*" -not -path "*/venv/*" -not -path "*/__pycache__/*" -print0)
+    done < <(find . -type f -name "*.py" -not -path "*/.*" -not -path "*/venv/*" -not -path "*/__pycache__/*" -not -path "*/venvs/*" -print0)
 
     if [ $py_count -eq 0 ]; then
         echo -e "${DIM}  No .py files found${NC}"

@@ -30,9 +30,13 @@ class BenchMode:
         elif "gpu" in mode:
             # Check if GPU is available
             gpus = tf.config.list_physical_devices("GPU")
-            if gpus:
-                return "/GPU:0"
-            return "/CPU:0"
+            if not gpus:
+                print("Error: GPU mode requested but no GPU detected")
+                print(f"Available devices: {tf.config.list_physical_devices()}")
+                raise RuntimeError(
+                    "GPU not available. Install tensorflow-metal for Metal support."
+                )
+            return "/GPU:0"
         return "/CPU:0"
 
 
@@ -89,43 +93,38 @@ def run_benchmark(mode, configs, warmup, iterations):
     print(f"iterations={iterations}")
 
     for m, k, n in configs:
-        if "static" in mode:
-            time_sec = benchmark_static(mode, m, k, n, warmup, iterations)
-        else:
-            time_sec = benchmark_dynamic(mode, m, k, n, warmup, iterations)
+        try:
+            if "static" in mode:
+                time_sec = benchmark_static(mode, m, k, n, warmup, iterations)
+            else:
+                time_sec = benchmark_dynamic(mode, m, k, n, warmup, iterations)
 
-        print(f"{m}x{k}x{n},{time_sec * 1000:.6f}ms")
+            print(f"{m}x{k}x{n},{time_sec * 1000:.6f}ms")
+        except Exception as e:
+            print(f"{m}x{k}x{n},ERROR")
+            # Optionally print error to stderr for debugging
+            import sys
+
+            print(f"Error for {m}x{k}x{n}: {e}", file=sys.stderr)
 
 
 def print_usage():
-    print("Usage: python _tf.py <mode>")
+    print("Usage: python _tensorflow.py <mode>")
     print("\nAvailable modes:")
     print("  dynamic-cpu     - Dynamic execution on CPU")
-
-    # Check GPU availability
-    gpus = tf.config.list_physical_devices("GPU")
-    if gpus:
-        print("  dynamic-gpu     - Dynamic execution on GPU")
-
+    print("  dynamic-gpu     - Dynamic execution on GPU")
     print("  static-cpu      - Static computation graph on CPU (tf.function)")
-
-    if gpus:
-        print("  static-gpu      - Static computation graph on GPU (tf.function)")
+    print("  static-gpu      - Static computation graph on GPU (tf.function)")
 
 
 def get_valid_modes():
     """Get list of valid modes based on available hardware"""
-    valid_modes = [
+    return [
         BenchMode.DYNAMIC_CPU,
+        BenchMode.DYNAMIC_GPU,
         BenchMode.STATIC_CPU,
+        BenchMode.STATIC_GPU,
     ]
-
-    # Check GPU
-    gpus = tf.config.list_physical_devices("GPU")
-    if gpus:
-        valid_modes.extend([BenchMode.DYNAMIC_GPU, BenchMode.STATIC_GPU])
-
-    return valid_modes
 
 
 def main():

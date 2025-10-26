@@ -4,35 +4,27 @@ Performance benchmarks comparing Hodu against popular deep learning frameworks.
 
 ## Available Benchmarks
 
-- **matmul/** - Matrix multiplication benchmarks comparing Hodu, PyTorch, and TensorFlow
+- **matmul/** - Matrix multiplication benchmarks
 
 ## Requirements
 
-- **Python**: 3.11.14
+- **Python**: 3.11.x
 - **Rust**: 1.90.0 or higher
 
 ## Setup
 
-### Basic Installation
-
 ```bash
-pip install -r requirements.txt
+python3 setup.py
 ```
-
-### Metal Support (macOS/Apple Silicon)
-
-For GPU acceleration on macOS:
-
-```bash
-# TensorFlow Metal support (requires tensorflow-macos)
-pip uninstall tensorflow
-pip install tensorflow-macos tensorflow-metal
-```
-
-**Note:**
-- PyTorch includes built-in MPS (Metal Performance Shaders) support
-- TensorFlow on macOS requires `tensorflow-macos` instead of `tensorflow` for Metal support
 
 ## Running Benchmarks
 
-See individual benchmark directories for specific instructions.
+Navigate to each benchmark directory and run:
+
+```bash
+cd <benchmark_folder>
+python3 run.py          # CPU only
+python3 run.py --metal  # With Metal (macOS)
+python3 run.py --cuda   # With CUDA (NVIDIA GPUs)
+python3 run.py --xla    # With XLA
+```

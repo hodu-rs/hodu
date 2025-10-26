@@ -1,5 +1,6 @@
 [workspace]
 members = ["crates/*", "benchmarks/*"]
+exclude = ["benchmarks/libs", "benchmarks/venvs"]
 
 [package]
 name = "hodu"

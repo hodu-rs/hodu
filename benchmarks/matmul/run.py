@@ -20,11 +20,11 @@ def print_color(color, text):
     print(f"{color}{text}{NC}")
 
 
-def run_command(command, cwd=None):
+def run_command(command, cwd=None, env=None):
     """Runs a command and captures output."""
     try:
         result = subprocess.run(
-            command, check=False, capture_output=True, text=True, cwd=cwd
+            command, check=False, capture_output=True, text=True, cwd=cwd, env=env
         )
         return result
     except Exception as e:
@@ -49,6 +49,13 @@ def parse_benchmark_output(output):
                     m, k, n = match.groups()
                     size = f"{m}x{k}x{n}"
                     results[size] = "TIMEOUT"
+            elif "ERROR" in line:
+                # Parse: 128x128x128,ERROR
+                match = re.match(r"(\d+)x(\d+)x(\d+),ERROR", line)
+                if match:
+                    m, k, n = match.groups()
+                    size = f"{m}x{k}x{n}"
+                    results[size] = "ERROR"
             elif "ms" in line:
                 # Parse: 128x128x128,0.123456ms or 128x128x128,time_ms=0.123456ms
                 match = re.match(
@@ -100,11 +107,43 @@ def run_hodu_benchmark(mode):
 
 
 def run_python_benchmark(script, mode):
-    """Run Python-based benchmark (PyTorch, TensorFlow)."""
+    """Run Python-based benchmark (PyTorch, JAX, TensorFlow)."""
     script_name = Path(script).stem.replace("_", "")
     print_color(CYAN, f"\n--- Running {script_name.upper()} {mode} ---")
 
-    cmd = ["python3", script, mode]
+    # Determine which Python executable to use
+    import os
+
+    base_path = Path(__file__).parent.parent
+
+    if script == "_jax.py":
+        # Use venvs/1 for JAX
+        venv_path = base_path / "venvs" / "1"
+        if venv_path.exists():
+            python_exe = venv_path / "bin" / "python3"
+            cmd = [str(python_exe), script, mode]
+        else:
+            print_color(YELLOW, "Warning: venvs/1 not found, using system python3")
+            cmd = ["python3", script, mode]
+    elif script == "_tensorflow.py":
+        # Use venvs/2 for TensorFlow
+        venv_path = base_path / "venvs" / "2"
+        if venv_path.exists():
+            python_exe = venv_path / "bin" / "python3"
+            cmd = [str(python_exe), script, mode]
+        else:
+            print_color(YELLOW, "Warning: venvs/2 not found, using system python3")
+            cmd = ["python3", script, mode]
+    else:
+        # Use venvs/1 for PyTorch (same as JAX)
+        venv_path = base_path / "venvs" / "1"
+        if venv_path.exists():
+            python_exe = venv_path / "bin" / "python3"
+            cmd = [str(python_exe), script, mode]
+        else:
+            print_color(YELLOW, "Warning: venvs/1 not found, using system python3")
+            cmd = ["python3", script, mode]
+
     print_color(YELLOW, f"Running: {' '.join(cmd)}")
 
     result = run_command(cmd, cwd=Path(__file__).parent)
@@ -188,7 +227,11 @@ def print_comparison_table(all_results, baseline_name):
                 # Calculate ratio vs baseline (estimate >1 second)
                 ratio_str = ""
                 ratio_color = RED
-                if baseline_time and baseline_time != "TIMEOUT":
+                if (
+                    baseline_time
+                    and baseline_time != "TIMEOUT"
+                    and baseline_time != "ERROR"
+                ):
                     if isinstance(baseline_time, (int, float)) and baseline_time > 0:
                         # Estimate minimum ratio based on 1 second timeout
                         min_ratio = 1000.0 / baseline_time  # 1 second in ms
@@ -211,10 +254,25 @@ def print_comparison_table(all_results, baseline_name):
                 )
                 continue
 
+            # Handle ERROR cases
+            if time_ms == "ERROR":
+                # Color for framework name
+                fw_color = GREEN if impl_name == baseline_name else BLUE
+
+                framework_str = f"{framework:<25}"
+                mode_str = f"{mode:<15}"
+                time_str = f"{'ERROR':>12}"
+                ratio_str_formatted = f"{'N/A':>12}"
+
+                print(
+                    f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_str_formatted}"
+                )
+                continue
+
             # Calculate ratio vs baseline for normal cases
             ratio_str = ""
             ratio_color = NC
-            if baseline_time == "TIMEOUT":
+            if baseline_time == "TIMEOUT" or baseline_time == "ERROR":
                 ratio_str = "N/A"
                 ratio_color = NC
             elif (
@@ -265,16 +323,19 @@ def main():
     ]
     hodu_modes = ["dynamic-cpu", "static-cpu"]
 
+    jax_modes = [("dynamic-cpu", "CPU"), ("static-cpu", "CPU")]
+
     # Add GPU modes if requested
     if sys.platform == "darwin" and enable_metal:
-        print_color(YELLOW, "Metal/MPS benchmarks enabled\n")
+        print_color(YELLOW, "Metal benchmarks enabled\n")
         test_modes.extend(
             [
-                ("dynamic-mps", "MPS"),
-                ("static-mps", "MPS"),
+                ("dynamic-metal", "Metal"),
+                ("static-metal", "Metal"),
             ]
         )
         hodu_modes.extend(["dynamic-metal", "static-metal"])
+        jax_modes.extend([("dynamic-metal", "Metal"), ("static-metal", "Metal")])
     elif sys.platform != "darwin" and enable_cuda:
         print_color(YELLOW, "CUDA benchmarks enabled\n")
         test_modes.extend(
@@ -299,10 +360,16 @@ def main():
         if results:
             all_results[f"Hodu - {mode_name or mode}"] = results
 
+    # Run JAX benchmarks
+    for mode, device in jax_modes:
+        mode_name, results = run_python_benchmark("_jax.py", mode)
+        if results:
+            all_results[f"JAX - {mode_name or mode}"] = results
+
     # Run TensorFlow benchmarks
     for mode, device in test_modes:
-        # TensorFlow uses 'gpu' instead of 'cuda'/'mps'
-        tf_mode = mode.replace("cuda", "gpu").replace("mps", "gpu")
+        # TensorFlow uses 'gpu' instead of 'cuda'/'metal'
+        tf_mode = mode.replace("cuda", "gpu").replace("metal", "gpu")
         mode_name, results = run_python_benchmark("_tensorflow.py", tf_mode)
         if results:
             all_results[f"TensorFlow - {mode_name or tf_mode}"] = results

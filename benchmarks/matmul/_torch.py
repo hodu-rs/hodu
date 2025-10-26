@@ -6,20 +6,20 @@ import sys
 class BenchMode:
     DYNAMIC_CPU = "dynamic-cpu"
     DYNAMIC_CUDA = "dynamic-cuda"
-    DYNAMIC_MPS = "dynamic-mps"
+    DYNAMIC_METAL = "dynamic-metal"
     STATIC_CPU = "static-cpu"
     STATIC_CUDA = "static-cuda"
-    STATIC_MPS = "static-mps"
+    STATIC_METAL = "static-metal"
 
     @staticmethod
     def get_name(mode):
         names = {
             BenchMode.DYNAMIC_CPU: "Dynamic CPU",
             BenchMode.DYNAMIC_CUDA: "Dynamic CUDA",
-            BenchMode.DYNAMIC_MPS: "Dynamic MPS",
+            BenchMode.DYNAMIC_METAL: "Dynamic Metal",
             BenchMode.STATIC_CPU: "Static CPU",
             BenchMode.STATIC_CUDA: "Static CUDA",
-            BenchMode.STATIC_MPS: "Static MPS",
+            BenchMode.STATIC_METAL: "Static Metal",
         }
         return names.get(mode, mode)
 
@@ -34,7 +34,7 @@ class BenchMode:
             except Exception:
                 pass
             return torch.device("cpu")
-        elif "mps" in mode:
+        elif "metal" in mode:
             try:
                 if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
                     return torch.device("mps")
@@ -121,12 +121,19 @@ def run_benchmark(mode, configs, warmup, iterations):
     print(f"iterations={iterations}")
 
     for m, k, n in configs:
-        if "static" in mode:
-            time_sec = benchmark_static(mode, m, k, n, warmup, iterations)
-        else:
-            time_sec = benchmark_dynamic(mode, m, k, n, warmup, iterations)
+        try:
+            if "static" in mode:
+                time_sec = benchmark_static(mode, m, k, n, warmup, iterations)
+            else:
+                time_sec = benchmark_dynamic(mode, m, k, n, warmup, iterations)
 
-        print(f"{m}x{k}x{n},{time_sec * 1000:.6f}ms")
+            print(f"{m}x{k}x{n},{time_sec * 1000:.6f}ms")
+        except Exception as e:
+            print(f"{m}x{k}x{n},ERROR")
+            # Optionally print error to stderr for debugging
+            import sys
+
+            print(f"Error for {m}x{k}x{n}: {e}", file=sys.stderr)
 
 
 def print_usage():
@@ -143,12 +150,12 @@ def print_usage():
     except Exception:
         pass
 
-    # Check MPS availability
-    mps_available = False
+    # Check Metal/MPS availability
+    metal_available = False
     try:
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            mps_available = True
-            print("  dynamic-mps     - Dynamic execution on MPS (Apple Silicon)")
+            metal_available = True
+            print("  dynamic-metal   - Dynamic execution on Metal (Apple Silicon)")
     except Exception:
         pass
 
@@ -156,8 +163,8 @@ def print_usage():
 
     if cuda_available:
         print("  static-cuda     - Static computation graph on CUDA (torch.compile)")
-    if mps_available:
-        print("  static-mps      - Static computation graph on MPS (torch.compile)")
+    if metal_available:
+        print("  static-metal    - Static computation graph on Metal (torch.compile)")
 
 
 def get_valid_modes():
@@ -174,10 +181,10 @@ def get_valid_modes():
     except Exception:
         pass
 
-    # Check MPS
+    # Check Metal/MPS
     try:
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-            valid_modes.extend([BenchMode.DYNAMIC_MPS, BenchMode.STATIC_MPS])
+            valid_modes.extend([BenchMode.DYNAMIC_METAL, BenchMode.STATIC_METAL])
     except Exception:
         pass
 
