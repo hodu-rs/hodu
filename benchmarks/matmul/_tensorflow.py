@@ -98,7 +98,7 @@ def run_benchmark(mode, configs, warmup, iterations):
 
 
 def print_usage():
-    print("Usage: python bench_tf.py <mode>")
+    print("Usage: python _tf.py <mode>")
     print("\nAvailable modes:")
     print("  dynamic-cpu     - Dynamic execution on CPU")
 

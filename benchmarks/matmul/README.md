@@ -1,6 +1,6 @@
 # Matrix Multiplication Benchmark
 
-Compares matrix multiplication performance across **Hodu**, **PyTorch**, **JAX**, and **TensorFlow**.
+Compares matrix multiplication performance across **Hodu**, **PyTorch**, and **TensorFlow**.
 
 ## Quick Start
 
@@ -35,10 +35,6 @@ cargo run --release --bin hodu -- static-cpu
 cargo run --release --bin hodu --features=metal -- static-metal
 ```
 
-### JAX (`_jax.py`)
-- `dynamic-cpu`, `dynamic-gpu`
-- `static-cpu`, `static-gpu` (uses `jax.jit`)
-
 ### TensorFlow (`_tensorflow.py`)
 - `dynamic-cpu`, `dynamic-gpu`
 - `static-cpu`, `static-gpu` (uses `tf.function`)
@@ -53,7 +49,7 @@ cargo run --release --bin hodu --features=metal -- static-metal
 pip install -r ../requirements.txt
 ```
 
-Requires: Rust toolchain, Python 3.x, PyTorch, JAX, TensorFlow (optional)
+Requires: Rust toolchain, Python 3.x, PyTorch, TensorFlow (optional)
 
 ## Output
 

@@ -100,7 +100,7 @@ def run_hodu_benchmark(mode):
 
 
 def run_python_benchmark(script, mode):
-    """Run Python-based benchmark (PyTorch, JAX, TensorFlow)."""
+    """Run Python-based benchmark (PyTorch, TensorFlow)."""
     script_name = Path(script).stem.replace("_", "")
     print_color(CYAN, f"\n--- Running {script_name.upper()} {mode} ---")
 
@@ -136,7 +136,7 @@ def get_speedup_color(ratio):
 
 
 def print_comparison_table(all_results, baseline_name):
-    """Print a beautiful comparison table."""
+    """Print a simple comparison table."""
     if not all_results:
         print_color(RED, "No results to display")
         return
@@ -151,58 +151,19 @@ def print_comparison_table(all_results, baseline_name):
         print_color(RED, "No timing data found")
         return
 
-    # Box drawing characters (ASCII)
-    T_DOWN = "+"
-    # T_UP = "+"
-    T_CROSS = "+"
-    L_VERT = "|"
-    L_HORZ = "-"
-    C_TL = "+"
-    C_TR = "+"
-    C_BL = "+"
-    C_BR = "+"
-    T_LEFT = "+"
-    T_RIGHT = "+"
-
-    # Column widths
-    col_impl_width = 25
-    col_size_width = 15
-    col_time_width = 12
-    col_ratio_width = 12
-
-    # Print title
-    title = " Matrix Multiplication Benchmark Results "
-    # Total width calculation:
-    # Data row: "| text | text | text | text |"
-    # Each segment: " " + text(col_width-2) + " " = col_width
-    # Separators: "|" appears 5 times (start + 3 middle + end)
-    # Total: sum of col_widths + 5
-    total_width = col_impl_width + col_size_width + col_time_width + col_ratio_width + 5
-    print(f"\n{C_TL}{L_HORZ * total_width}{C_TR}")
-    print(f"{L_VERT}{title.center(total_width)}{L_VERT}")
-
     # Get baseline results if available
     baseline_results = all_results.get(baseline_name, {})
 
-    for size_idx, size in enumerate(sizes):
-        # Print size header
-        size_header = f" Size: {size} "
-        print(
-            f"{T_LEFT}{L_HORZ * total_width}{T_RIGHT}"
-            if size_idx > 0
-            else f"{T_LEFT}{L_HORZ * total_width}{T_RIGHT}"
-        )
-        print(f"{L_VERT}{size_header.center(total_width)}{L_VERT}")
+    print("\n" + "=" * 80)
+    print("Matrix Multiplication Benchmark Results")
+    print("=" * 80)
 
-        # Print column headers
+    for size in sizes:
+        print(f"\n[{size}]")
         print(
-            f"{T_LEFT}{L_HORZ * col_impl_width}{T_DOWN}{L_HORZ * col_size_width}{T_DOWN}{L_HORZ * col_time_width}{T_DOWN}{L_HORZ * col_ratio_width}{T_RIGHT}"
+            f"{'Implementation':<25} {'Mode':<15} {'Time (ms)':>12} {'vs Baseline':>12}"
         )
-        header_line = f"{L_VERT} {'Implementation':<{col_impl_width - 2}} {L_VERT} {'Mode':<{col_size_width - 2}} {L_VERT} {'Time (ms)':>{col_time_width - 2}} {L_VERT} {'vs Baseline':>{col_ratio_width - 2}} {L_VERT}"
-        print(header_line)
-        print(
-            f"{T_LEFT}{L_HORZ * col_impl_width}{T_CROSS}{L_HORZ * col_size_width}{T_CROSS}{L_HORZ * col_time_width}{T_CROSS}{L_HORZ * col_ratio_width}{T_RIGHT}"
-        )
+        print("-" * 80)
 
         # Get baseline time for this size
         baseline_time = baseline_results.get(size)
@@ -240,14 +201,14 @@ def print_comparison_table(all_results, baseline_name):
                 # Color for framework name
                 fw_color = GREEN if impl_name == baseline_name else BLUE
 
-                # Format strings first, then apply colors
-                framework_str = f"{framework:<{col_impl_width - 2}}"
-                mode_str = f"{mode:<{col_size_width - 2}}"
-                time_str = f"{'TIMEOUT':>{col_time_width - 2}}"
-                ratio_str_formatted = f"{ratio_str:>{col_ratio_width - 2}}"
+                framework_str = f"{framework:<25}"
+                mode_str = f"{mode:<15}"
+                time_str = f"{'TIMEOUT':>12}"
+                ratio_str_formatted = f"{ratio_str:>12}"
 
-                row = f"{L_VERT} {fw_color}{framework_str}{NC} {L_VERT} {mode_str} {L_VERT} {RED}{time_str}{NC} {L_VERT} {ratio_color}{ratio_str_formatted}{NC} {L_VERT}"
-                print(row)
+                print(
+                    f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_color}{ratio_str_formatted}{NC}"
+                )
                 continue
 
             # Calculate ratio vs baseline for normal cases
@@ -271,17 +232,16 @@ def print_comparison_table(all_results, baseline_name):
             # Color for framework name
             fw_color = GREEN if impl_name == baseline_name else BLUE
 
-            # Format strings first, then apply colors
-            framework_str = f"{framework:<{col_impl_width - 2}}"
-            mode_str = f"{mode:<{col_size_width - 2}}"
-            time_str = f"{time_ms:>{col_time_width - 2}.4f}"
-            ratio_str_formatted = f"{ratio_str:>{col_ratio_width - 2}}"
+            framework_str = f"{framework:<25}"
+            mode_str = f"{mode:<15}"
+            time_str = f"{time_ms:>12.4f}"
+            ratio_str_formatted = f"{ratio_str:>12}"
 
-            row = f"{L_VERT} {fw_color}{framework_str}{NC} {L_VERT} {mode_str} {L_VERT} {time_str} {L_VERT} {ratio_color}{ratio_str_formatted}{NC} {L_VERT}"
-            print(row)
+            print(
+                f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
+            )
 
-    # Print footer
-    print(f"{C_BL}{L_HORZ * total_width}{C_BR}")
+    print("\n" + "=" * 80)
 
 
 def main():
@@ -338,14 +298,6 @@ def main():
         mode_name, results = run_hodu_benchmark(mode)
         if results:
             all_results[f"Hodu - {mode_name or mode}"] = results
-
-    # Run JAX benchmarks (convert mps/cuda to gpu for JAX)
-    for mode, device in test_modes:
-        # JAX uses 'gpu' instead of 'cuda'/'mps'
-        jax_mode = mode.replace("cuda", "gpu").replace("mps", "gpu")
-        mode_name, results = run_python_benchmark("_jax.py", jax_mode)
-        if results:
-            all_results[f"JAX - {mode_name or jax_mode}"] = results
 
     # Run TensorFlow benchmarks
     for mode, device in test_modes:

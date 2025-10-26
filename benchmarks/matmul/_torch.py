@@ -130,7 +130,7 @@ def run_benchmark(mode, configs, warmup, iterations):
 
 
 def print_usage():
-    print("Usage: python bench_torch.py <mode>")
+    print("Usage: python _torch.py <mode>")
     print("\nAvailable modes:")
     print("  dynamic-cpu     - Dynamic execution on CPU")
 
