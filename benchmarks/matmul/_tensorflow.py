@@ -50,12 +50,14 @@ def benchmark_dynamic(mode, m, k, n, warmup, iterations):
 
         # Warmup
         for _ in range(warmup):
-            _ = tf.matmul(a, b)
+            result = tf.matmul(a, b)
+            _ = result.numpy()  # Ensure computation completes
 
         # Benchmark
         start = time.time()
         for _ in range(iterations):
-            _ = tf.matmul(a, b)
+            result = tf.matmul(a, b)
+            _ = result.numpy()  # Ensure computation completes
         elapsed = time.time() - start
 
     return elapsed / iterations
@@ -76,12 +78,14 @@ def benchmark_static(mode, m, k, n, warmup, iterations):
 
         # Warmup
         for _ in range(warmup):
-            _ = matmul_compiled(a, b)
+            result = matmul_compiled(a, b)
+            _ = result.numpy()  # Ensure computation completes
 
         # Benchmark
         start = time.time()
         for _ in range(iterations):
-            _ = matmul_compiled(a, b)
+            result = matmul_compiled(a, b)
+            _ = result.numpy()  # Ensure computation completes
         elapsed = time.time() - start
 
     return elapsed / iterations
