@@ -43,4 +43,31 @@ else
     fi
 fi
 
+# Format Python files
+echo -e "\n${BRIGHT_BLUE}▶${NC} ${BOLD}Formatting Python files...${NC}"
+
+# Check if ruff is installed
+if ! command -v ruff &> /dev/null
+then
+    echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} ruff is not installed"
+    echo -e "${DIM}   Install with: ${MAGENTA}pip install ruff${NC}\n"
+else
+    # Counter for formatted files
+    py_count=0
+
+    # Find all .py files recursively from current directory
+    while IFS= read -r -d '' file
+    do
+        echo -e "  ${CYAN}→${NC} ${DIM}$file${NC}"
+        ruff format "$file"
+        ((py_count++))
+    done < <(find . -type f -name "*.py" -not -path "*/.*" -not -path "*/venv/*" -not -path "*/__pycache__/*" -print0)
+
+    if [ $py_count -eq 0 ]; then
+        echo -e "${DIM}  No .py files found${NC}"
+    else
+        echo -e "${BRIGHT_GREEN}✓${NC} Formatted ${BOLD}${py_count}${NC} Python file(s)"
+    fi
+fi
+
 echo -e "\n${BOLD}${BRIGHT_GREEN}All formatting complete!${NC}"

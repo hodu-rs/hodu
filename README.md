@@ -192,6 +192,8 @@ Building with the `xla` feature requires:
 
 [TODOS](TODOS.md) - Planned features and improvements
 
+[CONTRIBUTING](CONTRIBUTING.md) - Contribution guide
+
 Guide
 - [Tensor Creation Guide (Korean)](docs/tensor_creation_ko.md) - 텐서 생성 가이드
 - [Tensor Creation Guide (English)](docs/tensor_creation_en.md) - Tensor creation guide
@@ -203,6 +205,13 @@ Guide
 - [Builder/Script Guide (English)](docs/builder_and_script_en.md) - Builder/Script guide
 - [Gradient Tape Management Guide (Korean)](docs/tensor_gradient_tape_ko.md) - 그래디언트 테이프 관리 가이드
 - [Gradient Tape Management Guide (English)](docs/tensor_gradient_tape_en.md) - Gradient tape management guide
+
+## Related Projects
+
+Here are some other Rust ML frameworks you might find interesting:
+
+- [maidenx](https://github.com/miniex/maidenx) - The predecessor project to Hodu
+- [cetana](https://github.com/SkuldNorniern/cetana) - An advanced machine learning library empowering developers to build intelligent applications with ease.
 
 ## Inspired by
 
