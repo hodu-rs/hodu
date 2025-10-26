@@ -20,7 +20,7 @@ python3 run.py --xla
 
 ## Test Configurations
 
-**Matrix sizes:** 128×128×128, 256×256×256, 512×512×512, 1024×1024×1024, 2048×2048×2048
+**Matrix sizes:** 128x128x128, 256x256x256, 512x512x512, 1024x1024x1024, 2048x2048x2048
 
 **Settings:** 5 warmup iterations, 10 benchmark iterations, 1-second timeout
 
@@ -35,10 +35,6 @@ cargo run --release --bin hodu -- static-cpu
 cargo run --release --bin hodu --features=metal -- static-metal
 ```
 
-### PyTorch (`_torch.py`)
-- `dynamic-cpu`, `dynamic-cuda`, `dynamic-mps`
-- `static-cpu`, `static-cuda`, `static-mps` (uses `torch.compile`)
-
 ### JAX (`_jax.py`)
 - `dynamic-cpu`, `dynamic-gpu`
 - `static-cpu`, `static-gpu` (uses `jax.jit`)
@@ -46,6 +42,10 @@ cargo run --release --bin hodu --features=metal -- static-metal
 ### TensorFlow (`_tensorflow.py`)
 - `dynamic-cpu`, `dynamic-gpu`
 - `static-cpu`, `static-gpu` (uses `tf.function`)
+
+### PyTorch (`_torch.py`)
+- `dynamic-cpu`, `dynamic-cuda`, `dynamic-mps`
+- `static-cpu`, `static-cuda`, `static-mps` (uses `torch.compile`)
 
 ## Prerequisites
 
