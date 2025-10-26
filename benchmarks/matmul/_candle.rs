@@ -102,15 +102,15 @@ fn run_benchmark(
         match result {
             Ok(time) => {
                 println!("{}x{}x{},time_ms={:.6}ms", m, k, n, time * 1000.0);
-            }
+            },
             Err(e) if e.to_string().contains("TIMEOUT") => {
                 println!("{}x{}x{},TIMEOUT", m, k, n);
                 timed_out = true; // Mark as timed out to skip remaining benchmarks
-            }
+            },
             Err(e) => {
                 eprintln!("Error for {}x{}x{}: {}", m, k, n, e);
                 println!("{}x{}x{},ERROR", m, k, n);
-            }
+            },
         }
     }
 
@@ -141,7 +141,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("Error: Invalid mode '{}'", args[1]);
             print_usage();
             std::process::exit(1);
-        }
+        },
     };
 
     let configs = [

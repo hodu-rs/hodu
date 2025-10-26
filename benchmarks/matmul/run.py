@@ -201,14 +201,14 @@ def get_ratio_color(ratio):
     """Get color based on ratio relative to baseline (1.0).
 
     Returns colors:
-    - ratio < 1.0 (faster): Green
+    - ratio > 1.0 (faster): Green
     - ratio = 1.0 (same): Blue
-    - ratio > 1.0 (slower): Red
+    - ratio < 1.0 (slower): Red
     """
-    if ratio < 1.0:
+    if ratio > 1.0:
         # Faster than baseline - Green
         return GREEN
-    elif ratio > 1.0:
+    elif ratio < 1.0:
         # Slower than baseline - Red
         return RED
     else:
@@ -241,9 +241,7 @@ def print_comparison_table(all_results, baseline_name):
 
     for size in sizes:
         print(f"\n[{size}]")
-        print(
-            f"{'Framework':<25} {'Mode':<15} {'Time (ms)':>12} {'Faster than':>12}"
-        )
+        print(f"{'Framework':<25} {'Mode':<15} {'Time (ms)':>12} {'Faster than':>12}")
         print("-" * 80)
 
         # Get baseline time for this size
@@ -266,7 +264,7 @@ def print_comparison_table(all_results, baseline_name):
 
             # Handle TIMEOUT cases
             if time_ms == "TIMEOUT":
-                # Calculate ratio vs baseline (estimate >1 second)
+                # Calculate ratio vs baseline (timeout means much slower)
                 ratio_str = ""
                 ratio_color = RED
                 if (
@@ -275,11 +273,11 @@ def print_comparison_table(all_results, baseline_name):
                     and baseline_time != "ERROR"
                 ):
                     if isinstance(baseline_time, (int, float)) and baseline_time > 0:
-                        # Estimate minimum ratio based on 1 second timeout
-                        min_ratio = 1000.0 / baseline_time  # 1 second in ms
-                        ratio_str = f">{min_ratio:.0f}x"
+                        # Estimate maximum ratio based on 1 second timeout
+                        max_ratio = baseline_time / 1000.0  # 1 second in ms
+                        ratio_str = f"<{max_ratio:.2f}x"
                     else:
-                        ratio_str = ">100x"
+                        ratio_str = "<0.01x"
                 else:
                     ratio_str = "TIMEOUT"
 
@@ -322,7 +320,7 @@ def print_comparison_table(all_results, baseline_name):
                 and isinstance(baseline_time, (int, float))
                 and baseline_time > 0
             ):
-                ratio = time_ms / baseline_time
+                ratio = baseline_time / time_ms
                 ratio_str = f"{ratio:.2f}x"
                 ratio_color = get_ratio_color(ratio)
             elif impl_name == baseline_name:
@@ -367,10 +365,12 @@ def main():
     # Add CPU modes if requested
     if enable_cpu:
         print_color(YELLOW, "CPU benchmarks enabled\n")
-        test_modes.extend([
-            ("dynamic-cpu", "CPU"),
-            ("static-cpu", "CPU"),
-        ])
+        test_modes.extend(
+            [
+                ("dynamic-cpu", "CPU"),
+                ("static-cpu", "CPU"),
+            ]
+        )
         hodu_modes.extend(["dynamic-cpu", "static-cpu"])
         jax_modes.extend([("dynamic-cpu", "CPU"), ("static-cpu", "CPU")])
 
