@@ -11,6 +11,7 @@ RED = "\033[0;31m"
 CYAN = "\033[0;36m"
 MAGENTA = "\033[0;35m"
 WHITE = "\033[1;37m"
+LIGHT_PINK = "\033[38;5;218m"
 NC = "\033[0m"  # No Color
 
 
@@ -348,7 +349,12 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
                     else:
                         ratio_str = "TIMEOUT"
 
-                    fw_color = BLUE if impl_name == cpu_baseline else CYAN
+                    if impl_name == cpu_baseline:
+                        fw_color = BLUE
+                    elif framework == "Hodu":
+                        fw_color = LIGHT_PINK
+                    else:
+                        fw_color = CYAN
                     framework_str = f"{framework:<25}"
                     mode_str = f"{mode:<15}"
                     time_str = f"{'TIMEOUT':>12}"
@@ -361,7 +367,12 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
 
                 # Handle ERROR cases
                 if time_ms == "ERROR":
-                    fw_color = BLUE if impl_name == cpu_baseline else CYAN
+                    if impl_name == cpu_baseline:
+                        fw_color = BLUE
+                    elif framework == "Hodu":
+                        fw_color = LIGHT_PINK
+                    else:
+                        fw_color = CYAN
                     framework_str = f"{framework:<25}"
                     mode_str = f"{mode:<15}"
                     time_str = f"{'ERROR':>12}"
@@ -390,7 +401,12 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
                     ratio_str = "baseline"
                     ratio_color = WHITE
 
-                fw_color = BLUE if impl_name == cpu_baseline else CYAN
+                if impl_name == cpu_baseline:
+                    fw_color = BLUE
+                elif framework == "Hodu":
+                    fw_color = LIGHT_PINK
+                else:
+                    fw_color = CYAN
                 framework_str = f"{framework:<25}"
                 mode_str = f"{mode:<15}"
                 time_str = f"{time_ms:>12.4f}"
@@ -443,7 +459,12 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
                     else:
                         ratio_str = "TIMEOUT"
 
-                    fw_color = BLUE if impl_name == gpu_baseline else CYAN
+                    if impl_name == gpu_baseline:
+                        fw_color = BLUE
+                    elif framework == "Hodu":
+                        fw_color = LIGHT_PINK
+                    else:
+                        fw_color = CYAN
                     framework_str = f"{framework:<25}"
                     mode_str = f"{mode:<15}"
                     time_str = f"{'TIMEOUT':>12}"
@@ -456,7 +477,12 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
 
                 # Handle ERROR cases
                 if time_ms == "ERROR":
-                    fw_color = BLUE if impl_name == gpu_baseline else CYAN
+                    if impl_name == gpu_baseline:
+                        fw_color = BLUE
+                    elif framework == "Hodu":
+                        fw_color = LIGHT_PINK
+                    else:
+                        fw_color = CYAN
                     framework_str = f"{framework:<25}"
                     mode_str = f"{mode:<15}"
                     time_str = f"{'ERROR':>12}"
@@ -485,7 +511,12 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
                     ratio_str = "baseline"
                     ratio_color = WHITE
 
-                fw_color = BLUE if impl_name == gpu_baseline else CYAN
+                if impl_name == gpu_baseline:
+                    fw_color = BLUE
+                elif framework == "Hodu":
+                    fw_color = LIGHT_PINK
+                else:
+                    fw_color = CYAN
                 framework_str = f"{framework:<25}"
                 mode_str = f"{mode:<15}"
                 time_str = f"{time_ms:>12.4f}"
@@ -611,20 +642,26 @@ def main():
         if results:
             all_results[f"PyTorch - {mode_name or mode}"] = results
 
-    # Find CPU and GPU baselines (Burn)
+    # Find CPU and GPU baselines (PyTorch dynamic-cpu)
     cpu_baseline = None
     gpu_baseline = None
 
     for key in all_results.keys():
-        if "Burn" in key and "CPU" in key:
+        if "PyTorch" in key and ("Dynamic CPU" in key or "dynamic-cpu" in key):
             cpu_baseline = key
-        if "Burn" in key and (
-            "WGPU" in key or "TCH" in key or "Metal" in key or "CUDA" in key
+            break
+
+    for key in all_results.keys():
+        if "PyTorch" in key and (
+            "Dynamic Metal" in key
+            or "dynamic-metal" in key
+            or "Dynamic CUDA" in key
+            or "dynamic-cuda" in key
         ):
-            if gpu_baseline is None:  # Use first GPU Burn result found
+            if gpu_baseline is None:  # Use first GPU PyTorch result found
                 gpu_baseline = key
 
-    # Fallback to first result if Burn not found
+    # Fallback to first result if PyTorch not found
     if not cpu_baseline:
         for key in all_results.keys():
             if any(x in key for x in ["CPU", "cpu", "XLA"]):
