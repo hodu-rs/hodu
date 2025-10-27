@@ -390,7 +390,16 @@ impl HoduExecutor {
             (Device::CUDA(_), _) => Err(HoduError::InternalError(
                 "CUDA tensor conversion not implemented".to_string(),
             )),
-            (Device::Metal, storage) => storage.to_cpu_storage().map(HoduStorage::CPU),
+            #[cfg(feature = "metal")]
+            (Device::Metal, storage) => match storage {
+                HoduStorage::Metal(metal_storage) => Ok(HoduStorage::Metal(metal_storage.clone())),
+                HoduStorage::CPU(cpu_storage) => {
+                    use crate::backends::be_hodu::metal::storage::MetalStorage;
+                    MetalStorage::from_cpu_storage(cpu_storage).map(HoduStorage::Metal)
+                },
+            },
+            #[cfg(not(feature = "metal"))]
+            (Device::Metal, _) => Err(HoduError::InternalError("Metal feature not enabled".to_string())),
         })
     }
 
