@@ -15,7 +15,7 @@ NC = "\033[0m"  # No Color
 # Configuration: Define packages for each virtual environment
 VENV_CONFIGS = [
     {
-        "name": "venvs/1",
+        "name": ".venvs/1",
         "packages": (
             [
                 "numpy==2.3.4",
@@ -33,7 +33,7 @@ VENV_CONFIGS = [
         ),
     },
     {
-        "name": "venvs/2",
+        "name": ".venvs/2",
         "packages": (
             [
                 "numpy==1.26.4",

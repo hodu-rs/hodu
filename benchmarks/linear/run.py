@@ -43,27 +43,24 @@ def parse_benchmark_output(output):
         elif "," in line:
             # Check for TIMEOUT first
             if "TIMEOUT" in line:
-                # Parse: 128x128x128,TIMEOUT
-                match = re.match(r"(\d+)x(\d+)x(\d+),TIMEOUT", line)
+                match = re.match(r"(\d+)x(\d+)x(\d+)x(\d+),TIMEOUT", line)
                 if match:
-                    m, k, n = match.groups()
-                    size = f"{m}x{k}x{n}"
+                    b, i, h, o = match.groups()
+                    size = f"{b}x{i}x{h}x{o}"
                     results[size] = "TIMEOUT"
             elif "ERROR" in line:
-                # Parse: 128x128x128,ERROR
-                match = re.match(r"(\d+)x(\d+)x(\d+),ERROR", line)
+                match = re.match(r"(\d+)x(\d+)x(\d+)x(\d+),ERROR", line)
                 if match:
-                    m, k, n = match.groups()
-                    size = f"{m}x{k}x{n}"
+                    b, i, h, o = match.groups()
+                    size = f"{b}x{i}x{h}x{o}"
                     results[size] = "ERROR"
             elif "ms" in line:
-                # Parse: 128x128x128,0.123456ms or 128x128x128,time_ms=0.123456ms
                 match = re.match(
-                    r"(\d+)x(\d+)x(\d+),(?:time_ms=)?([0-9.]+)(?:ms)?", line
+                    r"(\d+)x(\d+)x(\d+)x(\d+),(?:time_ms=)?([0-9.]+)(?:ms)?", line
                 )
                 if match:
-                    m, k, n, time_ms = match.groups()
-                    size = f"{m}x{k}x{n}"
+                    b, i, h, o, time_ms = match.groups()
+                    size = f"{b}x{i}x{h}x{o}"
                     results[size] = float(time_ms)
 
     return mode, results
@@ -171,7 +168,7 @@ def run_python_benchmark(script, mode):
             python_exe = venv_path / "bin" / "python3"
             cmd = [str(python_exe), script, mode]
         else:
-            print_color(YELLOW, "Warning: ..venvs/1 not found, using system python3")
+            print_color(YELLOW, "Warning: .venvs/1 not found, using system python3")
             cmd = ["python3", script, mode]
 
     print_color(YELLOW, f"Running: {' '.join(cmd)}")
@@ -259,14 +256,14 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
         print_color(RED, "No timing data found")
         return
 
-    print("\n" + "=" * 80)
-    print("Matrix Multiplication Benchmark Results")
-    print("=" * 80)
+    print("\n" + "=" * 110)
+    print("MLP Block Benchmark Results (3-layer MLP with GELU and Residual)")
+    print("=" * 110)
 
     for size in sizes:
-        print(f"\n[{size}]")
+        print(f"\n[{size}] (batch_size x in_features x hidden_features x out_features)")
         print(f"{'Framework':<25} {'Mode':<15} {'Time (ms)':>12} {'Faster than':>12}")
-        print("-" * 80)
+        print("-" * 110)
 
         # Print CPU results first
         if cpu_results:
@@ -376,7 +373,7 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
 
         # Print separator between CPU and GPU
         if cpu_results and gpu_results:
-            print("-" * 80)
+            print("-" * 110)
 
         # Print GPU results
         if gpu_results:
@@ -484,13 +481,13 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
                     f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
                 )
 
-    print("\n" + "=" * 80)
+    print("\n" + "=" * 110)
 
 
 def main():
     # Check if we're in the right directory
     if not Path("_hodu.rs").exists():
-        print_color(RED, "Error: Must be run from benchmarks/matmul directory")
+        print_color(RED, "Error: Must be run from benchmarks/linear directory")
         sys.exit(1)
 
     # Parse command line arguments
