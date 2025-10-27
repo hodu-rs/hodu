@@ -138,12 +138,38 @@ impl XlaExecutor {
             + script_ir.graph.metadata.outputs.len();
         let mut tensor_layouts = HashMap::with_capacity(estimated_layout_count);
 
-        for node in &script_ir.graph.topology.nodes {
-            for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
-                tensor_layouts.insert(tensor_id, layout.clone());
+        #[cfg(feature = "rayon")]
+        {
+            let node_layouts: Vec<_> = script_ir
+                .graph
+                .topology
+                .nodes
+                .par_iter()
+                .flat_map(|node| {
+                    let mut layouts = Vec::new();
+                    for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
+                        layouts.push((tensor_id, layout.clone()));
+                    }
+                    for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
+                        layouts.push((tensor_id, layout.clone()));
+                    }
+                    layouts
+                })
+                .collect();
+
+            for (tensor_id, layout) in node_layouts {
+                tensor_layouts.insert(tensor_id, layout);
             }
-            for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
-                tensor_layouts.insert(tensor_id, layout.clone());
+        }
+        #[cfg(not(feature = "rayon"))]
+        {
+            for node in &script_ir.graph.topology.nodes {
+                for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
+                    tensor_layouts.insert(tensor_id, layout.clone());
+                }
+                for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
+                    tensor_layouts.insert(tensor_id, layout.clone());
+                }
             }
         }
 
@@ -173,9 +199,26 @@ impl XlaExecutor {
     fn collect_tensor_dtypes(&self, script_ir: &ScriptIR, script: &Script) -> HashMap<TensorId, DType> {
         let mut tensor_dtypes = HashMap::with_capacity(script_ir.graph.metadata.tensor_info.len());
 
-        for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
-            if let Some(dtype) = tensor_info.dtype {
+        #[cfg(feature = "rayon")]
+        {
+            let dtypes: Vec<_> = script_ir
+                .graph
+                .metadata
+                .tensor_info
+                .par_iter()
+                .filter_map(|(&tensor_id, tensor_info)| tensor_info.dtype.map(|dtype| (tensor_id, dtype)))
+                .collect();
+
+            for (tensor_id, dtype) in dtypes {
                 tensor_dtypes.insert(tensor_id, dtype);
+            }
+        }
+        #[cfg(not(feature = "rayon"))]
+        {
+            for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
+                if let Some(dtype) = tensor_info.dtype {
+                    tensor_dtypes.insert(tensor_id, dtype);
+                }
             }
         }
 
@@ -3555,12 +3598,12 @@ impl ExecutorT for XlaExecutor {
 
     fn execute(&self, compiled: &Self::CompiledScript, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
         // Convert inputs to XLA literals using input_mapping (exactly like HoduExecutor)
-        let mut xla_inputs = Vec::new();
-
         // Get input names in consistent order (sort for consistent ordering)
         let mut input_names: Vec<_> = compiled.input_mapping.keys().cloned().collect();
         input_names.sort();
 
+        // XLA Literal is not Send, so we cannot use rayon here
+        let mut xla_inputs = Vec::new();
         for input_name in input_names.iter() {
             let tensor = inputs
                 .get(input_name.as_str())
@@ -3626,12 +3669,12 @@ impl ExecutorT for XlaExecutor {
                 )));
             }
 
+            // XLA result_buffers is not Send, so we cannot use rayon here
             for (i, output_name) in output_names.iter().enumerate() {
                 let element_literal = result_buffers[0][i].to_literal_sync().map_err(|e| {
                     HoduError::InternalError(format!("Failed to convert tuple element {} to literal: {:?}", i, e))
                 })?;
 
-                // Get expected dtype from tensor_dtypes mapping
                 let output_tensor_id = compiled.output_mapping.get(output_name).ok_or_else(|| {
                     HoduError::InternalError(format!("Output tensor ID not found for {}", output_name))
                 })?;

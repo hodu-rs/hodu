@@ -108,12 +108,38 @@ impl HoduExecutor {
         #[cfg(not(feature = "std"))]
         let mut tensor_layouts = HashMap::new();
 
-        for node in &script_ir.graph.topology.nodes {
-            for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
-                tensor_layouts.insert(tensor_id, layout.clone());
+        #[cfg(all(feature = "std", feature = "rayon"))]
+        {
+            let node_layouts: Vec<_> = script_ir
+                .graph
+                .topology
+                .nodes
+                .par_iter()
+                .flat_map(|node| {
+                    let mut layouts = Vec::new();
+                    for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
+                        layouts.push((tensor_id, layout.clone()));
+                    }
+                    for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
+                        layouts.push((tensor_id, layout.clone()));
+                    }
+                    layouts
+                })
+                .collect();
+
+            for (tensor_id, layout) in node_layouts {
+                tensor_layouts.insert(tensor_id, layout);
             }
-            for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
-                tensor_layouts.insert(tensor_id, layout.clone());
+        }
+        #[cfg(not(all(feature = "std", feature = "rayon")))]
+        {
+            for node in &script_ir.graph.topology.nodes {
+                for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
+                    tensor_layouts.insert(tensor_id, layout.clone());
+                }
+                for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
+                    tensor_layouts.insert(tensor_id, layout.clone());
+                }
             }
         }
 
@@ -151,9 +177,26 @@ impl HoduExecutor {
     fn collect_tensor_dtypes(&self, script_ir: &ScriptIR, script: &Script) -> HashMap<TensorId, DType> {
         let mut tensor_dtypes = HashMap::new();
 
-        for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
-            if let Some(dtype) = tensor_info.dtype {
+        #[cfg(all(feature = "std", feature = "rayon"))]
+        {
+            let dtypes: Vec<_> = script_ir
+                .graph
+                .metadata
+                .tensor_info
+                .par_iter()
+                .filter_map(|(&tensor_id, tensor_info)| tensor_info.dtype.map(|dtype| (tensor_id, dtype)))
+                .collect();
+
+            for (tensor_id, dtype) in dtypes {
                 tensor_dtypes.insert(tensor_id, dtype);
+            }
+        }
+        #[cfg(not(all(feature = "std", feature = "rayon")))]
+        {
+            for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
+                if let Some(dtype) = tensor_info.dtype {
+                    tensor_dtypes.insert(tensor_id, dtype);
+                }
             }
         }
 
@@ -175,23 +218,57 @@ impl HoduExecutor {
         #[cfg(not(feature = "std"))]
         let mut constant_storage = HashMap::new();
 
-        for (tensor_id, constant_node) in &script_ir.graph.metadata.constants {
-            match self.current_device {
-                Device::CPU => {
-                    let storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                    constant_storage.insert(*tensor_id, Arc::new(HoduStorage::CPU(storage)));
-                },
-                Device::CUDA(_) => {
-                    // TODO: Convert to CUDA storage
-                    return Err(HoduError::InternalError(
-                        "CUDA constant conversion not implemented".to_string(),
-                    ));
-                },
-                Device::Metal => {
-                    let cpu_storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                    let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                    constant_storage.insert(*tensor_id, Arc::new(HoduStorage::Metal(metal_storage)));
-                },
+        #[cfg(all(feature = "std", feature = "rayon"))]
+        {
+            let constant_storages: Vec<_> = script_ir
+                .graph
+                .metadata
+                .constants
+                .par_iter()
+                .map(|(tensor_id, constant_node)| {
+                    let storage = match self.current_device {
+                        Device::CPU => {
+                            let storage = self.convert_constant_to_cpu_storage(constant_node)?;
+                            Arc::new(HoduStorage::CPU(storage))
+                        },
+                        Device::CUDA(_) => {
+                            return Err(HoduError::InternalError(
+                                "CUDA constant conversion not implemented".to_string(),
+                            ));
+                        },
+                        Device::Metal => {
+                            let cpu_storage = self.convert_constant_to_cpu_storage(constant_node)?;
+                            let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
+                            Arc::new(HoduStorage::Metal(metal_storage))
+                        },
+                    };
+                    Ok((*tensor_id, storage))
+                })
+                .collect::<HoduResult<Vec<_>>>()?;
+
+            for (tensor_id, storage) in constant_storages {
+                constant_storage.insert(tensor_id, storage);
+            }
+        }
+        #[cfg(not(all(feature = "std", feature = "rayon")))]
+        {
+            for (tensor_id, constant_node) in &script_ir.graph.metadata.constants {
+                match self.current_device {
+                    Device::CPU => {
+                        let storage = self.convert_constant_to_cpu_storage(constant_node)?;
+                        constant_storage.insert(*tensor_id, Arc::new(HoduStorage::CPU(storage)));
+                    },
+                    Device::CUDA(_) => {
+                        return Err(HoduError::InternalError(
+                            "CUDA constant conversion not implemented".to_string(),
+                        ));
+                    },
+                    Device::Metal => {
+                        let cpu_storage = self.convert_constant_to_cpu_storage(constant_node)?;
+                        let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
+                        constant_storage.insert(*tensor_id, Arc::new(HoduStorage::Metal(metal_storage)));
+                    },
+                }
             }
         }
 
@@ -1404,10 +1481,29 @@ impl ExecutorT for HoduExecutor {
         }
 
         // Convert input tensors to storage
-        for (input_name, input_tensor) in &inputs {
-            if let Some(&tensor_id) = compiled.input_mapping.get(*input_name) {
-                let storage = self.tensor_to_storage(input_tensor)?;
-                tensor_storage.insert(tensor_id, Arc::new(storage));
+        #[cfg(all(feature = "std", feature = "rayon"))]
+        {
+            let input_storages: Vec<_> = inputs
+                .par_iter()
+                .filter_map(|(input_name, input_tensor)| {
+                    compiled.input_mapping.get(*input_name).map(|&tensor_id| {
+                        self.tensor_to_storage(input_tensor)
+                            .map(|storage| (tensor_id, Arc::new(storage)))
+                    })
+                })
+                .collect::<HoduResult<Vec<_>>>()?;
+
+            for (tensor_id, storage) in input_storages {
+                tensor_storage.insert(tensor_id, storage);
+            }
+        }
+        #[cfg(not(all(feature = "std", feature = "rayon")))]
+        {
+            for (input_name, input_tensor) in &inputs {
+                if let Some(&tensor_id) = compiled.input_mapping.get(*input_name) {
+                    let storage = self.tensor_to_storage(input_tensor)?;
+                    tensor_storage.insert(tensor_id, Arc::new(storage));
+                }
             }
         }
 
@@ -1427,11 +1523,20 @@ impl ExecutorT for HoduExecutor {
         let mut outputs = HashMap::with_capacity(compiled.output_mapping.len());
         #[cfg(not(feature = "std"))]
         let mut outputs = HashMap::new();
-        for (output_name, &tensor_id) in &compiled.output_mapping {
-            if let Some(storage) = tensor_storage.get(&tensor_id) {
-                if let Some(layout) = compiled.tensor_layouts.get(&tensor_id) {
-                    // Clone the storage data only when creating the final output tensor
-                    // Use Arc::try_unwrap to avoid cloning when possible
+
+        #[cfg(all(feature = "std", feature = "rayon"))]
+        {
+            let output_tensors: Vec<_> = compiled
+                .output_mapping
+                .par_iter()
+                .map(|(output_name, &tensor_id)| {
+                    let storage = tensor_storage.get(&tensor_id).ok_or_else(|| {
+                        HoduError::InternalError(format!("Storage not found for output tensor {tensor_id:?}"))
+                    })?;
+                    let layout = compiled.tensor_layouts.get(&tensor_id).ok_or_else(|| {
+                        HoduError::InternalError(format!("Layout not found for output tensor {tensor_id:?}"))
+                    })?;
+
                     let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
                         Ok(storage) => storage,
                         Err(shared_storage) => match shared_storage.as_ref() {
@@ -1440,16 +1545,38 @@ impl ExecutorT for HoduExecutor {
                         },
                     };
                     let output_tensor = from_storage(output_storage, layout.clone(), false);
-                    outputs.insert(output_name.clone(), output_tensor);
+                    Ok((output_name.clone(), output_tensor))
+                })
+                .collect::<HoduResult<Vec<_>>>()?;
+
+            for (output_name, tensor) in output_tensors {
+                outputs.insert(output_name, tensor);
+            }
+        }
+        #[cfg(not(all(feature = "std", feature = "rayon")))]
+        {
+            for (output_name, &tensor_id) in &compiled.output_mapping {
+                if let Some(storage) = tensor_storage.get(&tensor_id) {
+                    if let Some(layout) = compiled.tensor_layouts.get(&tensor_id) {
+                        let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
+                            Ok(storage) => storage,
+                            Err(shared_storage) => match shared_storage.as_ref() {
+                                HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
+                                HoduStorage::Metal(metal_storage) => HoduStorage::Metal(metal_storage.clone()),
+                            },
+                        };
+                        let output_tensor = from_storage(output_storage, layout.clone(), false);
+                        outputs.insert(output_name.clone(), output_tensor);
+                    } else {
+                        return Err(HoduError::InternalError(format!(
+                            "Layout not found for output tensor {tensor_id:?}"
+                        )));
+                    }
                 } else {
                     return Err(HoduError::InternalError(format!(
-                        "Layout not found for output tensor {tensor_id:?}"
+                        "Storage not found for output tensor {tensor_id:?}"
                     )));
                 }
-            } else {
-                return Err(HoduError::InternalError(format!(
-                    "Storage not found for output tensor {tensor_id:?}"
-                )));
             }
         }
 

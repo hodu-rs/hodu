@@ -92,18 +92,26 @@ tests=(
     "serde|serde only (no-std)"
     "std|no features (std)"
     "std,serde|serde only (std)"
+    "std,rayon|rayon only (std)"
+    "std,serde,rayon|serde + rayon (std)"
     "std,xla|xla only (std)"
-    "std,serde,xla|serde, xla (std)"
+    "std,serde,xla|serde + xla (std)"
+    "std,rayon,xla|rayon + xla (std)"
+    "std,serde,rayon,xla|serde + rayon + xla (std)"
 )
 
 # Add metal features only to std combinations
 if [ "$HAS_METAL" = true ]; then
     # Add metal to std-based combinations
     tests+=(
-        "std,metal|std + metal"
-        "std,serde,metal|std + serde + metal"
-        "std,xla,metal|std + xla + metal"
-        "std,serde,xla,metal|std + serde + xla + metal"
+        "std,metal|metal (std)"
+        "std,serde,metal|serde + metal (std)"
+        "std,rayon,metal|rayon + metal (std)"
+        "std,serde,rayon,metal|serde + rayon + metal (std)"
+        "std,xla,metal|xla + metal (std)"
+        "std,serde,xla,metal|serde + xla + metal (std)"
+        "std,rayon,xla,metal|rayon + xla + metal (std)"
+        "std,serde,rayon,xla,metal|serde + rayon + xla + metal (std)"
     )
 fi
 

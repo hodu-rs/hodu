@@ -30,6 +30,13 @@
    ```
 5. Check and format code before submitting:
    ```bash
-   bash ./tools/check.sh   # Run lints and checks
    bash ./tools/format.sh  # Format code
+   bash ./tools/check.sh   # Run lints and checks
+
+   # To test additional features (e.g., metal):
+   bash ./tools/check.sh -f metal
+   bash ./tools/check.sh --features metal
+
+   # Multiple features:
+   bash ./tools/check.sh -f metal cuda
    ```

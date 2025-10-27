@@ -3,8 +3,7 @@ use core::arch::aarch64::*;
 #[cfg(target_arch = "arm")]
 use core::arch::arm::*;
 
-#[cfg(feature = "rayon")]
-use rayon::prelude::*;
+use crate::compat::*;
 
 unsafe fn pack_a_f32(src: &[f32], dst: &mut [f32], lda: usize, i_offset: usize, k_offset: usize, mc: usize, kc: usize) {
     const MR: usize = 6;

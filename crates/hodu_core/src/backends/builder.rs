@@ -257,66 +257,169 @@ impl Builder {
 
                 let mut processed_constants = HashSet::new();
 
+                // Collect all unique constant tensor IDs first
+                let mut constant_tensor_ids = Vec::new();
                 for op in &b.operations {
                     let input_tensors = op.get_input_tensor_ids();
-
                     for &tensor_id in &input_tensors {
-                        if !processed_constants.contains(&tensor_id) && crate::tensor::get(tensor_id).is_some() {
-                            let tensor = crate::tensor::tensor_from_id(tensor_id);
-                            if tensor.has_storage() {
-                                let cpu_storage = tensor.with_storage(|storage| Ok(storage.to_cpu_storage()))?;
-
-                                let constant_node = ConstantNode {
-                                    tensor_id,
-                                    shape: tensor.get_layout().get_shape().to_vec(),
-                                    dtype: tensor.get_dtype(),
-                                    data: cpu_storage?.to_bytes(),
-                                    compression: None,
-                                };
-                                graph.metadata.constants.insert(tensor_id, constant_node);
-                                processed_constants.insert(tensor_id);
-                            }
+                        if !processed_constants.contains(&tensor_id)
+                            && crate::tensor::get(tensor_id).is_some()
+                            && crate::tensor::tensor_from_id(tensor_id).has_storage()
+                        {
+                            constant_tensor_ids.push(tensor_id);
+                            processed_constants.insert(tensor_id);
                         }
                     }
                 }
 
-                for (name, tensor) in &b.graph_inputs {
-                    let input_node = InputNode {
-                        name: name.to_string(),
-                        tensor_id: tensor.id(),
-                        optional: false,
-                        default_value: None,
-                    };
-                    graph.metadata.inputs.push(input_node);
+                // Convert constants in parallel
+                #[cfg(all(feature = "std", feature = "rayon"))]
+                let constant_nodes: Vec<_> = {
+                    constant_tensor_ids
+                        .par_iter()
+                        .map(|&tensor_id| {
+                            let tensor = crate::tensor::tensor_from_id(tensor_id);
+                            let cpu_storage = tensor.with_storage(|storage| Ok(storage.to_cpu_storage()))?;
 
-                    use crate::backends::script::ir::TensorInfo;
-                    let tensor_info = TensorInfo {
-                        id: tensor.id(),
-                        shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
-                        dtype: Some(tensor.get_dtype()),
-                        layout: None,
-                        memory_layout: None,
-                    };
-                    graph.metadata.tensor_info.insert(tensor.id(), tensor_info);
+                            let constant_node = ConstantNode {
+                                tensor_id,
+                                shape: tensor.get_layout().get_shape().to_vec(),
+                                dtype: tensor.get_dtype(),
+                                data: cpu_storage?.to_bytes(),
+                                compression: None,
+                            };
+                            Ok((tensor_id, constant_node))
+                        })
+                        .collect::<HoduResult<Vec<_>>>()?
+                };
+
+                #[cfg(not(all(feature = "std", feature = "rayon")))]
+                let constant_nodes: Vec<_> = {
+                    constant_tensor_ids
+                        .iter()
+                        .map(|&tensor_id| {
+                            let tensor = crate::tensor::tensor_from_id(tensor_id);
+                            let cpu_storage = tensor.with_storage(|storage| Ok(storage.to_cpu_storage()))?;
+
+                            let constant_node = ConstantNode {
+                                tensor_id,
+                                shape: tensor.get_layout().get_shape().to_vec(),
+                                dtype: tensor.get_dtype(),
+                                data: cpu_storage?.to_bytes(),
+                                compression: None,
+                            };
+                            Ok((tensor_id, constant_node))
+                        })
+                        .collect::<HoduResult<Vec<_>>>()?
+                };
+
+                // Insert constant nodes
+                for (tensor_id, constant_node) in constant_nodes {
+                    graph.metadata.constants.insert(tensor_id, constant_node);
                 }
 
-                for (name, tensor) in &b.graph_outputs {
-                    let output_node = OutputNode {
-                        name: name.to_string(),
-                        tensor_id: tensor.id(),
-                        is_intermediate: false,
-                    };
-                    graph.metadata.outputs.push(output_node);
+                use crate::backends::script::ir::TensorInfo;
 
-                    use crate::backends::script::ir::TensorInfo;
-                    let tensor_info = TensorInfo {
-                        id: tensor.id(),
-                        shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
-                        dtype: Some(tensor.get_dtype()),
-                        layout: None,
-                        memory_layout: None,
-                    };
-                    graph.metadata.tensor_info.insert(tensor.id(), tensor_info);
+                // Process graph_inputs in parallel
+                #[cfg(all(feature = "std", feature = "rayon"))]
+                let input_data: Vec<_> = {
+                    b.graph_inputs
+                        .par_iter()
+                        .map(|(name, tensor)| {
+                            let input_node = InputNode {
+                                name: name.to_string(),
+                                tensor_id: tensor.id(),
+                                optional: false,
+                                default_value: None,
+                            };
+                            let tensor_info = TensorInfo {
+                                id: tensor.id(),
+                                shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
+                                dtype: Some(tensor.get_dtype()),
+                                layout: None,
+                                memory_layout: None,
+                            };
+                            (input_node, tensor_info)
+                        })
+                        .collect()
+                };
+
+                #[cfg(not(all(feature = "std", feature = "rayon")))]
+                let input_data: Vec<_> = {
+                    b.graph_inputs
+                        .iter()
+                        .map(|(name, tensor)| {
+                            let input_node = InputNode {
+                                name: name.to_string(),
+                                tensor_id: tensor.id(),
+                                optional: false,
+                                default_value: None,
+                            };
+                            let tensor_info = TensorInfo {
+                                id: tensor.id(),
+                                shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
+                                dtype: Some(tensor.get_dtype()),
+                                layout: None,
+                                memory_layout: None,
+                            };
+                            (input_node, tensor_info)
+                        })
+                        .collect()
+                };
+
+                for (input_node, tensor_info) in input_data {
+                    graph.metadata.inputs.push(input_node);
+                    graph.metadata.tensor_info.insert(tensor_info.id, tensor_info);
+                }
+
+                // Process graph_outputs in parallel
+                #[cfg(all(feature = "std", feature = "rayon"))]
+                let output_data: Vec<_> = {
+                    b.graph_outputs
+                        .par_iter()
+                        .map(|(name, tensor)| {
+                            let output_node = OutputNode {
+                                name: name.to_string(),
+                                tensor_id: tensor.id(),
+                                is_intermediate: false,
+                            };
+                            let tensor_info = TensorInfo {
+                                id: tensor.id(),
+                                shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
+                                dtype: Some(tensor.get_dtype()),
+                                layout: None,
+                                memory_layout: None,
+                            };
+                            (output_node, tensor_info)
+                        })
+                        .collect()
+                };
+
+                #[cfg(not(all(feature = "std", feature = "rayon")))]
+                let output_data: Vec<_> = {
+                    b.graph_outputs
+                        .iter()
+                        .map(|(name, tensor)| {
+                            let output_node = OutputNode {
+                                name: name.to_string(),
+                                tensor_id: tensor.id(),
+                                is_intermediate: false,
+                            };
+                            let tensor_info = TensorInfo {
+                                id: tensor.id(),
+                                shape: Some(tensor.get_layout().get_shape().iter().map(|&s| Some(s)).collect()),
+                                dtype: Some(tensor.get_dtype()),
+                                layout: None,
+                                memory_layout: None,
+                            };
+                            (output_node, tensor_info)
+                        })
+                        .collect()
+                };
+
+                for (output_node, tensor_info) in output_data {
+                    graph.metadata.outputs.push(output_node);
+                    graph.metadata.tensor_info.insert(tensor_info.id, tensor_info);
                 }
 
                 for (node_counter, op) in b.operations.iter().enumerate() {
