@@ -1027,8 +1027,134 @@ macro_rules! unary_op {
     };
 }
 
-unary_op!(Neg, "neg", v, -v);
-unary_op!(Abs, "abs", v, v.abs());
+impl UnaryOpT for Neg {
+    const NAME: &'static str = "neg";
+
+    #[inline(always)]
+    fn bool(_: bool) -> bool {
+        todo!("no unary function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v: F8E4M3) -> F8E4M3 {
+        -v
+    }
+    #[inline(always)]
+    fn f8e5m2(v: F8E5M2) -> F8E5M2 {
+        -v
+    }
+    #[inline(always)]
+    fn bf16(v: bf16) -> bf16 {
+        -v
+    }
+    #[inline(always)]
+    fn f16(v: f16) -> f16 {
+        -v
+    }
+    #[inline(always)]
+    fn f32(v: f32) -> f32 {
+        -v
+    }
+    #[inline(always)]
+    fn f64(v: f64) -> f64 {
+        -v
+    }
+    #[inline(always)]
+    fn u8(_: u8) -> u8 {
+        todo!("no unary function for u8")
+    }
+    #[inline(always)]
+    fn u16(_: u16) -> u16 {
+        todo!("no unary function for u16")
+    }
+    #[inline(always)]
+    fn u32(_: u32) -> u32 {
+        todo!("no unary function for u32")
+    }
+    #[inline(always)]
+    fn u64(_: u64) -> u64 {
+        todo!("no unary function for u64")
+    }
+    #[inline(always)]
+    fn i8(v: i8) -> i8 {
+        -v
+    }
+    #[inline(always)]
+    fn i16(v: i16) -> i16 {
+        -v
+    }
+    #[inline(always)]
+    fn i32(v: i32) -> i32 {
+        -v
+    }
+    #[inline(always)]
+    fn i64(v: i64) -> i64 {
+        -v
+    }
+}
+impl UnaryOpT for Abs {
+    const NAME: &'static str = "abs";
+
+    #[inline(always)]
+    fn bool(_: bool) -> bool {
+        todo!("no unary function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v: F8E4M3) -> F8E4M3 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn f8e5m2(v: F8E5M2) -> F8E5M2 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn bf16(v: bf16) -> bf16 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn f16(v: f16) -> f16 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn f32(v: f32) -> f32 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn f64(v: f64) -> f64 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn u8(_: u8) -> u8 {
+        todo!("no unary function for u8")
+    }
+    #[inline(always)]
+    fn u16(_: u16) -> u16 {
+        todo!("no unary function for u16")
+    }
+    #[inline(always)]
+    fn u32(_: u32) -> u32 {
+        todo!("no unary function for u32")
+    }
+    #[inline(always)]
+    fn u64(_: u64) -> u64 {
+        todo!("no unary function for u64")
+    }
+    #[inline(always)]
+    fn i8(v: i8) -> i8 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn i16(v: i16) -> i16 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn i32(v: i32) -> i32 {
+        v.abs()
+    }
+    #[inline(always)]
+    fn i64(v: i64) -> i64 {
+        v.abs()
+    }
+}
 impl UnaryOpT for Sign {
     const NAME: &'static str = "sign";
 
@@ -1077,23 +1203,89 @@ impl UnaryOpT for Sign {
         todo!("no unary function for u64")
     }
     #[inline(always)]
-    fn i8(_: i8) -> i8 {
-        todo!("no unary function for i8")
+    fn i8(v: i8) -> i8 {
+        (v > 0) as i8 - (v < 0) as i8
     }
     #[inline(always)]
-    fn i16(_: i16) -> i16 {
-        todo!("no unary function for i16")
+    fn i16(v: i16) -> i16 {
+        (v > 0) as i16 - (v < 0) as i16
     }
     #[inline(always)]
-    fn i32(_: i32) -> i32 {
-        todo!("no unary function for i32")
+    fn i32(v: i32) -> i32 {
+        (v > 0) as i32 - (v < 0) as i32
     }
     #[inline(always)]
-    fn i64(_: i64) -> i64 {
-        todo!("no unary function for i64")
+    fn i64(v: i64) -> i64 {
+        (v > 0) as i64 - (v < 0) as i64
     }
 }
-unary_op!(Square, "square", v, v * v);
+impl UnaryOpT for Square {
+    const NAME: &'static str = "square";
+
+    #[inline(always)]
+    fn bool(_: bool) -> bool {
+        todo!("no unary function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v: F8E4M3) -> F8E4M3 {
+        v * v
+    }
+    #[inline(always)]
+    fn f8e5m2(v: F8E5M2) -> F8E5M2 {
+        v * v
+    }
+    #[inline(always)]
+    fn bf16(v: bf16) -> bf16 {
+        v * v
+    }
+    #[inline(always)]
+    fn f16(v: f16) -> f16 {
+        v * v
+    }
+    #[inline(always)]
+    fn f32(v: f32) -> f32 {
+        v * v
+    }
+    #[inline(always)]
+    fn f64(v: f64) -> f64 {
+        v * v
+    }
+    #[inline(always)]
+    fn u8(v: u8) -> u8 {
+        v * v
+    }
+    #[inline(always)]
+    fn u16(v: u16) -> u16 {
+        v * v
+    }
+    #[inline(always)]
+    fn u32(v: u32) -> u32 {
+        v * v
+    }
+    #[inline(always)]
+    fn u64(v: u64) -> u64 {
+        v * v
+    }
+    #[inline(always)]
+    fn i8(v: i8) -> i8 {
+        v * v
+    }
+    #[inline(always)]
+    fn i16(v: i16) -> i16 {
+        v * v
+    }
+    #[inline(always)]
+    fn i32(v: i32) -> i32 {
+        v * v
+    }
+    #[inline(always)]
+    fn i64(v: i64) -> i64 {
+        v * v
+    }
+}
+unary_op!(Sqrt, "sqrt", v, v.sqrt());
+unary_op!(Recip, "recip", v, v.recip());
+
 impl UnaryOpT for Relu {
     const NAME: &'static str = "relu";
 
@@ -1166,20 +1358,36 @@ impl UnaryOpT for Relu {
         todo!("no unary function for u64")
     }
     #[inline(always)]
-    fn i8(_: i8) -> i8 {
-        todo!("no unary function for i8")
+    fn i8(v: i8) -> i8 {
+        if v > 0 {
+            v
+        } else {
+            0
+        }
     }
     #[inline(always)]
-    fn i16(_: i16) -> i16 {
-        todo!("no unary function for i16")
+    fn i16(v: i16) -> i16 {
+        if v > 0 {
+            v
+        } else {
+            0
+        }
     }
     #[inline(always)]
-    fn i32(_: i32) -> i32 {
-        todo!("no unary function for i32")
+    fn i32(v: i32) -> i32 {
+        if v > 0 {
+            v
+        } else {
+            0
+        }
     }
     #[inline(always)]
-    fn i64(_: i64) -> i64 {
-        todo!("no unary function for i64")
+    fn i64(v: i64) -> i64 {
+        if v > 0 {
+            v
+        } else {
+            0
+        }
     }
 }
 unary_op!(Sigmoid, "sigmoid", v, {
@@ -1281,13 +1489,13 @@ impl UnaryOpT for Gelu {
         todo!("no unary function for i64")
     }
 }
+unary_op!(Softplus, "softplus", v, (v.exp() + v / v).ln());
+
 unary_op!(Sin, "sin", v, v.sin());
 unary_op!(Cos, "cos", v, v.cos());
 unary_op!(Tan, "tan", v, v.tan());
-unary_op!(Ln, "ln", v, v.ln());
-unary_op!(Log10, "log10", v, v.log10());
-unary_op!(Log2, "log2", v, v.log2());
 unary_op!(Exp, "exp", v, v.exp());
+unary_op!(Exp2, "exp2", v, v.exp2());
 impl UnaryOpT for Exp10 {
     const NAME: &'static str = "exp10";
 
@@ -1358,10 +1566,9 @@ impl UnaryOpT for Exp10 {
         todo!("no unary function for i64")
     }
 }
-unary_op!(Exp2, "exp2", v, v.exp2());
-unary_op!(Softplus, "softplus", v, (v.exp() + v / v).ln());
-unary_op!(Recip, "recip", v, v.recip());
-unary_op!(Sqrt, "sqrt", v, v.sqrt());
+unary_op!(Ln, "ln", v, v.ln());
+unary_op!(Log2, "log2", v, v.log2());
+unary_op!(Log10, "log10", v, v.log10());
 
 pub(crate) struct LogicalNot;
 
@@ -1509,9 +1716,198 @@ macro_rules! unary_scalar_op {
     };
 }
 
-unary_scalar_op!(AddScalar, "add_scalar", |v1, v2| v1 + v2);
-unary_scalar_op!(SubScalar, "sub_scalar", |v1, v2| v1 - v2);
-unary_scalar_op!(MulScalar, "mul_scalar", |v1, v2| v1 * v2);
+impl UnaryScalarOpT for AddScalar {
+    const NAME: &'static str = "add_scalar";
+
+    #[inline(always)]
+    fn bool(_: bool, _: Scalar) -> bool {
+        todo!("no unary scalar function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3 {
+        v1 + scalar.to_f8e4m3()
+    }
+    #[inline(always)]
+    fn f8e5m2(v1: F8E5M2, scalar: Scalar) -> F8E5M2 {
+        v1 + scalar.to_f8e5m2()
+    }
+    #[inline(always)]
+    fn bf16(v1: bf16, scalar: Scalar) -> bf16 {
+        v1 + scalar.to_bf16()
+    }
+    #[inline(always)]
+    fn f16(v1: f16, scalar: Scalar) -> f16 {
+        v1 + scalar.to_f16()
+    }
+    #[inline(always)]
+    fn f32(v1: f32, scalar: Scalar) -> f32 {
+        v1 + scalar.to_f32()
+    }
+    #[inline(always)]
+    fn f64(v1: f64, scalar: Scalar) -> f64 {
+        v1 + scalar.to_f64()
+    }
+    #[inline(always)]
+    fn u8(v1: u8, scalar: Scalar) -> u8 {
+        v1 + scalar.to_u8()
+    }
+    #[inline(always)]
+    fn u16(v1: u16, scalar: Scalar) -> u16 {
+        v1 + scalar.to_u16()
+    }
+    #[inline(always)]
+    fn u32(v1: u32, scalar: Scalar) -> u32 {
+        v1 + scalar.to_u32()
+    }
+    #[inline(always)]
+    fn u64(v1: u64, scalar: Scalar) -> u64 {
+        v1 + scalar.to_u64()
+    }
+    #[inline(always)]
+    fn i8(v1: i8, scalar: Scalar) -> i8 {
+        v1 + scalar.to_i8()
+    }
+    #[inline(always)]
+    fn i16(v1: i16, scalar: Scalar) -> i16 {
+        v1 + scalar.to_i16()
+    }
+    #[inline(always)]
+    fn i32(v1: i32, scalar: Scalar) -> i32 {
+        v1 + scalar.to_i32()
+    }
+    #[inline(always)]
+    fn i64(v1: i64, scalar: Scalar) -> i64 {
+        v1 + scalar.to_i64()
+    }
+}
+impl UnaryScalarOpT for SubScalar {
+    const NAME: &'static str = "sub_scalar";
+
+    #[inline(always)]
+    fn bool(_: bool, _: Scalar) -> bool {
+        todo!("no unary scalar function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3 {
+        v1 - scalar.to_f8e4m3()
+    }
+    #[inline(always)]
+    fn f8e5m2(v1: F8E5M2, scalar: Scalar) -> F8E5M2 {
+        v1 - scalar.to_f8e5m2()
+    }
+    #[inline(always)]
+    fn bf16(v1: bf16, scalar: Scalar) -> bf16 {
+        v1 - scalar.to_bf16()
+    }
+    #[inline(always)]
+    fn f16(v1: f16, scalar: Scalar) -> f16 {
+        v1 - scalar.to_f16()
+    }
+    #[inline(always)]
+    fn f32(v1: f32, scalar: Scalar) -> f32 {
+        v1 - scalar.to_f32()
+    }
+    #[inline(always)]
+    fn f64(v1: f64, scalar: Scalar) -> f64 {
+        v1 - scalar.to_f64()
+    }
+    #[inline(always)]
+    fn u8(v1: u8, scalar: Scalar) -> u8 {
+        v1 - scalar.to_u8()
+    }
+    #[inline(always)]
+    fn u16(v1: u16, scalar: Scalar) -> u16 {
+        v1 - scalar.to_u16()
+    }
+    #[inline(always)]
+    fn u32(v1: u32, scalar: Scalar) -> u32 {
+        v1 - scalar.to_u32()
+    }
+    #[inline(always)]
+    fn u64(v1: u64, scalar: Scalar) -> u64 {
+        v1 - scalar.to_u64()
+    }
+    #[inline(always)]
+    fn i8(v1: i8, scalar: Scalar) -> i8 {
+        v1 - scalar.to_i8()
+    }
+    #[inline(always)]
+    fn i16(v1: i16, scalar: Scalar) -> i16 {
+        v1 - scalar.to_i16()
+    }
+    #[inline(always)]
+    fn i32(v1: i32, scalar: Scalar) -> i32 {
+        v1 - scalar.to_i32()
+    }
+    #[inline(always)]
+    fn i64(v1: i64, scalar: Scalar) -> i64 {
+        v1 - scalar.to_i64()
+    }
+}
+impl UnaryScalarOpT for MulScalar {
+    const NAME: &'static str = "mul_scalar";
+
+    #[inline(always)]
+    fn bool(_: bool, _: Scalar) -> bool {
+        todo!("no unary scalar function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3 {
+        v1 * scalar.to_f8e4m3()
+    }
+    #[inline(always)]
+    fn f8e5m2(v1: F8E5M2, scalar: Scalar) -> F8E5M2 {
+        v1 * scalar.to_f8e5m2()
+    }
+    #[inline(always)]
+    fn bf16(v1: bf16, scalar: Scalar) -> bf16 {
+        v1 * scalar.to_bf16()
+    }
+    #[inline(always)]
+    fn f16(v1: f16, scalar: Scalar) -> f16 {
+        v1 * scalar.to_f16()
+    }
+    #[inline(always)]
+    fn f32(v1: f32, scalar: Scalar) -> f32 {
+        v1 * scalar.to_f32()
+    }
+    #[inline(always)]
+    fn f64(v1: f64, scalar: Scalar) -> f64 {
+        v1 * scalar.to_f64()
+    }
+    #[inline(always)]
+    fn u8(v1: u8, scalar: Scalar) -> u8 {
+        v1 * scalar.to_u8()
+    }
+    #[inline(always)]
+    fn u16(v1: u16, scalar: Scalar) -> u16 {
+        v1 * scalar.to_u16()
+    }
+    #[inline(always)]
+    fn u32(v1: u32, scalar: Scalar) -> u32 {
+        v1 * scalar.to_u32()
+    }
+    #[inline(always)]
+    fn u64(v1: u64, scalar: Scalar) -> u64 {
+        v1 * scalar.to_u64()
+    }
+    #[inline(always)]
+    fn i8(v1: i8, scalar: Scalar) -> i8 {
+        v1 * scalar.to_i8()
+    }
+    #[inline(always)]
+    fn i16(v1: i16, scalar: Scalar) -> i16 {
+        v1 * scalar.to_i16()
+    }
+    #[inline(always)]
+    fn i32(v1: i32, scalar: Scalar) -> i32 {
+        v1 * scalar.to_i32()
+    }
+    #[inline(always)]
+    fn i64(v1: i64, scalar: Scalar) -> i64 {
+        v1 * scalar.to_i64()
+    }
+}
 unary_scalar_op!(DivScalar, "div_scalar", |v1, v2| v1 / v2);
 impl UnaryScalarOpT for PowScalar {
     const NAME: &'static str = "pow_scalar";
@@ -1577,8 +1973,274 @@ impl UnaryScalarOpT for PowScalar {
         v1.pow(scalar.to_u32())
     }
 }
-unary_scalar_op!(MaximumScalar, "maximum_scalar", |v1, v2| if v1 < v2 { v2 } else { v1 });
-unary_scalar_op!(MinimumScalar, "minimum_scalar", |v1, v2| if v1 > v2 { v2 } else { v1 });
+impl UnaryScalarOpT for MaximumScalar {
+    const NAME: &'static str = "maximum_scalar";
+
+    #[inline(always)]
+    fn bool(_: bool, _: Scalar) -> bool {
+        todo!("no unary scalar function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3 {
+        let v2 = scalar.to_f8e4m3();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f8e5m2(v1: F8E5M2, scalar: Scalar) -> F8E5M2 {
+        let v2 = scalar.to_f8e5m2();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn bf16(v1: bf16, scalar: Scalar) -> bf16 {
+        let v2 = scalar.to_bf16();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f16(v1: f16, scalar: Scalar) -> f16 {
+        let v2 = scalar.to_f16();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f32(v1: f32, scalar: Scalar) -> f32 {
+        let v2 = scalar.to_f32();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f64(v1: f64, scalar: Scalar) -> f64 {
+        let v2 = scalar.to_f64();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u8(v1: u8, scalar: Scalar) -> u8 {
+        let v2 = scalar.to_u8();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u16(v1: u16, scalar: Scalar) -> u16 {
+        let v2 = scalar.to_u16();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u32(v1: u32, scalar: Scalar) -> u32 {
+        let v2 = scalar.to_u32();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u64(v1: u64, scalar: Scalar) -> u64 {
+        let v2 = scalar.to_u64();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i8(v1: i8, scalar: Scalar) -> i8 {
+        let v2 = scalar.to_i8();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i16(v1: i16, scalar: Scalar) -> i16 {
+        let v2 = scalar.to_i16();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i32(v1: i32, scalar: Scalar) -> i32 {
+        let v2 = scalar.to_i32();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i64(v1: i64, scalar: Scalar) -> i64 {
+        let v2 = scalar.to_i64();
+        if v1 < v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+}
+impl UnaryScalarOpT for MinimumScalar {
+    const NAME: &'static str = "minimum_scalar";
+
+    #[inline(always)]
+    fn bool(_: bool, _: Scalar) -> bool {
+        todo!("no unary scalar function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3 {
+        let v2 = scalar.to_f8e4m3();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f8e5m2(v1: F8E5M2, scalar: Scalar) -> F8E5M2 {
+        let v2 = scalar.to_f8e5m2();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn bf16(v1: bf16, scalar: Scalar) -> bf16 {
+        let v2 = scalar.to_bf16();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f16(v1: f16, scalar: Scalar) -> f16 {
+        let v2 = scalar.to_f16();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f32(v1: f32, scalar: Scalar) -> f32 {
+        let v2 = scalar.to_f32();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn f64(v1: f64, scalar: Scalar) -> f64 {
+        let v2 = scalar.to_f64();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u8(v1: u8, scalar: Scalar) -> u8 {
+        let v2 = scalar.to_u8();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u16(v1: u16, scalar: Scalar) -> u16 {
+        let v2 = scalar.to_u16();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u32(v1: u32, scalar: Scalar) -> u32 {
+        let v2 = scalar.to_u32();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn u64(v1: u64, scalar: Scalar) -> u64 {
+        let v2 = scalar.to_u64();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i8(v1: i8, scalar: Scalar) -> i8 {
+        let v2 = scalar.to_i8();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i16(v1: i16, scalar: Scalar) -> i16 {
+        let v2 = scalar.to_i16();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i32(v1: i32, scalar: Scalar) -> i32 {
+        let v2 = scalar.to_i32();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+    #[inline(always)]
+    fn i64(v1: i64, scalar: Scalar) -> i64 {
+        let v2 = scalar.to_i64();
+        if v1 > v2 {
+            v2
+        } else {
+            v1
+        }
+    }
+}
 impl UnaryScalarOpT for LeakyRelu {
     const NAME: &'static str = "leaky_relu";
 

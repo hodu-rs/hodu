@@ -5,6 +5,7 @@ pub use crate::{
     },
     compat::*,
     error::{HoduError, HoduResult},
+    tensor::Tensor,
     types::{backend::Backend, device::Device, dtype::DType},
 };
 
@@ -350,5 +351,37 @@ pub fn validate_dtype_for_op(dtype: DType, op: &Op) -> HoduResult<()> {
         },
     }
 
+    Ok(())
+}
+
+pub fn validate_same_dtype(tensors: &[&Tensor], op: &str) -> HoduResult<()> {
+    if tensors.is_empty() {
+        return Ok(());
+    }
+
+    let first_dtype = tensors[0].get_dtype();
+
+    for tensor in tensors.iter().skip(1) {
+        let current_dtype = tensor.get_dtype();
+        if current_dtype != first_dtype {
+            return Err(HoduError::DTypeConflictInOp {
+                left: first_dtype,
+                right: current_dtype,
+                op: op.to_string(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+pub fn validate_indices_dtype(indices: &Tensor, op: &str) -> HoduResult<()> {
+    let dtype = indices.get_dtype();
+    if !dtype.is_int() && !dtype.is_uint() {
+        return Err(HoduError::UnsupportedDType {
+            dtype,
+            op: format!("{} - indices must be integer type", op),
+        });
+    }
     Ok(())
 }

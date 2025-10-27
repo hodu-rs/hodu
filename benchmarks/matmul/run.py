@@ -10,6 +10,7 @@ YELLOW = "\033[1;33m"
 RED = "\033[0;31m"
 CYAN = "\033[0;36m"
 MAGENTA = "\033[0;35m"
+WHITE = "\033[1;37m"
 NC = "\033[0m"  # No Color
 
 
@@ -235,27 +236,59 @@ def run_python_benchmark(script, mode):
 def get_ratio_color(ratio):
     """Get color based on ratio relative to baseline (1.0).
 
-    Returns colors:
-    - ratio > 1.0 (faster): Green
-    - ratio = 1.0 (same): Blue
-    - ratio < 1.0 (slower): Red
+    Color intensity increases as the difference from 1.0 increases:
+    - ratio > 1.0 (faster): Green shades (lighter near 1.0, darker further away)
+    - ratio = 1.0 (same): White
+    - ratio < 1.0 (slower): Red shades (lighter near 1.0, darker further away)
     """
     if ratio > 1.0:
-        # Faster than baseline - Green
-        return GREEN
+        # Faster than baseline - Green with varying intensity
+        if ratio >= 2.0:
+            return "\033[38;5;34m"  # Dark green (very fast)
+        elif ratio >= 1.5:
+            return "\033[38;5;40m"  # Medium-dark green
+        elif ratio >= 1.2:
+            return "\033[38;5;46m"  # Medium green
+        elif ratio >= 1.1:
+            return "\033[38;5;82m"  # Light green
+        else:
+            return "\033[38;5;120m"  # Very light green (barely faster)
     elif ratio < 1.0:
-        # Slower than baseline - Red
-        return RED
+        # Slower than baseline - Red with varying intensity
+        if ratio <= 0.5:
+            return "\033[38;5;160m"  # Dark red (very slow)
+        elif ratio <= 0.7:
+            return "\033[38;5;196m"  # Medium-dark red
+        elif ratio <= 0.85:
+            return "\033[38;5;202m"  # Medium red
+        elif ratio <= 0.95:
+            return "\033[38;5;208m"  # Light red/orange
+        else:
+            return "\033[38;5;214m"  # Very light orange (barely slower)
     else:
-        # Same as baseline - Blue
-        return BLUE
+        # Same as baseline - White
+        return WHITE
 
 
-def print_comparison_table(all_results, baseline_name):
-    """Print a simple comparison table."""
+def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
+    """Print a unified comparison table with CPU and GPU sections."""
     if not all_results:
         print_color(RED, "No results to display")
         return
+
+    # Separate CPU and GPU results
+    cpu_results = {}
+    gpu_results = {}
+
+    for key, results in all_results.items():
+        # Check if this is a CPU or GPU benchmark based on the mode name
+        if any(x in key for x in ["CPU", "cpu", "XLA"]):
+            cpu_results[key] = results
+        elif any(x in key for x in ["Metal", "CUDA", "GPU", "gpu", "WGPU", "TCH"]):
+            gpu_results[key] = results
+        else:
+            # Default to CPU if unclear
+            cpu_results[key] = results
 
     # Get all sizes
     sizes = set()
@@ -267,9 +300,6 @@ def print_comparison_table(all_results, baseline_name):
         print_color(RED, "No timing data found")
         return
 
-    # Get baseline results if available
-    baseline_results = all_results.get(baseline_name, {})
-
     print("\n" + "=" * 80)
     print("Matrix Multiplication Benchmark Results")
     print("=" * 80)
@@ -279,100 +309,191 @@ def print_comparison_table(all_results, baseline_name):
         print(f"{'Framework':<25} {'Mode':<15} {'Time (ms)':>12} {'Faster than':>12}")
         print("-" * 80)
 
-        # Get baseline time for this size
-        baseline_time = baseline_results.get(size)
+        # Print CPU results first
+        if cpu_results:
+            cpu_baseline_results = all_results.get(cpu_baseline, {})
+            cpu_baseline_time = cpu_baseline_results.get(size)
 
-        # Sort implementations
-        impl_names = sorted(all_results.keys())
+            impl_names = sorted(cpu_results.keys())
 
-        for impl_name in impl_names:
-            results = all_results[impl_name]
-            time_ms = results.get(size)
+            for impl_name in impl_names:
+                results = cpu_results[impl_name]
+                time_ms = results.get(size)
 
-            if time_ms is None:
-                continue
+                if time_ms is None:
+                    continue
 
-            # Extract framework and mode
-            parts = impl_name.split(" - ")
-            framework = parts[0] if parts else impl_name
-            mode = parts[1] if len(parts) > 1 else ""
+                # Extract framework and mode
+                parts = impl_name.split(" - ")
+                framework = parts[0] if parts else impl_name
+                mode = parts[1] if len(parts) > 1 else ""
 
-            # Handle TIMEOUT cases
-            if time_ms == "TIMEOUT":
-                # Calculate ratio vs baseline (timeout means much slower)
-                ratio_str = ""
-                ratio_color = RED
-                if (
-                    baseline_time
-                    and baseline_time != "TIMEOUT"
-                    and baseline_time != "ERROR"
-                ):
-                    if isinstance(baseline_time, (int, float)) and baseline_time > 0:
-                        # Estimate maximum ratio based on 1 second timeout
-                        max_ratio = baseline_time / 1000.0  # 1 second in ms
-                        ratio_str = f"<{max_ratio:.2f}x"
+                # Handle TIMEOUT cases
+                if time_ms == "TIMEOUT":
+                    ratio_str = ""
+                    ratio_color = RED
+                    if (
+                        cpu_baseline_time
+                        and cpu_baseline_time != "TIMEOUT"
+                        and cpu_baseline_time != "ERROR"
+                    ):
+                        if (
+                            isinstance(cpu_baseline_time, (int, float))
+                            and cpu_baseline_time > 0
+                        ):
+                            max_ratio = cpu_baseline_time / 1000.0
+                            ratio_str = f"<{max_ratio:.2f}x"
+                        else:
+                            ratio_str = "<0.01x"
                     else:
-                        ratio_str = "<0.01x"
-                else:
-                    ratio_str = "TIMEOUT"
+                        ratio_str = "TIMEOUT"
 
-                # Color for framework name
-                fw_color = BLUE if impl_name == baseline_name else CYAN
+                    fw_color = BLUE if impl_name == cpu_baseline else CYAN
+                    framework_str = f"{framework:<25}"
+                    mode_str = f"{mode:<15}"
+                    time_str = f"{'TIMEOUT':>12}"
+                    ratio_str_formatted = f"{ratio_str:>12}"
 
+                    print(
+                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_color}{ratio_str_formatted}{NC}"
+                    )
+                    continue
+
+                # Handle ERROR cases
+                if time_ms == "ERROR":
+                    fw_color = BLUE if impl_name == cpu_baseline else CYAN
+                    framework_str = f"{framework:<25}"
+                    mode_str = f"{mode:<15}"
+                    time_str = f"{'ERROR':>12}"
+                    ratio_str_formatted = f"{'N/A':>12}"
+
+                    print(
+                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_str_formatted}"
+                    )
+                    continue
+
+                # Calculate ratio vs CPU baseline for normal cases
+                ratio_str = ""
+                ratio_color = NC
+                if cpu_baseline_time == "TIMEOUT" or cpu_baseline_time == "ERROR":
+                    ratio_str = "N/A"
+                    ratio_color = NC
+                elif (
+                    cpu_baseline_time
+                    and isinstance(cpu_baseline_time, (int, float))
+                    and cpu_baseline_time > 0
+                ):
+                    ratio = cpu_baseline_time / time_ms
+                    ratio_str = f"{ratio:.2f}x"
+                    ratio_color = get_ratio_color(ratio)
+                elif impl_name == cpu_baseline:
+                    ratio_str = "baseline"
+                    ratio_color = WHITE
+
+                fw_color = BLUE if impl_name == cpu_baseline else CYAN
                 framework_str = f"{framework:<25}"
                 mode_str = f"{mode:<15}"
-                time_str = f"{'TIMEOUT':>12}"
+                time_str = f"{time_ms:>12.4f}"
                 ratio_str_formatted = f"{ratio_str:>12}"
 
                 print(
-                    f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_color}{ratio_str_formatted}{NC}"
+                    f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
                 )
-                continue
 
-            # Handle ERROR cases
-            if time_ms == "ERROR":
-                # Color for framework name
-                fw_color = BLUE if impl_name == baseline_name else CYAN
+        # Print separator between CPU and GPU
+        if cpu_results and gpu_results:
+            print("-" * 80)
 
+        # Print GPU results
+        if gpu_results:
+            gpu_baseline_results = all_results.get(gpu_baseline, {})
+            gpu_baseline_time = gpu_baseline_results.get(size)
+
+            impl_names = sorted(gpu_results.keys())
+
+            for impl_name in impl_names:
+                results = gpu_results[impl_name]
+                time_ms = results.get(size)
+
+                if time_ms is None:
+                    continue
+
+                # Extract framework and mode
+                parts = impl_name.split(" - ")
+                framework = parts[0] if parts else impl_name
+                mode = parts[1] if len(parts) > 1 else ""
+
+                # Handle TIMEOUT cases
+                if time_ms == "TIMEOUT":
+                    ratio_str = ""
+                    ratio_color = RED
+                    if (
+                        gpu_baseline_time
+                        and gpu_baseline_time != "TIMEOUT"
+                        and gpu_baseline_time != "ERROR"
+                    ):
+                        if (
+                            isinstance(gpu_baseline_time, (int, float))
+                            and gpu_baseline_time > 0
+                        ):
+                            max_ratio = gpu_baseline_time / 1000.0
+                            ratio_str = f"<{max_ratio:.2f}x"
+                        else:
+                            ratio_str = "<0.01x"
+                    else:
+                        ratio_str = "TIMEOUT"
+
+                    fw_color = BLUE if impl_name == gpu_baseline else CYAN
+                    framework_str = f"{framework:<25}"
+                    mode_str = f"{mode:<15}"
+                    time_str = f"{'TIMEOUT':>12}"
+                    ratio_str_formatted = f"{ratio_str:>12}"
+
+                    print(
+                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_color}{ratio_str_formatted}{NC}"
+                    )
+                    continue
+
+                # Handle ERROR cases
+                if time_ms == "ERROR":
+                    fw_color = BLUE if impl_name == gpu_baseline else CYAN
+                    framework_str = f"{framework:<25}"
+                    mode_str = f"{mode:<15}"
+                    time_str = f"{'ERROR':>12}"
+                    ratio_str_formatted = f"{'N/A':>12}"
+
+                    print(
+                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_str_formatted}"
+                    )
+                    continue
+
+                # Calculate ratio vs GPU baseline for normal cases
+                ratio_str = ""
+                ratio_color = NC
+                if gpu_baseline_time == "TIMEOUT" or gpu_baseline_time == "ERROR":
+                    ratio_str = "N/A"
+                    ratio_color = NC
+                elif (
+                    gpu_baseline_time
+                    and isinstance(gpu_baseline_time, (int, float))
+                    and gpu_baseline_time > 0
+                ):
+                    ratio = gpu_baseline_time / time_ms
+                    ratio_str = f"{ratio:.2f}x"
+                    ratio_color = get_ratio_color(ratio)
+                elif impl_name == gpu_baseline:
+                    ratio_str = "baseline"
+                    ratio_color = WHITE
+
+                fw_color = BLUE if impl_name == gpu_baseline else CYAN
                 framework_str = f"{framework:<25}"
                 mode_str = f"{mode:<15}"
-                time_str = f"{'ERROR':>12}"
-                ratio_str_formatted = f"{'N/A':>12}"
+                time_str = f"{time_ms:>12.4f}"
+                ratio_str_formatted = f"{ratio_str:>12}"
 
                 print(
-                    f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_str_formatted}"
+                    f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
                 )
-                continue
-
-            # Calculate ratio vs baseline for normal cases
-            ratio_str = ""
-            ratio_color = NC
-            if baseline_time == "TIMEOUT" or baseline_time == "ERROR":
-                ratio_str = "N/A"
-                ratio_color = NC
-            elif (
-                baseline_time
-                and isinstance(baseline_time, (int, float))
-                and baseline_time > 0
-            ):
-                ratio = baseline_time / time_ms
-                ratio_str = f"{ratio:.2f}x"
-                ratio_color = get_ratio_color(ratio)
-            elif impl_name == baseline_name:
-                ratio_str = "baseline"
-                ratio_color = BLUE
-
-            # Color for framework name
-            fw_color = BLUE if impl_name == baseline_name else CYAN
-
-            framework_str = f"{framework:<25}"
-            mode_str = f"{mode:<15}"
-            time_str = f"{time_ms:>12.4f}"
-            ratio_str_formatted = f"{ratio_str:>12}"
-
-            print(
-                f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
-            )
 
     print("\n" + "=" * 80)
 
@@ -425,9 +546,9 @@ def main():
         # Note: Hodu CUDA support would need to be added here
         # hodu_modes.extend(["dynamic-cuda", "static-cuda"])
 
-    # Add XLA mode if requested
-    if enable_xla:
-        hodu_modes.append("static-xla")
+    # Add XLA mode if requested (requires CPU to be enabled)
+    if enable_xla and enable_cpu:
+        hodu_modes.append("static-xla-cpu")
 
     # Determine Burn modes (dynamic only)
     burn_modes = []
@@ -490,19 +611,34 @@ def main():
         if results:
             all_results[f"PyTorch - {mode_name or mode}"] = results
 
-    # Print comparison table
-    print_color(BLUE, "\n===== Benchmark Results =====")
+    # Find CPU and GPU baselines (Burn)
+    cpu_baseline = None
+    gpu_baseline = None
 
-    # Use Candle Dynamic CPU as baseline if available, otherwise first result
-    baseline = None
     for key in all_results.keys():
-        if "Candle" in key and "Dynamic CPU" in key:
-            baseline = key
-            break
-    if not baseline and all_results:
-        baseline = list(all_results.keys())[0]
+        if "Burn" in key and "CPU" in key:
+            cpu_baseline = key
+        if "Burn" in key and (
+            "WGPU" in key or "TCH" in key or "Metal" in key or "CUDA" in key
+        ):
+            if gpu_baseline is None:  # Use first GPU Burn result found
+                gpu_baseline = key
 
-    print_comparison_table(all_results, baseline)
+    # Fallback to first result if Burn not found
+    if not cpu_baseline:
+        for key in all_results.keys():
+            if any(x in key for x in ["CPU", "cpu", "XLA"]):
+                cpu_baseline = key
+                break
+
+    if not gpu_baseline:
+        for key in all_results.keys():
+            if any(x in key for x in ["Metal", "CUDA", "GPU", "gpu", "WGPU", "TCH"]):
+                gpu_baseline = key
+                break
+
+    # Print unified comparison table
+    print_comparison_table(all_results, cpu_baseline, gpu_baseline)
 
 
 if __name__ == "__main__":

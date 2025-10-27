@@ -11,7 +11,7 @@ enum BenchMode {
     #[cfg(feature = "metal")]
     StaticMetal,
     #[cfg(feature = "xla")]
-    StaticXLA,
+    StaticXLACPU,
 }
 
 impl BenchMode {
@@ -24,7 +24,7 @@ impl BenchMode {
             #[cfg(feature = "metal")]
             "static-metal" => Some(Self::StaticMetal),
             #[cfg(feature = "xla")]
-            "static-xla" => Some(Self::StaticXLA),
+            "static-xla-cpu" => Some(Self::StaticXLACPU),
             _ => None,
         }
     }
@@ -38,7 +38,7 @@ impl BenchMode {
             #[cfg(feature = "metal")]
             Self::StaticMetal => "Static Metal",
             #[cfg(feature = "xla")]
-            Self::StaticXLA => "Static XLA",
+            Self::StaticXLACPU => "Static XLA CPU",
         }
     }
 }
@@ -118,7 +118,8 @@ fn benchmark_static(
             script.set_device(Device::Metal);
         },
         #[cfg(feature = "xla")]
-        BenchMode::StaticXLA => {
+        BenchMode::StaticXLACPU => {
+            script.set_device(Device::CPU);
             script.set_backend(Backend::XLA);
         },
         _ => unreachable!(),
@@ -178,7 +179,7 @@ fn run_benchmark(
             #[cfg(feature = "metal")]
             BenchMode::StaticMetal => benchmark_static(mode, *m, *k, *n, warmup, iterations),
             #[cfg(feature = "xla")]
-            BenchMode::StaticXLA => benchmark_static(mode, *m, *k, *n, warmup, iterations),
+            BenchMode::StaticXLACPU => benchmark_static(mode, *m, *k, *n, warmup, iterations),
         };
 
         match result {
@@ -206,7 +207,7 @@ fn print_usage() {
     #[cfg(feature = "metal")]
     println!("  static-metal    - Static computation graph on Metal");
     #[cfg(feature = "xla")]
-    println!("  static-xla      - Static computation graph with XLA backend");
+    println!("  static-xla-cpu  - Static computation graph with XLA backend on CPU");
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

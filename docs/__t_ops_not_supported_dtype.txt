@@ -10,8 +10,8 @@ xla: f8e4m3, f8e5m2
 add: bool
 sub: bool
 mul: bool
-div: bool, U, I
-pow: bool, U, I
+div: bool
+pow: bool
 maximum: bool
 minimum: bool
 
@@ -71,8 +71,8 @@ logical_not: -
 add_scalar: bool
 sub_scalar: bool
 mul_scalar: bool
-div_scalar: bool, U, I
-pow_scalar: bool, U, I
+div_scalar: bool
+pow_scalar: bool
 maximum_scalar: bool
 minimum_scalar: bool
 

@@ -3,6 +3,7 @@ use crate::{
     backends::{
         builder,
         op::{self, Op},
+        utils::{validate_dtype_for_op, validate_indices_dtype, validate_same_dtype},
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -30,12 +31,16 @@ macro_rules! binary_op {
                     (lhs_broadcasted, rhs_broadcasted)
                 };
 
+            // Validate dtype for operation
+            let op = Op::Binary(op::BinaryOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
+            validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
+            validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+
             if builder::is_builder_active() {
                 let result_layout = lhs_broadcasted.get_layout().clone();
                 let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::Binary(op::BinaryOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -81,16 +86,20 @@ macro_rules! binary_logical_op {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
             let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
+            // Validate dtype for operation
+            let op = Op::BinaryLogical(
+                op::BinaryLogicalOp::$op_name,
+                lhs_broadcasted.id(),
+                rhs_broadcasted.id(),
+            );
+            validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
+            validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+
             if builder::is_builder_active() {
                 let result_layout = lhs_broadcasted.get_layout().clone();
                 let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::BinaryLogical(
-                    op::BinaryLogicalOp::$op_name,
-                    lhs_broadcasted.id(),
-                    rhs_broadcasted.id(),
-                );
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -136,12 +145,16 @@ macro_rules! cmp_op {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
             let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
+            // Validate dtype for operation
+            let op = Op::Cmp(op::CmpOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
+            validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
+            validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+
             if builder::is_builder_active() {
                 let result_layout = lhs_broadcasted.get_layout().clone();
                 let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::Cmp(op::CmpOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -186,12 +199,16 @@ macro_rules! cmp_scalar_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name<T: Into<Scalar>>(&self, scalar: T) -> HoduResult<Self> {
             let scalar = scalar.into();
+
+            // Validate dtype for operation
+            let op = Op::CmpScalar(op::CmpScalarOp::$op_name, self.id(), scalar);
+            validate_dtype_for_op(self.get_dtype(), &op)?;
+
             if builder::is_builder_active() {
                 let result_layout = self.get_layout().clone();
                 let requires_grad = self.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::CmpScalar(op::CmpScalarOp::$op_name, self.id(), scalar);
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -225,12 +242,15 @@ macro_rules! cmp_scalar_op {
 macro_rules! unary_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self) -> HoduResult<Self> {
+            // Validate dtype for operation
+            let op = Op::Unary(op::UnaryOp::$op_name, self.id());
+            validate_dtype_for_op(self.get_dtype(), &op)?;
+
             if builder::is_builder_active() {
                 let result_layout = self.get_layout().clone();
                 let requires_grad = self.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::Unary(op::UnaryOp::$op_name, self.id());
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -263,12 +283,15 @@ macro_rules! unary_op {
 macro_rules! unary_logical_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self) -> HoduResult<Self> {
+            // Validate dtype for operation
+            let op = Op::UnaryLogical(op::UnaryLogicalOp::$op_name, self.id());
+            validate_dtype_for_op(self.get_dtype(), &op)?;
+
             if builder::is_builder_active() {
                 let result_layout = self.get_layout().clone();
                 let requires_grad = self.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::UnaryLogical(op::UnaryLogicalOp::$op_name, self.id());
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -303,12 +326,16 @@ macro_rules! unary_scalar_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name<T: Into<Scalar>>(&self, scalar: T) -> HoduResult<Self> {
             let scalar = scalar.into();
+
+            // Validate dtype for operation
+            let op = Op::UnaryScalar(op::UnaryScalarOp::$op_name, self.id(), scalar);
+            validate_dtype_for_op(self.get_dtype(), &op)?;
+
             if builder::is_builder_active() {
                 let result_layout = self.get_layout().clone();
                 let requires_grad = self.is_requires_grad();
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-                let op = Op::UnaryScalar(op::UnaryScalarOp::$op_name, self.id(), scalar);
                 register_operation_in_builder(
                     op.clone(),
                     vec![result_id],
@@ -412,6 +439,11 @@ impl Tensor {
 
     // Matrix operations
     pub fn matmul(&self, other: &Self) -> HoduResult<Self> {
+        // Validate dtype for operation
+        let op = Op::Matrix(op::MatrixOp::Matmul, self.id(), other.id());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, other], "matmul")?;
+
         // Supports ND batched matrix multiplication with broadcasting (like XLA matmul)
         let lhs_layout = self.get_layout();
         let rhs_layout = other.get_layout();
@@ -608,6 +640,11 @@ impl Tensor {
     }
 
     pub fn dot(&self, other: &Self) -> HoduResult<Self> {
+        // Validate dtype for operation
+        let op = Op::Matrix(op::MatrixOp::Dot, self.id(), other.id());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, other], "dot")?;
+
         // Simple dot operation - supports 1D and 2D combinations (like XLA dot)
         let lhs_layout = self.get_layout();
         let rhs_layout = other.get_layout();
@@ -855,6 +892,11 @@ impl Tensor {
     }
 
     fn reduce_operation(&self, reduce_op: op::ReduceOp, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+        // Validate dtype for operation
+        let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
+        let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars.clone());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let shape = layout.get_shape();
@@ -883,8 +925,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
-            let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars);
             register_operation_in_builder(op.clone(), vec![result_id], vec![layout.clone()], vec![result_layout]);
 
             if self.is_requires_grad() {
@@ -942,6 +982,13 @@ impl Tensor {
         let dim_usize = dim_scalar.to_u64() as usize;
 
         let first = tensors[0];
+
+        // Validate dtype for operation
+        let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
+        let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
+        validate_dtype_for_op(first.get_dtype(), &op)?;
+        validate_same_dtype(tensors, "concat")?;
+
         let mut output_shape = first.get_layout().get_shape().to_vec();
         for tensor in &tensors[1..] {
             let layout = tensor.get_layout();
@@ -961,8 +1008,6 @@ impl Tensor {
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad());
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
-            let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
             let input_layouts: Vec<Layout> = tensors.iter().map(|t| t.get_layout().clone()).collect();
             register_operation_in_builder(op.clone(), vec![result_id], input_layouts, vec![result_layout]);
 
@@ -1026,12 +1071,15 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let mut params = vec![dim_scalar];
+        params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
+        let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), 0);
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let shape = layout.get_shape();
-
-            let mut params = vec![dim_scalar];
-            params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
 
             let requires_grad = self.is_requires_grad();
             let mut result_tensors = Vec::new();
@@ -1147,6 +1195,15 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(
+            op::IndexingOp::IndexSelect,
+            vec![self.id(), indices.id()],
+            vec![dim_scalar],
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_indices_dtype(indices, "index_select")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1160,11 +1217,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(
-                op::IndexingOp::IndexSelect,
-                vec![self.id(), indices.id()],
-                vec![dim_scalar],
-            );
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1211,6 +1263,16 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(
+            op::IndexingOp::IndexPut,
+            vec![self.id(), indices.id(), values.id()],
+            vec![dim_scalar],
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, values], "index_put")?;
+        validate_indices_dtype(indices, "index_put")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1221,11 +1283,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || values.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(
-                op::IndexingOp::IndexPut,
-                vec![self.id(), indices.id(), values.id()],
-                vec![dim_scalar],
-            );
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1275,6 +1332,11 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_indices_dtype(indices, "gather")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1284,7 +1346,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1321,6 +1382,16 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(
+            op::IndexingOp::Scatter,
+            vec![self.id(), indices.id(), src.id()],
+            vec![dim_scalar],
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, src], "scatter")?;
+        validate_indices_dtype(indices, "scatter")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1331,11 +1402,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || src.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(
-                op::IndexingOp::Scatter,
-                vec![self.id(), indices.id(), src.id()],
-                vec![dim_scalar],
-            );
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1385,6 +1451,16 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(
+            op::IndexingOp::ScatterAdd,
+            vec![self.id(), indices.id(), src.id()],
+            vec![dim_scalar],
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, src], "scatter_add")?;
+        validate_indices_dtype(indices, "scatter_add")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1394,11 +1470,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || src.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(
-                op::IndexingOp::ScatterAdd,
-                vec![self.id(), indices.id(), src.id()],
-                vec![dim_scalar],
-            );
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1448,6 +1519,16 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(
+            op::IndexingOp::ScatterMax,
+            vec![self.id(), indices.id(), src.id()],
+            vec![dim_scalar],
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, src], "scatter_max")?;
+        validate_indices_dtype(indices, "scatter_max")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1457,11 +1538,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || src.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(
-                op::IndexingOp::ScatterMax,
-                vec![self.id(), indices.id(), src.id()],
-                vec![dim_scalar],
-            );
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1511,6 +1587,16 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
+        // Validate dtype for operation
+        let op = Op::Indexing(
+            op::IndexingOp::ScatterMin,
+            vec![self.id(), indices.id(), src.id()],
+            vec![dim_scalar],
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, src], "scatter_min")?;
+        validate_indices_dtype(indices, "scatter_min")?;
+
         if builder::is_builder_active() {
             let layout = self.get_layout();
             let indices_layout = indices.get_layout();
@@ -1520,11 +1606,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || src.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let op = Op::Indexing(
-                op::IndexingOp::ScatterMin,
-                vec![self.id(), indices.id(), src.id()],
-                vec![dim_scalar],
-            );
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1650,6 +1731,21 @@ impl Tensor {
             });
         }
 
+        // Validate dtype for operation
+        let params_scalars = vec![
+            Scalar::U32(batch_size as u32),
+            Scalar::U32(length_input as u32),
+            Scalar::U32(channels_output as u32),
+            Scalar::U32(channels_input as u32),
+            Scalar::U32(kernel_size as u32),
+            Scalar::U32(padding as u32),
+            Scalar::U32(stride as u32),
+            Scalar::U32(dilation as u32),
+        ];
+        let op = Op::Conv(op::ConvOp::Conv1d, self.id(), weight.id(), params_scalars.clone());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, weight], "conv1d")?;
+
         let params = op::conv::ParamsConv1D {
             batch_size,
             length_input,
@@ -1669,18 +1765,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || weight.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let params_scalars = vec![
-                Scalar::U32(batch_size as u32),
-                Scalar::U32(length_input as u32),
-                Scalar::U32(channels_output as u32),
-                Scalar::U32(channels_input as u32),
-                Scalar::U32(kernel_size as u32),
-                Scalar::U32(padding as u32),
-                Scalar::U32(stride as u32),
-                Scalar::U32(dilation as u32),
-            ];
-
-            let op = Op::Conv(op::ConvOp::Conv1d, self.id(), weight.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1762,6 +1846,23 @@ impl Tensor {
             });
         }
 
+        // Validate dtype for operation
+        let params_scalars = vec![
+            Scalar::U32(batch_size as u32),
+            Scalar::U32(input_height as u32),
+            Scalar::U32(input_width as u32),
+            Scalar::U32(kernel_height as u32),
+            Scalar::U32(kernel_width as u32),
+            Scalar::U32(channels_output as u32),
+            Scalar::U32(channels_input as u32),
+            Scalar::U32(padding as u32),
+            Scalar::U32(stride as u32),
+            Scalar::U32(dilation as u32),
+        ];
+        let op = Op::Conv(op::ConvOp::Conv2d, self.id(), weight.id(), params_scalars.clone());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, weight], "conv2d")?;
+
         let params = op::conv::ParamsConv2D {
             batch_size,
             input_height,
@@ -1784,20 +1885,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || weight.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let params_scalars = vec![
-                Scalar::U32(batch_size as u32),
-                Scalar::U32(input_height as u32),
-                Scalar::U32(input_width as u32),
-                Scalar::U32(kernel_height as u32),
-                Scalar::U32(kernel_width as u32),
-                Scalar::U32(channels_output as u32),
-                Scalar::U32(channels_input as u32),
-                Scalar::U32(padding as u32),
-                Scalar::U32(stride as u32),
-                Scalar::U32(dilation as u32),
-            ];
-
-            let op = Op::Conv(op::ConvOp::Conv2d, self.id(), weight.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -1883,6 +1970,25 @@ impl Tensor {
             });
         }
 
+        // Validate dtype for operation
+        let params_scalars = vec![
+            Scalar::U32(batch_size as u32),
+            Scalar::U32(input_depth as u32),
+            Scalar::U32(input_height as u32),
+            Scalar::U32(input_width as u32),
+            Scalar::U32(kernel_depth as u32),
+            Scalar::U32(kernel_height as u32),
+            Scalar::U32(kernel_width as u32),
+            Scalar::U32(channels_output as u32),
+            Scalar::U32(channels_input as u32),
+            Scalar::U32(padding as u32),
+            Scalar::U32(stride as u32),
+            Scalar::U32(dilation as u32),
+        ];
+        let op = Op::Conv(op::ConvOp::Conv3d, self.id(), weight.id(), params_scalars.clone());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, weight], "conv3d")?;
+
         let params = op::conv::ParamsConv3D {
             batch_size,
             input_depth,
@@ -1908,22 +2014,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || weight.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let params_scalars = vec![
-                Scalar::U32(batch_size as u32),
-                Scalar::U32(input_depth as u32),
-                Scalar::U32(input_height as u32),
-                Scalar::U32(input_width as u32),
-                Scalar::U32(kernel_depth as u32),
-                Scalar::U32(kernel_height as u32),
-                Scalar::U32(kernel_width as u32),
-                Scalar::U32(channels_output as u32),
-                Scalar::U32(channels_input as u32),
-                Scalar::U32(padding as u32),
-                Scalar::U32(stride as u32),
-                Scalar::U32(dilation as u32),
-            ];
-
-            let op = Op::Conv(op::ConvOp::Conv3d, self.id(), weight.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -2014,6 +2104,27 @@ impl Tensor {
             });
         }
 
+        // Validate dtype for operation
+        let params_scalars = vec![
+            Scalar::U32(batch_size as u32),
+            Scalar::U32(length_input as u32),
+            Scalar::U32(channels_output as u32),
+            Scalar::U32(channels_input as u32),
+            Scalar::U32(kernel_size as u32),
+            Scalar::U32(padding as u32),
+            Scalar::U32(output_padding as u32),
+            Scalar::U32(stride as u32),
+            Scalar::U32(dilation as u32),
+        ];
+        let op = Op::Conv(
+            op::ConvOp::ConvTranspose1d,
+            self.id(),
+            weight.id(),
+            params_scalars.clone(),
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, weight], "conv_transpose1d")?;
+
         let params = op::conv::ParamsConvTranspose1D {
             batch_size,
             length_input,
@@ -2034,20 +2145,6 @@ impl Tensor {
             let result_layout = Layout::from_shape(&output_shape);
             let requires_grad = self.is_requires_grad() || weight.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
-
-            let params_scalars = vec![
-                Scalar::U32(batch_size as u32),
-                Scalar::U32(length_input as u32),
-                Scalar::U32(channels_output as u32),
-                Scalar::U32(channels_input as u32),
-                Scalar::U32(kernel_size as u32),
-                Scalar::U32(padding as u32),
-                Scalar::U32(output_padding as u32),
-                Scalar::U32(stride as u32),
-                Scalar::U32(dilation as u32),
-            ];
-
-            let op = Op::Conv(op::ConvOp::ConvTranspose1d, self.id(), weight.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -2137,6 +2234,29 @@ impl Tensor {
             });
         }
 
+        // Validate dtype for operation
+        let params_scalars = vec![
+            Scalar::U32(batch_size as u32),
+            Scalar::U32(input_height as u32),
+            Scalar::U32(input_width as u32),
+            Scalar::U32(kernel_height as u32),
+            Scalar::U32(kernel_width as u32),
+            Scalar::U32(channels_output as u32),
+            Scalar::U32(channels_input as u32),
+            Scalar::U32(padding as u32),
+            Scalar::U32(output_padding as u32),
+            Scalar::U32(stride as u32),
+            Scalar::U32(dilation as u32),
+        ];
+        let op = Op::Conv(
+            op::ConvOp::ConvTranspose2d,
+            self.id(),
+            weight.id(),
+            params_scalars.clone(),
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, weight], "conv_transpose2d")?;
+
         let params = op::conv::ParamsConvTranspose2D {
             batch_size,
             input_height,
@@ -2162,21 +2282,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad() || weight.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let params_scalars = vec![
-                Scalar::U32(batch_size as u32),
-                Scalar::U32(input_height as u32),
-                Scalar::U32(input_width as u32),
-                Scalar::U32(kernel_height as u32),
-                Scalar::U32(kernel_width as u32),
-                Scalar::U32(channels_output as u32),
-                Scalar::U32(channels_input as u32),
-                Scalar::U32(padding as u32),
-                Scalar::U32(output_padding as u32),
-                Scalar::U32(stride as u32),
-                Scalar::U32(dilation as u32),
-            ];
-
-            let op = Op::Conv(op::ConvOp::ConvTranspose2d, self.id(), weight.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -2271,6 +2376,31 @@ impl Tensor {
             });
         }
 
+        // Validate dtype for operation
+        let params_scalars = vec![
+            Scalar::U32(batch_size as u32),
+            Scalar::U32(input_depth as u32),
+            Scalar::U32(input_height as u32),
+            Scalar::U32(input_width as u32),
+            Scalar::U32(kernel_depth as u32),
+            Scalar::U32(kernel_height as u32),
+            Scalar::U32(kernel_width as u32),
+            Scalar::U32(channels_output as u32),
+            Scalar::U32(channels_input as u32),
+            Scalar::U32(padding as u32),
+            Scalar::U32(output_padding as u32),
+            Scalar::U32(stride as u32),
+            Scalar::U32(dilation as u32),
+        ];
+        let op = Op::Conv(
+            op::ConvOp::ConvTranspose3d,
+            self.id(),
+            weight.id(),
+            params_scalars.clone(),
+        );
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+        validate_same_dtype(&[self, weight], "conv_transpose3d")?;
+
         let params = op::conv::ParamsConvTranspose3D {
             batch_size,
             input_depth,
@@ -2299,24 +2429,6 @@ impl Tensor {
             let result_layout = Layout::from_shape(&output_shape);
             let requires_grad = self.is_requires_grad() || weight.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
-
-            let params_scalars = vec![
-                Scalar::U32(batch_size as u32),
-                Scalar::U32(input_depth as u32),
-                Scalar::U32(input_height as u32),
-                Scalar::U32(input_width as u32),
-                Scalar::U32(kernel_depth as u32),
-                Scalar::U32(kernel_height as u32),
-                Scalar::U32(kernel_width as u32),
-                Scalar::U32(channels_output as u32),
-                Scalar::U32(channels_input as u32),
-                Scalar::U32(padding as u32),
-                Scalar::U32(output_padding as u32),
-                Scalar::U32(stride as u32),
-                Scalar::U32(dilation as u32),
-            ];
-
-            let op = Op::Conv(op::ConvOp::ConvTranspose3d, self.id(), weight.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
@@ -3036,16 +3148,6 @@ impl Tensor {
             },
         };
 
-        // Validate Mean reduction requires float dtype
-        if matches!(reduction_type, op::window_reduction::WindowReduction::Mean) {
-            if !self.get_dtype().is_float() {
-                return Err(HoduError::UnsupportedDType {
-                    dtype: self.get_dtype(),
-                    op: "reduce_window with Mean reduction".to_string(),
-                });
-            }
-        }
-
         // Validate inputs
         if window_shape.len() != rank {
             return Err(HoduError::InternalError(format!(
@@ -3069,6 +3171,29 @@ impl Tensor {
             )));
         }
 
+        // Pack parameters: rank, window_shape, strides, padding, reduction_type
+        let mut params_scalars = vec![Scalar::U32(rank as u32)];
+        for &ws in window_shape {
+            params_scalars.push(Scalar::U32(ws as u32));
+        }
+        for &s in strides {
+            params_scalars.push(Scalar::U32(s as u32));
+        }
+        for &(pad_lo, pad_hi) in padding {
+            params_scalars.push(Scalar::U32(pad_lo as u32));
+            params_scalars.push(Scalar::U32(pad_hi as u32));
+        }
+        params_scalars.push(Scalar::U32(match reduction_type {
+            op::window_reduction::WindowReduction::Max => 0,
+            op::window_reduction::WindowReduction::Mean => 1,
+            op::window_reduction::WindowReduction::Sum => 2,
+            op::window_reduction::WindowReduction::Min => 3,
+        }));
+
+        // Validate dtype for operation
+        let op = Op::Windowing(op::WindowingOp::ReduceWindow, self.id(), params_scalars.clone());
+        validate_dtype_for_op(self.get_dtype(), &op)?;
+
         // Calculate output shape
         let mut output_shape = Vec::with_capacity(rank);
         for i in 0..rank {
@@ -3082,26 +3207,6 @@ impl Tensor {
             let requires_grad = self.is_requires_grad();
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            // Pack parameters: rank, window_shape, strides, padding, reduction_type
-            let mut params_scalars = vec![Scalar::U32(rank as u32)];
-            for &ws in window_shape {
-                params_scalars.push(Scalar::U32(ws as u32));
-            }
-            for &s in strides {
-                params_scalars.push(Scalar::U32(s as u32));
-            }
-            for &(pad_lo, pad_hi) in padding {
-                params_scalars.push(Scalar::U32(pad_lo as u32));
-                params_scalars.push(Scalar::U32(pad_hi as u32));
-            }
-            params_scalars.push(Scalar::U32(match reduction_type {
-                op::window_reduction::WindowReduction::Max => 0,
-                op::window_reduction::WindowReduction::Mean => 1,
-                op::window_reduction::WindowReduction::Sum => 2,
-                op::window_reduction::WindowReduction::Min => 3,
-            }));
-
-            let op = Op::Windowing(op::WindowingOp::ReduceWindow, self.id(), params_scalars);
             register_operation_in_builder(
                 op.clone(),
                 vec![result_id],
