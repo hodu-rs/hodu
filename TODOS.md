@@ -11,6 +11,9 @@ Items may be added at any time.
 
 **Backend:** (🔴 Critical)
 - [ ] CPU SIMD support
+  - [ ] NEON support
+  - [ ] AVX2 support
+- [ ] CPU parallelization support
 - [ ] CUDA support
 - [x] Metal support
 

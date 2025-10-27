@@ -53,12 +53,14 @@ pub use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 // Core traits and functions
 #[cfg(not(feature = "std"))]
 pub use core::{
+    any::TypeId,
     cell::{Cell, RefCell},
     fmt, ops,
 };
 
 #[cfg(feature = "std")]
 pub use std::{
+    any::TypeId,
     cell::{Cell, RefCell},
     fmt, ops, thread_local,
 };
@@ -66,3 +68,7 @@ pub use std::{
 // Debug printing
 #[cfg(feature = "std")]
 pub use std::{eprintln, println};
+
+// Parallel iteration
+#[cfg(all(feature = "std", feature = "rayon"))]
+pub use rayon::prelude::*;

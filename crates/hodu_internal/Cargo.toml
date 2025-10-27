@@ -11,11 +11,12 @@ repository = "https://github.com/hodu-rs/hodu"
 [features]
 std = ["hodu_core/std", "hodu_nn/std", "hodu_utils/std"]
 serde = ["hodu_core/serde", "hodu_nn/serde"]
+rayon = ["std", "hodu_core/rayon"]
 
 cuda = ["hodu_core/cuda"]
 metal = ["hodu_core/metal"]
 
-xla = ["hodu_core/xla"]
+xla = ["std", "hodu_core/xla"]
 
 [dependencies]
 hodu_core = { path = "../hodu_core", version = "0.1.8" }

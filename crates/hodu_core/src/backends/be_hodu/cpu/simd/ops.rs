@@ -1,2 +1,2 @@
+pub mod dot;
 pub mod matmul;
-pub mod types;
