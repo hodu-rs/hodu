@@ -19,7 +19,7 @@ path = "_hodu.rs"
 [dependencies]
 candle-core = "0.9.1"
 hodu = { path = "../../", version = "0.1.8" }
-burn = "0.16.0"
+burn = "0.18.0"
 burn-ndarray = "0.16.0"
 burn-wgpu = { version = "0.16.0", optional = true }
 burn-tch = { version = "0.18.0", optional = true }
