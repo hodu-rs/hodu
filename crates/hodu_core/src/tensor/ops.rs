@@ -2,8 +2,14 @@ use super::utils::{broadcast_tensors2, broadcast_tensors3};
 use crate::{
     backends::{
         builder,
-        op::{self, Op},
-        utils::{validate_dtype_for_op, validate_indices_dtype, validate_same_dtype},
+        op::{
+            self,
+            utils::{
+                validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_same_device,
+                validate_same_dtype,
+            },
+            Op,
+        },
     },
     compat::*,
     error::{HoduError, HoduResult},
@@ -31,7 +37,13 @@ macro_rules! binary_op {
                     (lhs_broadcasted, rhs_broadcasted)
                 };
 
-            // Validate dtype for operation
+            // Validate device, dtype for device, and dtype for operation
+            validate_same_device(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+            validate_dtype_for_device(
+                lhs_broadcasted.get_dtype(),
+                &lhs_broadcasted.get_device(),
+                stringify!($op_name),
+            )?;
             let op = Op::Binary(op::BinaryOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
             validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
             validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
@@ -86,7 +98,13 @@ macro_rules! binary_logical_op {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
             let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
-            // Validate dtype for operation
+            // Validate device, dtype for device, and dtype for operation
+            validate_same_device(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+            validate_dtype_for_device(
+                lhs_broadcasted.get_dtype(),
+                &lhs_broadcasted.get_device(),
+                stringify!($op_name),
+            )?;
             let op = Op::BinaryLogical(
                 op::BinaryLogicalOp::$op_name,
                 lhs_broadcasted.id(),
@@ -145,7 +163,13 @@ macro_rules! cmp_op {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
             let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
 
-            // Validate dtype for operation
+            // Validate device, dtype for device, and dtype for operation
+            validate_same_device(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+            validate_dtype_for_device(
+                lhs_broadcasted.get_dtype(),
+                &lhs_broadcasted.get_device(),
+                stringify!($op_name),
+            )?;
             let op = Op::Cmp(op::CmpOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
             validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
             validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
@@ -200,7 +224,8 @@ macro_rules! cmp_scalar_op {
         pub fn $fn_name<T: Into<Scalar>>(&self, scalar: T) -> HoduResult<Self> {
             let scalar = scalar.into();
 
-            // Validate dtype for operation
+            // Validate dtype for device and operation
+            validate_dtype_for_device(self.get_dtype(), &self.get_device(), stringify!($op_name))?;
             let op = Op::CmpScalar(op::CmpScalarOp::$op_name, self.id(), scalar);
             validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -242,7 +267,8 @@ macro_rules! cmp_scalar_op {
 macro_rules! unary_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self) -> HoduResult<Self> {
-            // Validate dtype for operation
+            // Validate dtype for device and operation
+            validate_dtype_for_device(self.get_dtype(), &self.get_device(), stringify!($op_name))?;
             let op = Op::Unary(op::UnaryOp::$op_name, self.id());
             validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -283,7 +309,8 @@ macro_rules! unary_op {
 macro_rules! unary_logical_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self) -> HoduResult<Self> {
-            // Validate dtype for operation
+            // Validate dtype for device and operation
+            validate_dtype_for_device(self.get_dtype(), &self.get_device(), stringify!($op_name))?;
             let op = Op::UnaryLogical(op::UnaryLogicalOp::$op_name, self.id());
             validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -327,7 +354,8 @@ macro_rules! unary_scalar_op {
         pub fn $fn_name<T: Into<Scalar>>(&self, scalar: T) -> HoduResult<Self> {
             let scalar = scalar.into();
 
-            // Validate dtype for operation
+            // Validate dtype for device and operation
+            validate_dtype_for_device(self.get_dtype(), &self.get_device(), stringify!($op_name))?;
             let op = Op::UnaryScalar(op::UnaryScalarOp::$op_name, self.id(), scalar);
             validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -439,7 +467,9 @@ impl Tensor {
 
     // Matrix operations
     pub fn matmul(&self, other: &Self) -> HoduResult<Self> {
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, other], "matmul")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "matmul")?;
         let op = Op::Matrix(op::MatrixOp::Matmul, self.id(), other.id());
         validate_dtype_for_op(self.get_dtype(), &op)?;
         validate_same_dtype(&[self, other], "matmul")?;
@@ -640,7 +670,9 @@ impl Tensor {
     }
 
     pub fn dot(&self, other: &Self) -> HoduResult<Self> {
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, other], "dot")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "dot")?;
         let op = Op::Matrix(op::MatrixOp::Dot, self.id(), other.id());
         validate_dtype_for_op(self.get_dtype(), &op)?;
         validate_same_dtype(&[self, other], "dot")?;
@@ -892,7 +924,8 @@ impl Tensor {
     }
 
     fn reduce_operation(&self, reduce_op: op::ReduceOp, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
-        // Validate dtype for operation
+        // Validate dtype for device and operation
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), &reduce_op.to_string())?;
         let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
         let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars.clone());
         validate_dtype_for_op(self.get_dtype(), &op)?;
@@ -983,7 +1016,9 @@ impl Tensor {
 
         let first = tensors[0];
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(tensors, "concat")?;
+        validate_dtype_for_device(first.get_dtype(), &first.get_device(), "concat")?;
         let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
         let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
         validate_dtype_for_op(first.get_dtype(), &op)?;
@@ -1071,7 +1106,8 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate dtype for device and operation
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "split")?;
         let mut params = vec![dim_scalar];
         params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
         let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), 0);
@@ -1195,7 +1231,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices], "index_select")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "index_select")?;
         let op = Op::Indexing(
             op::IndexingOp::IndexSelect,
             vec![self.id(), indices.id()],
@@ -1263,7 +1301,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices, values], "index_put")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "index_put")?;
         let op = Op::Indexing(
             op::IndexingOp::IndexPut,
             vec![self.id(), indices.id(), values.id()],
@@ -1332,7 +1372,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices], "gather")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "gather")?;
         let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
         validate_dtype_for_op(self.get_dtype(), &op)?;
         validate_indices_dtype(indices, "gather")?;
@@ -1382,7 +1424,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices, src], "scatter")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter")?;
         let op = Op::Indexing(
             op::IndexingOp::Scatter,
             vec![self.id(), indices.id(), src.id()],
@@ -1451,7 +1495,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices, src], "scatter_add")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter_add")?;
         let op = Op::Indexing(
             op::IndexingOp::ScatterAdd,
             vec![self.id(), indices.id(), src.id()],
@@ -1519,7 +1565,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices, src], "scatter_max")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter_max")?;
         let op = Op::Indexing(
             op::IndexingOp::ScatterMax,
             vec![self.id(), indices.id(), src.id()],
@@ -1587,7 +1635,9 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_usize = dim_scalar.to_u64() as usize;
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, indices, src], "scatter_min")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter_min")?;
         let op = Op::Indexing(
             op::IndexingOp::ScatterMin,
             vec![self.id(), indices.id(), src.id()],
@@ -1731,7 +1781,9 @@ impl Tensor {
             });
         }
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, weight], "conv1d")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv1d")?;
         let params_scalars = vec![
             Scalar::U32(batch_size as u32),
             Scalar::U32(length_input as u32),
@@ -1846,7 +1898,9 @@ impl Tensor {
             });
         }
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, weight], "conv2d")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv2d")?;
         let params_scalars = vec![
             Scalar::U32(batch_size as u32),
             Scalar::U32(input_height as u32),
@@ -1970,7 +2024,9 @@ impl Tensor {
             });
         }
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, weight], "conv3d")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv3d")?;
         let params_scalars = vec![
             Scalar::U32(batch_size as u32),
             Scalar::U32(input_depth as u32),
@@ -2104,7 +2160,9 @@ impl Tensor {
             });
         }
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, weight], "conv_transpose1d")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv_transpose1d")?;
         let params_scalars = vec![
             Scalar::U32(batch_size as u32),
             Scalar::U32(length_input as u32),
@@ -2234,7 +2292,9 @@ impl Tensor {
             });
         }
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, weight], "conv_transpose2d")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv_transpose2d")?;
         let params_scalars = vec![
             Scalar::U32(batch_size as u32),
             Scalar::U32(input_height as u32),
@@ -2376,7 +2436,9 @@ impl Tensor {
             });
         }
 
-        // Validate dtype for operation
+        // Validate device, dtype for device, and dtype for operation
+        validate_same_device(&[self, weight], "conv_transpose3d")?;
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv_transpose3d")?;
         let params_scalars = vec![
             Scalar::U32(batch_size as u32),
             Scalar::U32(input_depth as u32),
@@ -3190,7 +3252,8 @@ impl Tensor {
             op::window_reduction::WindowReduction::Min => 3,
         }));
 
-        // Validate dtype for operation
+        // Validate dtype for device and operation
+        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "reduce_window")?;
         let op = Op::Windowing(op::WindowingOp::ReduceWindow, self.id(), params_scalars.clone());
         validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -3705,6 +3768,9 @@ impl Tensor {
 
     // Cast Operations
     pub fn to_dtype(&self, dtype: DType) -> HoduResult<Self> {
+        // Validate that target dtype is supported on current device
+        validate_dtype_for_device(dtype, &self.get_device(), "to_dtype")?;
+
         if builder::is_builder_active() {
             let result_layout = Layout::from_shape(self.get_layout().get_shape());
             let requires_grad = self.is_requires_grad() && dtype.is_float();

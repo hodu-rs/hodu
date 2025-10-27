@@ -9,16 +9,38 @@ pub use crate::{
     types::{backend::Backend, device::Device, dtype::DType},
 };
 
-pub fn validate_dtype_for_device(dtype: DType, device: &Device) -> HoduResult<()> {
+pub fn validate_same_device(tensors: &[&Tensor], op: &str) -> HoduResult<()> {
+    if tensors.is_empty() {
+        return Ok(());
+    }
+
+    let first_device = tensors[0].get_device();
+
+    for tensor in tensors.iter().skip(1) {
+        let current_device = tensor.get_device();
+        if current_device != first_device {
+            return Err(HoduError::DeviceConflictInOp {
+                left: first_device.clone(),
+                right: current_device.clone(),
+                op: op.to_string(),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+pub fn validate_dtype_for_device(dtype: DType, device: &Device, op: &str) -> HoduResult<()> {
     match device {
         Device::CPU => Ok(()),
         Device::CUDA(_) => Ok(()),
         Device::Metal => {
             // metal: f8e4m3, f8e5m2, f64 not supported
             match dtype {
-                DType::F8E4M3 | DType::F8E5M2 | DType::F64 => Err(HoduError::UnsupportedDTypeForDevice {
+                DType::F8E4M3 | DType::F8E5M2 | DType::F64 => Err(HoduError::UnsupportedDTypeForDeviceInOp {
                     dtype,
                     device: device.clone(),
+                    op: op.to_string(),
                 }),
                 _ => Ok(()),
             }
@@ -26,15 +48,16 @@ pub fn validate_dtype_for_device(dtype: DType, device: &Device) -> HoduResult<()
     }
 }
 
-pub fn validate_dtype_for_backend(dtype: DType, backend: &Backend) -> HoduResult<()> {
+pub fn validate_dtype_for_backend(dtype: DType, backend: &Backend, op: &str) -> HoduResult<()> {
     match backend {
         Backend::HODU => Ok(()),
         Backend::XLA => {
             // xla: f8e4m3, f8e5m2 not supported
             match dtype {
-                DType::F8E4M3 | DType::F8E5M2 => Err(HoduError::UnsupportedDTypeForBackend {
+                DType::F8E4M3 | DType::F8E5M2 => Err(HoduError::UnsupportedDTypeForBackendInOp {
                     dtype,
                     backend: *backend,
+                    op: op.to_string(),
                 }),
                 _ => Ok(()),
             }

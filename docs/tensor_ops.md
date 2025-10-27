@@ -2,55 +2,65 @@
 
 This document lists all supported tensor operations in Hodu.
 
+## Device and Backend DType Support
+
+Some data types are not supported on specific devices or backends:
+
+**Device Restrictions:**
+- **Metal**: `f8e4m3`, `f8e5m2`, `f64` are not supported
+
+**Backend Restrictions:**
+- **XLA**: `f8e4m3`, `f8e5m2` are not supported
+
 ## Binary Operations
 
 Element-wise operations between two tensors.
 
-| Operation | Description |
-|-----------|-------------|
-| `add` | Element-wise addition: `a + b` |
-| `sub` | Element-wise subtraction: `a - b` |
-| `mul` | Element-wise multiplication: `a * b` |
-| `div` | Element-wise division: `a / b` |
-| `pow` | Element-wise power: `a^b` |
-| `maximum` | Element-wise maximum: `max(a, b)` |
-| `minimum` | Element-wise minimum: `min(a, b)` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `add` | Element-wise addition: `a + b` | `bool` |
+| `sub` | Element-wise subtraction: `a - b` | `bool` |
+| `mul` | Element-wise multiplication: `a * b` | `bool` |
+| `div` | Element-wise division: `a / b` | `bool` |
+| `pow` | Element-wise power: `a^b` | `bool` |
+| `maximum` | Element-wise maximum: `max(a, b)` | `bool` |
+| `minimum` | Element-wise minimum: `min(a, b)` | `bool` |
 
 ## Binary Logical Operations
 
 Logical operations between two tensors.
 
-| Operation | Description |
-|-----------|-------------|
-| `logical_and` | Logical AND: `a && b` |
-| `logical_or` | Logical OR: `a \|\| b` |
-| `logical_xor` | Logical XOR: `a ^ b` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `logical_and` | Logical AND: `a && b` | - |
+| `logical_or` | Logical OR: `a \|\| b` | - |
+| `logical_xor` | Logical XOR: `a ^ b` | - |
 
 ## Comparison Operations
 
 Element-wise comparison between two tensors, returns boolean tensor.
 
-| Operation | Description |
-|-----------|-------------|
-| `eq` | Equal: `a == b` |
-| `ne` | Not equal: `a != b` |
-| `lt` | Less than: `a < b` |
-| `le` | Less than or equal: `a <= b` |
-| `gt` | Greater than: `a > b` |
-| `ge` | Greater than or equal: `a >= b` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `eq` | Equal: `a == b` | - |
+| `ne` | Not equal: `a != b` | - |
+| `lt` | Less than: `a < b` | `bool` |
+| `le` | Less than or equal: `a <= b` | `bool` |
+| `gt` | Greater than: `a > b` | `bool` |
+| `ge` | Greater than or equal: `a >= b` | `bool` |
 
 ## Comparison with Scalar
 
 Element-wise comparison between tensor and scalar.
 
-| Operation | Description |
-|-----------|-------------|
-| `eq_scalar` | Equal to scalar: `a == c` |
-| `ne_scalar` | Not equal to scalar: `a != c` |
-| `lt_scalar` | Less than scalar: `a < c` |
-| `le_scalar` | Less than or equal to scalar: `a <= c` |
-| `gt_scalar` | Greater than scalar: `a > c` |
-| `ge_scalar` | Greater than or equal to scalar: `a >= c` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `eq_scalar` | Equal to scalar: `a == c` | - |
+| `ne_scalar` | Not equal to scalar: `a != c` | - |
+| `lt_scalar` | Less than scalar: `a < c` | `bool` |
+| `le_scalar` | Less than or equal to scalar: `a <= c` | `bool` |
+| `gt_scalar` | Greater than scalar: `a > c` | `bool` |
+| `ge_scalar` | Greater than or equal to scalar: `a >= c` | `bool` |
 
 ## Unary Operations
 
@@ -58,49 +68,49 @@ Element-wise operations on a single tensor.
 
 ### Basic Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `neg` | Negation: `-a` |
-| `abs` | Absolute value: `\|a\|` |
-| `sign` | Sign function: `sign(a)` |
-| `square` | Square: `a²` |
-| `sqrt` | Square root: `√a` |
-| `recip` | Reciprocal: `1/a` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `neg` | Negation: `-a` | `bool`, `u8`-`u64` |
+| `abs` | Absolute value: `\|a\|` | `bool`, `u8`-`u64` |
+| `sign` | Sign function: `sign(a)` | `bool`, `u8`-`u64` |
+| `square` | Square: `a²` | `bool` |
+| `sqrt` | Square root: `√a` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `recip` | Reciprocal: `1/a` | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ### Activation Functions
 
-| Operation | Description |
-|-----------|-------------|
-| `relu` | ReLU: `max(0, a)` |
-| `sigmoid` | Sigmoid: `1 / (1 + exp(-a))` |
-| `tanh` | Hyperbolic tangent |
-| `gelu` | Gaussian Error Linear Unit |
-| `softplus` | Softplus: `ln(1 + exp(a))` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `relu` | ReLU: `max(0, a)` | `bool`, `u8`-`u64` |
+| `sigmoid` | Sigmoid: `1 / (1 + exp(-a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `tanh` | Hyperbolic tangent | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `gelu` | Gaussian Error Linear Unit | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `softplus` | Softplus: `ln(1 + exp(a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ### Trigonometric Functions
 
-| Operation | Description |
-|-----------|-------------|
-| `sin` | Sine function |
-| `cos` | Cosine function |
-| `tan` | Tangent function |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `sin` | Sine function | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `cos` | Cosine function | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `tan` | Tangent function | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ### Exponential and Logarithmic Functions
 
-| Operation | Description |
-|-----------|-------------|
-| `exp` | Natural exponential: `e^a` |
-| `exp2` | Base-2 exponential: `2^a` |
-| `exp10` | Base-10 exponential: `10^a` |
-| `ln` | Natural logarithm: `log_e(a)` |
-| `log2` | Base-2 logarithm: `log_2(a)` |
-| `log10` | Base-10 logarithm: `log_10(a)` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `exp` | Natural exponential: `e^a` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `exp2` | Base-2 exponential: `2^a` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `exp10` | Base-10 exponential: `10^a` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `ln` | Natural logarithm: `log_e(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `log2` | Base-2 logarithm: `log_2(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `log10` | Base-10 logarithm: `log_10(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ## Unary Logical Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `logical_not` | Logical NOT: `!a` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `logical_not` | Logical NOT: `!a` | - |
 
 ## Unary Operations with Scalar
 
@@ -108,22 +118,22 @@ Element-wise operations between tensor and scalar.
 
 ### Arithmetic Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `add_scalar` | Add scalar: `a + c` |
-| `sub_scalar` | Subtract scalar: `a - c` |
-| `mul_scalar` | Multiply by scalar: `a * c` |
-| `div_scalar` | Divide by scalar: `a / c` |
-| `pow_scalar` | Power with scalar exponent: `a^c` |
-| `maximum_scalar` | Maximum with scalar: `max(a, c)` |
-| `minimum_scalar` | Minimum with scalar: `min(a, c)` |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `add_scalar` | Add scalar: `a + c` | `bool` |
+| `sub_scalar` | Subtract scalar: `a - c` | `bool` |
+| `mul_scalar` | Multiply by scalar: `a * c` | `bool` |
+| `div_scalar` | Divide by scalar: `a / c` | `bool` |
+| `pow_scalar` | Power with scalar exponent: `a^c` | `bool` |
+| `maximum_scalar` | Maximum with scalar: `max(a, c)` | `bool` |
+| `minimum_scalar` | Minimum with scalar: `min(a, c)` | `bool` |
 
 ### Activation Functions with Parameters
 
-| Operation | Description |
-|-----------|-------------|
-| `leaky_relu` | Leaky ReLU with negative slope parameter |
-| `elu` | ELU with alpha parameter |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `leaky_relu` | Leaky ReLU with negative slope parameter | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `elu` | ELU with alpha parameter | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ## Matrix Operations
 
@@ -158,24 +168,26 @@ Supports only 1D and 2D combinations (for simplicity).
 - `matmul` handles broadcasting automatically for batch dimensions
 - Both operations follow XLA's semantics for consistency
 
+**Unsupported Types:** `bool`, `u8`-`u64`, `i8`-`i64`
+
 ## Reduction Operations
 
 Operations that reduce tensor dimensions.
 
-| Operation | Description | Variants |
-|-----------|-------------|----------|
-| `sum` | Sum along specified dimensions | `sum_all`, `sum_to_shape` |
-| `mean` | Mean along specified dimensions | `mean_all` |
-| `max` | Maximum along specified dimensions | - |
-| `min` | Minimum along specified dimensions | - |
-| `prod` | Product along specified dimensions | - |
-| `std` | Standard deviation along specified dimensions | `std_all` |
-| `var` | Variance along specified dimensions | `var_all` |
-| `norm` | Lp norm with parameter `p` (p=1: L1, p=2: L2, other: Lp) | `l2_norm`, `l1_norm` |
-| `argmax` | Indices of maximum values along dimension | - |
-| `argmin` | Indices of minimum values along dimension | - |
-| `any` | Check if any element is true (logical reduction) | - |
-| `all` | Check if all elements are true (logical reduction) | - |
+| Operation | Description | Variants | Unsupported Types |
+|-----------|-------------|----------|-------------------|
+| `sum` | Sum along specified dimensions | `sum_all`, `sum_to_shape` | `bool` |
+| `mean` | Mean along specified dimensions | `mean_all` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `max` | Maximum along specified dimensions | - | `bool` |
+| `min` | Minimum along specified dimensions | - | `bool` |
+| `prod` | Product along specified dimensions | - | `bool` |
+| `std` | Standard deviation along specified dimensions | `std_all` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `var` | Variance along specified dimensions | `var_all` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `norm` | Lp norm with parameter `p` (p=1: L1, p=2: L2, other: Lp) | `l2_norm`, `l1_norm` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `argmax` | Indices of maximum values along dimension | - | - |
+| `argmin` | Indices of minimum values along dimension | - | - |
+| `any` | Check if any element is true (logical reduction) | - | - |
+| `all` | Check if all elements are true (logical reduction) | - | - |
 
 **Notes**:
 - `norm(p, dims, keep_dim)` computes the Lp norm: `(sum(|x|^p))^(1/p)`
@@ -187,10 +199,10 @@ Operations that reduce tensor dimensions.
 
 Operations that combine tensors.
 
-| Operation | Description | Aliases |
-|-----------|-------------|---------|
-| `concat` | Concatenate along existing dimension | `cat` |
-| `stack` | Stack along new dimension | - |
+| Operation | Description | Aliases | Unsupported Types |
+|-----------|-------------|---------|-------------------|
+| `concat` | Concatenate along existing dimension | `cat` | - |
+| `stack` | Stack along new dimension | - | - |
 
 **Note**: `stack` is implemented as a combination of `unsqueeze` and `concat` operations
 
@@ -198,35 +210,35 @@ Operations that combine tensors.
 
 Operations that split tensor.
 
-| Operation | Description |
-|-----------|-------------|
-| `split` | Split into specified sizes |
-| `chunk` | Split into N equal chunks |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `split` | Split into specified sizes | - |
+| `chunk` | Split into N equal chunks | - |
 
 **Note**: `chunk` is implemented as a wrapper around `split` with automatically calculated equal sizes
 
 ## Normalization Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `softmax` | Softmax normalization along dimension |
-| `log_softmax` | Log-softmax normalization along dimension |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `softmax` | Softmax normalization along dimension | (depends on underlying ops) |
+| `log_softmax` | Log-softmax normalization along dimension | (depends on underlying ops) |
 
-**Note**: `softmax` and `log_softmax` are implemented using `exp`, `sum`, and `ln` with numerically stable computation by subtracting the maximum value
+**Note**: `softmax` and `log_softmax` are implemented using `exp`, `sum`, and `ln` with numerically stable computation by subtracting the maximum value. They inherit dtype restrictions from these operations.
 
 ## Indexing Operations
 
 Operations for selecting and gathering tensor elements.
 
-| Operation | Description |
-|-----------|-------------|
-| `index_select` | Select elements along dimension using indices |
-| `index_put` | Put values at specified indices along dimension |
-| `gather` | Gather elements along dimension |
-| `scatter` | Scatter elements along dimension |
-| `scatter_add` | Scatter elements along dimension and add |
-| `scatter_max` | Scatter elements along dimension and take max |
-| `scatter_min` | Scatter elements along dimension and take min |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `index_select` | Select elements along dimension using indices | - |
+| `index_put` | Put values at specified indices along dimension | - |
+| `gather` | Gather elements along dimension | - |
+| `scatter` | Scatter elements along dimension | - |
+| `scatter_add` | Scatter elements along dimension and add | `bool` |
+| `scatter_max` | Scatter elements along dimension and take max | `bool` |
+| `scatter_min` | Scatter elements along dimension and take min | `bool` |
 
 **Examples:**
 - `index_select(dim, indices)`: Select rows/columns at given indices
@@ -238,18 +250,19 @@ Operations for selecting and gathering tensor elements.
 
 Operations for conditional selection and masking.
 
-| Operation | Description |
-|-----------|-------------|
-| `where3` | Select between self and other based on condition |
-| `masked_fill` | Fill elements where mask is true |
-| `clamp` | Clamp values to range `[min, max]` |
-| `clamp_min` | Clamp values to minimum |
-| `clamp_max` | Clamp values to maximum |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `where3` | Select between self and other based on condition | (depends on underlying ops) |
+| `masked_fill` | Fill elements where mask is true | (depends on underlying ops) |
+| `clamp` | Clamp values to range `[min, max]` | (depends on underlying ops) |
+| `clamp_min` | Clamp values to minimum | (depends on underlying ops) |
+| `clamp_max` | Clamp values to maximum | (depends on underlying ops) |
 
 **Notes**:
 - `where3` is implemented using element-wise operations with automatic broadcasting
 - `masked_fill` is implemented using `where3`
 - `clamp`, `clamp_min`, and `clamp_max` are implemented using `where3` and comparison operations
+- These operations inherit dtype restrictions from their underlying operations
 
 ## Convolution Operations
 
@@ -271,6 +284,8 @@ Neural network convolution operations with support for stride, padding, and dila
 | `conv_transpose2d` | `[B, C_in, H, W]` | `[C_in, C_out, K_h, K_w]` | `[B, C_out, H_out, W_out]` | 2D transposed convolution |
 | `conv_transpose3d` | `[B, C_in, D, H, W]` | `[C_in, C_out, K_d, K_h, K_w]` | `[B, C_out, D_out, H_out, W_out]` | 3D transposed convolution |
 
+**Unsupported Types:** `bool`, `u8`-`u64`, `i8`-`i64`
+
 ## Windowing Operations
 
 Sliding window reduction operations, commonly used for pooling.
@@ -284,6 +299,12 @@ Sliding window reduction operations, commonly used for pooling.
 - `strides`: Step size for sliding the window (default: 1 for each dim)
 - `padding`: Padding applied before windowing
 - `reduction`: Reduction type - `'max'`, `'mean'`, `'sum'`, `'min'`
+
+**Unsupported Types by Reduction:**
+- `max`: `bool`
+- `mean`: `bool`, `u8`-`u64`, `i8`-`i64`
+- `sum`: `bool`
+- `min`: `bool`
 
 ## Shape Operations
 
@@ -301,12 +322,12 @@ Operations that manipulate tensor shape and layout.
 
 ## Type Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `to_dtype` | Cast tensor to different data type |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `to_dtype` | Cast tensor to different data type | - |
 
 ## Memory Operations
 
-| Operation | Description |
-|-----------|-------------|
-| `contiguous` | Ensure tensor has contiguous memory layout |
+| Operation | Description | Unsupported Types |
+|-----------|-------------|-------------------|
+| `contiguous` | Ensure tensor has contiguous memory layout | - |

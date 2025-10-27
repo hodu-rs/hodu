@@ -271,7 +271,7 @@ pub mod storage {
             _: &[usize],
             _: &[usize],
             _: &[(usize, usize)],
-            _: crate::backends::utils::WindowReduction,
+            _: crate::backends::op::window_reduction::WindowReduction,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }

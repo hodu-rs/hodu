@@ -5,6 +5,7 @@
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
 pub mod conv;
+pub mod utils;
 pub mod window_reduction;
 
 use crate::{compat::*, scalar::Scalar, tensor::TensorId};

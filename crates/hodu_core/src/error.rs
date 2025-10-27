@@ -36,9 +36,19 @@ pub enum HoduError {
         dtype: DType,
         device: Device,
     },
+    UnsupportedDTypeForDeviceInOp {
+        dtype: DType,
+        device: Device,
+        op: String,
+    },
     UnsupportedDTypeForBackend {
         dtype: DType,
         backend: Backend,
+    },
+    UnsupportedDTypeForBackendInOp {
+        dtype: DType,
+        backend: Backend,
+        op: String,
     },
     // Shape and Layout
     ShapeMismatch {
@@ -122,8 +132,17 @@ impl fmt::Display for HoduError {
             Self::UnsupportedDTypeForDevice { dtype, device } => {
                 write!(f, "Unsupported dtype - {dtype} for device {device}")
             },
+            Self::UnsupportedDTypeForDeviceInOp { dtype, device, op } => {
+                write!(f, "Unsupported dtype - {dtype} for device {device} in operation '{op}'")
+            },
             Self::UnsupportedDTypeForBackend { dtype, backend } => {
                 write!(f, "Unsupported dtype - {dtype} for backend {backend:?}")
+            },
+            Self::UnsupportedDTypeForBackendInOp { dtype, backend, op } => {
+                write!(
+                    f,
+                    "Unsupported dtype - {dtype} for backend {backend:?} in operation '{op}'"
+                )
             },
             Self::ShapeMismatch { expected, got } => {
                 write!(f, "Shape mismatch - expected {expected:?}, got {got:?}")
