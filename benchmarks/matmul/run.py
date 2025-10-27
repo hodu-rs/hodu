@@ -73,21 +73,7 @@ def run_candle_benchmark(mode):
     """Run Candle (Rust) benchmark."""
     print_color(CYAN, f"\n--- Running Candle {mode} ---")
 
-    # Build first
-    build_cmd = ["cargo", "build", "--release", "--bin", "candle"]
-    if "metal" in mode:
-        build_cmd.append("--features=metal")
-    elif "cuda" in mode:
-        build_cmd.append("--features=cuda")
-
-    print_color(YELLOW, f"Building: {' '.join(build_cmd)}")
-    build_result = run_command(build_cmd, cwd=Path(__file__).parent)
-
-    if build_result and build_result.returncode != 0:
-        print_color(RED, f"Candle build failed: {build_result.stderr}")
-        return None, {}
-
-    # Run benchmark
+    # Run benchmark (cargo run will build if needed)
     run_cmd = ["cargo", "run", "--release", "--bin", "candle", "--"]
     if "metal" in mode:
         run_cmd.insert(3, "--features=metal")
@@ -110,21 +96,7 @@ def run_burn_benchmark(mode):
     """Run Burn (Rust) benchmark."""
     print_color(CYAN, f"\n--- Running Burn {mode} ---")
 
-    # Build first
-    build_cmd = ["cargo", "build", "--release", "--bin", "burn"]
-    if "wgpu" in mode:
-        build_cmd.append("--features=wgpu")
-    elif "tch" in mode or "cuda" in mode:
-        build_cmd.append("--features=cuda")
-
-    print_color(YELLOW, f"Building: {' '.join(build_cmd)}")
-    build_result = run_command(build_cmd, cwd=Path(__file__).parent)
-
-    if build_result and build_result.returncode != 0:
-        print_color(RED, f"Burn build failed: {build_result.stderr}")
-        return None, {}
-
-    # Run benchmark
+    # Run benchmark (cargo run will build if needed)
     run_cmd = ["cargo", "run", "--release", "--bin", "burn", "--"]
     if "wgpu" in mode:
         run_cmd.insert(3, "--features=wgpu")
@@ -147,21 +119,7 @@ def run_hodu_benchmark(mode):
     """Run Hodu (Rust) benchmark."""
     print_color(CYAN, f"\n--- Running Hodu {mode} ---")
 
-    # Build first
-    build_cmd = ["cargo", "build", "--release", "--bin", "hodu"]
-    if "metal" in mode:
-        build_cmd.append("--features=metal")
-    elif "xla" in mode:
-        build_cmd.append("--features=xla")
-
-    print_color(YELLOW, f"Building: {' '.join(build_cmd)}")
-    build_result = run_command(build_cmd, cwd=Path(__file__).parent)
-
-    if build_result and build_result.returncode != 0:
-        print_color(RED, f"Hodu build failed: {build_result.stderr}")
-        return None, {}
-
-    # Run benchmark
+    # Run benchmark (cargo run will build if needed)
     run_cmd = ["cargo", "run", "--release", "--bin", "hodu", "--"]
     if "metal" in mode:
         run_cmd.insert(3, "--features=metal")
