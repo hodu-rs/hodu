@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess
 import sys
 import re
@@ -103,6 +101,43 @@ def run_candle_benchmark(mode):
     else:
         error_msg = result.stderr if result else "Unknown error"
         print_color(RED, f"Candle benchmark failed: {error_msg}")
+        return None, {}
+
+
+def run_burn_benchmark(mode):
+    """Run Burn (Rust) benchmark."""
+    print_color(CYAN, f"\n--- Running Burn {mode} ---")
+
+    # Build first
+    build_cmd = ["cargo", "build", "--release", "--bin", "burn"]
+    if "wgpu" in mode:
+        build_cmd.append("--features=wgpu")
+    elif "tch" in mode or "cuda" in mode:
+        build_cmd.append("--features=cuda")
+
+    print_color(YELLOW, f"Building: {' '.join(build_cmd)}")
+    build_result = run_command(build_cmd, cwd=Path(__file__).parent)
+
+    if build_result and build_result.returncode != 0:
+        print_color(RED, f"Burn build failed: {build_result.stderr}")
+        return None, {}
+
+    # Run benchmark
+    run_cmd = ["cargo", "run", "--release", "--bin", "burn", "--"]
+    if "wgpu" in mode:
+        run_cmd.insert(3, "--features=wgpu")
+    elif "tch" in mode or "cuda" in mode:
+        run_cmd.insert(3, "--features=cuda")
+    run_cmd.append(mode)
+
+    print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
+    result = run_command(run_cmd, cwd=Path(__file__).parent)
+
+    if result and result.returncode == 0:
+        return parse_benchmark_output(result.stdout)
+    else:
+        error_msg = result.stderr if result else "Unknown error"
+        print_color(RED, f"Burn benchmark failed: {error_msg}")
         return None, {}
 
 
@@ -343,9 +378,6 @@ def print_comparison_table(all_results, baseline_name):
 
 
 def main():
-    """Main function to run all benchmarks and compare results."""
-    print_color(BLUE, "===== Matrix Multiplication Benchmark Suite =====\n")
-
     # Check if we're in the right directory
     if not Path("_hodu.rs").exists():
         print_color(RED, "Error: Must be run from benchmarks/matmul directory")
@@ -364,7 +396,6 @@ def main():
 
     # Add CPU modes if requested
     if enable_cpu:
-        print_color(YELLOW, "CPU benchmarks enabled\n")
         test_modes.extend(
             [
                 ("dynamic-cpu", "CPU"),
@@ -376,7 +407,6 @@ def main():
 
     # Add GPU modes if requested
     if sys.platform == "darwin" and enable_metal:
-        print_color(YELLOW, "Metal benchmarks enabled\n")
         test_modes.extend(
             [
                 ("dynamic-metal", "Metal"),
@@ -386,7 +416,6 @@ def main():
         hodu_modes.extend(["dynamic-metal", "static-metal"])
         jax_modes.extend([("dynamic-metal", "Metal"), ("static-metal", "Metal")])
     elif sys.platform != "darwin" and enable_cuda:
-        print_color(YELLOW, "CUDA benchmarks enabled\n")
         test_modes.extend(
             [
                 ("dynamic-cuda", "CUDA"),
@@ -398,8 +427,19 @@ def main():
 
     # Add XLA mode if requested
     if enable_xla:
-        print_color(YELLOW, "XLA benchmarks enabled\n")
         hodu_modes.append("static-xla")
+
+    # Determine Burn modes (dynamic only)
+    burn_modes = []
+    if enable_cpu:
+        burn_modes.append("dynamic-cpu")
+    # WGPU works on both Metal (macOS) and CUDA (Linux/Windows)
+    if sys.platform == "darwin" and enable_metal:
+        burn_modes.append("dynamic-wgpu")
+    if sys.platform != "darwin" and enable_cuda:
+        burn_modes.append("dynamic-wgpu")
+        # LibTorch CUDA backend (only on CUDA platforms)
+        burn_modes.append("dynamic-tch")
 
     # Determine Candle modes (dynamic only)
     candle_modes = []
@@ -411,6 +451,12 @@ def main():
         candle_modes.append("dynamic-cuda")
 
     all_results = {}
+
+    # Run Burn benchmarks
+    for mode in burn_modes:
+        mode_name, results = run_burn_benchmark(mode)
+        if results:
+            all_results[f"Burn - {mode_name or mode}"] = results
 
     # Run Candle benchmarks
     for mode in candle_modes:
@@ -457,8 +503,6 @@ def main():
         baseline = list(all_results.keys())[0]
 
     print_comparison_table(all_results, baseline)
-
-    print_color(BLUE, "\n===== Benchmark Complete =====")
 
 
 if __name__ == "__main__":
