@@ -536,6 +536,21 @@ impl VjpCompute for UnaryScalarOp {
                 let total_grad = create_add_tensor(mask_pos, neg_grad)?;
                 Ok(vec![create_mul_tensor(grad_output, total_grad)?])
             },
+            UnaryScalarOp::Rrelu => {
+                // d/dx rrelu(x, alpha) = 1 if x > 0, else alpha
+                // RReLU gradient is the same as PReLU (uses fixed alpha during backward)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.get_dtype();
+                let zero = Scalar::zero(dtype);
+                let alpha = scalar;
+                let mask_pos = create_gt_scalar_tensor(input, zero)?;
+                let mask_neg = create_le_scalar_tensor(input, zero)?;
+                let ones_like_input = create_ones_like_tensor(input)?;
+                let alpha_tensor = create_mul_scalar_tensor(ones_like_input, alpha)?;
+                let neg_grad = create_mul_tensor(mask_neg, alpha_tensor)?;
+                let total_grad = create_add_tensor(mask_pos, neg_grad)?;
+                Ok(vec![create_mul_tensor(grad_output, total_grad)?])
+            },
         }
     }
 }

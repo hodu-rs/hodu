@@ -221,7 +221,7 @@ pub fn validate_dtype_for_op(dtype: DType, op: &Op) -> HoduResult<()> {
                     });
                 }
             },
-            UnaryScalarOp::LeakyRelu | UnaryScalarOp::Elu | UnaryScalarOp::Prelu => {
+            UnaryScalarOp::LeakyRelu | UnaryScalarOp::Elu | UnaryScalarOp::Prelu | UnaryScalarOp::Rrelu => {
                 if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
                     return Err(HoduError::UnsupportedDType {
                         dtype,

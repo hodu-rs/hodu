@@ -1009,6 +1009,7 @@ impl HoduExecutor {
             UnaryScalarOp::LeakyRelu => input_storage.unary_scalar_impl::<LeakyRelu>(layout, scalar),
             UnaryScalarOp::Elu => input_storage.unary_scalar_impl::<Elu>(layout, scalar),
             UnaryScalarOp::Prelu => input_storage.unary_scalar_impl::<Prelu>(layout, scalar),
+            UnaryScalarOp::Rrelu => input_storage.unary_scalar_impl::<Rrelu>(layout, scalar),
         }
     }
 

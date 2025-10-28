@@ -234,6 +234,7 @@ pub enum UnaryScalarOp {
     LeakyRelu,
     Elu,
     Prelu,
+    Rrelu,
 }
 
 pub trait UnaryScalarOpT {
@@ -1876,6 +1877,7 @@ pub(crate) struct MinimumScalar;
 pub(crate) struct LeakyRelu;
 pub(crate) struct Elu;
 pub(crate) struct Prelu;
+pub(crate) struct Rrelu;
 
 macro_rules! unary_scalar_op {
     ($op:ident, $name: literal, $e: expr) => {
@@ -2663,6 +2665,102 @@ impl UnaryScalarOpT for Elu {
 
 impl UnaryScalarOpT for Prelu {
     const NAME: &'static str = "prelu";
+
+    #[inline(always)]
+    fn bool(_: bool, _: Scalar) -> bool {
+        todo!("no unary scalar function for bool")
+    }
+    #[inline(always)]
+    fn f8e4m3(v1: F8E4M3, scalar: Scalar) -> F8E4M3 {
+        let alpha = scalar.to_f8e4m3();
+        if v1 > F8E4M3::ZERO {
+            v1
+        } else {
+            alpha * v1
+        }
+    }
+    #[inline(always)]
+    fn f8e5m2(v1: F8E5M2, scalar: Scalar) -> F8E5M2 {
+        let alpha = scalar.to_f8e5m2();
+        if v1 > F8E5M2::ZERO {
+            v1
+        } else {
+            alpha * v1
+        }
+    }
+    #[inline(always)]
+    fn bf16(v1: bf16, scalar: Scalar) -> bf16 {
+        let alpha = scalar.to_bf16();
+        if v1 > bf16::ZERO {
+            v1
+        } else {
+            alpha * v1
+        }
+    }
+    #[inline(always)]
+    fn f16(v1: f16, scalar: Scalar) -> f16 {
+        let alpha = scalar.to_f16();
+        if v1 > f16::ZERO {
+            v1
+        } else {
+            alpha * v1
+        }
+    }
+    #[inline(always)]
+    fn f32(v1: f32, scalar: Scalar) -> f32 {
+        let alpha = scalar.to_f32();
+        if v1 > 0.0 {
+            v1
+        } else {
+            alpha * v1
+        }
+    }
+    #[inline(always)]
+    fn f64(v1: f64, scalar: Scalar) -> f64 {
+        let alpha = scalar.to_f64();
+        if v1 > 0.0 {
+            v1
+        } else {
+            alpha * v1
+        }
+    }
+    #[inline(always)]
+    fn u8(_: u8, _: Scalar) -> u8 {
+        todo!("no unary scalar function for u8")
+    }
+    #[inline(always)]
+    fn u16(_: u16, _: Scalar) -> u16 {
+        todo!("no unary scalar function for u16")
+    }
+    #[inline(always)]
+    fn u32(_: u32, _: Scalar) -> u32 {
+        todo!("no unary scalar function for u32")
+    }
+    #[inline(always)]
+    fn u64(_: u64, _: Scalar) -> u64 {
+        todo!("no unary scalar function for u64")
+    }
+    #[inline(always)]
+    fn i8(_: i8, _: Scalar) -> i8 {
+        todo!("no unary scalar function for i8")
+    }
+    #[inline(always)]
+    fn i16(_: i16, _: Scalar) -> i16 {
+        todo!("no unary scalar function for i16")
+    }
+    #[inline(always)]
+    fn i32(_: i32, _: Scalar) -> i32 {
+        todo!("no unary scalar function for i32")
+    }
+    #[inline(always)]
+    fn i64(_: i64, _: Scalar) -> i64 {
+        todo!("no unary scalar function for i64")
+    }
+}
+
+
+impl UnaryScalarOpT for Rrelu {
+    const NAME: &'static str = "rrelu";
 
     #[inline(always)]
     fn bool(_: bool, _: Scalar) -> bool {

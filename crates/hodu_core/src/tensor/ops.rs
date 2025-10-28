@@ -468,6 +468,7 @@ impl Tensor {
     unary_scalar_op!(leaky_relu, LeakyRelu);
     unary_scalar_op!(elu, Elu);
     unary_scalar_op!(prelu, Prelu);
+    unary_scalar_op!(rrelu, Rrelu);
 
     // Matrix operations
     pub fn matmul(&self, other: &Self) -> HoduResult<Self> {
