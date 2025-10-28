@@ -88,50 +88,6 @@ impl Softplus {
 }
 
 #[derive(Module, Clone)]
-pub struct LeakyReLU {
-    exponent: Scalar,
-}
-
-impl LeakyReLU {
-    pub fn new(exponent: impl Into<Scalar>) -> Self {
-        Self {
-            exponent: exponent.into(),
-        }
-    }
-
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let exponent = self.exponent.to_dtype(input.get_dtype());
-        input.leaky_relu(exponent)
-    }
-
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
-        vec![]
-    }
-}
-
-#[derive(Module, Clone)]
-pub struct ELU {
-    exponent: Scalar,
-}
-
-impl ELU {
-    pub fn new(exponent: impl Into<Scalar>) -> Self {
-        Self {
-            exponent: exponent.into(),
-        }
-    }
-
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let exponent = self.exponent.to_dtype(input.get_dtype());
-        input.elu(exponent)
-    }
-
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
-        vec![]
-    }
-}
-
-#[derive(Module, Clone)]
 pub struct SiLU;
 
 impl SiLU {
@@ -183,15 +139,57 @@ impl Mish {
 }
 
 #[derive(Module, Clone)]
+pub struct LeakyReLU {
+    exponent: Scalar,
+}
+
+impl LeakyReLU {
+    pub fn new(exponent: impl Into<Scalar>) -> Self {
+        Self {
+            exponent: exponent.into(),
+        }
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let exponent = self.exponent.to_dtype(input.get_dtype());
+        input.leaky_relu(exponent)
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct ELU {
+    exponent: Scalar,
+}
+
+impl ELU {
+    pub fn new(exponent: impl Into<Scalar>) -> Self {
+        Self {
+            exponent: exponent.into(),
+        }
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let exponent = self.exponent.to_dtype(input.get_dtype());
+        input.elu(exponent)
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
 pub struct PReLU {
     weight: Scalar,
 }
 
 impl PReLU {
     pub fn new(weight: impl Into<Scalar>) -> Self {
-        Self {
-            weight: weight.into(),
-        }
+        Self { weight: weight.into() }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {

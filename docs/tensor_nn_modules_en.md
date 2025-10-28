@@ -872,6 +872,52 @@ let output = softplus.forward(&input)?;
 - Smooth everywhere
 - Gradient: sigmoid function
 
+#### SiLU (Swish)
+
+Sigmoid Linear Unit (also known as Swish): `x * σ(x)`
+
+```rust
+use hodu::nn::modules::SiLU;
+// or
+use hodu::nn::modules::Swish;
+
+let silu = SiLU::new();
+let output = silu.forward(&input)?;
+```
+
+**Formula:**
+```
+f(x) = x * sigmoid(x) = x / (1 + e^(-x))
+```
+
+**Properties:**
+- Smooth and non-monotonic
+- Self-gating activation
+- Used in modern architectures (EfficientNet, etc.)
+- Better than ReLU in many cases
+
+#### Mish
+
+Self-regularized non-monotonic activation: `x * tanh(softplus(x))`
+
+```rust
+use hodu::nn::modules::Mish;
+
+let mish = Mish::new();
+let output = mish.forward(&input)?;
+```
+
+**Formula:**
+```
+f(x) = x * tanh(ln(1 + e^x))
+```
+
+**Properties:**
+- Smooth and non-monotonic
+- Unbounded above, bounded below
+- Improved accuracy over ReLU and Swish in some tasks
+- Self-regularizing
+
 #### LeakyReLU
 
 Leaky ReLU: `max(αx, x)`
@@ -912,6 +958,52 @@ f(x) = x           if x > 0
 - Negative values push mean towards zero
 - Self-normalizing in some networks
 
+#### PReLU
+
+Parametric ReLU with learnable slope
+
+```rust
+use hodu::nn::modules::PReLU;
+
+let prelu = PReLU::new(0.25);  // Initial weight/slope
+let output = prelu.forward(&input)?;
+```
+
+**Formula:**
+```
+f(x) = x           if x > 0
+     = weight * x  if x ≤ 0
+```
+
+**Properties:**
+- Learnable negative slope parameter
+- Can adapt to data
+- More flexible than LeakyReLU
+
+#### RReLU
+
+Randomized Leaky ReLU
+
+```rust
+use hodu::nn::modules::RReLU;
+
+let rrelu = RReLU::new(0.125, 0.333);  // lower, upper bounds
+let output = rrelu.forward(&input)?;
+```
+
+**Formula:**
+```
+f(x) = x           if x > 0
+     = α * x       if x ≤ 0
+where α is randomly sampled from uniform(lower, upper) during training
+      α = (lower + upper) / 2 during inference
+```
+
+**Properties:**
+- Randomized negative slope during training
+- Acts as regularization
+- Reduces overfitting
+
 ### Activation Function Comparison
 
 | Activation | Range | Smooth | Zero-centered | Use Case |
@@ -921,8 +1013,12 @@ f(x) = x           if x > 0
 | Tanh | `(-1, 1)` | Yes | Yes | RNNs, hidden layers |
 | GELU | `(-∞, ∞)` | Yes | Yes | Transformers, modern architectures |
 | Softplus | `(0, ∞)` | Yes | No | Smooth ReLU alternative |
+| SiLU/Swish | `(-∞, ∞)` | Yes | No | Modern CNNs (EfficientNet) |
+| Mish | `(-∞, ∞)` | Yes | No | High accuracy tasks |
 | LeakyReLU | `(-∞, ∞)` | No | Yes | Prevent dying ReLU |
 | ELU | `(-α, ∞)` | Yes | No | Self-normalizing networks |
+| PReLU | `(-∞, ∞)` | No | Yes | Learnable negative slope |
+| RReLU | `(-∞, ∞)` | No | Yes | Regularization, reduce overfitting |
 
 ## Loss Functions
 

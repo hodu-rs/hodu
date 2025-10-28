@@ -792,6 +792,52 @@ let output = softplus.forward(&input)?;
 - 모든 곳에서 부드러움
 - Gradient: sigmoid 함수
 
+#### SiLU (Swish)
+
+시그모이드 선형 유닛(Sigmoid Linear Unit, Swish): `x * σ(x)`
+
+```rust
+use hodu::nn::modules::SiLU;
+// 또는
+use hodu::nn::modules::Swish;
+
+let silu = SiLU::new();
+let output = silu.forward(&input)?;
+```
+
+**공식:**
+```
+f(x) = x * sigmoid(x) = x / (1 + e^(-x))
+```
+
+**특성:**
+- 부드럽고 비단조(non-monotonic)
+- 자기 게이팅 활성화
+- 현대적 아키텍처에 사용 (EfficientNet 등)
+- 많은 경우 ReLU보다 우수
+
+#### Mish
+
+자기 정규화 비단조 활성화: `x * tanh(softplus(x))`
+
+```rust
+use hodu::nn::modules::Mish;
+
+let mish = Mish::new();
+let output = mish.forward(&input)?;
+```
+
+**공식:**
+```
+f(x) = x * tanh(ln(1 + e^x))
+```
+
+**특성:**
+- 부드럽고 비단조
+- 위로 무한, 아래로 유한
+- 일부 작업에서 ReLU와 Swish보다 정확도 향상
+- 자기 정규화
+
 #### LeakyReLU
 
 Leaky ReLU: `max(αx, x)`
@@ -832,6 +878,52 @@ f(x) = x           if x > 0
 - 음수 값이 평균을 0으로 밀어냄
 - 일부 네트워크에서 자기 정규화(self-normalizing)
 
+#### PReLU
+
+학습 가능한 기울기를 가진 파라메트릭 ReLU
+
+```rust
+use hodu::nn::modules::PReLU;
+
+let prelu = PReLU::new(0.25);  // 초기 가중치/기울기
+let output = prelu.forward(&input)?;
+```
+
+**공식:**
+```
+f(x) = x           if x > 0
+     = weight * x  if x ≤ 0
+```
+
+**특성:**
+- 학습 가능한 음수 기울기 파라미터
+- 데이터에 적응 가능
+- LeakyReLU보다 유연
+
+#### RReLU
+
+랜덤화된 Leaky ReLU
+
+```rust
+use hodu::nn::modules::RReLU;
+
+let rrelu = RReLU::new(0.125, 0.333);  // 하한, 상한
+let output = rrelu.forward(&input)?;
+```
+
+**공식:**
+```
+f(x) = x           if x > 0
+     = α * x       if x ≤ 0
+여기서 α는 훈련 중 uniform(lower, upper)에서 랜덤 샘플링
+     α = (lower + upper) / 2 추론 중
+```
+
+**특성:**
+- 훈련 중 랜덤화된 음수 기울기
+- 정규화 역할
+- 과적합 감소
+
 ### 활성화 함수 비교
 
 | 활성화 함수 | 범위 | 부드러움 | 제로 중심 | 사용 사례 |
@@ -841,8 +933,12 @@ f(x) = x           if x > 0
 | Tanh | `(-1, 1)` | 예 | 예 | RNN, 은닉층 |
 | GELU | `(-∞, ∞)` | 예 | 예 | Transformer, 현대적 아키텍처 |
 | Softplus | `(0, ∞)` | 예 | 아니오 | 부드러운 ReLU 대안 |
+| SiLU/Swish | `(-∞, ∞)` | 예 | 아니오 | 현대적 CNN (EfficientNet) |
+| Mish | `(-∞, ∞)` | 예 | 아니오 | 고정확도 작업 |
 | LeakyReLU | `(-∞, ∞)` | 아니오 | 예 | Dying ReLU 방지 |
 | ELU | `(-α, ∞)` | 예 | 아니오 | 자기 정규화 네트워크 |
+| PReLU | `(-∞, ∞)` | 아니오 | 예 | 학습 가능한 음수 기울기 |
+| RReLU | `(-∞, ∞)` | 아니오 | 예 | 정규화, 과적합 감소 |
 
 ## 손실 함수
 

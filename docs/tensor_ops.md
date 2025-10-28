@@ -86,6 +86,9 @@ Element-wise operations on a single tensor.
 | `tanh` | Hyperbolic tangent | `bool`, `u8`-`u64`, `i8`-`i64` |
 | `gelu` | Gaussian Error Linear Unit | `bool`, `u8`-`u64`, `i8`-`i64` |
 | `softplus` | Softplus: `ln(1 + exp(a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `silu` | SiLU (Swish): `a * sigmoid(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `swish` | Swish (alias for SiLU): `a * sigmoid(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `mish` | Mish: `a * tanh(softplus(a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ### Trigonometric Functions
 
@@ -134,6 +137,8 @@ Element-wise operations between tensor and scalar.
 |-----------|-------------|-------------------|
 | `leaky_relu` | Leaky ReLU with negative slope parameter | `bool`, `u8`-`u64`, `i8`-`i64` |
 | `elu` | ELU with alpha parameter | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `prelu` | PReLU (Parametric ReLU) with learnable slope | `bool`, `u8`-`u64`, `i8`-`i64` |
+| `rrelu` | RReLU (Randomized ReLU) with random slope | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ## Matrix Operations
 
