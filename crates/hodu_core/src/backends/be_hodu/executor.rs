@@ -958,6 +958,9 @@ impl HoduExecutor {
             UnaryOp::Sigmoid => input_storage.unary_impl::<Sigmoid>(layout),
             UnaryOp::Tanh => input_storage.unary_impl::<Tanh>(layout),
             UnaryOp::Gelu => input_storage.unary_impl::<Gelu>(layout),
+            UnaryOp::Silu => input_storage.unary_impl::<Silu>(layout),
+            UnaryOp::Swish => input_storage.unary_impl::<Swish>(layout),
+            UnaryOp::Mish => input_storage.unary_impl::<Mish>(layout),
             UnaryOp::Sin => input_storage.unary_impl::<Sin>(layout),
             UnaryOp::Cos => input_storage.unary_impl::<Cos>(layout),
             UnaryOp::Tan => input_storage.unary_impl::<Tan>(layout),
@@ -1005,6 +1008,8 @@ impl HoduExecutor {
             UnaryScalarOp::MinimumScalar => input_storage.unary_scalar_impl::<MinimumScalar>(layout, scalar),
             UnaryScalarOp::LeakyRelu => input_storage.unary_scalar_impl::<LeakyRelu>(layout, scalar),
             UnaryScalarOp::Elu => input_storage.unary_scalar_impl::<Elu>(layout, scalar),
+            UnaryScalarOp::Prelu => input_storage.unary_scalar_impl::<Prelu>(layout, scalar),
+            UnaryScalarOp::Rrelu => input_storage.unary_scalar_impl::<Rrelu>(layout, scalar),
         }
     }
 

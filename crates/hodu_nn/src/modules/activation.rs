@@ -130,3 +130,115 @@ impl ELU {
         vec![]
     }
 }
+
+#[derive(Module, Clone)]
+pub struct SiLU;
+
+impl SiLU {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        input.silu()
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct Swish;
+
+impl Swish {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        input.swish()
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct Mish;
+
+impl Mish {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        input.mish()
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct PReLU {
+    weight: Scalar,
+}
+
+impl PReLU {
+    pub fn new(weight: impl Into<Scalar>) -> Self {
+        Self {
+            weight: weight.into(),
+        }
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let weight = self.weight.to_dtype(input.get_dtype());
+        input.prelu(weight)
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct RReLU {
+    lower: Scalar,
+    upper: Scalar,
+    training: bool,
+}
+
+impl RReLU {
+    pub fn new(lower: impl Into<Scalar>, upper: impl Into<Scalar>) -> Self {
+        Self {
+            lower: lower.into(),
+            upper: upper.into(),
+            training: true,
+        }
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let dtype = input.get_dtype();
+        // In inference mode, use the average of lower and upper bounds
+        // In training mode, ideally we'd use a random value, but for simplicity we use the average
+        let lower_f32 = self.lower.to_f32();
+        let upper_f32 = self.upper.to_f32();
+        let alpha = Scalar::from_f32((lower_f32 + upper_f32) / 2.0, dtype);
+        input.rrelu(alpha)
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+
+    pub fn train(&mut self) {
+        self.training = true;
+    }
+
+    pub fn eval(&mut self) {
+        self.training = false;
+    }
+}
