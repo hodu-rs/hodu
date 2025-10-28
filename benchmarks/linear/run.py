@@ -256,232 +256,189 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
         print_color(RED, "No timing data found")
         return
 
-    print("\n" + "=" * 110)
+    print("\n" + "=" * 140)
     print("MLP Block Benchmark Results (3-layer MLP with GELU and Residual)")
-    print("=" * 110)
+    print("=" * 140)
 
-    for size in sizes:
-        print(f"\n[{size}] (batch_size x in_features x hidden_features x out_features)")
-        print(f"{'Framework':<25} {'Mode':<15} {'Time (ms)':>12} {'Faster than':>12}")
-        print("-" * 110)
+    # Print sizes as metadata
+    sizes_str = ", ".join(sizes)
+    print(f"\nSizes: {sizes_str}\n")
 
-        # Print CPU results first
-        if cpu_results:
-            cpu_baseline_results = all_results.get(cpu_baseline, {})
-            cpu_baseline_time = cpu_baseline_results.get(size)
+    # Build simple header - All Times first, then all Ratios
+    label_parts = []
 
-            impl_names = sorted(cpu_results.keys())
+    # First add all Time columns
+    for i, size in enumerate(sizes):
+        if i == 0:
+            label_parts.append(f"{'Time(ms)':>10}")
+        else:
+            label_parts.append(f"{'':>10}")
 
-            for impl_name in impl_names:
-                results = cpu_results[impl_name]
+    # Then add all Ratio columns
+    for i, size in enumerate(sizes):
+        if i == 0:
+            label_parts.append(f"{'Ratio':>12}")
+        else:
+            label_parts.append(f"{'':>12}")
+
+    label_header = "  ".join(label_parts)
+    header_line = f"{'Framework':>12} {'Mode':>15} {label_header}"
+    print(header_line)
+    print("-" * 140)
+
+    # Print CPU results first
+    if cpu_results:
+        cpu_baseline_results = all_results.get(cpu_baseline, {})
+        impl_names = sorted(cpu_results.keys())
+
+        for impl_name in impl_names:
+            results = cpu_results[impl_name]
+
+            # Extract framework and mode
+            parts = impl_name.split(" - ")
+            framework = parts[0] if parts else impl_name
+            mode = parts[1] if len(parts) > 1 else ""
+
+            if impl_name == cpu_baseline:
+                fw_color = BLUE
+            elif framework == "Hodu":
+                fw_color = LIGHT_PINK
+            else:
+                fw_color = CYAN
+
+            # Build output with Times first, then Ratios
+            time_parts = []
+            ratio_parts = []
+
+            for size in sizes:
                 time_ms = results.get(size)
+                cpu_baseline_time = cpu_baseline_results.get(size)
 
+                # Time column
                 if time_ms is None:
-                    continue
+                    time_parts.append(f"{'N/A':>10}")
+                elif time_ms == "TIMEOUT":
+                    time_parts.append(f"{'TIMEOUT':>10}")
+                elif time_ms == "ERROR":
+                    time_parts.append(f"{'ERROR':>10}")
+                else:
+                    time_parts.append(f"{time_ms:>10.4f}")
 
-                # Extract framework and mode
-                parts = impl_name.split(" - ")
-                framework = parts[0] if parts else impl_name
-                mode = parts[1] if len(parts) > 1 else ""
-
-                # Handle TIMEOUT cases
-                if time_ms == "TIMEOUT":
-                    ratio_str = ""
-                    ratio_color = RED
+                # Ratio column
+                if time_ms is None:
+                    ratio_parts.append(f"{'':>12}")
+                elif time_ms == "TIMEOUT":
                     if (
                         cpu_baseline_time
                         and cpu_baseline_time != "TIMEOUT"
                         and cpu_baseline_time != "ERROR"
+                        and isinstance(cpu_baseline_time, (int, float))
+                        and cpu_baseline_time > 0
                     ):
-                        if (
-                            isinstance(cpu_baseline_time, (int, float))
-                            and cpu_baseline_time > 0
-                        ):
-                            max_ratio = cpu_baseline_time / 1000.0
-                            ratio_str = f"<{max_ratio:.2f}x"
-                        else:
-                            ratio_str = "<0.01x"
+                        max_ratio = cpu_baseline_time / 1000.0
+                        ratio_parts.append(f"{RED}{f'<{max_ratio:.2f}x':>12}{NC}")
                     else:
-                        ratio_str = "TIMEOUT"
-
-                    if impl_name == cpu_baseline:
-                        fw_color = BLUE
-                    elif framework == "Hodu":
-                        fw_color = LIGHT_PINK
-                    else:
-                        fw_color = CYAN
-                    framework_str = f"{framework:<25}"
-                    mode_str = f"{mode:<15}"
-                    time_str = f"{'TIMEOUT':>12}"
-                    ratio_str_formatted = f"{ratio_str:>12}"
-
-                    print(
-                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_color}{ratio_str_formatted}{NC}"
-                    )
-                    continue
-
-                # Handle ERROR cases
-                if time_ms == "ERROR":
-                    if impl_name == cpu_baseline:
-                        fw_color = BLUE
-                    elif framework == "Hodu":
-                        fw_color = LIGHT_PINK
-                    else:
-                        fw_color = CYAN
-                    framework_str = f"{framework:<25}"
-                    mode_str = f"{mode:<15}"
-                    time_str = f"{'ERROR':>12}"
-                    ratio_str_formatted = f"{'N/A':>12}"
-
-                    print(
-                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_str_formatted}"
-                    )
-                    continue
-
-                # Calculate ratio vs CPU baseline for normal cases
-                ratio_str = ""
-                ratio_color = NC
-                if cpu_baseline_time == "TIMEOUT" or cpu_baseline_time == "ERROR":
-                    ratio_str = "N/A"
-                    ratio_color = NC
-                elif (
-                    cpu_baseline_time
-                    and isinstance(cpu_baseline_time, (int, float))
-                    and cpu_baseline_time > 0
-                ):
-                    ratio = cpu_baseline_time / time_ms
-                    ratio_str = f"{ratio:.2f}x"
-                    ratio_color = get_ratio_color(ratio)
-                elif impl_name == cpu_baseline:
-                    ratio_str = "baseline"
-                    ratio_color = WHITE
-
-                if impl_name == cpu_baseline:
-                    fw_color = BLUE
-                elif framework == "Hodu":
-                    fw_color = LIGHT_PINK
+                        ratio_parts.append(f"{RED}{'TIMEOUT':>12}{NC}")
+                elif time_ms == "ERROR":
+                    ratio_parts.append(f"{'N/A':>12}")
                 else:
-                    fw_color = CYAN
-                framework_str = f"{framework:<25}"
-                mode_str = f"{mode:<15}"
-                time_str = f"{time_ms:>12.4f}"
-                ratio_str_formatted = f"{ratio_str:>12}"
+                    # Calculate ratio vs CPU baseline
+                    if cpu_baseline_time == "TIMEOUT" or cpu_baseline_time == "ERROR":
+                        ratio_parts.append(f"{'N/A':>12}")
+                    elif (
+                        cpu_baseline_time
+                        and isinstance(cpu_baseline_time, (int, float))
+                        and cpu_baseline_time > 0
+                    ):
+                        ratio = cpu_baseline_time / time_ms
+                        ratio_color = get_ratio_color(ratio)
+                        ratio_parts.append(f"{ratio_color}{f'{ratio:.2f}x':>12}{NC}")
+                    elif impl_name == cpu_baseline:
+                        ratio_parts.append(f"{WHITE}{'baseline':>12}{NC}")
+                    else:
+                        ratio_parts.append(f"{'':>12}")
 
-                print(
-                    f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
-                )
+            output_str = "  ".join(time_parts + ratio_parts)
 
-        # Print separator between CPU and GPU
-        if cpu_results and gpu_results:
-            print("-" * 110)
+            print(f"{fw_color}{framework:>12}{NC} {mode:>15} {output_str}")
 
-        # Print GPU results
-        if gpu_results:
-            gpu_baseline_results = all_results.get(gpu_baseline, {})
-            gpu_baseline_time = gpu_baseline_results.get(size)
+    # Print GPU results
+    if gpu_results:
+        gpu_baseline_results = all_results.get(gpu_baseline, {})
+        impl_names = sorted(gpu_results.keys())
 
-            impl_names = sorted(gpu_results.keys())
+        for impl_name in impl_names:
+            results = gpu_results[impl_name]
 
-            for impl_name in impl_names:
-                results = gpu_results[impl_name]
+            # Extract framework and mode
+            parts = impl_name.split(" - ")
+            framework = parts[0] if parts else impl_name
+            mode = parts[1] if len(parts) > 1 else ""
+
+            if impl_name == gpu_baseline:
+                fw_color = BLUE
+            elif framework == "Hodu":
+                fw_color = LIGHT_PINK
+            else:
+                fw_color = CYAN
+
+            # Build output with Times first, then Ratios
+            time_parts = []
+            ratio_parts = []
+
+            for size in sizes:
                 time_ms = results.get(size)
+                gpu_baseline_time = gpu_baseline_results.get(size)
 
+                # Time column
                 if time_ms is None:
-                    continue
+                    time_parts.append(f"{'N/A':>10}")
+                elif time_ms == "TIMEOUT":
+                    time_parts.append(f"{'TIMEOUT':>10}")
+                elif time_ms == "ERROR":
+                    time_parts.append(f"{'ERROR':>10}")
+                else:
+                    time_parts.append(f"{time_ms:>10.4f}")
 
-                # Extract framework and mode
-                parts = impl_name.split(" - ")
-                framework = parts[0] if parts else impl_name
-                mode = parts[1] if len(parts) > 1 else ""
-
-                # Handle TIMEOUT cases
-                if time_ms == "TIMEOUT":
-                    ratio_str = ""
-                    ratio_color = RED
+                # Ratio column
+                if time_ms is None:
+                    ratio_parts.append(f"{'':>12}")
+                elif time_ms == "TIMEOUT":
                     if (
                         gpu_baseline_time
                         and gpu_baseline_time != "TIMEOUT"
                         and gpu_baseline_time != "ERROR"
+                        and isinstance(gpu_baseline_time, (int, float))
+                        and gpu_baseline_time > 0
                     ):
-                        if (
-                            isinstance(gpu_baseline_time, (int, float))
-                            and gpu_baseline_time > 0
-                        ):
-                            max_ratio = gpu_baseline_time / 1000.0
-                            ratio_str = f"<{max_ratio:.2f}x"
-                        else:
-                            ratio_str = "<0.01x"
+                        max_ratio = gpu_baseline_time / 1000.0
+                        ratio_parts.append(f"{RED}{f'<{max_ratio:.2f}x':>12}{NC}")
                     else:
-                        ratio_str = "TIMEOUT"
-
-                    if impl_name == gpu_baseline:
-                        fw_color = BLUE
-                    elif framework == "Hodu":
-                        fw_color = LIGHT_PINK
-                    else:
-                        fw_color = CYAN
-                    framework_str = f"{framework:<25}"
-                    mode_str = f"{mode:<15}"
-                    time_str = f"{'TIMEOUT':>12}"
-                    ratio_str_formatted = f"{ratio_str:>12}"
-
-                    print(
-                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_color}{ratio_str_formatted}{NC}"
-                    )
-                    continue
-
-                # Handle ERROR cases
-                if time_ms == "ERROR":
-                    if impl_name == gpu_baseline:
-                        fw_color = BLUE
-                    elif framework == "Hodu":
-                        fw_color = LIGHT_PINK
-                    else:
-                        fw_color = CYAN
-                    framework_str = f"{framework:<25}"
-                    mode_str = f"{mode:<15}"
-                    time_str = f"{'ERROR':>12}"
-                    ratio_str_formatted = f"{'N/A':>12}"
-
-                    print(
-                        f"{fw_color}{framework_str}{NC} {mode_str} {RED}{time_str}{NC} {ratio_str_formatted}"
-                    )
-                    continue
-
-                # Calculate ratio vs GPU baseline for normal cases
-                ratio_str = ""
-                ratio_color = NC
-                if gpu_baseline_time == "TIMEOUT" or gpu_baseline_time == "ERROR":
-                    ratio_str = "N/A"
-                    ratio_color = NC
-                elif (
-                    gpu_baseline_time
-                    and isinstance(gpu_baseline_time, (int, float))
-                    and gpu_baseline_time > 0
-                ):
-                    ratio = gpu_baseline_time / time_ms
-                    ratio_str = f"{ratio:.2f}x"
-                    ratio_color = get_ratio_color(ratio)
-                elif impl_name == gpu_baseline:
-                    ratio_str = "baseline"
-                    ratio_color = WHITE
-
-                if impl_name == gpu_baseline:
-                    fw_color = BLUE
-                elif framework == "Hodu":
-                    fw_color = LIGHT_PINK
+                        ratio_parts.append(f"{RED}{'TIMEOUT':>12}{NC}")
+                elif time_ms == "ERROR":
+                    ratio_parts.append(f"{'N/A':>12}")
                 else:
-                    fw_color = CYAN
-                framework_str = f"{framework:<25}"
-                mode_str = f"{mode:<15}"
-                time_str = f"{time_ms:>12.4f}"
-                ratio_str_formatted = f"{ratio_str:>12}"
+                    # Calculate ratio vs GPU baseline
+                    if gpu_baseline_time == "TIMEOUT" or gpu_baseline_time == "ERROR":
+                        ratio_parts.append(f"{'N/A':>12}")
+                    elif (
+                        gpu_baseline_time
+                        and isinstance(gpu_baseline_time, (int, float))
+                        and gpu_baseline_time > 0
+                    ):
+                        ratio = gpu_baseline_time / time_ms
+                        ratio_color = get_ratio_color(ratio)
+                        ratio_parts.append(f"{ratio_color}{f'{ratio:.2f}x':>12}{NC}")
+                    elif impl_name == gpu_baseline:
+                        ratio_parts.append(f"{WHITE}{'baseline':>12}{NC}")
+                    else:
+                        ratio_parts.append(f"{'':>12}")
 
-                print(
-                    f"{fw_color}{framework_str}{NC} {mode_str} {time_str} {ratio_color}{ratio_str_formatted}{NC}"
-                )
+            output_str = "  ".join(time_parts + ratio_parts)
 
-    print("\n" + "=" * 110)
+            print(f"{fw_color}{framework:>12}{NC} {mode:>15} {output_str}")
+
+    print("\n" + "=" * 140)
 
 
 def main():

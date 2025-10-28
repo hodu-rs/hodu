@@ -122,7 +122,6 @@ def main():
 
     # 3. Create virtual environments and install packages
     base_path = Path(__file__).parent
-
     for config in VENV_CONFIGS:
         venv_name = config["name"]
         packages = [pkg for pkg in config["packages"] if pkg is not None]
