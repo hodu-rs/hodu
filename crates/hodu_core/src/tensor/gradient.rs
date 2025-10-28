@@ -249,6 +249,53 @@ impl VjpCompute for UnaryOp {
 
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
+            UnaryOp::Silu => {
+                // d/dx SiLU(x) = d/dx (x * sigmoid(x)) = sigmoid(x) + x * sigmoid(x) * (1 - sigmoid(x))
+                // = sigmoid(x) * (1 + x * (1 - sigmoid(x)))
+                let sigmoid_x = create_sigmoid_tensor(input)?;
+                let ones = create_ones_like_tensor(input)?;
+                let one_minus_sigmoid = create_sub_tensor(ones, sigmoid_x)?;
+                let x_times_one_minus_sigmoid = create_mul_tensor(input, one_minus_sigmoid)?;
+                let one_plus_term = create_add_tensor(ones, x_times_one_minus_sigmoid)?;
+                let derivative = create_mul_tensor(sigmoid_x, one_plus_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Swish => {
+                // Swish is identical to SiLU, same derivative
+                let sigmoid_x = create_sigmoid_tensor(input)?;
+                let ones = create_ones_like_tensor(input)?;
+                let one_minus_sigmoid = create_sub_tensor(ones, sigmoid_x)?;
+                let x_times_one_minus_sigmoid = create_mul_tensor(input, one_minus_sigmoid)?;
+                let one_plus_term = create_add_tensor(ones, x_times_one_minus_sigmoid)?;
+                let derivative = create_mul_tensor(sigmoid_x, one_plus_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Mish => {
+                // d/dx Mish(x) = d/dx (x * tanh(softplus(x)))
+                // = tanh(softplus(x)) + x * sech²(softplus(x)) * sigmoid(x)
+
+                // softplus(x) = ln(1 + exp(x))
+                let exp_x = create_exp_tensor(input)?;
+                let ones = create_ones_like_tensor(input)?;
+                let one_plus_exp_x = create_add_tensor(ones, exp_x)?;
+                let softplus_x = create_ln_tensor(one_plus_exp_x)?;
+
+                let tanh_softplus = create_tanh_tensor(softplus_x)?;
+                let sigmoid_x = create_sigmoid_tensor(input)?;
+
+                // sech²(softplus(x)) = 1 - tanh²(softplus(x))
+                let tanh_softplus_squared = create_mul_tensor(tanh_softplus, tanh_softplus)?;
+                let ones_for_sech = create_ones_like_tensor(input)?;
+                let sech_squared_softplus = create_sub_tensor(ones_for_sech, tanh_softplus_squared)?;
+
+                // x * sech²(softplus(x)) * sigmoid(x)
+                let sech_times_sigmoid = create_mul_tensor(sech_squared_softplus, sigmoid_x)?;
+                let x_times_term = create_mul_tensor(input, sech_times_sigmoid)?;
+
+                // Total derivative = tanh(softplus(x)) + x * sech²(softplus(x)) * sigmoid(x)
+                let derivative = create_add_tensor(tanh_softplus, x_times_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
             UnaryOp::Sin => {
                 // d/dx sin(x) = cos(x)
                 let cos_input = create_cos_tensor(input)?;
@@ -472,6 +519,20 @@ impl VjpCompute for UnaryScalarOp {
                 let exp_input = create_exp_tensor(input)?;
                 let alpha_exp = create_mul_scalar_tensor(exp_input, alpha)?;
                 let neg_grad = create_mul_tensor(mask_neg, alpha_exp)?;
+                let total_grad = create_add_tensor(mask_pos, neg_grad)?;
+                Ok(vec![create_mul_tensor(grad_output, total_grad)?])
+            },
+            UnaryScalarOp::Prelu => {
+                // d/dx prelu(x, alpha) = 1 if x > 0, else alpha
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.get_dtype();
+                let zero = Scalar::zero(dtype);
+                let alpha = scalar;
+                let mask_pos = create_gt_scalar_tensor(input, zero)?;
+                let mask_neg = create_le_scalar_tensor(input, zero)?;
+                let ones_like_input = create_ones_like_tensor(input)?;
+                let alpha_tensor = create_mul_scalar_tensor(ones_like_input, alpha)?;
+                let neg_grad = create_mul_tensor(mask_neg, alpha_tensor)?;
                 let total_grad = create_add_tensor(mask_pos, neg_grad)?;
                 Ok(vec![create_mul_tensor(grad_output, total_grad)?])
             },

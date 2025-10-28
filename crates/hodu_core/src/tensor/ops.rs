@@ -438,6 +438,9 @@ impl Tensor {
     unary_op!(tanh, Tanh);
     unary_op!(gelu, Gelu);
     unary_op!(softplus, Softplus);
+    unary_op!(silu, Silu);
+    unary_op!(swish, Swish);
+    unary_op!(mish, Mish);
 
     unary_op!(sin, Sin);
     unary_op!(cos, Cos);
@@ -464,6 +467,7 @@ impl Tensor {
 
     unary_scalar_op!(leaky_relu, LeakyRelu);
     unary_scalar_op!(elu, Elu);
+    unary_scalar_op!(prelu, Prelu);
 
     // Matrix operations
     pub fn matmul(&self, other: &Self) -> HoduResult<Self> {
