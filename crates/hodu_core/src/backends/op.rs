@@ -157,7 +157,6 @@ pub enum UnaryOp {
     Gelu,
     Softplus,
     Silu,
-    Swish,
     Mish,
 
     Sin,
@@ -955,7 +954,6 @@ pub(crate) struct Tanh;
 pub(crate) struct Gelu;
 pub(crate) struct Softplus;
 pub(crate) struct Silu;
-pub(crate) struct Swish;
 pub(crate) struct Mish;
 pub(crate) struct Sin;
 pub(crate) struct Cos;
@@ -1568,76 +1566,6 @@ impl UnaryOpT for Silu {
         todo!("no unary function for i64")
     }
 }
-
-impl UnaryOpT for Swish {
-    const NAME: &'static str = "swish";
-
-    #[inline(always)]
-    fn bool(_: bool) -> bool {
-        todo!("no unary function for bool")
-    }
-    #[inline(always)]
-    fn f8e4m3(v: F8E4M3) -> F8E4M3 {
-        let one = F8E4M3::from(1.0f32);
-        v * (one / (one + (-v).exp()))
-    }
-    #[inline(always)]
-    fn f8e5m2(v: F8E5M2) -> F8E5M2 {
-        let one = F8E5M2::from(1.0f32);
-        v * (one / (one + (-v).exp()))
-    }
-    #[inline(always)]
-    fn bf16(v: bf16) -> bf16 {
-        let one = bf16::from_f32(1.0);
-        v * (one / (one + (-v).exp()))
-    }
-    #[inline(always)]
-    fn f16(v: f16) -> f16 {
-        let one = f16::from_f32(1.0);
-        v * (one / (one + (-v).exp()))
-    }
-    #[inline(always)]
-    fn f32(v: f32) -> f32 {
-        v * (1.0 / (1.0 + (-v).exp()))
-    }
-    #[inline(always)]
-    fn f64(v: f64) -> f64 {
-        v * (1.0 / (1.0 + (-v).exp()))
-    }
-    #[inline(always)]
-    fn u8(_: u8) -> u8 {
-        todo!("no unary function for u8")
-    }
-    #[inline(always)]
-    fn u16(_: u16) -> u16 {
-        todo!("no unary function for u16")
-    }
-    #[inline(always)]
-    fn u32(_: u32) -> u32 {
-        todo!("no unary function for u32")
-    }
-    #[inline(always)]
-    fn u64(_: u64) -> u64 {
-        todo!("no unary function for u64")
-    }
-    #[inline(always)]
-    fn i8(_: i8) -> i8 {
-        todo!("no unary function for i8")
-    }
-    #[inline(always)]
-    fn i16(_: i16) -> i16 {
-        todo!("no unary function for i16")
-    }
-    #[inline(always)]
-    fn i32(_: i32) -> i32 {
-        todo!("no unary function for i32")
-    }
-    #[inline(always)]
-    fn i64(_: i64) -> i64 {
-        todo!("no unary function for i64")
-    }
-}
-
 impl UnaryOpT for Mish {
     const NAME: &'static str = "mish";
 

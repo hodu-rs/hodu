@@ -79,16 +79,15 @@ Element-wise operations on a single tensor.
 
 ### Activation Functions
 
-| Operation | Description | Unsupported Types |
-|-----------|-------------|-------------------|
-| `relu` | ReLU: `max(0, a)` | `bool`, `u8`-`u64` |
-| `sigmoid` | Sigmoid: `1 / (1 + exp(-a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `tanh` | Hyperbolic tangent | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `gelu` | Gaussian Error Linear Unit | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `softplus` | Softplus: `ln(1 + exp(a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `silu` | SiLU (Swish): `a * sigmoid(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `swish` | Swish (alias for SiLU): `a * sigmoid(a)` | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `mish` | Mish: `a * tanh(softplus(a))` | `bool`, `u8`-`u64`, `i8`-`i64` |
+| Operation | Description | Aliases | Unsupported Types |
+|-----------|-------------|---------|-------------------|
+| `relu` | ReLU: `max(0, a)` | - | `bool`, `u8u64` |
+| `sigmoid` | Sigmoid: `1 / (1 + exp(-a))` | - | `bool`, `u8u64`, `i8i64` |
+| `tanh` | Hyperbolic tangent | - | `bool`, `u8u64`, `i8i64` |
+| `gelu` | Gaussian Error Linear Unit | - | `bool`, `u8u64`, `i8i64` |
+| `softplus` | Softplus: `ln(1 + exp(a))` | - | `bool`, `u8u64`, `i8i64` |
+| `silu` | SiLU (Swish): `a * sigmoid(a)` | `swish` | `bool`, `u8u64`, `i8i64` |
+| `mish` | Mish: `a * tanh(softplus(a))` | - | `bool`, `u8u64`, `i8i64` |
 
 ### Trigonometric Functions
 

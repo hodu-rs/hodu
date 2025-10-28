@@ -164,7 +164,7 @@ pub fn validate_dtype_for_op(dtype: DType, op: &Op) -> HoduResult<()> {
                     });
                 }
             },
-            UnaryOp::Sigmoid | UnaryOp::Tanh | UnaryOp::Gelu | UnaryOp::Softplus | UnaryOp::Silu | UnaryOp::Swish | UnaryOp::Mish => {
+            UnaryOp::Sigmoid | UnaryOp::Tanh | UnaryOp::Gelu | UnaryOp::Softplus | UnaryOp::Silu | UnaryOp::Mish => {
                 if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
                     return Err(HoduError::UnsupportedDType {
                         dtype,

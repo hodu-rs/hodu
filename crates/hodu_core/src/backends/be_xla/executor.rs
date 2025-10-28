@@ -480,6 +480,22 @@ impl XlaExecutor {
                         let one_plus_exp = one.add_(&exp_x).map_err(xla_error_to_hodu_error)?;
                         one_plus_exp.log()
                     },
+                    UnaryOp::Silu => {
+                        // silu(x) = x * sigmoid(x)
+                        let x = &input_ops[0];
+                        let sigmoid = x.logistic().map_err(xla_error_to_hodu_error)?;
+                        x.mul_(&sigmoid)
+                    },
+                    UnaryOp::Mish => {
+                        // mish(x) = x * tanh(softplus(x)) = x * tanh(ln(1 + exp(x)))
+                        let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
+                        let x = &input_ops[0];
+                        let exp_x = x.exp().map_err(xla_error_to_hodu_error)?;
+                        let one_plus_exp = one.add_(&exp_x).map_err(xla_error_to_hodu_error)?;
+                        let softplus = one_plus_exp.log().map_err(xla_error_to_hodu_error)?;
+                        let tanh_softplus = softplus.tanh().map_err(xla_error_to_hodu_error)?;
+                        x.mul_(&tanh_softplus)
+                    },
 
                     UnaryOp::Sin => input_ops[0].sin(),
                     UnaryOp::Cos => input_ops[0].cos(),
@@ -573,6 +589,20 @@ impl XlaExecutor {
                             .map_err(xla_error_to_hodu_error)?;
                         let condition = input_ops[0].gt(&zero).map_err(xla_error_to_hodu_error)?;
                         condition.select(&input_ops[0], &elu_negative)
+                    },
+                    UnaryScalarOp::Prelu => {
+                        // PReLU: x if x > 0, else α * x
+                        let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
+                        let negative_part = scalar_op.mul_(&input_ops[0]).map_err(xla_error_to_hodu_error)?;
+                        let condition = input_ops[0].gt(&zero).map_err(xla_error_to_hodu_error)?;
+                        condition.select(&input_ops[0], &negative_part)
+                    },
+                    UnaryScalarOp::Rrelu => {
+                        // RReLU: x if x > 0, else α * x (α is the average in inference mode)
+                        let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
+                        let negative_part = scalar_op.mul_(&input_ops[0]).map_err(xla_error_to_hodu_error)?;
+                        let condition = input_ops[0].gt(&zero).map_err(xla_error_to_hodu_error)?;
+                        condition.select(&input_ops[0], &negative_part)
                     },
                 }
                 .map_err(xla_error_to_hodu_error)?;

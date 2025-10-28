@@ -44,7 +44,7 @@ tanh
 gelu
 softplus
 silu
-swish
+swish@
 mish
 // unary - trigonometric
 sin

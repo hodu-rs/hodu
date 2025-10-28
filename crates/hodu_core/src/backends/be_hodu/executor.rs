@@ -959,7 +959,6 @@ impl HoduExecutor {
             UnaryOp::Tanh => input_storage.unary_impl::<Tanh>(layout),
             UnaryOp::Gelu => input_storage.unary_impl::<Gelu>(layout),
             UnaryOp::Silu => input_storage.unary_impl::<Silu>(layout),
-            UnaryOp::Swish => input_storage.unary_impl::<Swish>(layout),
             UnaryOp::Mish => input_storage.unary_impl::<Mish>(layout),
             UnaryOp::Sin => input_storage.unary_impl::<Sin>(layout),
             UnaryOp::Cos => input_storage.unary_impl::<Cos>(layout),

@@ -260,16 +260,6 @@ impl VjpCompute for UnaryOp {
                 let derivative = create_mul_tensor(sigmoid_x, one_plus_term)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
-            UnaryOp::Swish => {
-                // Swish is identical to SiLU, same derivative
-                let sigmoid_x = create_sigmoid_tensor(input)?;
-                let ones = create_ones_like_tensor(input)?;
-                let one_minus_sigmoid = create_sub_tensor(ones, sigmoid_x)?;
-                let x_times_one_minus_sigmoid = create_mul_tensor(input, one_minus_sigmoid)?;
-                let one_plus_term = create_add_tensor(ones, x_times_one_minus_sigmoid)?;
-                let derivative = create_mul_tensor(sigmoid_x, one_plus_term)?;
-                Ok(vec![create_mul_tensor(grad_output, derivative)?])
-            },
             UnaryOp::Mish => {
                 // d/dx Mish(x) = d/dx (x * tanh(softplus(x)))
                 // = tanh(softplus(x)) + x * sech²(softplus(x)) * sigmoid(x)
