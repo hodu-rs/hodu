@@ -50,6 +50,9 @@ sigmoid: bool, U, I
 tanh: bool, U, I
 gelu: bool, U, I
 softplus: bool, U, I
+silu: bool, U, I
+swish: bool, U, I
+mish: bool, U, I
 
 // unary - trigonometric
 sin: bool, U, I
@@ -79,6 +82,8 @@ minimum_scalar: bool
 // unary with scalar - activation
 leaky_relu: bool, U, I
 elu: bool, U, I
+prelu: bool, U, I
+rrelu: bool, U, I
 
 // matrix
 matmul: bool, U, I

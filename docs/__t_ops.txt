@@ -43,6 +43,9 @@ sigmoid
 tanh
 gelu
 softplus
+silu
+swish
+mish
 // unary - trigonometric
 sin
 cos
@@ -67,6 +70,8 @@ minimum_scalar!
 // unary with scalar - activation
 leaky_relu
 elu
+prelu
+rrelu
 // matrix
 matmul
 dot

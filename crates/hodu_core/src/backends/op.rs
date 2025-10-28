@@ -947,25 +947,25 @@ pub(crate) struct Neg;
 pub(crate) struct Abs;
 pub(crate) struct Sign;
 pub(crate) struct Square;
+pub(crate) struct Sqrt;
+pub(crate) struct Recip;
 pub(crate) struct Relu;
 pub(crate) struct Sigmoid;
 pub(crate) struct Tanh;
 pub(crate) struct Gelu;
-pub(crate) struct Sin;
-pub(crate) struct Cos;
-pub(crate) struct Tan;
-pub(crate) struct Ln;
-pub(crate) struct Log10;
-pub(crate) struct Log2;
-pub(crate) struct Exp;
-pub(crate) struct Exp10;
-pub(crate) struct Exp2;
 pub(crate) struct Softplus;
 pub(crate) struct Silu;
 pub(crate) struct Swish;
 pub(crate) struct Mish;
-pub(crate) struct Recip;
-pub(crate) struct Sqrt;
+pub(crate) struct Sin;
+pub(crate) struct Cos;
+pub(crate) struct Tan;
+pub(crate) struct Exp;
+pub(crate) struct Exp2;
+pub(crate) struct Exp10;
+pub(crate) struct Ln;
+pub(crate) struct Log2;
+pub(crate) struct Log10;
 
 macro_rules! unary_op {
     ($op:ident, $name: literal, $a: ident, $e: expr) => {
@@ -1499,6 +1499,7 @@ impl UnaryOpT for Gelu {
     }
 }
 
+unary_op!(Softplus, "softplus", v, (v.exp() + v / v).ln());
 impl UnaryOpT for Silu {
     const NAME: &'static str = "silu";
 
@@ -1718,8 +1719,6 @@ impl UnaryOpT for Mish {
         todo!("no unary function for i64")
     }
 }
-
-unary_op!(Softplus, "softplus", v, (v.exp() + v / v).ln());
 
 unary_op!(Sin, "sin", v, v.sin());
 unary_op!(Cos, "cos", v, v.cos());
@@ -2662,7 +2661,6 @@ impl UnaryScalarOpT for Elu {
     }
 }
 
-
 impl UnaryScalarOpT for Prelu {
     const NAME: &'static str = "prelu";
 
@@ -2757,7 +2755,6 @@ impl UnaryScalarOpT for Prelu {
         todo!("no unary scalar function for i64")
     }
 }
-
 
 impl UnaryScalarOpT for Rrelu {
     const NAME: &'static str = "rrelu";
