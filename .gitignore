@@ -1,5 +1,6 @@
 target
 Cargo.lock
+.cargo
 
 # OS
 .DS_Store
