@@ -203,3 +203,42 @@ impl PReLU {
         vec![]
     }
 }
+
+#[derive(Module, Clone)]
+pub struct RReLU {
+    lower: Scalar,
+    upper: Scalar,
+    training: bool,
+}
+
+impl RReLU {
+    pub fn new(lower: impl Into<Scalar>, upper: impl Into<Scalar>) -> Self {
+        Self {
+            lower: lower.into(),
+            upper: upper.into(),
+            training: true,
+        }
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let dtype = input.get_dtype();
+        // In inference mode, use the average of lower and upper bounds
+        // In training mode, ideally we'd use a random value, but for simplicity we use the average
+        let lower_f32 = self.lower.to_f32();
+        let upper_f32 = self.upper.to_f32();
+        let alpha = Scalar::from_f32((lower_f32 + upper_f32) / 2.0, dtype);
+        input.rrelu(alpha)
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+
+    pub fn train(&mut self) {
+        self.training = true;
+    }
+
+    pub fn eval(&mut self) {
+        self.training = false;
+    }
+}
