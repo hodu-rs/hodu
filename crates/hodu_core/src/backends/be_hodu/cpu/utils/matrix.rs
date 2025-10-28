@@ -102,6 +102,54 @@ pub fn matmul_map<
             let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
             return Ok(result_typed);
         }
+
+        if TypeId::of::<T>() == TypeId::of::<u8>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const u8, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const u8, rhs_storage.len()) };
+            let c = simd::ops::matmul::u8(a, b, lhs_m, lhs_k, rhs_n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<u16>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const u16, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const u16, rhs_storage.len()) };
+            let c = simd::ops::matmul::u16(a, b, lhs_m, lhs_k, rhs_n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<u32>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const u32, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const u32, rhs_storage.len()) };
+            let c = simd::ops::matmul::u32(a, b, lhs_m, lhs_k, rhs_n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<i8>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const i8, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const i8, rhs_storage.len()) };
+            let c = simd::ops::matmul::i8(a, b, lhs_m, lhs_k, rhs_n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<i16>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const i16, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const i16, rhs_storage.len()) };
+            let c = simd::ops::matmul::i16(a, b, lhs_m, lhs_k, rhs_n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<i32>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const i32, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const i32, rhs_storage.len()) };
+            let c = simd::ops::matmul::i32(a, b, lhs_m, lhs_k, rhs_n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
     }
 
     #[cfg(feature = "rayon")]
@@ -307,6 +355,54 @@ pub fn dot_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output = T>
             let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const f64, lhs_storage.len()) };
             let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const f64, rhs_storage.len()) };
             let c = simd::ops::dot::f64(a, b, m, k1, n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<u8>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const u8, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const u8, rhs_storage.len()) };
+            let c = simd::ops::dot::u8(a, b, m, k1, n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<u16>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const u16, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const u16, rhs_storage.len()) };
+            let c = simd::ops::dot::u16(a, b, m, k1, n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<u32>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const u32, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const u32, rhs_storage.len()) };
+            let c = simd::ops::dot::u32(a, b, m, k1, n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<i8>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const i8, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const i8, rhs_storage.len()) };
+            let c = simd::ops::dot::i8(a, b, m, k1, n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<i16>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const i16, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const i16, rhs_storage.len()) };
+            let c = simd::ops::dot::i16(a, b, m, k1, n);
+            let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
+            return Ok(result_typed);
+        }
+
+        if TypeId::of::<T>() == TypeId::of::<i32>() {
+            let a = unsafe { core::slice::from_raw_parts(lhs_storage.as_ptr() as *const i32, lhs_storage.len()) };
+            let b = unsafe { core::slice::from_raw_parts(rhs_storage.as_ptr() as *const i32, rhs_storage.len()) };
+            let c = simd::ops::dot::i32(a, b, m, k1, n);
             let result_typed = unsafe { core::slice::from_raw_parts(c.as_ptr() as *const T, c.len()) }.to_vec();
             return Ok(result_typed);
         }
