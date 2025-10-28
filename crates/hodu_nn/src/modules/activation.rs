@@ -130,3 +130,76 @@ impl ELU {
         vec![]
     }
 }
+
+#[derive(Module, Clone)]
+pub struct SiLU;
+
+impl SiLU {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        input.silu()
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct Swish;
+
+impl Swish {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        input.swish()
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct Mish;
+
+impl Mish {
+    pub fn new() -> Self {
+        Self
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        input.mish()
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
+
+#[derive(Module, Clone)]
+pub struct PReLU {
+    weight: Scalar,
+}
+
+impl PReLU {
+    pub fn new(weight: impl Into<Scalar>) -> Self {
+        Self {
+            weight: weight.into(),
+        }
+    }
+
+    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let weight = self.weight.to_dtype(input.get_dtype());
+        input.prelu(weight)
+    }
+
+    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+        vec![]
+    }
+}
