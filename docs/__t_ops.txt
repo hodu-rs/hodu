@@ -71,7 +71,6 @@ minimum_scalar!
 leaky_relu
 elu
 prelu
-rrelu
 // matrix
 matmul
 dot

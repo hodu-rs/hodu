@@ -1,5 +1,8 @@
-use crate::compat::*;
-use crate::module::Module;
+use crate::{
+    compat::*,
+    module::Module,
+    state::{get_state, State},
+};
 use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
 #[derive(Module, Clone)]
@@ -206,7 +209,6 @@ impl PReLU {
 pub struct RReLU {
     lower: Scalar,
     upper: Scalar,
-    training: bool,
 }
 
 impl RReLU {
@@ -214,29 +216,36 @@ impl RReLU {
         Self {
             lower: lower.into(),
             upper: upper.into(),
-            training: true,
         }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let dtype = input.get_dtype();
-        // In inference mode, use the average of lower and upper bounds
-        // In training mode, ideally we'd use a random value, but for simplicity we use the average
-        let lower_f32 = self.lower.to_f32();
-        let upper_f32 = self.upper.to_f32();
-        let alpha = Scalar::from_f32((lower_f32 + upper_f32) / 2.0, dtype);
-        input.rrelu(alpha)
+        let zero = Scalar::zero(dtype);
+
+        // Compute alpha based on training/evaluation mode
+        let alpha = if get_state() == State::Training {
+            // Training mode: use random alpha for each element
+            let lower_f32 = self.lower.to_f32();
+            let upper_f32 = self.upper.to_f32();
+            Tensor::rand_uniform_like(input, lower_f32, upper_f32)?
+        } else {
+            // Evaluation mode: use average of lower and upper bounds
+            let avg = (self.lower.to_f32() + self.upper.to_f32()) / 2.0;
+            let avg_scalar = Scalar::from_f32(avg, dtype);
+            Tensor::full_like(input, avg_scalar)?
+        };
+
+        // RReLU: x if x > 0, else alpha * x
+        let mask_pos = input.gt_scalar(zero)?;
+        let mask_neg = input.le_scalar(zero)?;
+        let positive_part = input.mul(&mask_pos.to_dtype(dtype)?)?;
+        let negative_part = input.mul(&alpha)?.mul(&mask_neg.to_dtype(dtype)?)?;
+
+        positive_part.add(&negative_part)
     }
 
     pub fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
-    }
-
-    pub fn train(&mut self) {
-        self.training = true;
-    }
-
-    pub fn eval(&mut self) {
-        self.training = false;
     }
 }

@@ -137,7 +137,6 @@ Element-wise operations between tensor and scalar.
 | `leaky_relu` | Leaky ReLU with negative slope parameter | `bool`, `u8`-`u64`, `i8`-`i64` |
 | `elu` | ELU with alpha parameter | `bool`, `u8`-`u64`, `i8`-`i64` |
 | `prelu` | PReLU (Parametric ReLU) with learnable slope | `bool`, `u8`-`u64`, `i8`-`i64` |
-| `rrelu` | RReLU (Randomized ReLU) with random slope | `bool`, `u8`-`u64`, `i8`-`i64` |
 
 ## Matrix Operations
 

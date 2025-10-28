@@ -902,27 +902,38 @@ f(x) = x           if x > 0
 
 #### RReLU
 
-랜덤화된 Leaky ReLU
+랜덤화된 Leaky ReLU (Randomized Leaky ReLU)
 
 ```rust
 use hodu::nn::modules::RReLU;
 
 let rrelu = RReLU::new(0.125, 0.333);  // 하한, 상한
-let output = rrelu.forward(&input)?;
+let input = Tensor::randn(&[32, 128], 0.0, 1.0)?;
+
+// 학습 시
+train!();
+let output = rrelu.forward(&input)?;  // 각 요소마다 랜덤 alpha 사용
+
+// 평가 시
+eval!();
+let output = rrelu.forward(&input)?;  // 평균값 alpha 사용
 ```
 
 **공식:**
 ```
 f(x) = x           if x > 0
      = α * x       if x ≤ 0
-여기서 α는 훈련 중 uniform(lower, upper)에서 랜덤 샘플링
-     α = (lower + upper) / 2 추론 중
+
+훈련 모드: α ~ Uniform(lower, upper) (각 요소마다 다른 랜덤값)
+평가 모드: α = (lower + upper) / 2 (고정값)
 ```
 
 **특성:**
-- 훈련 중 랜덤화된 음수 기울기
-- 정규화 역할
+- 훈련 중 각 요소에 다른 랜덤 음수 기울기 적용
+- 랜덤화를 통한 정규화 효과
 - 과적합 감소
+- Dropout과 유사한 정규화 역할
+- 평가 시 deterministic (재현 가능)
 
 ### 활성화 함수 비교
 

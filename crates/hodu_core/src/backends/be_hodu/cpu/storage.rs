@@ -539,67 +539,67 @@ impl HoduStorageT for CpuStorage {
         }
     }
 
-    fn unary_scalar_impl<U: UnaryScalarOpT>(&self, layout: &Layout, scalar: Scalar) -> HoduResult<Self> {
+    fn cmp_scalar_impl<C: CmpScalarOpT>(&self, layout: &Layout, scalar: Scalar) -> HoduResult<CpuStorage> {
         match self {
             Self::BOOL(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::bool);
-                Ok(Self::BOOL(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::bool);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::F8E4M3(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::f8e4m3);
-                Ok(Self::F8E4M3(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::f8e4m3);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::F8E5M2(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::f8e5m2);
-                Ok(Self::F8E5M2(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::f8e5m2);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::BF16(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::bf16);
-                Ok(Self::BF16(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::bf16);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::F16(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::f16);
-                Ok(Self::F16(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::f16);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::F32(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::f32);
-                Ok(Self::F32(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::f32);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::F64(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::f64);
-                Ok(Self::F64(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::f64);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::U8(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::u8);
-                Ok(Self::U8(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::u8);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::U16(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::u16);
-                Ok(Self::U16(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::u16);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::U32(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::u32);
-                Ok(Self::U32(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::u32);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::U64(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::u64);
-                Ok(Self::U64(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::u64);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::I8(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::i8);
-                Ok(Self::I8(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::i8);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::I16(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::i16);
-                Ok(Self::I16(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::i16);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::I32(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::i32);
-                Ok(Self::I32(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::i32);
+                Ok(CpuStorage::BOOL(data))
             },
             Self::I64(storage) => {
-                let data = unary_scalar_map(storage, layout, scalar, U::i64);
-                Ok(Self::I64(data))
+                let data = cmp_scalar_map(storage, layout, scalar, C::i64);
+                Ok(CpuStorage::BOOL(data))
             },
         }
     }
@@ -734,67 +734,67 @@ impl HoduStorageT for CpuStorage {
         }
     }
 
-    fn cmp_scalar_impl<C: CmpScalarOpT>(&self, layout: &Layout, scalar: Scalar) -> HoduResult<CpuStorage> {
+    fn unary_scalar_impl<U: UnaryScalarOpT>(&self, layout: &Layout, scalar: Scalar) -> HoduResult<Self> {
         match self {
             Self::BOOL(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::bool);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::bool);
+                Ok(Self::BOOL(data))
             },
             Self::F8E4M3(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::f8e4m3);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::f8e4m3);
+                Ok(Self::F8E4M3(data))
             },
             Self::F8E5M2(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::f8e5m2);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::f8e5m2);
+                Ok(Self::F8E5M2(data))
             },
             Self::BF16(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::bf16);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::bf16);
+                Ok(Self::BF16(data))
             },
             Self::F16(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::f16);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::f16);
+                Ok(Self::F16(data))
             },
             Self::F32(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::f32);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::f32);
+                Ok(Self::F32(data))
             },
             Self::F64(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::f64);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::f64);
+                Ok(Self::F64(data))
             },
             Self::U8(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::u8);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::u8);
+                Ok(Self::U8(data))
             },
             Self::U16(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::u16);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::u16);
+                Ok(Self::U16(data))
             },
             Self::U32(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::u32);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::u32);
+                Ok(Self::U32(data))
             },
             Self::U64(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::u64);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::u64);
+                Ok(Self::U64(data))
             },
             Self::I8(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::i8);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::i8);
+                Ok(Self::I8(data))
             },
             Self::I16(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::i16);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::i16);
+                Ok(Self::I16(data))
             },
             Self::I32(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::i32);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::i32);
+                Ok(Self::I32(data))
             },
             Self::I64(storage) => {
-                let data = cmp_scalar_map(storage, layout, scalar, C::i64);
-                Ok(CpuStorage::BOOL(data))
+                let data = unary_scalar_map(storage, layout, scalar, U::i64);
+                Ok(Self::I64(data))
             },
         }
     }

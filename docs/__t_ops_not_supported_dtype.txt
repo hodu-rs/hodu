@@ -83,7 +83,6 @@ minimum_scalar: bool
 leaky_relu: bool, U, I
 elu: bool, U, I
 prelu: bool, U, I
-rrelu: bool, U, I
 
 // matrix
 matmul: bool, U, I

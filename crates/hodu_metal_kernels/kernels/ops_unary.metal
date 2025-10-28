@@ -232,8 +232,6 @@ UNARY_OP_WITH_CONSTANT(bfloat, bfloat, elu_bf16,
                                               : float(const_val) * (exp(float(x)) - 1.0f)));
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, prelu_bf16,
                        x > 0.0bf ? x : bfloat(float(const_val) * float(x)));
-UNARY_OP_WITH_CONSTANT(bfloat, bfloat, rrelu_bf16,
-                       x > 0.0bf ? x : bfloat(float(const_val) * float(x)));
 
 // ============================================================================
 // HALF (F16) OPERATIONS
@@ -299,7 +297,6 @@ UNARY_OP_WITH_CONSTANT(half, half, elu_f16,
                        half(float(x) > 0.0f ? float(x)
                                             : float(const_val) * (exp(float(x)) - 1.0f)));
 UNARY_OP_WITH_CONSTANT(half, half, prelu_f16, x > 0.0h ? x : half(float(const_val) * float(x)));
-UNARY_OP_WITH_CONSTANT(half, half, rrelu_f16, x > 0.0h ? x : half(float(const_val) * float(x)));
 
 // ============================================================================
 // FLOAT32 OPERATIONS
@@ -360,7 +357,6 @@ UNARY_OP_WITH_CONSTANT(float, float, minimum_scalar_f32, minimum(x, const_val));
 UNARY_OP_WITH_CONSTANT(float, float, leaky_relu_f32, x > 0 ? x : const_val * x);
 UNARY_OP_WITH_CONSTANT(float, float, elu_f32, x > 0 ? x : const_val * (exp(x) - 1.0f));
 UNARY_OP_WITH_CONSTANT(float, float, prelu_f32, x > 0 ? x : const_val * x);
-UNARY_OP_WITH_CONSTANT(float, float, rrelu_f32, x > 0 ? x : const_val * x);
 
 // ============================================================================
 // UINT8 OPERATIONS

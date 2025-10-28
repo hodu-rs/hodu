@@ -988,21 +988,32 @@ Randomized Leaky ReLU
 use hodu::nn::modules::RReLU;
 
 let rrelu = RReLU::new(0.125, 0.333);  // lower, upper bounds
-let output = rrelu.forward(&input)?;
+let input = Tensor::randn(&[32, 128], 0.0, 1.0)?;
+
+// Training mode
+train!();
+let output = rrelu.forward(&input)?;  // Each element uses different random alpha
+
+// Evaluation mode
+eval!();
+let output = rrelu.forward(&input)?;  // Uses fixed average alpha
 ```
 
 **Formula:**
 ```
 f(x) = x           if x > 0
      = α * x       if x ≤ 0
-where α is randomly sampled from uniform(lower, upper) during training
-      α = (lower + upper) / 2 during inference
+
+Training mode: α ~ Uniform(lower, upper) (different random value per element)
+Evaluation mode: α = (lower + upper) / 2 (fixed value)
 ```
 
 **Properties:**
-- Randomized negative slope during training
-- Acts as regularization
+- Each element uses different random negative slope during training
+- Regularization through randomization
 - Reduces overfitting
+- Similar regularization effect as Dropout
+- Deterministic during evaluation (reproducible)
 
 ### Activation Function Comparison
 

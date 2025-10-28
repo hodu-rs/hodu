@@ -1402,7 +1402,7 @@ pub fn unary_scalar_map(
     };
 
     macro_rules! dispatch_unary_scalar {
-        ($op:ident,$dtype:ident,$ty:ty, $conv:expr) => {{
+        ($op:ident, $dtype:ident, $ty:ty, $conv:expr) => {{
             let val: $ty = $conv;
             hodu_metal_kernels::kernels::call_unary_scalar(
                 device.device(),
@@ -1584,17 +1584,6 @@ pub fn unary_scalar_map(
                 return Err(HoduError::UnsupportedDType {
                     dtype,
                     op: "prelu".to_string(),
-                })
-            },
-        },
-        "rrelu" => match dtype {
-            DType::BF16 => dispatch_unary_scalar!(rrelu, BF16, half::bf16, scalar.to_bf16()),
-            DType::F16 => dispatch_unary_scalar!(rrelu, F16, half::f16, scalar.to_f16()),
-            DType::F32 => dispatch_unary_scalar!(rrelu, F32, f32, scalar.to_f32()),
-            _ => {
-                return Err(HoduError::UnsupportedDType {
-                    dtype,
-                    op: "rrelu".to_string(),
                 })
             },
         },

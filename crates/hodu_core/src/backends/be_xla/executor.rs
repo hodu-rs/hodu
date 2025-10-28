@@ -597,13 +597,6 @@ impl XlaExecutor {
                         let condition = input_ops[0].gt(&zero).map_err(xla_error_to_hodu_error)?;
                         condition.select(&input_ops[0], &negative_part)
                     },
-                    UnaryScalarOp::Rrelu => {
-                        // RReLU: x if x > 0, else α * x (α is the average in inference mode)
-                        let zero = builder.constant_r0(0.0f32).map_err(xla_error_to_hodu_error)?;
-                        let negative_part = scalar_op.mul_(&input_ops[0]).map_err(xla_error_to_hodu_error)?;
-                        let condition = input_ops[0].gt(&zero).map_err(xla_error_to_hodu_error)?;
-                        condition.select(&input_ops[0], &negative_part)
-                    },
                 }
                 .map_err(xla_error_to_hodu_error)?;
                 Ok(result)
