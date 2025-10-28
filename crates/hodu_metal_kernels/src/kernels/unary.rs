@@ -21,6 +21,8 @@ ops!(
     tanh,
     gelu,
     softplus,
+    silu,
+    mish,
     sin,
     cos,
     tan,
@@ -45,7 +47,9 @@ ops!(
     gt_scalar,
     ge_scalar,
     leaky_relu,
-    elu
+    elu,
+    prelu,
+    rrelu
 );
 
 #[allow(clippy::too_many_arguments)]

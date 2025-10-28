@@ -193,6 +193,8 @@ UNARY_OP(bfloat, gelu_bf16,
                 (1.0f + tanh(0.7978845608028654f *
                              (float(x) + 0.044715f * float(x) * float(x) * float(x))))));
 UNARY_OP(bfloat, softplus_bf16, bfloat(log(1.0f + exp(float(x)))));
+UNARY_OP(bfloat, silu_bf16, bfloat(float(x) / (1.0f + exp(-float(x)))));
+UNARY_OP(bfloat, mish_bf16, bfloat(float(x) * tanh(log(1.0f + exp(float(x))))));
 
 // unary - trigonometric
 UNARY_OP(bfloat, sin_bf16, bfloat(sin(float(x))));
@@ -228,6 +230,10 @@ UNARY_OP_WITH_CONSTANT(bfloat, bfloat, leaky_relu_bf16,
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, elu_bf16,
                        bfloat(float(x) > 0.0f ? float(x)
                                               : float(const_val) * (exp(float(x)) - 1.0f)));
+UNARY_OP_WITH_CONSTANT(bfloat, bfloat, prelu_bf16,
+                       x > 0.0bf ? x : bfloat(float(const_val) * float(x)));
+UNARY_OP_WITH_CONSTANT(bfloat, bfloat, rrelu_bf16,
+                       x > 0.0bf ? x : bfloat(float(const_val) * float(x)));
 
 // ============================================================================
 // HALF (F16) OPERATIONS
@@ -258,6 +264,8 @@ UNARY_OP(half, gelu_f16,
               (1.0f + tanh(0.7978845608028654f *
                            (float(x) + 0.044715f * float(x) * float(x) * float(x))))));
 UNARY_OP(half, softplus_f16, half(log(1.0f + exp(float(x)))));
+UNARY_OP(half, silu_f16, half(float(x) / (1.0f + exp(-float(x)))));
+UNARY_OP(half, mish_f16, half(float(x) * tanh(log(1.0f + exp(float(x))))));
 
 // unary - trigonometric
 UNARY_OP(half, sin_f16, half(sin(float(x))));
@@ -290,6 +298,8 @@ UNARY_OP_WITH_CONSTANT(half, half, leaky_relu_f16,
 UNARY_OP_WITH_CONSTANT(half, half, elu_f16,
                        half(float(x) > 0.0f ? float(x)
                                             : float(const_val) * (exp(float(x)) - 1.0f)));
+UNARY_OP_WITH_CONSTANT(half, half, prelu_f16, x > 0.0h ? x : half(float(const_val) * float(x)));
+UNARY_OP_WITH_CONSTANT(half, half, rrelu_f16, x > 0.0h ? x : half(float(const_val) * float(x)));
 
 // ============================================================================
 // FLOAT32 OPERATIONS
@@ -318,6 +328,8 @@ UNARY_OP(float, tanh_f32, tanh(x));
 UNARY_OP(float, gelu_f32,
          0.5f * x * (1.0f + tanh(0.7978845608028654f * (x + 0.044715f * x * x * x))));
 UNARY_OP(float, softplus_f32, log(1.0f + exp(x)));
+UNARY_OP(float, silu_f32, x / (1.0f + exp(-x)));
+UNARY_OP(float, mish_f32, x *tanh(log(1.0f + exp(x))));
 
 // unary - trigonometric
 UNARY_OP(float, sin_f32, sin(x));
@@ -347,6 +359,8 @@ UNARY_OP_WITH_CONSTANT(float, float, minimum_scalar_f32, minimum(x, const_val));
 // unary with scalar - activation
 UNARY_OP_WITH_CONSTANT(float, float, leaky_relu_f32, x > 0 ? x : const_val * x);
 UNARY_OP_WITH_CONSTANT(float, float, elu_f32, x > 0 ? x : const_val * (exp(x) - 1.0f));
+UNARY_OP_WITH_CONSTANT(float, float, prelu_f32, x > 0 ? x : const_val * x);
+UNARY_OP_WITH_CONSTANT(float, float, rrelu_f32, x > 0 ? x : const_val * x);
 
 // ============================================================================
 // UINT8 OPERATIONS

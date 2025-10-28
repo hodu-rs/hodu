@@ -1183,6 +1183,8 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
         "tanh" => dispatch_dtype!(tanh),
         "gelu" => dispatch_dtype!(gelu),
         "softplus" => dispatch_dtype!(softplus),
+        "silu" => dispatch_dtype!(silu),
+        "mish" => dispatch_dtype!(mish),
         "sin" => dispatch_dtype!(sin),
         "cos" => dispatch_dtype!(cos),
         "tan" => dispatch_dtype!(tan),
@@ -1549,6 +1551,50 @@ pub fn unary_scalar_map(
                 return Err(HoduError::UnsupportedDType {
                     dtype,
                     op: "minimum_scalar".to_string(),
+                })
+            },
+        },
+        "leaky_relu" => match dtype {
+            DType::BF16 => dispatch_unary_scalar!(leaky_relu, BF16, half::bf16, scalar.to_bf16()),
+            DType::F16 => dispatch_unary_scalar!(leaky_relu, F16, half::f16, scalar.to_f16()),
+            DType::F32 => dispatch_unary_scalar!(leaky_relu, F32, f32, scalar.to_f32()),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "leaky_relu".to_string(),
+                })
+            },
+        },
+        "elu" => match dtype {
+            DType::BF16 => dispatch_unary_scalar!(elu, BF16, half::bf16, scalar.to_bf16()),
+            DType::F16 => dispatch_unary_scalar!(elu, F16, half::f16, scalar.to_f16()),
+            DType::F32 => dispatch_unary_scalar!(elu, F32, f32, scalar.to_f32()),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "elu".to_string(),
+                })
+            },
+        },
+        "prelu" => match dtype {
+            DType::BF16 => dispatch_unary_scalar!(prelu, BF16, half::bf16, scalar.to_bf16()),
+            DType::F16 => dispatch_unary_scalar!(prelu, F16, half::f16, scalar.to_f16()),
+            DType::F32 => dispatch_unary_scalar!(prelu, F32, f32, scalar.to_f32()),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "prelu".to_string(),
+                })
+            },
+        },
+        "rrelu" => match dtype {
+            DType::BF16 => dispatch_unary_scalar!(rrelu, BF16, half::bf16, scalar.to_bf16()),
+            DType::F16 => dispatch_unary_scalar!(rrelu, F16, half::f16, scalar.to_f16()),
+            DType::F32 => dispatch_unary_scalar!(rrelu, F32, f32, scalar.to_f32()),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "rrelu".to_string(),
                 })
             },
         },
