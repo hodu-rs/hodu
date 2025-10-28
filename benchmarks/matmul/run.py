@@ -14,10 +14,31 @@ WHITE = "\033[1;37m"
 LIGHT_PINK = "\033[38;5;218m"
 NC = "\033[0m"  # No Color
 
+# Cursor control
+HIDE_CURSOR = "\033[?25l"
+SHOW_CURSOR = "\033[?25h"
+
+# Global quiet mode flag
+QUIET_MODE = False
+
 
 def print_color(color, text):
     """Prints text in the specified color."""
-    print(f"{color}{text}{NC}")
+    if not QUIET_MODE:
+        print(f"{color}{text}{NC}")
+
+
+def print_progress(current, total):
+    """Print progress percentage in quiet mode (updates same line)."""
+    if QUIET_MODE:
+        if current == 1:
+            # Hide cursor at the start
+            print(HIDE_CURSOR, end="", flush=True)
+        percentage = int((current / total) * 100)
+        bar_length = 20
+        filled = int(bar_length * current / total)
+        bar = "█" * filled + "░" * (bar_length - filled)
+        print(f"\rProgress: [{bar}] {percentage}%    ", end="", flush=True)
 
 
 def run_command(command, cwd=None, env=None):
@@ -122,9 +143,11 @@ def run_hodu_benchmark(mode):
     # Run benchmark (cargo run will build if needed)
     run_cmd = ["cargo", "run", "--release", "--bin", "hodu", "--"]
     if "metal" in mode:
-        run_cmd.insert(3, "--features=metal")
+        run_cmd.insert(3, "--features=metal,hodu-bench")
     elif "xla" in mode:
-        run_cmd.insert(3, "--features=xla")
+        run_cmd.insert(3, "--features=xla,hodu-bench")
+    else:
+        run_cmd.insert(3, "--features=hodu-bench")
     run_cmd.append(mode)
 
     print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
@@ -424,6 +447,8 @@ def print_comparison_table(all_results, cpu_baseline, gpu_baseline):
 
 
 def main():
+    global QUIET_MODE
+
     # Check if we're in the right directory
     if not Path("_hodu.rs").exists():
         print_color(RED, "Error: Must be run from benchmarks/matmul directory")
@@ -434,6 +459,7 @@ def main():
     enable_metal = "--metal" in sys.argv
     enable_cuda = "--cuda" in sys.argv
     enable_xla = "--xla" in sys.argv
+    QUIET_MODE = "--quiet" in sys.argv
 
     # Determine which modes to test
     test_modes = []
@@ -498,32 +524,52 @@ def main():
 
     all_results = {}
 
+    # Calculate total number of benchmarks for progress tracking
+    total_benchmarks = (
+        len(burn_modes)
+        + len(candle_modes)
+        + len(hodu_modes)
+        + len(jax_modes)
+        + len(test_modes) * 2  # TensorFlow + PyTorch
+    )
+    current_benchmark = 0
+
     # Run Burn benchmarks
     for mode in burn_modes:
+        current_benchmark += 1
+        print_progress(current_benchmark, total_benchmarks)
         mode_name, results = run_burn_benchmark(mode)
         if results:
             all_results[f"Burn - {mode_name or mode}"] = results
 
     # Run Candle benchmarks
     for mode in candle_modes:
+        current_benchmark += 1
+        print_progress(current_benchmark, total_benchmarks)
         mode_name, results = run_candle_benchmark(mode)
         if results:
             all_results[f"Candle - {mode_name or mode}"] = results
 
     # Run Hodu benchmarks
     for mode in hodu_modes:
+        current_benchmark += 1
+        print_progress(current_benchmark, total_benchmarks)
         mode_name, results = run_hodu_benchmark(mode)
         if results:
             all_results[f"Hodu - {mode_name or mode}"] = results
 
     # Run JAX benchmarks
     for mode, device in jax_modes:
+        current_benchmark += 1
+        print_progress(current_benchmark, total_benchmarks)
         mode_name, results = run_python_benchmark("_jax.py", mode)
         if results:
             all_results[f"JAX - {mode_name or mode}"] = results
 
     # Run TensorFlow benchmarks
     for mode, device in test_modes:
+        current_benchmark += 1
+        print_progress(current_benchmark, total_benchmarks)
         # TensorFlow uses 'gpu' instead of 'cuda'/'metal'
         tf_mode = mode.replace("cuda", "gpu").replace("metal", "gpu")
         mode_name, results = run_python_benchmark("_tensorflow.py", tf_mode)
@@ -532,9 +578,15 @@ def main():
 
     # Run PyTorch benchmarks
     for mode, device in test_modes:
+        current_benchmark += 1
+        print_progress(current_benchmark, total_benchmarks)
         mode_name, results = run_python_benchmark("_torch.py", mode)
         if results:
             all_results[f"PyTorch - {mode_name or mode}"] = results
+
+    # Print newline after progress indicator in quiet mode
+    if QUIET_MODE:
+        print(SHOW_CURSOR)  # Show cursor and newline
 
     # Find CPU and GPU baselines (PyTorch dynamic-cpu)
     cpu_baseline = None

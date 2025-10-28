@@ -15,6 +15,7 @@ path = "_candle.rs"
 [[bin]]
 name = "hodu"
 path = "_hodu.rs"
+required-features = ["hodu-bench"]
 
 [dependencies]
 burn = "0.18.0"
@@ -22,11 +23,12 @@ burn-ndarray = "0.18.0"
 burn-tch = { version = "0.18.0", optional = true }
 burn-wgpu = { version = "0.18.0", optional = true }
 candle-core = "0.9.1"
-hodu = { path = "../../", version = "0.1.8" }
+hodu = { path = "../../", version = "0.1.8", optional = true }
 
 [features]
 default = []
-metal = ["candle-core/metal", "hodu/metal"]
+hodu-bench = ["hodu"]
+metal = ["candle-core/metal", "hodu?/metal"]
 cuda = ["burn-tch", "candle-core/cuda"]
-xla = ["hodu/xla"]
+xla = ["hodu?/xla"]
 wgpu = ["burn-wgpu"]
