@@ -130,8 +130,16 @@ for test in "${tests[@]}"; do
         cmd="cargo check --no-default-features --features $features"
     fi
 
-    if $cmd &>/dev/null; then
-        echo -e "${BRIGHT_GREEN}✓${NC}"
+    # Capture output to check for warnings
+    output=$($cmd 2>&1)
+    exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        if echo "$output" | grep -q "warning:"; then
+            echo -e "${BRIGHT_YELLOW}△${NC}"
+        else
+            echo -e "${BRIGHT_GREEN}✓${NC}"
+        fi
         ((passed++))
     else
         echo -e "${BRIGHT_RED}✗${NC}"

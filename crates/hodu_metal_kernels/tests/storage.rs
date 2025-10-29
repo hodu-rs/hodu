@@ -1,3 +1,4 @@
+use core::f32;
 use half::{bf16, f16};
 use hodu_metal_kernels::{
     kernel::Kernels,
@@ -76,8 +77,8 @@ fn run_const_set<T: Clone + EncoderParam>(
 fn test_const_set_f32() {
     let shape = vec![10];
     let strides = vec![1];
-    let result = run_const_set(&shape, &strides, 0, 3.14f32, const_set::F32);
-    assert_eq!(result, vec![3.14f32; 10]);
+    let result = run_const_set(&shape, &strides, 0, f32::consts::PI, const_set::F32);
+    assert_eq!(result, vec![f32::consts::PI; 10]);
 }
 
 #[test]

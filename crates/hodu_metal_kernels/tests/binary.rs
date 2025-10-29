@@ -1,3 +1,5 @@
+#![allow(clippy::bool_comparison)]
+
 use half::{bf16, f16};
 use hodu_metal_kernels::{
     kernel::Kernels,

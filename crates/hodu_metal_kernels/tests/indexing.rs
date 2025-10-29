@@ -8,5 +8,4 @@ fn indexing_placeholder() {
     // - Index tensors (with proper bounds)
     // - Complex metadata setup
     // TODO: Implement proper indexing tests
-    assert!(true);
 }

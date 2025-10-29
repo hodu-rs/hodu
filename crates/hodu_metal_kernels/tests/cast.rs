@@ -75,10 +75,7 @@ fn cast_f32_to_bf16() {
 
 #[test]
 fn cast_f16_to_f32() {
-    let input: Vec<f16> = vec![1.0f32, 2.5, 3.75, -1.5]
-        .iter()
-        .map(|&x| f16::from_f32(x))
-        .collect();
+    let input: Vec<f16> = [1.0f32, 2.5, 3.75, -1.5].iter().map(|&x| f16::from_f32(x)).collect();
     let results: Vec<f32> = run_cast(&input, "cast_f16_to_f32");
     let expected: Vec<f32> = input.iter().map(|x| x.to_f32()).collect();
 
@@ -90,10 +87,7 @@ fn cast_f16_to_f32() {
 
 #[test]
 fn cast_bf16_to_f32() {
-    let input: Vec<bf16> = vec![1.0f32, 2.5, 3.75, -1.5]
-        .iter()
-        .map(|&x| bf16::from_f32(x))
-        .collect();
+    let input: Vec<bf16> = [1.0f32, 2.5, 3.75, -1.5].iter().map(|&x| bf16::from_f32(x)).collect();
     let results: Vec<f32> = run_cast(&input, "cast_bf16_to_f32");
     let expected: Vec<f32> = input.iter().map(|x| x.to_f32()).collect();
 

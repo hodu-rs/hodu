@@ -5,6 +5,7 @@ use crate::{
 };
 
 // Helper function to convert flat index to multi-dimensional indices
+#[allow(dead_code)]
 fn flat_to_indices(mut flat_idx: usize, shape: &[usize]) -> Vec<usize> {
     let mut indices = vec![0; shape.len()];
     for i in (0..shape.len()).rev() {
