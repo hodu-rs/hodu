@@ -217,16 +217,20 @@ impl HoduDeviceT for MetalDevice {
     type HoduStorage = MetalStorage;
 
     fn zeros(_: &Layout, _: DType) -> HoduResult<MetalStorage> {
-        Err(HoduError::InternalError(format!("zeros not supported on Metal Device")))
+        Err(HoduError::InternalError(
+            "zeros not supported on Metal Device".to_string(),
+        ))
     }
 
     fn randn(_: &Layout, _: DType, _: f64, _: f64) -> HoduResult<Self::HoduStorage> {
-        Err(HoduError::InternalError(format!("randn not supported on Metal Device")))
+        Err(HoduError::InternalError(
+            "randn not supported on Metal Device".to_string(),
+        ))
     }
 
     fn rand_uniform(_: &Layout, _: DType, _: f64, _: f64) -> HoduResult<Self::HoduStorage> {
-        Err(HoduError::InternalError(format!(
-            "randn uniform not supported on Metal Device"
-        )))
+        Err(HoduError::InternalError(
+            "randn uniform not supported on Metal Device".to_string(),
+        ))
     }
 }

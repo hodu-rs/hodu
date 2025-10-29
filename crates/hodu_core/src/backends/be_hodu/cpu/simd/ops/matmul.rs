@@ -8,7 +8,6 @@ pub fn f32(a: &[f32], b: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
         unsafe {
             super::super::neon::matmul::f32(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -21,8 +20,8 @@ pub fn f32(a: &[f32], b: &[f32], m: usize, k: usize, n: usize) -> Vec<f32> {
                 c[i * n + j] = sum;
             }
         }
-        c
     }
+    c
 }
 
 pub fn f64(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> Vec<f64> {
@@ -33,7 +32,6 @@ pub fn f64(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> Vec<f64> {
         unsafe {
             super::super::neon::matmul::f64(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -46,8 +44,8 @@ pub fn f64(a: &[f64], b: &[f64], m: usize, k: usize, n: usize) -> Vec<f64> {
                 c[i * n + j] = sum;
             }
         }
-        c
     }
+    c
 }
 
 pub fn u8(a: &[u8], b: &[u8], m: usize, k: usize, n: usize) -> Vec<u8> {
@@ -58,7 +56,6 @@ pub fn u8(a: &[u8], b: &[u8], m: usize, k: usize, n: usize) -> Vec<u8> {
         unsafe {
             super::super::neon::matmul::u8(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -71,8 +68,8 @@ pub fn u8(a: &[u8], b: &[u8], m: usize, k: usize, n: usize) -> Vec<u8> {
                 c[i * n + j] = sum.min(255) as u8;
             }
         }
-        c
     }
+    c
 }
 
 pub fn u16(a: &[u16], b: &[u16], m: usize, k: usize, n: usize) -> Vec<u16> {
@@ -83,7 +80,6 @@ pub fn u16(a: &[u16], b: &[u16], m: usize, k: usize, n: usize) -> Vec<u16> {
         unsafe {
             super::super::neon::matmul::u16(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -96,8 +92,8 @@ pub fn u16(a: &[u16], b: &[u16], m: usize, k: usize, n: usize) -> Vec<u16> {
                 c[i * n + j] = sum.min(65535) as u16;
             }
         }
-        c
     }
+    c
 }
 
 pub fn u32(a: &[u32], b: &[u32], m: usize, k: usize, n: usize) -> Vec<u32> {
@@ -108,7 +104,6 @@ pub fn u32(a: &[u32], b: &[u32], m: usize, k: usize, n: usize) -> Vec<u32> {
         unsafe {
             super::super::neon::matmul::u32(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -121,8 +116,8 @@ pub fn u32(a: &[u32], b: &[u32], m: usize, k: usize, n: usize) -> Vec<u32> {
                 c[i * n + j] = sum.min(u32::MAX as u64) as u32;
             }
         }
-        c
     }
+    c
 }
 
 pub fn i8(a: &[i8], b: &[i8], m: usize, k: usize, n: usize) -> Vec<i8> {
@@ -133,7 +128,6 @@ pub fn i8(a: &[i8], b: &[i8], m: usize, k: usize, n: usize) -> Vec<i8> {
         unsafe {
             super::super::neon::matmul::i8(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -146,8 +140,8 @@ pub fn i8(a: &[i8], b: &[i8], m: usize, k: usize, n: usize) -> Vec<i8> {
                 c[i * n + j] = sum.clamp(-128, 127) as i8;
             }
         }
-        c
     }
+    c
 }
 
 pub fn i16(a: &[i16], b: &[i16], m: usize, k: usize, n: usize) -> Vec<i16> {
@@ -158,7 +152,6 @@ pub fn i16(a: &[i16], b: &[i16], m: usize, k: usize, n: usize) -> Vec<i16> {
         unsafe {
             super::super::neon::matmul::i16(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -171,8 +164,8 @@ pub fn i16(a: &[i16], b: &[i16], m: usize, k: usize, n: usize) -> Vec<i16> {
                 c[i * n + j] = sum.clamp(-32768, 32767) as i16;
             }
         }
-        c
     }
+    c
 }
 
 pub fn i32(a: &[i32], b: &[i32], m: usize, k: usize, n: usize) -> Vec<i32> {
@@ -183,7 +176,6 @@ pub fn i32(a: &[i32], b: &[i32], m: usize, k: usize, n: usize) -> Vec<i32> {
         unsafe {
             super::super::neon::matmul::i32(a, b, &mut c, m, k, n);
         }
-        return c;
     }
     #[cfg(not(all(any(target_arch = "arm", target_arch = "aarch64"), target_feature = "neon")))]
     {
@@ -196,6 +188,6 @@ pub fn i32(a: &[i32], b: &[i32], m: usize, k: usize, n: usize) -> Vec<i32> {
                 c[i * n + j] = sum.clamp(i32::MIN as i64, i32::MAX as i64) as i32;
             }
         }
-        c
     }
+    c
 }

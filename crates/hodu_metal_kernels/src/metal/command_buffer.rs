@@ -65,13 +65,14 @@ impl AsRef<ProtocolObject<dyn MTLCommandBuffer>> for CommandBuffer {
     }
 }
 
+#[derive(Default)]
 pub struct CommandBufferThreadMap {
     inner: HashMap<thread::ThreadId, CommandBuffer>,
 }
 
 impl CommandBufferThreadMap {
     pub fn new() -> Self {
-        Self { inner: HashMap::new() }
+        Self::default()
     }
 
     pub fn get(&self) -> Option<&CommandBuffer> {

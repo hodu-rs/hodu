@@ -8,9 +8,15 @@ pub struct CrossEntropyLoss {
     dim: i32,
 }
 
+impl Default for CrossEntropyLoss {
+    fn default() -> Self {
+        Self { dim: -1 }
+    }
+}
+
 impl CrossEntropyLoss {
     pub fn new() -> Self {
-        Self { dim: -1 }
+        Self::default()
     }
 
     pub fn with_dim(dim: i32) -> Self {

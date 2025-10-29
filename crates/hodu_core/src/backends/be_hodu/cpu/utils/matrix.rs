@@ -1,3 +1,5 @@
+#![allow(clippy::needless_range_loop)]
+
 use crate::{
     backends::be_hodu::cpu::simd,
     compat::*,

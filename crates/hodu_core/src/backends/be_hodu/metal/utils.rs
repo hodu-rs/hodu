@@ -1,3 +1,5 @@
+#![allow(clippy::vec_init_then_push)]
+
 use crate::{
     backends::{
         be_hodu::{metal::storage::MetalStorage, storage::HoduStorageT},
@@ -1363,7 +1365,7 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
             _ => {
                 return Err(HoduError::UnsupportedDType {
                     dtype,
-                    op: format!("logical_not"),
+                    op: "logical_not".to_string(),
                 })
             },
         },
@@ -5741,7 +5743,7 @@ pub fn conv1d_map(
     let output_length =
         (input_length + 2 * params.padding - params.dilation * (kernel_size - 1) - 1) / params.stride + 1;
 
-    let output_shape = vec![batch, out_channels, output_length];
+    let output_shape = [batch, out_channels, output_length];
     let num_els: usize = output_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv1d")?;
@@ -5969,7 +5971,7 @@ pub fn conv2d_map(
     let output_h = (input_h + 2 * params.padding - params.dilation * (kernel_h - 1) - 1) / params.stride + 1;
     let output_w = (input_w + 2 * params.padding - params.dilation * (kernel_w - 1) - 1) / params.stride + 1;
 
-    let output_shape = vec![batch, out_channels, output_h, output_w];
+    let output_shape = [batch, out_channels, output_h, output_w];
     let num_els: usize = output_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv2d")?;
@@ -6207,7 +6209,7 @@ pub fn conv3d_map(
     let output_h = (input_h + 2 * params.padding - params.dilation * (kernel_h - 1) - 1) / params.stride + 1;
     let output_w = (input_w + 2 * params.padding - params.dilation * (kernel_w - 1) - 1) / params.stride + 1;
 
-    let output_shape = vec![batch, out_channels, output_d, output_h, output_w];
+    let output_shape = [batch, out_channels, output_d, output_h, output_w];
     let num_els: usize = output_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv3d")?;
@@ -7098,7 +7100,7 @@ pub(crate) fn conv1d_grad_weight_map(
     let kernel_size = params.kernel_size;
 
     // Output is the grad_weight with shape [out_channels, in_channels, kernel_size]
-    let grad_weight_shape = vec![out_channels, in_channels, kernel_size];
+    let grad_weight_shape = [out_channels, in_channels, kernel_size];
     let num_els: usize = grad_weight_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv1d_grad_weight")?;
@@ -7328,7 +7330,7 @@ pub(crate) fn conv2d_grad_weight_map(
     let kernel_width = params.kernel_width;
 
     // Output is the grad_weight with shape [out_channels, in_channels, kernel_height, kernel_width]
-    let grad_weight_shape = vec![out_channels, in_channels, kernel_height, kernel_width];
+    let grad_weight_shape = [out_channels, in_channels, kernel_height, kernel_width];
     let num_els: usize = grad_weight_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv2d_grad_weight")?;
@@ -7565,7 +7567,7 @@ pub(crate) fn conv3d_grad_weight_map(
     let kernel_width = params.kernel_width;
 
     // Output is the grad_weight with shape [out_channels, in_channels, kernel_depth, kernel_height, kernel_width]
-    let grad_weight_shape = vec![out_channels, in_channels, kernel_depth, kernel_height, kernel_width];
+    let grad_weight_shape = [out_channels, in_channels, kernel_depth, kernel_height, kernel_width];
     let num_els: usize = grad_weight_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv3d_grad_weight")?;
@@ -7800,7 +7802,7 @@ pub(crate) fn conv_transpose1d_grad_weight_map(
     let kernel_size = params.kernel_size;
 
     // Output is the grad_weight with shape [in_channels, out_channels, kernel_size]
-    let grad_weight_shape = vec![in_channels, out_channels, kernel_size];
+    let grad_weight_shape = [in_channels, out_channels, kernel_size];
     let num_els: usize = grad_weight_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv_transpose1d_grad_weight")?;
@@ -8032,7 +8034,7 @@ pub(crate) fn conv_transpose2d_grad_weight_map(
     let kernel_width = params.kernel_width;
 
     // Output is the grad_weight with shape [in_channels, out_channels, kernel_height, kernel_width]
-    let grad_weight_shape = vec![in_channels, out_channels, kernel_height, kernel_width];
+    let grad_weight_shape = [in_channels, out_channels, kernel_height, kernel_width];
     let num_els: usize = grad_weight_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv_transpose2d_grad_weight")?;
@@ -8271,7 +8273,7 @@ pub(crate) fn conv_transpose3d_grad_weight_map(
     let kernel_width = params.kernel_width;
 
     // Output is the grad_weight with shape [in_channels, out_channels, kernel_depth, kernel_height, kernel_width]
-    let grad_weight_shape = vec![in_channels, out_channels, kernel_depth, kernel_height, kernel_width];
+    let grad_weight_shape = [in_channels, out_channels, kernel_depth, kernel_height, kernel_width];
     let num_els: usize = grad_weight_shape.iter().product();
 
     let output = device.new_buffer(num_els, dtype, "conv_transpose3d_grad_weight")?;
@@ -8770,7 +8772,7 @@ pub(crate) fn to_dtype_map(
     let command_buffer = device.command_buffer()?;
 
     // Generate kernel name based on source and target dtypes
-    let kernel_name = format!("cast_{}_to_{}", source_dtype.to_string(), target_dtype.to_string());
+    let kernel_name = format!("cast_{}_to_{}", source_dtype, target_dtype);
 
     let input_buf = BufferOffset {
         buffer: input.buffer(),
@@ -8820,7 +8822,7 @@ pub(crate) fn contiguous_map(input: &MetalStorage, layout: &Layout) -> HoduResul
     };
 
     // Generate kernel name based on dtype
-    let kernel_name = format!("contiguous_{}", dtype.to_string());
+    let kernel_name = format!("contiguous_{}", dtype);
 
     // Use contiguous kernel to convert strided layout to contiguous
     call_contiguous(

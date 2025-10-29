@@ -522,7 +522,7 @@ impl Tensor {
                 });
             }
 
-            let rhs_reshaped = other.reshape(&[k2, 1])?;
+            let rhs_reshaped = other.reshape([k2, 1])?;
             let result = self.dot_2d(&rhs_reshaped)?;
             return result.squeeze(Some(-1));
         }
@@ -540,7 +540,7 @@ impl Tensor {
                 });
             }
 
-            let lhs_reshaped = self.reshape(&[1, k1])?;
+            let lhs_reshaped = self.reshape([1, k1])?;
             let result = lhs_reshaped.dot_2d(other)?;
             return result.squeeze(Some(0));
         }
@@ -716,7 +716,7 @@ impl Tensor {
                 });
             }
 
-            let rhs_reshaped = other.reshape(&[k2, 1])?;
+            let rhs_reshaped = other.reshape([k2, 1])?;
             let result = self.dot_2d(&rhs_reshaped)?;
             return result.squeeze(Some(-1));
         }
@@ -734,7 +734,7 @@ impl Tensor {
                 });
             }
 
-            let lhs_reshaped = self.reshape(&[1, k1])?;
+            let lhs_reshaped = self.reshape([1, k1])?;
             let result = lhs_reshaped.dot_2d(other)?;
             return result.squeeze(Some(0));
         }
@@ -1192,7 +1192,7 @@ impl Tensor {
         let shape = layout.get_shape();
         let dim_size = shape[dim_usize];
 
-        let chunk_size = (dim_size + chunks - 1) / chunks;
+        let chunk_size = dim_size.div_ceil(chunks);
         let sizes: Vec<usize> = (0..chunks)
             .map(|i| {
                 let start = i * chunk_size;

@@ -1,3 +1,6 @@
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::needless_range_loop)]
+
 #[cfg(target_arch = "aarch64")]
 use core::arch::aarch64::*;
 #[cfg(target_arch = "arm")]
@@ -549,7 +552,7 @@ macro_rules! impl_gemm {
                 let nc = (jc + NC).min(n) - jc;
                 for pc in (0..k).step_by(KC) {
                     let kc = (pc + KC).min(k) - pc;
-                    let packed_b_size = kc * ((nc + NR - 1) / NR) * NR;
+                    let packed_b_size = kc * nc.div_ceil(NR) * NR;
                     let mut packed_b = vec![$zero; packed_b_size];
                     $pack_b(b, &mut packed_b, n, pc, jc, kc, nc);
 
@@ -561,7 +564,7 @@ macro_rules! impl_gemm {
                         ic_indices.into_par_iter().for_each(|ic| {
                             let c_ptr = c_addr as *mut $ty;
                             let mc = (ic + MC).min(m) - ic;
-                            let packed_a_size = ((mc + MR - 1) / MR) * MR * kc;
+                            let packed_a_size = mc.div_ceil(MR) * MR * kc;
                             let mut packed_a = vec![$zero; packed_a_size];
                             $pack_a(a, &mut packed_a, k, ic, pc, mc, kc);
                             for ir in (0..mc).step_by(MR) {
@@ -588,7 +591,7 @@ macro_rules! impl_gemm {
                     {
                         for ic in (0..m).step_by(MC) {
                             let mc = (ic + MC).min(m) - ic;
-                            let packed_a_size = ((mc + MR - 1) / MR) * MR * kc;
+                            let packed_a_size = mc.div_ceil(MR) * MR * kc;
                             let mut packed_a = vec![$zero; packed_a_size];
                             $pack_a(a, &mut packed_a, k, ic, pc, mc, kc);
                             for ir in (0..mc).step_by(MR) {

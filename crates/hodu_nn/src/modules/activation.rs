@@ -5,7 +5,7 @@ use crate::{
 };
 use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct ReLU;
 
 impl ReLU {
@@ -22,7 +22,7 @@ impl ReLU {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct Sigmoid;
 
 impl Sigmoid {
@@ -39,7 +39,7 @@ impl Sigmoid {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct Tanh;
 
 impl Tanh {
@@ -56,7 +56,7 @@ impl Tanh {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct Gelu;
 
 impl Gelu {
@@ -73,7 +73,7 @@ impl Gelu {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct Softplus;
 
 impl Softplus {
@@ -90,7 +90,7 @@ impl Softplus {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct SiLU;
 
 impl SiLU {
@@ -107,7 +107,7 @@ impl SiLU {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct Swish;
 
 impl Swish {
@@ -124,7 +124,7 @@ impl Swish {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 pub struct Mish;
 
 impl Mish {

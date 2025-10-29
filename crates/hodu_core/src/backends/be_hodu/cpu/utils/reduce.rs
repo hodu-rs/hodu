@@ -1,3 +1,6 @@
+#![allow(clippy::needless_range_loop)]
+#![allow(clippy::if_same_then_else)]
+
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
@@ -664,14 +667,14 @@ pub fn reduce_min<T: Copy + PartialOrd + Send + Sync>(
     }
 }
 
-pub fn reduce_prod<T: Copy + ops::Mul<Output = T> + Send + Sync>(
+pub fn reduce_prod<T>(
     storage: &[T],
     layout: &Layout,
     dims: &[usize],
     keep_dim: bool,
 ) -> HoduResult<(Vec<T>, Vec<usize>)>
 where
-    T: num_traits::One,
+    T: Copy + ops::Mul<Output = T> + num_traits::One + Send + Sync,
 {
     let shape = layout.get_shape();
     let strides = layout.get_strides();
@@ -1041,7 +1044,7 @@ where
             })
             .collect();
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -1101,18 +1104,18 @@ where
             result[output_idx] = var_sum / denom_val;
         }
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 }
 
-pub fn reduce_norm<T: Send + Sync>(
+pub fn reduce_norm<T>(
     storage: &[T],
     layout: &Layout,
     dims: &[usize],
     keep_dim: bool,
 ) -> HoduResult<(Vec<T>, Vec<usize>)>
 where
-    T: Copy + Default + ops::Add<Output = T> + ops::Mul<Output = T> + num_traits::Float, // This provides sqrt
+    T: Copy + Default + ops::Add<Output = T> + ops::Mul<Output = T> + num_traits::Float + Send + Sync,
 {
     let shape = layout.get_shape();
     let strides = layout.get_strides();
@@ -1249,7 +1252,7 @@ where
             })
             .collect();
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -1308,7 +1311,7 @@ where
             result[output_idx] = sum_squares.sqrt();
         }
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 }
 
@@ -1369,17 +1372,15 @@ pub fn reduce_argmax<T: Copy + PartialOrd + Send + Sync>(
                 for in_dim in 0..ndim {
                     if in_dim == actual_dim {
                         input_indices[in_dim] = 0; // Will iterate over this
-                    } else {
-                        if !keep_dim || out_idx < output_indices.len() {
-                            input_indices[in_dim] = if keep_dim {
-                                output_indices[out_idx]
-                            } else if out_idx < output_indices.len() {
-                                output_indices[out_idx]
-                            } else {
-                                0
-                            };
-                            out_idx += 1;
-                        }
+                    } else if !keep_dim || out_idx < output_indices.len() {
+                        input_indices[in_dim] = if keep_dim {
+                            output_indices[out_idx]
+                        } else if out_idx < output_indices.len() {
+                            output_indices[out_idx]
+                        } else {
+                            0
+                        };
+                        out_idx += 1;
                     }
                 }
 
@@ -1405,7 +1406,7 @@ pub fn reduce_argmax<T: Copy + PartialOrd + Send + Sync>(
             })
             .collect();
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -1432,17 +1433,15 @@ pub fn reduce_argmax<T: Copy + PartialOrd + Send + Sync>(
             for in_dim in 0..ndim {
                 if in_dim == actual_dim {
                     input_indices[in_dim] = 0; // Will iterate over this
-                } else {
-                    if !keep_dim || out_idx < output_indices.len() {
-                        input_indices[in_dim] = if keep_dim {
-                            output_indices[out_idx]
-                        } else if out_idx < output_indices.len() {
-                            output_indices[out_idx]
-                        } else {
-                            0
-                        };
-                        out_idx += 1;
-                    }
+                } else if !keep_dim || out_idx < output_indices.len() {
+                    input_indices[in_dim] = if keep_dim {
+                        output_indices[out_idx]
+                    } else if out_idx < output_indices.len() {
+                        output_indices[out_idx]
+                    } else {
+                        0
+                    };
+                    out_idx += 1;
                 }
             }
 
@@ -1467,7 +1466,7 @@ pub fn reduce_argmax<T: Copy + PartialOrd + Send + Sync>(
             result[output_idx] = max_index;
         }
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 }
 
@@ -1528,17 +1527,15 @@ pub fn reduce_argmin<T: Copy + PartialOrd + Send + Sync>(
                 for in_dim in 0..ndim {
                     if in_dim == actual_dim {
                         input_indices[in_dim] = 0; // Will iterate over this
-                    } else {
-                        if !keep_dim || out_idx < output_indices.len() {
-                            input_indices[in_dim] = if keep_dim {
-                                output_indices[out_idx]
-                            } else if out_idx < output_indices.len() {
-                                output_indices[out_idx]
-                            } else {
-                                0
-                            };
-                            out_idx += 1;
-                        }
+                    } else if !keep_dim || out_idx < output_indices.len() {
+                        input_indices[in_dim] = if keep_dim {
+                            output_indices[out_idx]
+                        } else if out_idx < output_indices.len() {
+                            output_indices[out_idx]
+                        } else {
+                            0
+                        };
+                        out_idx += 1;
                     }
                 }
 
@@ -1564,7 +1561,7 @@ pub fn reduce_argmin<T: Copy + PartialOrd + Send + Sync>(
             })
             .collect();
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -1592,6 +1589,8 @@ pub fn reduce_argmin<T: Copy + PartialOrd + Send + Sync>(
                 if in_dim == actual_dim {
                     input_indices[in_dim] = 0; // Will iterate over this
                 } else {
+                    #[allow(clippy::collapsible_else_if)]
+                    #[allow(clippy::if_same_then_else)]
                     if !keep_dim || out_idx < output_indices.len() {
                         input_indices[in_dim] = if keep_dim {
                             output_indices[out_idx]
@@ -1626,18 +1625,18 @@ pub fn reduce_argmin<T: Copy + PartialOrd + Send + Sync>(
             result[output_idx] = min_index;
         }
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 }
 
-pub fn reduce_any<T: Send + Sync>(
+pub fn reduce_any<T>(
     storage: &[T],
     layout: &Layout,
     dims: &[usize],
     keep_dim: bool,
 ) -> HoduResult<(Vec<bool>, Vec<usize>)>
 where
-    T: Copy + Default + PartialEq,
+    T: Copy + Default + PartialEq + Send + Sync,
 {
     let shape = layout.get_shape();
     let strides = layout.get_strides();
@@ -1772,7 +1771,7 @@ where
             })
             .collect();
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -1835,18 +1834,18 @@ where
             }
         }
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 }
 
-pub fn reduce_all<T: Send + Sync>(
+pub fn reduce_all<T>(
     storage: &[T],
     layout: &Layout,
     dims: &[usize],
     keep_dim: bool,
 ) -> HoduResult<(Vec<bool>, Vec<usize>)>
 where
-    T: Copy + Default + PartialEq,
+    T: Copy + Default + PartialEq + Send + Sync,
 {
     let shape = layout.get_shape();
     let strides = layout.get_strides();
@@ -1981,7 +1980,7 @@ where
             })
             .collect();
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -2044,6 +2043,6 @@ where
             }
         }
 
-        return Ok((result, output_shape));
+        Ok((result, output_shape))
     }
 }

@@ -46,7 +46,7 @@ impl Embedding {
                 )));
             }
             // Set weight[idx] to zeros using index_put
-            let indices = Tensor::new(vec![idx as i32])?.reshape(&[1])?;
+            let indices = Tensor::new(vec![idx as i32])?.reshape([1])?;
             let zeros = Tensor::zeros(&[1, embedding_dim], dtype)?;
             weight.index_put(0, &indices, &zeros)?
         } else {
@@ -98,7 +98,7 @@ impl Embedding {
 
         // Flatten input to 1D for easier processing
         let num_indices: usize = input_shape.iter().product();
-        let flat_input = input.reshape(&[num_indices])?;
+        let flat_input = input.reshape([num_indices])?;
 
         // Use index_select on the weight tensor (same as gather on axis 0)
         // axis 0 is the num_embeddings dimension

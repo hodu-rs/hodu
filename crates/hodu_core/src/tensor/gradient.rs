@@ -20,7 +20,9 @@ pub trait VjpCompute {
         _output: TensorId,
         _grad_output: TensorId,
     ) -> HoduResult<Vec<TensorId>> {
-        Err(HoduError::VjpFunctionNotFound(format!("compute_vjp not implemented")))
+        Err(HoduError::VjpFunctionNotFound(
+            "compute_vjp not implemented".to_string(),
+        ))
     }
 
     fn compute_vjp_with_scalar(
@@ -30,9 +32,9 @@ pub trait VjpCompute {
         _grad_output: TensorId,
         _scalar: Scalar,
     ) -> HoduResult<Vec<TensorId>> {
-        Err(HoduError::VjpFunctionNotFound(format!(
-            "compute_vjp_with_scalar not implemented"
-        )))
+        Err(HoduError::VjpFunctionNotFound(
+            "compute_vjp_with_scalar not implemented".to_string(),
+        ))
     }
 
     fn compute_vjp_with_scalars(
@@ -42,9 +44,9 @@ pub trait VjpCompute {
         _grad_output: TensorId,
         _scalars: &[Scalar],
     ) -> HoduResult<Vec<TensorId>> {
-        Err(HoduError::VjpFunctionNotFound(format!(
-            "compute_vjp_with_scalars not implemented"
-        )))
+        Err(HoduError::VjpFunctionNotFound(
+            "compute_vjp_with_scalars not implemented".to_string(),
+        ))
     }
 
     fn compute_vjp_with_dims(
@@ -54,9 +56,9 @@ pub trait VjpCompute {
         _grad_output: TensorId,
         _dims: &[Scalar],
     ) -> HoduResult<Vec<TensorId>> {
-        Err(HoduError::VjpFunctionNotFound(format!(
-            "compute_vjp_with_dims not implemented"
-        )))
+        Err(HoduError::VjpFunctionNotFound(
+            "compute_vjp_with_dims not implemented".to_string(),
+        ))
     }
 
     fn compute_vjp_with_split_info(
@@ -67,9 +69,9 @@ pub trait VjpCompute {
         _params: &[Scalar],
         _output_index: usize,
     ) -> HoduResult<Vec<TensorId>> {
-        Err(HoduError::VjpFunctionNotFound(format!(
-            "compute_vjp_with_split_info not implemented"
-        )))
+        Err(HoduError::VjpFunctionNotFound(
+            "compute_vjp_with_split_info not implemented".to_string(),
+        ))
     }
 }
 
@@ -412,7 +414,7 @@ impl VjpCompute for UnaryScalarOp {
                         Scalar::from_f32(1.0 / v, dtype)
                     },
                     Scalar::F64(v) => {
-                        if v.abs() < f64::EPSILON as f64 {
+                        if v.abs() < f64::EPSILON {
                             return Err(HoduError::InternalError(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
@@ -737,7 +739,7 @@ impl VjpCompute for SplitOp {
         for (idx, &size) in sizes.iter().enumerate() {
             if idx == output_index {
                 // Use the actual gradient for this output
-                grad_pieces.push(tensor_from_id(grad_output).clone());
+                grad_pieces.push(tensor_from_id(grad_output));
             } else {
                 // Create zeros for other outputs
                 let mut piece_shape = input_shape.to_vec();
@@ -1346,7 +1348,7 @@ impl VjpCompute for ShapeOp {
             },
             ShapeOp::Broadcast => {
                 // Sum over the broadcasted dimensions to get back to original shape
-                let mut result_grad = grad_tensor.clone();
+                let mut result_grad = grad_tensor;
 
                 // Handle dimension differences (leading dimensions were added)
                 if grad_shape.len() > input_shape.len() {
@@ -1427,6 +1429,7 @@ impl VjpCompute for ShapeOp {
                 // Find the forward permutation by comparing input and grad shapes
                 let mut forward_perm = vec![0; ndim];
                 for i in 0..ndim {
+                    #[allow(clippy::needless_range_loop)]
                     for j in 0..ndim {
                         if input_shape[i] == grad_shape[j] {
                             // Check if this dimension is already used
@@ -1568,7 +1571,7 @@ static CONTEXT_COUNTER: AtomicUsize = AtomicUsize::new(1); // Start from 1 (0 is
 
 #[cfg(feature = "std")]
 thread_local! {
-    static CONTEXT_STACK: RefCell<Vec<usize>> = RefCell::new(vec![]);
+    static CONTEXT_STACK: RefCell<Vec<usize>> = const { RefCell::new(vec![]) };
 }
 
 #[cfg(not(feature = "std"))]
@@ -1606,8 +1609,8 @@ pub struct GradientContext {
     context_id: usize,
 }
 
-impl GradientContext {
-    pub fn new() -> Self {
+impl Default for GradientContext {
+    fn default() -> Self {
         let context_id = CONTEXT_COUNTER.fetch_add(1, Ordering::Relaxed);
 
         // Push to context stack
@@ -1624,6 +1627,12 @@ impl GradientContext {
         }
 
         Self { context_id }
+    }
+}
+
+impl GradientContext {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -1858,7 +1867,7 @@ fn compute_vjp_for_op(
         },
         Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output),
         Op::ShapeScalars(shape_op, _, scalars) => {
-            shape_op.compute_vjp_with_scalars(inputs, output, grad_output, &scalars)
+            shape_op.compute_vjp_with_scalars(inputs, output, grad_output, scalars)
         },
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }

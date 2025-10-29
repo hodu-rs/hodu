@@ -2,7 +2,7 @@ use crate::compat::*;
 use crate::module::Module;
 use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 #[module(inputs = 2)]
 pub struct MSELoss;
 

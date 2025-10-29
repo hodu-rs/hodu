@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::compat::*;
 use crate::module::Module;
 use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::dtype::DType};
@@ -62,7 +64,7 @@ impl Conv1D {
             // Need to reshape bias to [1, Co, 1] for broadcasting
             let bias_layout = bias.get_layout();
             let bias_shape = bias_layout.get_shape();
-            let bias_reshaped = bias.reshape(&[1, bias_shape[0], 1])?;
+            let bias_reshaped = bias.reshape([1, bias_shape[0], 1])?;
             output.add(&bias_reshaped)
         } else {
             Ok(output)
@@ -138,7 +140,7 @@ impl Conv2D {
             // Need to reshape bias to [1, Co, 1, 1] for broadcasting
             let bias_layout = bias.get_layout();
             let bias_shape = bias_layout.get_shape();
-            let bias_reshaped = bias.reshape(&[1, bias_shape[0], 1, 1])?;
+            let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1])?;
             output.add(&bias_reshaped)
         } else {
             Ok(output)
@@ -218,7 +220,7 @@ impl Conv3D {
             // Need to reshape bias to [1, Co, 1, 1, 1] for broadcasting
             let bias_layout = bias.get_layout();
             let bias_shape = bias_layout.get_shape();
-            let bias_reshaped = bias.reshape(&[1, bias_shape[0], 1, 1, 1])?;
+            let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1, 1])?;
             output.add(&bias_reshaped)
         } else {
             Ok(output)
@@ -303,7 +305,7 @@ impl ConvTranspose1D {
             // Need to reshape bias to [1, Co, 1] for broadcasting
             let bias_layout = bias.get_layout();
             let bias_shape = bias_layout.get_shape();
-            let bias_reshaped = bias.reshape(&[1, bias_shape[0], 1])?;
+            let bias_reshaped = bias.reshape([1, bias_shape[0], 1])?;
             output.add(&bias_reshaped)
         } else {
             Ok(output)
@@ -388,7 +390,7 @@ impl ConvTranspose2D {
             // Need to reshape bias to [1, Co, 1, 1] for broadcasting
             let bias_layout = bias.get_layout();
             let bias_shape = bias_layout.get_shape();
-            let bias_reshaped = bias.reshape(&[1, bias_shape[0], 1, 1])?;
+            let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1])?;
             output.add(&bias_reshaped)
         } else {
             Ok(output)
@@ -477,7 +479,7 @@ impl ConvTranspose3D {
             // Need to reshape bias to [1, Co, 1, 1, 1] for broadcasting
             let bias_layout = bias.get_layout();
             let bias_shape = bias_layout.get_shape();
-            let bias_reshaped = bias.reshape(&[1, bias_shape[0], 1, 1, 1])?;
+            let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1, 1])?;
             output.add(&bias_reshaped)
         } else {
             Ok(output)

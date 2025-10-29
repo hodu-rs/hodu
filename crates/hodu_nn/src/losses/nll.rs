@@ -8,9 +8,15 @@ pub struct NLLLoss {
     dim: i32,
 }
 
+impl Default for NLLLoss {
+    fn default() -> Self {
+        Self { dim: -1 }
+    }
+}
+
 impl NLLLoss {
     pub fn new() -> Self {
-        Self { dim: -1 }
+        Self::default()
     }
 
     pub fn with_dim(dim: i32) -> Self {
@@ -27,7 +33,7 @@ impl NLLLoss {
         let target_unsqueezed = target.unsqueeze(-1)?;
 
         // Gather along class dimension
-        let gathered = log_probs.gather(gather_dim as i32, &target_unsqueezed)?;
+        let gathered = log_probs.gather(gather_dim, &target_unsqueezed)?;
 
         // Remove the extra dimension
         let gathered_squeezed = gathered.squeeze(Some(-1))?;

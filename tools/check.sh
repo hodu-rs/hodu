@@ -126,8 +126,10 @@ for test in "${tests[@]}"; do
 
     if [ -z "$features" ]; then
         cmd="cargo check --no-default-features"
+        clippy_cmd="cargo clippy --no-default-features"
     else
         cmd="cargo check --no-default-features --features $features"
+        clippy_cmd="cargo clippy --no-default-features --features $features"
     fi
 
     # Capture output to check for warnings
@@ -135,12 +137,21 @@ for test in "${tests[@]}"; do
     exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
-        if echo "$output" | grep -q "warning:"; then
-            echo -e "${BRIGHT_YELLOW}△${NC}"
+        # Run clippy after successful check
+        clippy_output=$($clippy_cmd 2>&1)
+        clippy_exit_code=$?
+
+        if [ $clippy_exit_code -eq 0 ]; then
+            # Check for any warnings (from check or clippy)
+            if echo "$output" | grep -q "warning:" || echo "$clippy_output" | grep -q "warning:"; then
+                echo -e "${BRIGHT_YELLOW}△${NC}"
+            else
+                echo -e "${BRIGHT_GREEN}✓${NC}"
+            fi
+            ((passed++))
         else
-            echo -e "${BRIGHT_GREEN}✓${NC}"
+            echo -e "${BRIGHT_RED}✗${NC}"
         fi
-        ((passed++))
     else
         echo -e "${BRIGHT_RED}✗${NC}"
     fi

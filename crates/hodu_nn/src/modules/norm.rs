@@ -93,8 +93,8 @@ impl BatchNorm1D {
                 let one_minus_momentum = Scalar::from_f32(1.0, rm.get_dtype()) - momentum_typed;
 
                 // Squeeze mean and var to match running stats shape [C]
-                let mean_squeezed = mean.reshape(&[self.num_features])?;
-                let var_squeezed = var.reshape(&[self.num_features])?;
+                let mean_squeezed = mean.reshape([self.num_features])?;
+                let var_squeezed = var.reshape([self.num_features])?;
 
                 let new_mean = rm
                     .mul_scalar(momentum_typed)?
@@ -118,15 +118,15 @@ impl BatchNorm1D {
 
             // Reshape for broadcasting
             let mean = if input_shape.len() == 2 {
-                mean.reshape(&[1, self.num_features])?
+                mean.reshape([1, self.num_features])?
             } else {
-                mean.reshape(&[1, self.num_features, 1])?
+                mean.reshape([1, self.num_features, 1])?
             };
 
             let var = if input_shape.len() == 2 {
-                var.reshape(&[1, self.num_features])?
+                var.reshape([1, self.num_features])?
             } else {
-                var.reshape(&[1, self.num_features, 1])?
+                var.reshape([1, self.num_features, 1])?
             };
 
             let normalized = self.normalize(input, &mean, &var)?;
@@ -151,15 +151,15 @@ impl BatchNorm1D {
             let beta = self.beta.as_ref().unwrap();
 
             let gamma_reshaped = if input_shape.len() == 2 {
-                gamma.reshape(&[1, self.num_features])?
+                gamma.reshape([1, self.num_features])?
             } else {
-                gamma.reshape(&[1, self.num_features, 1])?
+                gamma.reshape([1, self.num_features, 1])?
             };
 
             let beta_reshaped = if input_shape.len() == 2 {
-                beta.reshape(&[1, self.num_features])?
+                beta.reshape([1, self.num_features])?
             } else {
-                beta.reshape(&[1, self.num_features, 1])?
+                beta.reshape([1, self.num_features, 1])?
             };
 
             let scaled = normalized.mul(&gamma_reshaped)?;
@@ -261,8 +261,8 @@ impl BatchNorm2D {
                 let one_minus_momentum = Scalar::from_f32(1.0, rm.get_dtype()) - momentum_typed;
 
                 // Squeeze mean and var to match running stats shape [C]
-                let mean_squeezed = mean.reshape(&[self.num_features])?;
-                let var_squeezed = var.reshape(&[self.num_features])?;
+                let mean_squeezed = mean.reshape([self.num_features])?;
+                let var_squeezed = var.reshape([self.num_features])?;
 
                 let new_mean = rm
                     .mul_scalar(momentum_typed)?
@@ -282,8 +282,8 @@ impl BatchNorm2D {
             let mean = self.running_mean.borrow();
             let var = self.running_var.borrow();
 
-            let mean = mean.reshape(&[1, self.num_features, 1, 1])?;
-            let var = var.reshape(&[1, self.num_features, 1, 1])?;
+            let mean = mean.reshape([1, self.num_features, 1, 1])?;
+            let var = var.reshape([1, self.num_features, 1, 1])?;
 
             let normalized = self.normalize(input, &mean, &var)?;
             Ok(normalized)
@@ -302,8 +302,8 @@ impl BatchNorm2D {
             let gamma = self.gamma.as_ref().unwrap();
             let beta = self.beta.as_ref().unwrap();
 
-            let gamma_reshaped = gamma.reshape(&[1, self.num_features, 1, 1])?;
-            let beta_reshaped = beta.reshape(&[1, self.num_features, 1, 1])?;
+            let gamma_reshaped = gamma.reshape([1, self.num_features, 1, 1])?;
+            let beta_reshaped = beta.reshape([1, self.num_features, 1, 1])?;
 
             let scaled = normalized.mul(&gamma_reshaped)?;
             scaled.add(&beta_reshaped)
@@ -404,8 +404,8 @@ impl BatchNorm3D {
                 let one_minus_momentum = Scalar::from_f32(1.0, rm.get_dtype()) - momentum_typed;
 
                 // Squeeze mean and var to match running stats shape [C]
-                let mean_squeezed = mean.reshape(&[self.num_features])?;
-                let var_squeezed = var.reshape(&[self.num_features])?;
+                let mean_squeezed = mean.reshape([self.num_features])?;
+                let var_squeezed = var.reshape([self.num_features])?;
 
                 let new_mean = rm
                     .mul_scalar(momentum_typed)?
@@ -425,8 +425,8 @@ impl BatchNorm3D {
             let mean = self.running_mean.borrow();
             let var = self.running_var.borrow();
 
-            let mean = mean.reshape(&[1, self.num_features, 1, 1, 1])?;
-            let var = var.reshape(&[1, self.num_features, 1, 1, 1])?;
+            let mean = mean.reshape([1, self.num_features, 1, 1, 1])?;
+            let var = var.reshape([1, self.num_features, 1, 1, 1])?;
 
             let normalized = self.normalize(input, &mean, &var)?;
             Ok(normalized)
@@ -445,8 +445,8 @@ impl BatchNorm3D {
             let gamma = self.gamma.as_ref().unwrap();
             let beta = self.beta.as_ref().unwrap();
 
-            let gamma_reshaped = gamma.reshape(&[1, self.num_features, 1, 1, 1])?;
-            let beta_reshaped = beta.reshape(&[1, self.num_features, 1, 1, 1])?;
+            let gamma_reshaped = gamma.reshape([1, self.num_features, 1, 1, 1])?;
+            let beta_reshaped = beta.reshape([1, self.num_features, 1, 1, 1])?;
 
             let scaled = normalized.mul(&gamma_reshaped)?;
             scaled.add(&beta_reshaped)

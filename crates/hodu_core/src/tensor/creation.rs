@@ -61,7 +61,7 @@ impl Tensor {
     pub fn zeros_like(tensor: &Tensor) -> HoduResult<Self> {
         let layout = tensor.get_layout();
         let shape = layout.get_shape();
-        Self::zeros(&shape, tensor.get_dtype())
+        Self::zeros(shape, tensor.get_dtype())
     }
 
     pub fn ones(shape: &[usize], dtype: DType) -> HoduResult<Self> {
@@ -79,7 +79,7 @@ impl Tensor {
     pub fn ones_like(tensor: &Tensor) -> HoduResult<Self> {
         let layout = tensor.get_layout();
         let shape = layout.get_shape();
-        Self::ones(&shape, tensor.get_dtype())
+        Self::ones(shape, tensor.get_dtype())
     }
 
     pub fn full<T: Into<Scalar>>(shape: &[usize], value: T) -> HoduResult<Self> {
@@ -98,7 +98,7 @@ impl Tensor {
     pub fn full_like(tensor: &Tensor, value: Scalar) -> HoduResult<Self> {
         let layout = tensor.get_layout();
         let shape = layout.get_shape();
-        Self::full(&shape, value)
+        Self::full(shape, value)
     }
 
     pub fn randn<T: Into<Scalar>>(shape: &[usize], mean: T, std: T) -> HoduResult<Self> {
@@ -122,7 +122,7 @@ impl Tensor {
     pub fn randn_like<T: Into<Scalar>>(tensor: &Tensor, mean: T, std: T) -> HoduResult<Self> {
         let layout = tensor.get_layout();
         let shape = layout.get_shape();
-        Self::randn(&shape, mean, std)
+        Self::randn(shape, mean, std)
     }
 
     pub fn rand_uniform<T: Into<Scalar>>(shape: &[usize], low: T, high: T) -> HoduResult<Self> {
@@ -146,6 +146,6 @@ impl Tensor {
     pub fn rand_uniform_like<T: Into<Scalar>>(tensor: &Tensor, low: T, high: T) -> HoduResult<Self> {
         let layout = tensor.get_layout();
         let shape = layout.get_shape();
-        Self::rand_uniform(&shape, low, high)
+        Self::rand_uniform(shape, low, high)
     }
 }

@@ -8,11 +8,17 @@ pub struct BCELoss {
     epsilon: Scalar,
 }
 
-impl BCELoss {
-    pub fn new() -> Self {
+impl Default for BCELoss {
+    fn default() -> Self {
         Self {
             epsilon: Scalar::F32(1e-7), // for numerical stability
         }
+    }
+}
+
+impl BCELoss {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn with_epsilon(epsilon: impl Into<Scalar>) -> Self {
@@ -48,7 +54,7 @@ impl BCELoss {
     }
 }
 
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 #[module(inputs = 2)]
 pub struct BCEWithLogitsLoss;
 

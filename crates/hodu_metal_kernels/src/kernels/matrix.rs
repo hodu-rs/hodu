@@ -91,8 +91,8 @@ pub fn call_dot(
         depth: 1,
     };
 
-    let grid_width = (n + TILE_SIZE - 1) / TILE_SIZE;
-    let grid_height = (m + TILE_SIZE - 1) / TILE_SIZE;
+    let grid_width = (n + TILE_SIZE - 1).div_ceil(TILE_SIZE);
+    let grid_height = (m + TILE_SIZE - 1).div_ceil(TILE_SIZE);
 
     let threadgroup_count = MTLSize {
         width: grid_width,
