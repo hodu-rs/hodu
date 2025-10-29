@@ -10,7 +10,7 @@ macro_rules! impl_simd_binary {
             #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
             #[cfg(target_feature = "neon")]
             {
-                use crate::be_hodu::cpu::simd::SimdType;
+                use crate::be_hodu::cpu_simd::SimdType;
                 const LANES: usize = <$ty>::LANES;
 
                 unsafe {

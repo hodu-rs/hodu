@@ -1,7 +1,7 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::{
-    be_hodu::cpu::simd,
+    be_hodu::cpu_simd as simd,
     compat::*,
     error::{HoduError, HoduResult},
     types::layout::Layout,
