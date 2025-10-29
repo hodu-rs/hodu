@@ -1,5 +1,5 @@
 use crate::{
-    backends::be_hodu::metal::error::MetalError,
+    be_hodu::metal::error::MetalError,
     compat::*,
     tensor::TensorId,
     types::{backend::Backend, device::Device, dtype::DType},

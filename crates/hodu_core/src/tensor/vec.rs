@@ -1,7 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    backends::be_hodu::{cpu::storage::CpuStorage, storage::HoduStorageT},
+    be_hodu::{cpu::storage::CpuStorage, storage::HoduStorageT},
     compat::*,
     error::{HoduError, HoduResult},
     tensor::Tensor,

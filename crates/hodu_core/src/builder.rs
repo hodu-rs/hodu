@@ -1,9 +1,9 @@
 pub use crate::types::layout::Layout;
 use crate::{
-    backends::{op::Op, script::Script},
     compat::*,
     error::{HoduError, HoduResult},
     tensor::{Tensor, TensorId},
+    {op::Op, script::Script},
 };
 #[cfg(feature = "std")]
 use dashmap::DashMap;
@@ -243,17 +243,15 @@ impl Builder {
     }
 
     pub fn build(&self) -> HoduResult<Script> {
-        use crate::backends::script::ir::{
-            ComputationGraph, GraphNode, InputNode, NodeId, NodeType, OutputNode, ScriptIR,
-        };
+        use crate::script::ir::{ComputationGraph, GraphNode, InputNode, NodeId, NodeType, OutputNode, ScriptIR};
 
         let script_ir = self
             .with_builder(|b| -> HoduResult<ScriptIR> {
                 let mut script_ir = ScriptIR::new(format!("script_from_{}", b.name));
                 let mut graph = ComputationGraph::new();
 
-                use crate::backends::script::ir::ConstantNode;
                 use crate::compat::HashSet;
+                use crate::script::ir::ConstantNode;
 
                 let mut processed_constants = HashSet::new();
 
@@ -318,7 +316,7 @@ impl Builder {
                     graph.metadata.constants.insert(tensor_id, constant_node);
                 }
 
-                use crate::backends::script::ir::TensorInfo;
+                use crate::script::ir::TensorInfo;
 
                 // Process graph_inputs in parallel
                 #[cfg(all(feature = "std", feature = "rayon"))]
@@ -432,7 +430,7 @@ impl Builder {
                     let (input_layouts, output_layouts) =
                         b.operation_layouts.get(node_counter).cloned().unwrap_or_default();
 
-                    use crate::backends::script::ir::TensorInfo;
+                    use crate::script::ir::TensorInfo;
 
                     for (tensor_id, layout) in input_tensors.iter().zip(input_layouts.iter()) {
                         if !graph.metadata.tensor_info.contains_key(tensor_id)

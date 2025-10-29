@@ -1,6 +1,6 @@
 use crate::{
-    backends::op::Op,
     compat::*,
+    op::Op,
     tensor::TensorId,
     types::{dtype::DType, layout::Layout},
 };

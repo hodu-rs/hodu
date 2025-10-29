@@ -1,5 +1,5 @@
 use crate::{
-    backends::be_hodu::{
+    be_hodu::{
         cpu::device::CpuDevice,
         metal::{device::MetalDevice, storage::MetalStorage},
         storage::{HoduStorage, HoduStorageT},

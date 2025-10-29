@@ -1,12 +1,12 @@
 mod utils;
 
 use crate::{
-    backends::op::{
+    compat::*,
+    error::{HoduError, HoduResult},
+    op::{
         BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, ConvOp, IndexingOp, MatrixOp, Op, ReduceOp, ShapeOp,
         ShapeScalarsOp, SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
     },
-    compat::*,
-    error::{HoduError, HoduResult},
     scalar::Scalar,
     tensor::{self, set_grad_tensor_id, tensor_from_id, Tensor, TensorId},
 };

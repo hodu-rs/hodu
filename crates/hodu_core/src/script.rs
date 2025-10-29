@@ -1,9 +1,9 @@
 pub(crate) mod ir;
 
-use crate::error::{HoduError, HoduResult};
 use crate::{
-    backends::executor::{CompileOptions, CompiledScript, ExecutionOutputs, Executor, ExecutorT},
     compat::*,
+    error::{HoduError, HoduResult},
+    executor::{CompileOptions, CompiledScript, ExecutionOutputs, Executor, ExecutorT},
     tensor::Tensor,
     types::{backend::Backend, device::Device},
 };
@@ -207,9 +207,9 @@ impl Script {
 
     /// Create appropriate executor based on backend and device settings
     fn create_executor(&self, target_device: Device) -> HoduResult<Executor> {
-        use crate::backends::be_hodu::executor::HoduExecutor;
+        use crate::be_hodu::executor::HoduExecutor;
         #[cfg(feature = "xla")]
-        use crate::backends::be_xla::executor::XlaExecutor;
+        use crate::be_xla::executor::XlaExecutor;
 
         match self.backend.unwrap_or(Backend::HODU) {
             Backend::HODU => Ok(Executor::Hodu(HoduExecutor::new(target_device))),

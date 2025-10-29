@@ -1,22 +1,20 @@
 use crate::{
-    backends::{
-        be_hodu::{
-            metal::storage::MetalStorage,
-            storage::{HoduStorage, HoduStorageT},
-        },
-        executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
-        op::{
-            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
-            ShapeScalarsOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
-        },
-        script::{
-            ir::{NodeId, ScriptIR},
-            Script,
-        },
+    be_hodu::{
+        metal::storage::MetalStorage,
+        storage::{HoduStorage, HoduStorageT},
     },
     compat::*,
     error::{HoduError, HoduResult},
+    executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
+    op::{
+        BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
+        ShapeScalarsOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
+    },
     scalar::Scalar,
+    script::{
+        ir::{NodeId, ScriptIR},
+        Script,
+    },
     tensor::{from_storage, Tensor, TensorId},
     types::{device::Device, dtype::DType, layout::Layout},
 };
@@ -277,10 +275,10 @@ impl HoduExecutor {
 
     fn convert_constant_to_cpu_storage(
         &self,
-        constant: &crate::backends::script::ir::ConstantNode,
-    ) -> HoduResult<crate::backends::be_hodu::cpu::storage::CpuStorage> {
-        use crate::backends::be_hodu::cpu::storage::CpuStorage;
-        use crate::backends::script::ir::CompressionType;
+        constant: &crate::script::ir::ConstantNode,
+    ) -> HoduResult<crate::be_hodu::cpu::storage::CpuStorage> {
+        use crate::be_hodu::cpu::storage::CpuStorage;
+        use crate::script::ir::CompressionType;
         use crate::types::dtype::DType;
         use float8::{F8E4M3, F8E5M2};
         use half::{bf16, f16};
@@ -471,7 +469,7 @@ impl HoduExecutor {
             (Device::Metal, storage) => match storage {
                 HoduStorage::Metal(metal_storage) => Ok(HoduStorage::Metal(metal_storage.clone())),
                 HoduStorage::CPU(cpu_storage) => {
-                    use crate::backends::be_hodu::metal::storage::MetalStorage;
+                    use crate::be_hodu::metal::storage::MetalStorage;
                     MetalStorage::from_cpu_storage(cpu_storage).map(HoduStorage::Metal)
                 },
             },
@@ -873,7 +871,7 @@ impl HoduExecutor {
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match binary_op {
             BinaryOp::Add => lhs_storage.binary_impl::<Add>(rhs_storage, lhs_layout, rhs_layout),
@@ -894,7 +892,7 @@ impl HoduExecutor {
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match binary_logical_op {
             BinaryLogicalOp::LogicalAnd => {
@@ -917,7 +915,7 @@ impl HoduExecutor {
         lhs_layout: &Layout,
         rhs_layout: &Layout,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match cmp_op {
             CmpOp::Eq => lhs_storage.cmp_impl::<Eq>(rhs_storage, lhs_layout, rhs_layout),
@@ -936,7 +934,7 @@ impl HoduExecutor {
         layout: &Layout,
         scalar: Scalar,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match cmp_scalar_op {
             CmpScalarOp::EqScalar => tensor_storage.cmp_scalar_impl::<EqScalar>(layout, scalar),
@@ -954,7 +952,7 @@ impl HoduExecutor {
         input_storage: &SharedStorage,
         layout: &Layout,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match unary_op {
             UnaryOp::Neg => input_storage.unary_impl::<Neg>(layout),
@@ -988,7 +986,7 @@ impl HoduExecutor {
         input_storage: &SharedStorage,
         layout: &Layout,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match unary_logical_op {
             UnaryLogicalOp::LogicalNot => input_storage.unary_logical_impl::<LogicalNot>(layout),
@@ -1002,7 +1000,7 @@ impl HoduExecutor {
         layout: &Layout,
         scalar: Scalar,
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::*;
+        use crate::op::*;
 
         match unary_scalar_op {
             UnaryScalarOp::AddScalar => input_storage.unary_scalar_impl::<AddScalar>(layout, scalar),
@@ -1041,7 +1039,7 @@ impl HoduExecutor {
         weight_layout: &Layout,
         params: &[Scalar],
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::conv::*;
+        use crate::op::conv::*;
 
         match conv_op {
             ConvOp::Conv1d => {
@@ -1294,7 +1292,7 @@ impl HoduExecutor {
         input_layout: &Layout,
         params: &[Scalar],
     ) -> HoduResult<HoduStorage> {
-        use crate::backends::op::window_reduction::WindowReduction;
+        use crate::op::window_reduction::WindowReduction;
 
         match windowing_op {
             WindowingOp::ReduceWindow => {

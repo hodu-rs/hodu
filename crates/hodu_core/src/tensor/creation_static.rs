@@ -1,5 +1,5 @@
 use crate::{
-    backends::builder::{get_active_builder, is_builder_active},
+    builder::{get_active_builder, is_builder_active},
     error::{HoduError, HoduResult},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::layout::Layout,

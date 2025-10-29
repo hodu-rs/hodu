@@ -1,15 +1,13 @@
 use crate::{
-    backends::{
-        executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
-        op::{
-            BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op,
-            ReduceOp, ShapeOp, ShapeScalarsOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
-        },
-        script::{ir::ScriptIR, Script},
-    },
     compat::*,
     error::{HoduError, HoduResult},
+    executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
+    op::{
+        BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ReduceOp,
+        ShapeOp, ShapeScalarsOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
+    },
     scalar::Scalar,
+    script::{ir::ScriptIR, Script},
     tensor::{from_storage, Tensor, TensorId},
     types::{device::Device, dtype::DType, layout::Layout},
 };
@@ -348,7 +346,7 @@ impl XlaExecutor {
         operation: &Op,
         input_ops: &[XlaOp],
         _compiled_script: &XlaCompiledScript,
-        current_node: &crate::backends::script::ir::GraphNode,
+        current_node: &crate::script::ir::GraphNode,
     ) -> HoduResult<XlaOp> {
         match operation {
             // Binary Operations
@@ -3218,7 +3216,7 @@ impl XlaExecutor {
                 .to_cpu_storage()
                 .map_err(|e| HoduError::InternalError(format!("Failed to convert to CPU storage: {:?}", e)))?;
 
-            use crate::backends::be_hodu::cpu::storage::CpuStorage;
+            use crate::be_hodu::cpu::storage::CpuStorage;
             match cpu_storage {
                 CpuStorage::BOOL(ref data) => {
                     // Convert bool to u8 as XLA doesn't support bool NativeType directly
@@ -3442,8 +3440,8 @@ impl XlaExecutor {
 
     /// Convert XLA literal to Hodu tensor
     fn literal_to_tensor(&self, literal: &Literal, dtype: DType) -> HoduResult<Tensor> {
-        use crate::backends::be_hodu::cpu::storage::CpuStorage;
-        use crate::backends::be_hodu::storage::HoduStorage;
+        use crate::be_hodu::cpu::storage::CpuStorage;
+        use crate::be_hodu::storage::HoduStorage;
 
         let array_shape = literal
             .array_shape()
@@ -3770,14 +3768,14 @@ impl XlaExecutor {
     fn convert_constant_to_xla_op(
         &self,
         builder: &XlaBuilder,
-        constant: &crate::backends::script::ir::ConstantNode,
+        constant: &crate::script::ir::ConstantNode,
     ) -> HoduResult<XlaOp> {
         use crate::types::dtype::DType;
 
         // Decompress data if needed
         let data = match &constant.compression {
             #[cfg(all(feature = "serde", feature = "std"))]
-            Some(crate::backends::script::ir::CompressionType::Gzip) => {
+            Some(crate::script::ir::CompressionType::Gzip) => {
                 let mut decoder = flate2::read::GzDecoder::new(&constant.data[..]);
                 let mut decompressed = Vec::new();
                 std::io::Read::read_to_end(&mut decoder, &mut decompressed)
@@ -3785,13 +3783,13 @@ impl XlaExecutor {
                 decompressed
             },
             #[cfg(not(all(feature = "serde", feature = "std")))]
-            Some(crate::backends::script::ir::CompressionType::Gzip) => {
+            Some(crate::script::ir::CompressionType::Gzip) => {
                 return Err(HoduError::InternalError(
                     "Gzip decompression requires both 'serde' and 'std' features to be enabled".to_string(),
                 ));
             },
-            Some(crate::backends::script::ir::CompressionType::None) => constant.data.clone(),
-            Some(crate::backends::script::ir::CompressionType::Zstd) => {
+            Some(crate::script::ir::CompressionType::None) => constant.data.clone(),
+            Some(crate::script::ir::CompressionType::Zstd) => {
                 return Err(HoduError::InternalError(
                     "Zstd decompression not implemented for XLA".to_string(),
                 ));

@@ -1,10 +1,10 @@
 pub use crate::{
-    backends::op::{
+    compat::*,
+    error::{HoduError, HoduResult},
+    op::{
         window_reduction::WindowReduction, BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConcatOp, IndexingOp,
         MatrixOp, MemoryOp, Op, ReduceOp, ShapeOp, SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
     },
-    compat::*,
-    error::{HoduError, HoduResult},
     tensor::Tensor,
     types::{backend::Backend, device::Device, dtype::DType},
 };

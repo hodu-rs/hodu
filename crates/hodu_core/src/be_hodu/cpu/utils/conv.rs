@@ -1,9 +1,9 @@
 use crate::{
-    backends::op::conv::{
-        ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D, ParamsConvTranspose3D,
-    },
     compat::*,
     error::HoduResult,
+    op::conv::{
+        ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D, ParamsConvTranspose3D,
+    },
     types::layout::Layout,
 };
 

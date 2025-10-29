@@ -1,11 +1,11 @@
 use crate::{
-    backends::{be_hodu::device::HoduDevice, builder::is_builder_active},
     compat::*,
     error::HoduResult,
     flatten::IntoFlattened,
     scalar::Scalar,
     tensor::{from_storage, Tensor},
     types::{device::Device, dtype::DType, layout::Layout},
+    {be_hodu::device::HoduDevice, builder::is_builder_active},
 };
 
 static RUNTIME_DEVICE: Mutex<Device> = Mutex::new(Device::CPU);

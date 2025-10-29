@@ -1,18 +1,16 @@
 #![allow(clippy::vec_init_then_push)]
 
 use crate::{
-    backends::{
-        be_hodu::{metal::storage::MetalStorage, storage::HoduStorageT},
-        op::{
-            conv::{
-                ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
-                ParamsConvTranspose3D,
-            },
-            window_reduction::WindowReduction,
-            ReduceOp,
-        },
-    },
+    be_hodu::{metal::storage::MetalStorage, storage::HoduStorageT},
     error::{HoduError, HoduResult},
+    op::{
+        conv::{
+            ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
+            ParamsConvTranspose3D,
+        },
+        window_reduction::WindowReduction,
+        ReduceOp,
+    },
     scalar::Scalar,
     types::{dtype::DType, layout::Layout},
 };
@@ -3265,34 +3263,34 @@ pub fn index_select_map(
             // Need to convert to I32
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -3588,34 +3586,34 @@ pub fn index_put_map(
         DType::I64 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -3957,34 +3955,34 @@ pub fn gather_map(
         DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
                     let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -4289,27 +4287,27 @@ pub fn scatter_map(
         DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -4664,27 +4662,27 @@ pub fn scatter_add_map(
         DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -5017,27 +5015,27 @@ pub fn scatter_max_map(
         DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -5370,27 +5368,27 @@ pub fn scatter_min_map(
         DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
+                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
-                crate::backends::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::backends::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
+                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {

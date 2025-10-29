@@ -1,10 +1,8 @@
 use crate::{
-    backends::{
-        be_hodu::{cpu::storage::CpuStorage, storage::HoduStorageT},
-        op::{window_reduction::WindowReduction, DivScalar},
-    },
+    be_hodu::{cpu::storage::CpuStorage, storage::HoduStorageT},
     compat::*,
     error::{HoduError, HoduResult},
+    op::{window_reduction::WindowReduction, DivScalar},
     scalar::Scalar,
     types::layout::Layout,
 };

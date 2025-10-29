@@ -1,4 +1,4 @@
-use crate::{backends::be_hodu::cpu::storage::CpuStorage, compat::*, types::dtype::DType};
+use crate::{be_hodu::cpu::storage::CpuStorage, compat::*, types::dtype::DType};
 use float8::{F8E4M3, F8E5M2};
 use half::{bf16, f16};
 

@@ -1,18 +1,16 @@
 use super::utils::{broadcast_tensors2, broadcast_tensors3};
 use crate::{
-    backends::{
-        builder,
-        op::{
-            self,
-            utils::{
-                validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_same_device,
-                validate_same_dtype,
-            },
-            Op,
-        },
-    },
+    builder,
     compat::*,
     error::{HoduError, HoduResult},
+    op::{
+        self,
+        utils::{
+            validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_same_device,
+            validate_same_dtype,
+        },
+        Op,
+    },
     scalar::Scalar,
     tensor::{
         create_builder_tensor_with_grad, from_shared_storage_with_grad, from_storage_with_grad, gradient,

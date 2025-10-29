@@ -1,21 +1,19 @@
 use crate::{
-    backends::{
-        be_hodu::{
-            cpu::storage::CpuStorage,
-            device::{HoduDevice, HoduDeviceT},
-            metal::storage::MetalStorage,
-        },
-        op::{
-            conv::{
-                ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
-                ParamsConvTranspose3D,
-            },
-            window_reduction::WindowReduction,
-            BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
-        },
+    be_hodu::{
+        cpu::storage::CpuStorage,
+        device::{HoduDevice, HoduDeviceT},
+        metal::storage::MetalStorage,
     },
     compat::*,
     error::{HoduError, HoduResult},
+    op::{
+        conv::{
+            ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
+            ParamsConvTranspose3D,
+        },
+        window_reduction::WindowReduction,
+        BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
+    },
     scalar::Scalar,
     types::{device::Device, dtype::DType, layout::Layout},
 };
@@ -328,7 +326,7 @@ impl HoduStorage {
 
     pub(crate) fn reduce(
         &self,
-        reduce_op: crate::backends::op::ReduceOp,
+        reduce_op: crate::op::ReduceOp,
         layout: &Layout,
         dims: &[usize],
         keep_dim: bool,

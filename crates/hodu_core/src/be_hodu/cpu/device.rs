@@ -1,5 +1,5 @@
 use crate::{
-    backends::be_hodu::{cpu::storage::CpuStorage, device::HoduDeviceT},
+    be_hodu::{cpu::storage::CpuStorage, device::HoduDeviceT},
     compat::*,
     error::{HoduError, HoduResult},
     types::{dtype::DType, layout::Layout},

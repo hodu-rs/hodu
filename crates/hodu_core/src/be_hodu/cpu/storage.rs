@@ -1,20 +1,18 @@
 use crate::{
-    backends::{
-        be_hodu::{
-            cpu::{device::CpuDevice, utils::*},
-            storage::HoduStorageT,
-        },
-        op::{
-            conv::{
-                ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
-                ParamsConvTranspose3D,
-            },
-            window_reduction::WindowReduction,
-            BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
-        },
+    be_hodu::{
+        cpu::{device::CpuDevice, utils::*},
+        storage::HoduStorageT,
     },
     compat::*,
     error::{HoduError, HoduResult},
+    op::{
+        conv::{
+            ParamsConv1D, ParamsConv2D, ParamsConv3D, ParamsConvTranspose1D, ParamsConvTranspose2D,
+            ParamsConvTranspose3D,
+        },
+        window_reduction::WindowReduction,
+        BinaryLogicalOpT, BinaryOpT, CmpOpT, CmpScalarOpT, ReduceOp, UnaryLogicalOpT, UnaryOpT, UnaryScalarOpT,
+    },
     scalar::Scalar,
     types::{device::Device, dtype::DType, layout::Layout},
 };

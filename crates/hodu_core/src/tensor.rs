@@ -8,7 +8,7 @@ pub(super) mod utils;
 mod vec;
 
 use crate::{
-    backends::be_hodu::storage::HoduStorage,
+    be_hodu::storage::HoduStorage,
     compat::*,
     error::{HoduError, HoduResult},
     types::{device::Device, dtype::DType, layout::Layout},
@@ -349,12 +349,12 @@ pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: boo
 }
 
 pub(crate) fn register_operation_in_builder(
-    op: crate::backends::op::Op,
+    op: crate::op::Op,
     output_ids: Vec<TensorId>,
     input_layouts: Vec<Layout>,
     output_layouts: Vec<Layout>,
 ) {
-    use crate::backends::builder;
+    use crate::builder;
     if let Ok(active_builder) = builder::get_active_builder() {
         let _ = active_builder.add_operation(op, output_ids, input_layouts, output_layouts);
     }

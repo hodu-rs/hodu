@@ -1,6 +1,6 @@
 #[cfg(feature = "xla")]
 use crate::error::HoduError;
-use crate::{backends::script::Script, compat::*, error::HoduResult, tensor::Tensor, types::device::Device};
+use crate::{compat::*, error::HoduResult, script::Script, tensor::Tensor, types::device::Device};
 
 pub trait ExecutorT: Send + Sync {
     type CompiledScript;
@@ -47,9 +47,9 @@ pub enum OptimizationLevel {
 pub type ExecutionInputs<'a> = HashMap<&'a str, Tensor>;
 pub type ExecutionOutputs = HashMap<String, Tensor>;
 
-use crate::backends::be_hodu::executor::HoduExecutor;
+use crate::be_hodu::executor::HoduExecutor;
 #[cfg(feature = "xla")]
-use crate::backends::be_xla::executor::XlaExecutor;
+use crate::be_xla::executor::XlaExecutor;
 
 pub enum Executor {
     Hodu(HoduExecutor),
