@@ -4,7 +4,7 @@ exclude = ["benchmarks/.venvs"]
 
 [package]
 name = "hodu"
-version = "0.1.8"
+version = "0.1.9"
 description = "A user-friendly ML framework built in Rust for rapid prototyping and embedded deployment"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -57,4 +57,4 @@ metal = ["hodu_internal/metal"]
 xla = ["std", "hodu_internal/xla"]
 
 [dependencies]
-hodu_internal = { path = "crates/hodu_internal", version = "0.1.8" }
+hodu_internal = { path = "crates/hodu_internal", version = "0.1.9" }

@@ -1,6 +1,6 @@
 [package]
 name = "hodu_utils"
-version = "0.1.8"
+version = "0.1.9"
 description = "hodu utils"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -13,7 +13,7 @@ std = ["hodu_core/std", "rand/std", "rand_distr/std"]
 serde = ["hodu_core/serde"]
 
 [dependencies]
-hodu_core = { path = "../hodu_core", version = "0.1.8" }
-hodu_utils_macros = { path = "macros", version = "0.1.8" }
+hodu_core = { path = "../hodu_core", version = "0.1.9" }
+hodu_utils_macros = { path = "macros", version = "0.1.9" }
 rand = { workspace = true, default-features = false, features = ["small_rng"] }
 rand_distr = { workspace = true, default-features = false }

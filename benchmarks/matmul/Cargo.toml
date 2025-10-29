@@ -23,7 +23,7 @@ burn-ndarray = "0.18.0"
 burn-tch = { version = "0.18.0", optional = true }
 burn-wgpu = { version = "0.18.0", optional = true }
 candle-core = "0.9.1"
-hodu = { path = "../../", version = "0.1.8", optional = true }
+hodu = { path = "../../", version = "0.1.9", optional = true }
 
 [features]
 default = []
