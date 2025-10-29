@@ -3772,6 +3772,64 @@ impl Tensor {
         }
     }
 
+    pub fn slice<S: Into<Scalar> + Copy>(&self, dim: usize, start: S, end: Option<S>, step: S) -> HoduResult<Self> {
+        let layout = self.get_layout();
+
+        // Convert Scalar to isize
+        let start_scalar = start.into();
+        let start_isize = start_scalar.to_i64() as isize;
+
+        let end_isize = end.map(|e| {
+            let end_scalar = e.into();
+            end_scalar.to_i64() as isize
+        });
+
+        let step_scalar = step.into();
+        let step_isize = step_scalar.to_i64() as isize;
+
+        let new_layout = layout.slice(dim, start_isize, end_isize, step_isize)?;
+        let requires_grad = self.is_requires_grad();
+
+        // First check if tensor is contiguous
+        if !layout.is_contiguous() {
+            // If not contiguous, make it contiguous first then slice
+            let contiguous_tensor = self.contiguous()?;
+            return contiguous_tensor.slice(dim, start, end, step);
+        }
+
+        // Store slice parameters in scalars: [dim, start, end_or_max, step]
+        // Use i32::MAX to represent None for end
+        let end_value = end_isize.unwrap_or(i32::MAX as isize);
+        let scalars = vec![
+            Scalar::I32(dim as i32),
+            Scalar::I32(start_isize as i32),
+            Scalar::I32(end_value as i32),
+            Scalar::I32(step_isize as i32),
+        ];
+
+        if builder::is_builder_active() {
+            let (tensor_id, result) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let op = Op::ShapeScalars(op::ShapeScalarsOp::Slice, self.id(), scalars.clone());
+            register_operation_in_builder(op.clone(), vec![tensor_id], vec![self.get_layout()], vec![new_layout]);
+
+            if self.is_requires_grad() {
+                gradient::record_operation(tensor_id, op, vec![self.id()])?;
+            }
+
+            Ok(result)
+        } else {
+            // Tensor is contiguous, we can share storage
+            let result = from_shared_storage_with_grad(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && self.is_requires_grad() {
+                let op = Op::ShapeScalars(op::ShapeScalarsOp::Slice, self.id(), scalars);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
+        }
+    }
+
     // Cast Operations
     pub fn to_dtype(&self, dtype: DType) -> HoduResult<Self> {
         // Validate that target dtype is supported on current device

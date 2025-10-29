@@ -20,8 +20,8 @@ pub fn validate_same_device(tensors: &[&Tensor], op: &str) -> HoduResult<()> {
         let current_device = tensor.get_device();
         if current_device != first_device {
             return Err(HoduError::DeviceConflictInOp {
-                left: first_device.clone(),
-                right: current_device.clone(),
+                left: first_device,
+                right: current_device,
                 op: op.to_string(),
             });
         }
@@ -39,7 +39,7 @@ pub fn validate_dtype_for_device(dtype: DType, device: &Device, op: &str) -> Hod
             match dtype {
                 DType::F8E4M3 | DType::F8E5M2 | DType::F64 => Err(HoduError::UnsupportedDTypeForDeviceInOp {
                     dtype,
-                    device: device.clone(),
+                    device: *device,
                     op: op.to_string(),
                 }),
                 _ => Ok(()),
@@ -364,8 +364,8 @@ pub fn validate_dtype_for_op(dtype: DType, op: &Op) -> HoduResult<()> {
             }
         },
 
-        // Shape, Cast, Memory operations - all types supported
-        Op::Shape(..) | Op::Cast(..) | Op::Memory(..) => {
+        // Shape, Shape with Scalars, Cast, Memory operations - all types supported
+        Op::Shape(..) | Op::ShapeScalars(..) | Op::Cast(..) | Op::Memory(..) => {
             // All types supported (-)
         },
 

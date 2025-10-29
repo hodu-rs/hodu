@@ -3,12 +3,12 @@ mod utils;
 use crate::{
     backends::op::{
         BinaryLogicalOp, BinaryOp, CmpOp, CmpScalarOp, ConcatOp, ConvOp, IndexingOp, MatrixOp, Op, ReduceOp, ShapeOp,
-        SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
+        ShapeScalarsOp, SplitOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
     },
     compat::*,
     error::{HoduError, HoduResult},
     scalar::Scalar,
-    tensor::{self, set_grad_tensor_id, tensor_from_id, TensorId},
+    tensor::{self, set_grad_tensor_id, tensor_from_id, Tensor, TensorId},
 };
 use num_traits::float::Float;
 use utils::*;
@@ -1453,6 +1453,95 @@ impl VjpCompute for ShapeOp {
     }
 }
 
+impl VjpCompute for ShapeScalarsOp {
+    fn compute_vjp_with_scalars(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        _scalars: &[Scalar],
+    ) -> HoduResult<Vec<TensorId>> {
+        let input = inputs[0];
+        let input_tensor = tensor_from_id(input);
+        let input_layout = input_tensor.get_layout();
+        let input_shape = input_layout.get_shape();
+        let grad_tensor = tensor_from_id(grad_output);
+        let grad_layout = grad_tensor.get_layout();
+        let grad_shape = grad_layout.get_shape();
+
+        match self {
+            ShapeScalarsOp::Slice => {
+                // Extract slice parameters from scalars: [dim, start, end_or_max, step]
+                if _scalars.len() < 4 {
+                    return Err(HoduError::InternalError(
+                        "Slice requires 4 scalar parameters".to_string(),
+                    ));
+                }
+
+                let dim = _scalars[0].to_i32() as usize;
+                let start = _scalars[1].to_i32() as isize;
+                let end_value = _scalars[2].to_i32();
+                let end = if end_value == i32::MAX {
+                    None
+                } else {
+                    Some(end_value as isize)
+                };
+                let step = _scalars[3].to_i32() as isize;
+
+                // Calculate slice indices
+                let dim_size = input_shape[dim] as isize;
+                let start_idx = if start < 0 { dim_size + start } else { start };
+                let end_idx = end
+                    .map(|e| if e < 0 { dim_size + e } else { e })
+                    .unwrap_or(if step > 0 { dim_size } else { -1 });
+
+                // Generate indices based on step direction
+                let mut indices_vec = Vec::new();
+                if step > 0 {
+                    let mut idx = start_idx;
+                    while idx < end_idx && idx < dim_size {
+                        indices_vec.push(idx as i32);
+                        idx += step;
+                    }
+                } else {
+                    let mut idx = start_idx;
+                    while idx > end_idx && idx >= 0 {
+                        indices_vec.push(idx as i32);
+                        idx += step;
+                    }
+                }
+
+                // Validate that grad_shape matches expected slice output
+                if grad_shape.len() != input_shape.len() {
+                    return Err(HoduError::InternalError(
+                        "Gradient shape rank must match input shape rank for slice".to_string(),
+                    ));
+                }
+                if grad_shape[dim] != indices_vec.len() {
+                    return Err(HoduError::InternalError(format!(
+                        "Gradient shape[{}]={} does not match expected slice size={}",
+                        dim,
+                        grad_shape[dim],
+                        indices_vec.len()
+                    )));
+                }
+
+                // Create indices tensor
+                let indices_tensor = Tensor::new(indices_vec)?;
+
+                // Create zero tensor with input shape
+                let dtype = input_tensor.get_dtype();
+                let grad_input = Tensor::zeros(input_shape, dtype)?;
+
+                // Use scatter_add to place gradients at the sliced positions
+                let result = grad_input.scatter_add(dim, &indices_tensor, &grad_tensor)?;
+
+                Ok(vec![result.id()])
+            },
+        }
+    }
+}
+
 #[derive(Clone)]
 struct TapeEntry {
     output_id: TensorId,
@@ -1768,6 +1857,9 @@ fn compute_vjp_for_op(
             windowing_op.compute_vjp_with_scalars(inputs, output, grad_output, params)
         },
         Op::Shape(shape_op, _) => shape_op.compute_vjp(inputs, output, grad_output),
+        Op::ShapeScalars(shape_op, _, scalars) => {
+            shape_op.compute_vjp_with_scalars(inputs, output, grad_output, &scalars)
+        },
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }
 }

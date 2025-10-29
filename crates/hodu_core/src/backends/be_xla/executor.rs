@@ -3,7 +3,7 @@ use crate::{
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
             BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op,
-            ReduceOp, ShapeOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
+            ReduceOp, ShapeOp, ShapeScalarsOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
         },
         script::{ir::ScriptIR, Script},
     },
@@ -15,6 +15,7 @@ use crate::{
 };
 use hodu_xla::{ElementType, Literal, PjRtClient, PjRtLoadedExecutable, PrimitiveType, XlaBuilder, XlaOp};
 use std::collections::HashMap;
+use std::f32;
 use std::sync::Arc;
 
 // Thread-safe wrapper for PjRtLoadedExecutable
@@ -452,9 +453,7 @@ impl XlaExecutor {
                     UnaryOp::Tanh => input_ops[0].tanh(),
                     UnaryOp::Gelu => {
                         // GELU approximation: 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x^3)))
-                        let sqrt_2_over_pi = builder
-                            .constant_r0(0.7978845608028654f32)
-                            .map_err(xla_error_to_hodu_error)?; // sqrt(2/π)
+                        let sqrt_2_over_pi = builder.constant_r0(0.797_884_6_f32).map_err(xla_error_to_hodu_error)?; // sqrt(2/π)
                         let gelu_coeff = builder.constant_r0(0.044715f32).map_err(xla_error_to_hodu_error)?;
                         let half = builder.constant_r0(0.5f32).map_err(xla_error_to_hodu_error)?;
                         let one = builder.constant_r0(1.0f32).map_err(xla_error_to_hodu_error)?;
@@ -508,14 +507,14 @@ impl XlaExecutor {
                     UnaryOp::Exp => input_ops[0].exp(),
                     UnaryOp::Exp2 => {
                         let ln_2 = builder
-                            .constant_r0(0.6931471805599453f32)
+                            .constant_r0(f32::consts::LN_2)
                             .map_err(xla_error_to_hodu_error)?; // ln(2)
                         let scaled = input_ops[0].mul_(&ln_2).map_err(xla_error_to_hodu_error)?;
                         scaled.exp()
                     },
                     UnaryOp::Exp10 => {
                         let ln_10 = builder
-                            .constant_r0(2.302585092994046f32)
+                            .constant_r0(f32::consts::LN_10)
                             .map_err(xla_error_to_hodu_error)?; // ln(10)
                         let scaled = input_ops[0].mul_(&ln_10).map_err(xla_error_to_hodu_error)?;
                         scaled.exp()
@@ -524,14 +523,14 @@ impl XlaExecutor {
                     UnaryOp::Log2 => {
                         let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
                         let ln_2 = builder
-                            .constant_r0(0.6931471805599453f32)
+                            .constant_r0(f32::consts::LN_2)
                             .map_err(xla_error_to_hodu_error)?; // ln(2)
                         ln_val.div_(&ln_2)
                     },
                     UnaryOp::Log10 => {
                         let ln_val = input_ops[0].log().map_err(xla_error_to_hodu_error)?;
                         let ln_10 = builder
-                            .constant_r0(2.302585092994046f32)
+                            .constant_r0(f32::consts::LN_10)
                             .map_err(xla_error_to_hodu_error)?; // ln(10)
                         ln_val.div_(&ln_10)
                     },
@@ -828,7 +827,7 @@ impl XlaExecutor {
                         let dim = dims[0];
                         let input = &input_ops[0];
                         let shape = input.array_shape().map_err(xla_error_to_hodu_error)?;
-                        let input_dims: Vec<i64> = shape.dims().iter().map(|&d| d as i64).collect();
+                        let input_dims: Vec<i64> = shape.dims().to_vec();
                         let builder = input.builder();
 
                         // Step 1: Find the max value along the dimension
@@ -878,7 +877,7 @@ impl XlaExecutor {
                         let dim = dims[0];
                         let input = &input_ops[0];
                         let shape = input.array_shape().map_err(xla_error_to_hodu_error)?;
-                        let input_dims: Vec<i64> = shape.dims().iter().map(|&d| d as i64).collect();
+                        let input_dims: Vec<i64> = shape.dims().to_vec();
                         let builder = input.builder();
 
                         // Step 1: Find the min value along the dimension
@@ -2251,7 +2250,7 @@ impl XlaExecutor {
                             //          2 - kernel + pad_total = kernel - 2*padding + output_padding
                             //          pad_total = 2*kernel - 2 - 2*padding + output_padding
 
-                            let pad_total = (2 * kernel_size - 2 - 2 * padding + output_padding) as i64;
+                            let pad_total = 2 * kernel_size - 2 - 2 * padding + output_padding;
                             let pad_low = pad_total / 2;
                             let pad_high = pad_total - pad_low;
 
@@ -2270,8 +2269,7 @@ impl XlaExecutor {
                             // For dilation=1: pad_total = K + K - 2 - 2*padding + output_padding
                             //                = 2*K - 2 - 2*padding + output_padding
 
-                            let pad_total =
-                                (dilation * kernel_size + kernel_size - 2 - 2 * padding + output_padding) as i64;
+                            let pad_total = dilation * kernel_size + kernel_size - 2 - 2 * padding + output_padding;
                             let pad_low = pad_total / 2;
                             let pad_high = pad_total - pad_low;
 
@@ -2331,21 +2329,20 @@ impl XlaExecutor {
                             xla_padding_w_high,
                         ) = if use_lhs_dilation {
                             // For stride > 1
-                            let pad_h_total = (2 * kernel_height - 2 - 2 * padding + output_padding) as i64;
+                            let pad_h_total = 2 * kernel_height - 2 - 2 * padding + output_padding;
                             let pad_h_low = pad_h_total / 2;
                             let pad_h_high = pad_h_total - pad_h_low;
-                            let pad_w_total = (2 * kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_total = 2 * kernel_width - 2 - 2 * padding + output_padding;
                             let pad_w_low = pad_w_total / 2;
                             let pad_w_high = pad_w_total - pad_w_low;
                             (vec![stride, stride], pad_h_low, pad_h_high, pad_w_low, pad_w_high)
                         } else {
                             // For stride = 1
                             let pad_h_total =
-                                (dilation * kernel_height + kernel_height - 2 - 2 * padding + output_padding) as i64;
+                                dilation * kernel_height + kernel_height - 2 - 2 * padding + output_padding;
                             let pad_h_low = pad_h_total / 2;
                             let pad_h_high = pad_h_total - pad_h_low;
-                            let pad_w_total =
-                                (dilation * kernel_width + kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_total = dilation * kernel_width + kernel_width - 2 - 2 * padding + output_padding;
                             let pad_w_low = pad_w_total / 2;
                             let pad_w_high = pad_w_total - pad_w_low;
                             (vec![], pad_h_low, pad_h_high, pad_w_low, pad_w_high)
@@ -2407,13 +2404,13 @@ impl XlaExecutor {
                             xla_padding_w_high,
                         ) = if use_lhs_dilation {
                             // For stride > 1
-                            let pad_d_total = (2 * kernel_depth - 2 - 2 * padding + output_padding) as i64;
+                            let pad_d_total = 2 * kernel_depth - 2 - 2 * padding + output_padding;
                             let pad_d_low = pad_d_total / 2;
                             let pad_d_high = pad_d_total - pad_d_low;
-                            let pad_h_total = (2 * kernel_height - 2 - 2 * padding + output_padding) as i64;
+                            let pad_h_total = 2 * kernel_height - 2 - 2 * padding + output_padding;
                             let pad_h_low = pad_h_total / 2;
                             let pad_h_high = pad_h_total - pad_h_low;
-                            let pad_w_total = (2 * kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_total = 2 * kernel_width - 2 - 2 * padding + output_padding;
                             let pad_w_low = pad_w_total / 2;
                             let pad_w_high = pad_w_total - pad_w_low;
                             (
@@ -2427,16 +2424,14 @@ impl XlaExecutor {
                             )
                         } else {
                             // For stride = 1
-                            let pad_d_total =
-                                (dilation * kernel_depth + kernel_depth - 2 - 2 * padding + output_padding) as i64;
+                            let pad_d_total = dilation * kernel_depth + kernel_depth - 2 - 2 * padding + output_padding;
                             let pad_d_low = pad_d_total / 2;
                             let pad_d_high = pad_d_total - pad_d_low;
                             let pad_h_total =
-                                (dilation * kernel_height + kernel_height - 2 - 2 * padding + output_padding) as i64;
+                                dilation * kernel_height + kernel_height - 2 - 2 * padding + output_padding;
                             let pad_h_low = pad_h_total / 2;
                             let pad_h_high = pad_h_total - pad_h_low;
-                            let pad_w_total =
-                                (dilation * kernel_width + kernel_width - 2 - 2 * padding + output_padding) as i64;
+                            let pad_w_total = dilation * kernel_width + kernel_width - 2 - 2 * padding + output_padding;
                             let pad_w_low = pad_w_total / 2;
                             let pad_w_high = pad_w_total - pad_w_low;
                             (
@@ -3069,8 +3064,8 @@ impl XlaExecutor {
                         let mut permutation = vec![0i64; ndim];
                         for i in 0..ndim {
                             // Find which output dimension corresponds to input dimension i
-                            for j in 0..ndim {
-                                if input_shape[i] == output_shape[j] {
+                            for (j, &out_dim) in output_shape.iter().enumerate().take(ndim) {
+                                if input_shape[i] == out_dim {
                                     // Check if this is not already assigned
                                     let already_used = permutation[..i].contains(&(j as i64));
                                     if !already_used {
@@ -3082,6 +3077,54 @@ impl XlaExecutor {
                         }
 
                         input_ops[0].transpose(&permutation).map_err(xla_error_to_hodu_error)
+                    },
+                }
+            },
+
+            // Shape Scalars Operations
+            Op::ShapeScalars(op, _, scalars) => {
+                if input_ops.len() != 1 {
+                    return Err(HoduError::InternalError(
+                        "ShapeScalars operation requires exactly 1 input".to_string(),
+                    ));
+                }
+                match op {
+                    ShapeScalarsOp::Slice => {
+                        // Extract slice parameters: [dim, start, end_or_max, step]
+                        if scalars.len() < 4 {
+                            return Err(HoduError::InternalError(
+                                "Slice requires 4 scalar parameters".to_string(),
+                            ));
+                        }
+
+                        let dim = scalars[0].to_i32() as usize;
+                        let start = scalars[1].to_i64();
+                        let end_value = scalars[2].to_i32();
+                        let end = if end_value == i32::MAX {
+                            None
+                        } else {
+                            Some(scalars[2].to_i64())
+                        };
+                        let stride = scalars[3].to_i64();
+
+                        // Get input shape to compute actual indices
+                        let input_layout = current_node
+                            .input_layouts
+                            .first()
+                            .ok_or_else(|| HoduError::InternalError("Missing input layout for slice".to_string()))?;
+                        let input_shape = input_layout.get_shape();
+
+                        // Normalize negative indices
+                        let dim_size = input_shape[dim] as i64;
+                        let start_idx = if start < 0 { dim_size + start } else { start };
+                        let end_idx = end
+                            .map(|e| if e < 0 { dim_size + e } else { e })
+                            .unwrap_or(if stride > 0 { dim_size } else { -1 });
+
+                        // Use XLA slice operation
+                        input_ops[0]
+                            .slice_in_dim(start_idx, end_idx, stride, dim as i64)
+                            .map_err(xla_error_to_hodu_error)
                     },
                 }
             },

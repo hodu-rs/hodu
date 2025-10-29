@@ -145,6 +145,8 @@ broadcast_left@
 transpose
 t@
 permute
+// shape with scalars
+slice
 // cast
 to_dtype!
 // memory

@@ -9,6 +9,7 @@ use crate::{
 };
 use ir::ScriptIR;
 
+#[derive(Default)]
 pub struct Script {
     ir: Option<ScriptIR>,
     backend: Option<Backend>,
@@ -16,19 +17,6 @@ pub struct Script {
     runtime_inputs: HashMap<String, Tensor>,
     compiled: Option<CompiledScript>,
     executor: Option<Executor>,
-}
-
-impl Default for Script {
-    fn default() -> Self {
-        Self {
-            ir: None,
-            backend: None,
-            device: None,
-            runtime_inputs: HashMap::new(),
-            compiled: None,
-            executor: None,
-        }
-    }
 }
 
 impl fmt::Debug for Script {

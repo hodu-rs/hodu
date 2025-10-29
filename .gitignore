@@ -1,6 +1,7 @@
 target
 Cargo.lock
 .cargo
+.rust-analyzer.json
 
 # OS
 .DS_Store

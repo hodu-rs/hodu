@@ -323,6 +323,14 @@ Operations that manipulate tensor shape and layout.
 | `transpose` | Swap two dimensions | `t` (for last two dims) |
 | `permute` | Reorder dimensions | - |
 
+## Shape Operations with Scalars
+
+
+| Operation | Description | Aliases |
+|-----------|-------------|---------|
+| `slice` | Extract sub-tensor along dimension with optional stride | |
+
+
 ## Type Operations
 
 | Operation | Description | Unsupported Types |

@@ -280,22 +280,23 @@ pub enum ReduceOp {
     All,    // no-backprop
 }
 
-impl ReduceOp {
-    pub fn to_string(&self) -> String {
-        match self {
-            ReduceOp::Sum => "sum".to_string(),
-            ReduceOp::Mean => "mean".to_string(),
-            ReduceOp::Max => "max".to_string(),
-            ReduceOp::Min => "min".to_string(),
-            ReduceOp::Prod => "prod".to_string(),
-            ReduceOp::Std => "std".to_string(),
-            ReduceOp::Var => "var".to_string(),
-            ReduceOp::Norm => "norm".to_string(),
-            ReduceOp::ArgMax => "argmax".to_string(),
-            ReduceOp::ArgMin => "argmin".to_string(),
-            ReduceOp::Any => "any".to_string(),
-            ReduceOp::All => "all".to_string(),
-        }
+impl fmt::Display for ReduceOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            ReduceOp::Sum => "sum",
+            ReduceOp::Mean => "mean",
+            ReduceOp::Max => "max",
+            ReduceOp::Min => "min",
+            ReduceOp::Prod => "prod",
+            ReduceOp::Std => "std",
+            ReduceOp::Var => "var",
+            ReduceOp::Norm => "norm",
+            ReduceOp::ArgMax => "argmax",
+            ReduceOp::ArgMin => "argmin",
+            ReduceOp::Any => "any",
+            ReduceOp::All => "all",
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -369,6 +370,13 @@ pub enum ShapeOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
+pub enum ShapeScalarsOp {
+    Slice,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum CastOp {
     ToDType, // no-backprop
 }
@@ -399,6 +407,7 @@ pub enum Op {
     Conv(ConvOp, TensorId, TensorId, Vec<Scalar>),
     Windowing(WindowingOp, TensorId, Vec<Scalar>),
     Shape(ShapeOp, TensorId),
+    ShapeScalars(ShapeScalarsOp, TensorId, Vec<Scalar>),
     Cast(CastOp, TensorId),
     Memory(MemoryOp, TensorId),
     Dummy,
@@ -422,6 +431,7 @@ impl Op {
             Op::Conv(_, input, weight, _) => vec![*input, *weight],
             Op::Windowing(_, t, _) => vec![*t],
             Op::Shape(_, t) => vec![*t],
+            Op::ShapeScalars(_, t, _) => vec![*t],
             Op::Cast(_, t) => vec![*t],
             Op::Memory(_, t) => vec![*t],
             Op::Dummy => vec![],

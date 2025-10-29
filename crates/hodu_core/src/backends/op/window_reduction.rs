@@ -10,13 +10,14 @@ pub enum WindowReduction {
     Min, // no-backprop
 }
 
-impl WindowReduction {
-    pub fn to_string(&self) -> String {
-        match self {
-            WindowReduction::Max => "max".to_string(),
-            WindowReduction::Mean => "mean".to_string(),
-            WindowReduction::Sum => "sum".to_string(),
-            WindowReduction::Min => "min".to_string(),
-        }
+impl fmt::Display for WindowReduction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            WindowReduction::Max => "max",
+            WindowReduction::Mean => "mean",
+            WindowReduction::Sum => "sum",
+            WindowReduction::Min => "min",
+        };
+        write!(f, "{}", s)
     }
 }

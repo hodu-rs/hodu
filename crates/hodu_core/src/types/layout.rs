@@ -262,4 +262,81 @@ impl Layout {
             offset: self.offset,
         })
     }
+
+    pub fn slice(&self, dim: usize, start: isize, end: Option<isize>, step: isize) -> HoduResult<Self> {
+        // Check dimension bounds
+        if dim >= self.get_ndim() {
+            return Err(HoduError::InternalError(format!(
+                "slice dimension {} out of range for {}-dimensional tensor",
+                dim,
+                self.get_ndim()
+            )));
+        }
+
+        if step == 0 {
+            return Err(HoduError::InternalError("slice step cannot be zero".to_string()));
+        }
+
+        let dim_size = self.shape[dim] as isize;
+
+        // Normalize negative indices and handle None for end
+        let start_idx = if start < 0 { dim_size + start } else { start };
+        let end_idx = match end {
+            Some(e) => {
+                if e < 0 {
+                    dim_size + e
+                } else {
+                    e
+                }
+            },
+            None => {
+                if step > 0 {
+                    dim_size
+                } else {
+                    -1
+                }
+            },
+        };
+
+        // Clamp indices to valid range
+        let clamped_start = start_idx.clamp(0, dim_size);
+        let clamped_end = if step > 0 {
+            end_idx.clamp(0, dim_size)
+        } else {
+            end_idx.clamp(-1, dim_size - 1)
+        };
+
+        // Calculate new size for the dimension
+        let new_size = if step > 0 {
+            if clamped_end > clamped_start {
+                (clamped_end - clamped_start + step - 1) / step
+            } else {
+                0
+            }
+        } else if clamped_start > clamped_end {
+            (clamped_start - clamped_end + (-step) - 1) / (-step)
+        } else {
+            0
+        };
+
+        if new_size <= 0 {
+            return Err(HoduError::InternalError("slice results in empty tensor".to_string()));
+        }
+
+        // Create a new Layout with adjusted shape, strides and offset
+        let mut new_shape = self.shape.clone();
+        let mut new_strides = self.strides.clone();
+
+        new_shape[dim] = new_size as usize;
+        new_strides[dim] = self.strides[dim] * step.unsigned_abs();
+
+        // Calculate new offset
+        let new_offset = self.offset + (clamped_start as usize * self.strides[dim]);
+
+        Ok(Self {
+            shape: new_shape,
+            strides: new_strides,
+            offset: new_offset,
+        })
+    }
 }

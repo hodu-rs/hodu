@@ -7,7 +7,7 @@ use crate::{
         executor::{CompileOptions, ExecutionInputs, ExecutionOutputs, ExecutorT},
         op::{
             BinaryLogicalOp, BinaryOp, CastOp, CmpOp, CmpScalarOp, ConvOp, IndexingOp, MatrixOp, MemoryOp, Op, ShapeOp,
-            UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
+            ShapeScalarsOp, UnaryLogicalOp, UnaryOp, UnaryScalarOp, WindowingOp,
         },
         script::{
             ir::{NodeId, ScriptIR},
@@ -831,6 +831,13 @@ impl HoduExecutor {
 
                 self.execute_shape_op(*shape_op, input_storage)
             },
+            Op::ShapeScalars(shape_scalars_op, tensor_id, scalars) => {
+                let input_storage = tensor_storage
+                    .get(tensor_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Input tensor {tensor_id:?} not found")))?;
+
+                self.execute_shape_scalars_op(*shape_scalars_op, input_storage, scalars)
+            },
             Op::Cast(cast_op, tensor_id) => {
                 let input_storage = tensor_storage
                     .get(tensor_id)
@@ -1355,6 +1362,20 @@ impl HoduExecutor {
 
     fn execute_shape_op(&self, _shape_op: ShapeOp, input_storage: &SharedStorage) -> HoduResult<HoduStorage> {
         // All shape operations (Reshape, Flatten, Squeeze, Unsqueeze, Broadcast, Transpose)
+        // simply return the same storage as the layout changes are handled at the tensor level
+        match input_storage.as_ref() {
+            HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
+            HoduStorage::Metal(metal_storage) => Ok(HoduStorage::Metal(metal_storage.clone())),
+        }
+    }
+
+    fn execute_shape_scalars_op(
+        &self,
+        _shape_scalars_op: ShapeScalarsOp,
+        input_storage: &SharedStorage,
+        _scalars: &[Scalar],
+    ) -> HoduResult<HoduStorage> {
+        // All shape scalars operations (Slice)
         // simply return the same storage as the layout changes are handled at the tensor level
         match input_storage.as_ref() {
             HoduStorage::CPU(cpu_storage) => Ok(HoduStorage::CPU(cpu_storage.clone())),
