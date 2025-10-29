@@ -9,6 +9,9 @@ use crate::{
 use float8::{F8E4M3, F8E5M2};
 use half::{bf16, f16};
 
+#[cfg(feature = "rayon")]
+const PARALLEL_THRESHOLD: usize = 4096;
+
 // Helper function to convert flat index to multi-dimensional indices
 #[allow(dead_code)]
 fn flat_to_indices(mut flat_idx: usize, shape: &[usize]) -> Vec<usize> {
@@ -51,34 +54,84 @@ pub fn reduce_window_impl(
 
             #[cfg(feature = "rayon")]
             {
-                let output_data: Vec<$T> = (0..output_size)
-                    .into_par_iter()
-                    .map(|out_idx| {
-                        // Calculate output coordinates
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let output_data: Vec<$T> = (0..output_size)
+                        .into_par_iter()
+                        .map(|out_idx| {
+                            // Calculate output coordinates
+                            let out_coords = flat_to_indices(out_idx, &output_shape);
+
+                            // Initialize accumulator
+                            let mut acc = $init_val;
+
+                            // Iterate over window
+                            let window_size: usize = window_shape.iter().product();
+                            for win_idx in 0..window_size {
+                                // Calculate window coordinates
+                                let window_coords = flat_to_indices(win_idx, window_shape);
+
+                                // Calculate absolute coordinates in input space (before padding adjustment)
+                                // Window starts at (output_coord * stride) and we need to account for padding
+                                let mut input_coords = vec![0; rank];
+                                let mut in_bounds = true;
+                                for i in 0..rank {
+                                    // Calculate position in padded space
+                                    let padded_pos = out_coords[i] * strides[i] + window_coords[i];
+                                    // Check if within padded bounds
+                                    if padded_pos < padding[i].0 {
+                                        in_bounds = false;
+                                        break;
+                                    }
+                                    // Convert to actual input coordinates
+                                    let input_pos = padded_pos - padding[i].0;
+                                    if input_pos >= input_shape[i] {
+                                        in_bounds = false;
+                                        break;
+                                    }
+                                    input_coords[i] = input_pos;
+                                }
+
+                                // Get value from input or use init_val for padding
+                                let val = if in_bounds {
+                                    // Calculate flat index using layout strides and offset
+                                    let mut idx = input_layout.get_offset();
+                                    for i in 0..rank {
+                                        idx += input_coords[i] * input_layout.get_strides()[i];
+                                    }
+                                    $storage[idx]
+                                } else {
+                                    $init_val // Padding region uses init value
+                                };
+
+                                acc = $reduce_op(acc, val);
+                            }
+
+                            acc
+                        })
+                        .collect();
+
+                    Ok(CpuStorage::$variant(output_data))
+                } else {
+                    let mut output_data = vec![$init_val; output_size];
+
+                    for out_idx in 0..output_size {
                         let out_coords = flat_to_indices(out_idx, &output_shape);
 
-                        // Initialize accumulator
                         let mut acc = $init_val;
 
-                        // Iterate over window
                         let window_size: usize = window_shape.iter().product();
                         for win_idx in 0..window_size {
-                            // Calculate window coordinates
                             let window_coords = flat_to_indices(win_idx, window_shape);
 
-                            // Calculate absolute coordinates in input space (before padding adjustment)
-                            // Window starts at (output_coord * stride) and we need to account for padding
                             let mut input_coords = vec![0; rank];
                             let mut in_bounds = true;
                             for i in 0..rank {
-                                // Calculate position in padded space
                                 let padded_pos = out_coords[i] * strides[i] + window_coords[i];
-                                // Check if within padded bounds
                                 if padded_pos < padding[i].0 {
                                     in_bounds = false;
                                     break;
                                 }
-                                // Convert to actual input coordinates
                                 let input_pos = padded_pos - padding[i].0;
                                 if input_pos >= input_shape[i] {
                                     in_bounds = false;
@@ -87,26 +140,24 @@ pub fn reduce_window_impl(
                                 input_coords[i] = input_pos;
                             }
 
-                            // Get value from input or use init_val for padding
                             let val = if in_bounds {
-                                // Calculate flat index using layout strides and offset
                                 let mut idx = input_layout.get_offset();
                                 for i in 0..rank {
                                     idx += input_coords[i] * input_layout.get_strides()[i];
                                 }
                                 $storage[idx]
                             } else {
-                                $init_val // Padding region uses init value
+                                $init_val
                             };
 
                             acc = $reduce_op(acc, val);
                         }
 
-                        acc
-                    })
-                    .collect();
+                        output_data[out_idx] = acc;
+                    }
 
-                Ok(CpuStorage::$variant(output_data))
+                    Ok(CpuStorage::$variant(output_data))
+                }
             }
 
             #[cfg(not(feature = "rayon"))]

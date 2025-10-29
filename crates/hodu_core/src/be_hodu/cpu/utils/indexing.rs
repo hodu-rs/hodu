@@ -4,6 +4,9 @@ use crate::{
     types::layout::Layout,
 };
 
+#[cfg(feature = "rayon")]
+const PARALLEL_THRESHOLD: usize = 4096;
+
 // Helper function to convert flat index to multi-dimensional indices
 #[allow(dead_code)]
 fn flat_to_indices(mut flat_idx: usize, shape: &[usize]) -> Vec<usize> {
@@ -46,15 +49,56 @@ pub fn index_select_map<T: Copy + Send + Sync>(
 
     #[cfg(feature = "rayon")]
     {
-        let result: Result<Vec<T>, HoduError> = (0..output_size)
-            .into_par_iter()
-            .map(|flat_idx| {
-                let output_indices = flat_to_indices(flat_idx, &output_shape);
+        if output_size >= PARALLEL_THRESHOLD {
+            use rayon::prelude::*;
+            let result: Result<Vec<T>, HoduError> = (0..output_size)
+                .into_par_iter()
+                .map(|flat_idx| {
+                    let output_indices = flat_to_indices(flat_idx, &output_shape);
 
-                // Calculate which index to use
+                    // Calculate which index to use
+                    let index_pos = output_indices[dim];
+
+                    // Get the actual index value from indices tensor
+                    let mut indices_idx = indices_offset;
+                    if indices_layout.is_contiguous() {
+                        indices_idx += index_pos;
+                    } else {
+                        let mut tmp_pos = index_pos;
+                        for d in (0..indices_shape.len()).rev() {
+                            let i_dim = tmp_pos % indices_shape[d];
+                            indices_idx += i_dim * indices_strides[d];
+                            tmp_pos /= indices_shape[d];
+                        }
+                    }
+
+                    let idx = indices_storage[indices_idx];
+                    if idx < 0 || idx >= shape[dim] as i32 {
+                        return Err(HoduError::InternalError(format!(
+                            "index {} out of bounds for dimension {} with size {}",
+                            idx, dim, shape[dim]
+                        )));
+                    }
+
+                    // Calculate flat index in source tensor
+                    let mut flat_index = offset;
+                    for i in 0..ndim {
+                        let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+                        flat_index += actual_idx * strides[i];
+                    }
+
+                    Ok(storage[flat_index])
+                })
+                .collect();
+
+            result
+        } else {
+            let mut result = Vec::with_capacity(output_size);
+            let mut output_indices = vec![0; ndim];
+
+            for _ in 0..output_size {
                 let index_pos = output_indices[dim];
 
-                // Get the actual index value from indices tensor
                 let mut indices_idx = indices_offset;
                 if indices_layout.is_contiguous() {
                     indices_idx += index_pos;
@@ -75,18 +119,25 @@ pub fn index_select_map<T: Copy + Send + Sync>(
                     )));
                 }
 
-                // Calculate flat index in source tensor
                 let mut flat_index = offset;
                 for i in 0..ndim {
                     let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
                     flat_index += actual_idx * strides[i];
                 }
 
-                Ok(storage[flat_index])
-            })
-            .collect();
+                result.push(storage[flat_index]);
 
-        result
+                for i in (0..ndim).rev() {
+                    output_indices[i] += 1;
+                    if output_indices[i] < output_shape[i] {
+                        break;
+                    }
+                    output_indices[i] = 0;
+                }
+            }
+
+            Ok(result)
+        }
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -280,12 +331,44 @@ pub fn gather_map<T: Copy + Send + Sync>(
 
     #[cfg(feature = "rayon")]
     {
-        let result: Result<Vec<T>, HoduError> = (0..output_size)
-            .into_par_iter()
-            .map(|flat_idx| {
-                let output_indices = flat_to_indices(flat_idx, indices_shape);
+        if output_size >= PARALLEL_THRESHOLD {
+            use rayon::prelude::*;
+            let result: Result<Vec<T>, HoduError> = (0..output_size)
+                .into_par_iter()
+                .map(|flat_idx| {
+                    let output_indices = flat_to_indices(flat_idx, indices_shape);
 
-                // Get index from indices tensor
+                    // Get index from indices tensor
+                    let mut indices_idx = indices_offset;
+                    for i in 0..ndim {
+                        indices_idx += output_indices[i] * indices_strides[i];
+                    }
+
+                    let idx = indices_storage[indices_idx];
+                    if idx < 0 || idx >= shape[dim] as i32 {
+                        return Err(HoduError::InternalError(format!(
+                            "index {} out of bounds for dimension {} with size {}",
+                            idx, dim, shape[dim]
+                        )));
+                    }
+
+                    // Calculate flat index in source tensor
+                    let mut flat_index = offset;
+                    for i in 0..ndim {
+                        let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+                        flat_index += actual_idx * strides[i];
+                    }
+
+                    Ok(storage[flat_index])
+                })
+                .collect();
+
+            result
+        } else {
+            let mut result = Vec::with_capacity(output_size);
+            let mut output_indices = vec![0; ndim];
+
+            for _ in 0..output_size {
                 let mut indices_idx = indices_offset;
                 for i in 0..ndim {
                     indices_idx += output_indices[i] * indices_strides[i];
@@ -299,18 +382,25 @@ pub fn gather_map<T: Copy + Send + Sync>(
                     )));
                 }
 
-                // Calculate flat index in source tensor
                 let mut flat_index = offset;
                 for i in 0..ndim {
                     let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
                     flat_index += actual_idx * strides[i];
                 }
 
-                Ok(storage[flat_index])
-            })
-            .collect();
+                result.push(storage[flat_index]);
 
-        result
+                for i in (0..ndim).rev() {
+                    output_indices[i] += 1;
+                    if output_indices[i] < indices_shape[i] {
+                        break;
+                    }
+                    output_indices[i] = 0;
+                }
+            }
+
+            Ok(result)
+        }
     }
 
     #[cfg(not(feature = "rayon"))]

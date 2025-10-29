@@ -7,6 +7,9 @@ use crate::{
     types::layout::Layout,
 };
 
+#[cfg(feature = "rayon")]
+const PARALLEL_THRESHOLD: usize = 4096;
+
 pub fn matmul_map<
     T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output = T> + Default + 'static + Send + Sync,
 >(
@@ -156,11 +159,83 @@ pub fn matmul_map<
 
     #[cfg(feature = "rayon")]
     let result = {
-        let batch_results: Vec<Vec<T>> = (0..total_batches)
-            .into_par_iter()
-            .map(|batch_idx| {
-                let mut batch_result = vec![T::default(); lhs_m * rhs_n];
+        if total_batches * lhs_m * rhs_n >= PARALLEL_THRESHOLD {
+            use rayon::prelude::*;
+            let batch_results: Vec<Vec<T>> = (0..total_batches)
+                .into_par_iter()
+                .map(|batch_idx| {
+                    let mut batch_result = vec![T::default(); lhs_m * rhs_n];
 
+                    // Compute batch indices
+                    let mut batch_indices = vec![0; batch_ndim];
+                    let mut temp = batch_idx;
+                    for i in (0..batch_ndim).rev() {
+                        batch_indices[i] = temp % batch_shape[i];
+                        temp /= batch_shape[i];
+                    }
+
+                    // Map batch indices to lhs and rhs indices (with broadcasting)
+                    let mut lhs_batch_indices = vec![0; lhs_batch_ndim];
+                    for i in 0..lhs_batch_ndim {
+                        let batch_dim_idx = batch_ndim - lhs_batch_ndim + i;
+                        lhs_batch_indices[i] = if lhs_shape[i] == 1 {
+                            0
+                        } else {
+                            batch_indices[batch_dim_idx]
+                        };
+                    }
+
+                    let mut rhs_batch_indices = vec![0; rhs_batch_ndim];
+                    for i in 0..rhs_batch_ndim {
+                        let batch_dim_idx = batch_ndim - rhs_batch_ndim + i;
+                        rhs_batch_indices[i] = if rhs_shape[i] == 1 {
+                            0
+                        } else {
+                            batch_indices[batch_dim_idx]
+                        };
+                    }
+
+                    // Compute the matmul for this batch
+                    for i in 0..lhs_m {
+                        for j in 0..rhs_n {
+                            let mut sum = T::default();
+
+                            for k in 0..lhs_k {
+                                // Calculate lhs index
+                                let mut lhs_idx = lhs_offset;
+                                for (dim, &idx) in lhs_batch_indices.iter().enumerate() {
+                                    lhs_idx += idx * lhs_strides[dim];
+                                }
+                                lhs_idx += i * lhs_strides[lhs_ndim - 2];
+                                lhs_idx += k * lhs_strides[lhs_ndim - 1];
+
+                                // Calculate rhs index
+                                let mut rhs_idx = rhs_offset;
+                                for (dim, &idx) in rhs_batch_indices.iter().enumerate() {
+                                    rhs_idx += idx * rhs_strides[dim];
+                                }
+                                rhs_idx += k * rhs_strides[rhs_ndim - 2];
+                                rhs_idx += j * rhs_strides[rhs_ndim - 1];
+
+                                let lhs_val = unsafe { *lhs_storage.get_unchecked(lhs_idx) };
+                                let rhs_val = unsafe { *rhs_storage.get_unchecked(rhs_idx) };
+
+                                sum = sum + lhs_val * rhs_val;
+                            }
+
+                            batch_result[i * rhs_n + j] = sum;
+                        }
+                    }
+
+                    batch_result
+                })
+                .collect();
+
+            batch_results.into_iter().flatten().collect()
+        } else {
+            let result_size = total_batches * lhs_m * rhs_n;
+            let mut result = vec![T::default(); result_size];
+            for batch_idx in 0..total_batches {
                 // Compute batch indices
                 let mut batch_indices = vec![0; batch_ndim];
                 let mut temp = batch_idx;
@@ -218,15 +293,13 @@ pub fn matmul_map<
                             sum = sum + lhs_val * rhs_val;
                         }
 
-                        batch_result[i * rhs_n + j] = sum;
+                        let result_idx = batch_idx * lhs_m * rhs_n + i * rhs_n + j;
+                        result[result_idx] = sum;
                     }
                 }
-
-                batch_result
-            })
-            .collect();
-
-        batch_results.into_iter().flatten().collect()
+            }
+            result
+        }
     };
 
     #[cfg(not(feature = "rayon"))]
@@ -412,11 +485,38 @@ pub fn dot_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output = T>
 
     #[cfg(feature = "rayon")]
     let result = {
-        let row_results: Vec<Vec<T>> = (0..m)
-            .into_par_iter()
-            .map(|i| {
-                let mut row_result = vec![T::default(); n];
+        if m * n >= PARALLEL_THRESHOLD {
+            use rayon::prelude::*;
+            let row_results: Vec<Vec<T>> = (0..m)
+                .into_par_iter()
+                .map(|i| {
+                    let mut row_result = vec![T::default(); n];
 
+                    for j in 0..n {
+                        let mut sum = T::default();
+
+                        for k in 0..k1 {
+                            let lhs_idx = lhs_offset + i * lhs_strides[0] + k * lhs_strides[1];
+                            let rhs_idx = rhs_offset + k * rhs_strides[0] + j * rhs_strides[1];
+
+                            let lhs_val = unsafe { *lhs_storage.get_unchecked(lhs_idx) };
+                            let rhs_val = unsafe { *rhs_storage.get_unchecked(rhs_idx) };
+
+                            sum = sum + lhs_val * rhs_val;
+                        }
+
+                        row_result[j] = sum;
+                    }
+
+                    row_result
+                })
+                .collect();
+
+            row_results.into_iter().flatten().collect()
+        } else {
+            let mut result = vec![T::default(); m * n];
+
+            for i in 0..m {
                 for j in 0..n {
                     let mut sum = T::default();
 
@@ -430,14 +530,13 @@ pub fn dot_map<T: Copy + core::ops::Add<Output = T> + core::ops::Mul<Output = T>
                         sum = sum + lhs_val * rhs_val;
                     }
 
-                    row_result[j] = sum;
+                    let result_idx = i * n + j;
+                    result[result_idx] = sum;
                 }
+            }
 
-                row_result
-            })
-            .collect();
-
-        row_results.into_iter().flatten().collect()
+            result
+        }
     };
 
     #[cfg(not(feature = "rayon"))]

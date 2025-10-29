@@ -7,6 +7,9 @@ use crate::{
     types::layout::Layout,
 };
 
+#[cfg(feature = "rayon")]
+const PARALLEL_THRESHOLD: usize = 4096;
+
 // Helper function to convert flat index to multi-dimensional indices
 #[allow(dead_code)]
 fn flat_to_indices(mut flat_idx: usize, shape: &[usize]) -> Vec<usize> {
@@ -246,8 +249,14 @@ where
 
     #[cfg(feature = "rayon")]
     {
-        let mean_result = sum_result.par_iter().map(|&x| x / count_val).collect();
-        Ok((mean_result, output_shape))
+        if sum_result.len() >= PARALLEL_THRESHOLD {
+            use rayon::prelude::*;
+            let mean_result = sum_result.par_iter().map(|&x| x / count_val).collect();
+            Ok((mean_result, output_shape))
+        } else {
+            let mean_result = sum_result.into_iter().map(|x| x / count_val).collect();
+            Ok((mean_result, output_shape))
+        }
     }
 
     #[cfg(not(feature = "rayon"))]
@@ -885,8 +894,14 @@ where
 
     #[cfg(feature = "rayon")]
     {
-        let std_result = var_result.par_iter().map(|&x| x.sqrt()).collect();
-        Ok((std_result, output_shape))
+        if var_result.len() >= PARALLEL_THRESHOLD {
+            use rayon::prelude::*;
+            let std_result = var_result.par_iter().map(|&x| x.sqrt()).collect();
+            Ok((std_result, output_shape))
+        } else {
+            let std_result = var_result.into_iter().map(|x| x.sqrt()).collect();
+            Ok((std_result, output_shape))
+        }
     }
 
     #[cfg(not(feature = "rayon"))]

@@ -1,5 +1,10 @@
 use crate::{compat::*, scalar::Scalar, types::layout::Layout};
 
+#[cfg(feature = "rayon")]
+const PARALLEL_THRESHOLD: usize = 4096;
+#[cfg(feature = "rayon")]
+const PARALLEL_CHUNK_SIZE: usize = 1024;
+
 pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U + Send + Sync>(
     lhs_storage: &[T],
     rhs_storage: &[T],
@@ -21,14 +26,32 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let l = lhs_slice[i % lhs_size];
+                                let r = rhs_slice[i % rhs_size];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let l = lhs_slice[i % lhs_size];
                         let r = rhs_slice[i % rhs_size];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -49,9 +72,36 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let l = lhs_slice[i % lhs_size];
+
+                                let mut rhs_idx = rhs_offset;
+                                let mut tmp_i = i % rhs_size;
+
+                                for d in (0..dims.len()).rev() {
+                                    let i_dim = tmp_i % dims[d];
+                                    rhs_idx += if rhs_strides[d] != 0 { i_dim * rhs_strides[d] } else { 0 };
+                                    tmp_i /= dims[d];
+                                }
+
+                                let r = rhs_storage[rhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let l = lhs_slice[i % lhs_size];
 
                         let mut rhs_idx = rhs_offset;
@@ -64,9 +114,10 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
                         }
 
                         let r = rhs_storage[rhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -97,9 +148,36 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let r = rhs_slice[i % rhs_size];
+
+                                let mut lhs_idx = lhs_offset;
+                                let mut tmp_i = i % lhs_size;
+
+                                for d in (0..dims.len()).rev() {
+                                    let i_dim = tmp_i % dims[d];
+                                    lhs_idx += if lhs_strides[d] != 0 { i_dim * lhs_strides[d] } else { 0 };
+                                    tmp_i /= dims[d];
+                                }
+
+                                let l = lhs_storage[lhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let r = rhs_slice[i % rhs_size];
 
                         let mut lhs_idx = lhs_offset;
@@ -112,9 +190,10 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
                         }
 
                         let l = lhs_storage[lhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -146,9 +225,44 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let mut lhs_idx = lhs_offset;
+                                let mut tmp_i = i % lhs_size;
+
+                                for d in (0..lhs_dims.len()).rev() {
+                                    let i_dim = tmp_i % lhs_dims[d];
+                                    lhs_idx += if lhs_strides[d] != 0 { i_dim * lhs_strides[d] } else { 0 };
+                                    tmp_i /= lhs_dims[d];
+                                }
+
+                                let mut rhs_idx = rhs_offset;
+                                tmp_i = i % rhs_size;
+
+                                for d in (0..rhs_dims.len()).rev() {
+                                    let i_dim = tmp_i % rhs_dims[d];
+                                    rhs_idx += if rhs_strides[d] != 0 { i_dim * rhs_strides[d] } else { 0 };
+                                    tmp_i /= rhs_dims[d];
+                                }
+
+                                let l = lhs_storage[lhs_idx];
+                                let r = rhs_storage[rhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let mut lhs_idx = lhs_offset;
                         let mut tmp_i = i % lhs_size;
 
@@ -169,9 +283,10 @@ pub fn binary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T, T) -> U
 
                         let l = lhs_storage[lhs_idx];
                         let r = rhs_storage[rhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -227,14 +342,32 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let l = lhs_slice[i % lhs_size];
+                                let r = rhs_slice[i % rhs_size];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let l = lhs_slice[i % lhs_size];
                         let r = rhs_slice[i % rhs_size];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -255,9 +388,36 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let l = lhs_slice[i % lhs_size];
+
+                                let mut rhs_idx = rhs_offset;
+                                let mut tmp_i = i % rhs_size;
+
+                                for d in (0..dims.len()).rev() {
+                                    let i_dim = tmp_i % dims[d];
+                                    rhs_idx += if rhs_strides[d] != 0 { i_dim * rhs_strides[d] } else { 0 };
+                                    tmp_i /= dims[d];
+                                }
+
+                                let r = rhs_storage[rhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let l = lhs_slice[i % lhs_size];
 
                         let mut rhs_idx = rhs_offset;
@@ -270,9 +430,10 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
                         }
 
                         let r = rhs_storage[rhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -303,9 +464,36 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let r = rhs_slice[i % rhs_size];
+
+                                let mut lhs_idx = lhs_offset;
+                                let mut tmp_i = i % lhs_size;
+
+                                for d in (0..dims.len()).rev() {
+                                    let i_dim = tmp_i % dims[d];
+                                    lhs_idx += if lhs_strides[d] != 0 { i_dim * lhs_strides[d] } else { 0 };
+                                    tmp_i /= dims[d];
+                                }
+
+                                let l = lhs_storage[lhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let r = rhs_slice[i % rhs_size];
 
                         let mut lhs_idx = lhs_offset;
@@ -318,9 +506,10 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
                         }
 
                         let l = lhs_storage[lhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -352,9 +541,44 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let mut lhs_idx = lhs_offset;
+                                let mut tmp_i = i % lhs_size;
+
+                                for d in (0..lhs_dims.len()).rev() {
+                                    let i_dim = tmp_i % lhs_dims[d];
+                                    lhs_idx += if lhs_strides[d] != 0 { i_dim * lhs_strides[d] } else { 0 };
+                                    tmp_i /= lhs_dims[d];
+                                }
+
+                                let mut rhs_idx = rhs_offset;
+                                tmp_i = i % rhs_size;
+
+                                for d in (0..rhs_dims.len()).rev() {
+                                    let i_dim = tmp_i % rhs_dims[d];
+                                    rhs_idx += if rhs_strides[d] != 0 { i_dim * rhs_strides[d] } else { 0 };
+                                    tmp_i /= rhs_dims[d];
+                                }
+
+                                let l = lhs_storage[lhs_idx];
+                                let r = rhs_storage[rhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let mut lhs_idx = lhs_offset;
                         let mut tmp_i = i % lhs_size;
 
@@ -375,9 +599,10 @@ pub fn binary_logical_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sy
 
                         let l = lhs_storage[lhs_idx];
                         let r = rhs_storage[rhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -433,14 +658,32 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let l = lhs_slice[i % lhs_size];
+                                let r = rhs_slice[i % rhs_size];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let l = lhs_slice[i % lhs_size];
                         let r = rhs_slice[i % rhs_size];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -461,9 +704,36 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let l = lhs_slice[i % lhs_size];
+
+                                let mut rhs_idx = rhs_offset;
+                                let mut tmp_i = i % rhs_size;
+
+                                for d in (0..dims.len()).rev() {
+                                    let i_dim = tmp_i % dims[d];
+                                    rhs_idx += if rhs_strides[d] != 0 { i_dim * rhs_strides[d] } else { 0 };
+                                    tmp_i /= dims[d];
+                                }
+
+                                let r = rhs_storage[rhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let l = lhs_slice[i % lhs_size];
 
                         let mut rhs_idx = rhs_offset;
@@ -476,9 +746,10 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
                         }
 
                         let r = rhs_storage[rhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -509,9 +780,36 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let r = rhs_slice[i % rhs_size];
+
+                                let mut lhs_idx = lhs_offset;
+                                let mut tmp_i = i % lhs_size;
+
+                                for d in (0..dims.len()).rev() {
+                                    let i_dim = tmp_i % dims[d];
+                                    lhs_idx += if lhs_strides[d] != 0 { i_dim * lhs_strides[d] } else { 0 };
+                                    tmp_i /= dims[d];
+                                }
+
+                                let l = lhs_storage[lhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let r = rhs_slice[i % rhs_size];
 
                         let mut lhs_idx = lhs_offset;
@@ -524,9 +822,10 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
                         }
 
                         let l = lhs_storage[lhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -558,9 +857,44 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
 
             #[cfg(feature = "rayon")]
             {
-                (0..output_size)
-                    .into_par_iter()
-                    .map(|i| {
+                if output_size >= PARALLEL_THRESHOLD {
+                    use rayon::prelude::*;
+                    let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+                    (0..chunks)
+                        .into_par_iter()
+                        .flat_map(|chunk_idx| {
+                            let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                            let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                            let mut chunk_result = Vec::with_capacity(end - start);
+                            for i in start..end {
+                                let mut lhs_idx = lhs_offset;
+                                let mut tmp_i = i % lhs_size;
+
+                                for d in (0..lhs_dims.len()).rev() {
+                                    let i_dim = tmp_i % lhs_dims[d];
+                                    lhs_idx += if lhs_strides[d] != 0 { i_dim * lhs_strides[d] } else { 0 };
+                                    tmp_i /= lhs_dims[d];
+                                }
+
+                                let mut rhs_idx = rhs_offset;
+                                tmp_i = i % rhs_size;
+
+                                for d in (0..rhs_dims.len()).rev() {
+                                    let i_dim = tmp_i % rhs_dims[d];
+                                    rhs_idx += if rhs_strides[d] != 0 { i_dim * rhs_strides[d] } else { 0 };
+                                    tmp_i /= rhs_dims[d];
+                                }
+
+                                let l = lhs_storage[lhs_idx];
+                                let r = rhs_storage[rhs_idx];
+                                chunk_result.push(f(l, r));
+                            }
+                            chunk_result
+                        })
+                        .collect()
+                } else {
+                    let mut result = Vec::with_capacity(output_size);
+                    for i in 0..output_size {
                         let mut lhs_idx = lhs_offset;
                         let mut tmp_i = i % lhs_size;
 
@@ -581,9 +915,10 @@ pub fn cmp_map<T: Copy + Send + Sync, F: Fn(T, T) -> bool + Send + Sync>(
 
                         let l = lhs_storage[lhs_idx];
                         let r = rhs_storage[rhs_idx];
-                        f(l, r)
-                    })
-                    .collect()
+                        result.push(f(l, r));
+                    }
+                    result
+                }
             }
 
             #[cfg(not(feature = "rayon"))]
@@ -630,10 +965,15 @@ pub fn cmp_scalar_map<T: Copy + Send + Sync, F: Fn(T, Scalar) -> bool + Send + S
     if layout.is_contiguous() {
         #[cfg(feature = "rayon")]
         {
-            storage[offset..offset + size]
-                .par_iter()
-                .map(|&v| f(v, scalar))
-                .collect()
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                storage[offset..offset + size]
+                    .par_iter()
+                    .map(|&v| f(v, scalar))
+                    .collect()
+            } else {
+                storage[offset..offset + size].iter().map(|&v| f(v, scalar)).collect()
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -646,9 +986,34 @@ pub fn cmp_scalar_map<T: Copy + Send + Sync, F: Fn(T, Scalar) -> bool + Send + S
 
         #[cfg(feature = "rayon")]
         {
-            (0..size)
-                .into_par_iter()
-                .map(|i| {
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                let chunks = size.div_ceil(PARALLEL_CHUNK_SIZE);
+                (0..chunks)
+                    .into_par_iter()
+                    .flat_map(|chunk_idx| {
+                        let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                        let end = (start + PARALLEL_CHUNK_SIZE).min(size);
+                        let mut chunk_result = Vec::with_capacity(end - start);
+                        for i in start..end {
+                            let mut idx = offset;
+                            let mut tmp_i = i;
+
+                            for d in (0..dims.len()).rev() {
+                                let i_dim = tmp_i % dims[d];
+                                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                                tmp_i /= dims[d];
+                            }
+
+                            let v = unsafe { storage.get_unchecked(idx) };
+                            chunk_result.push(f(*v, scalar));
+                        }
+                        chunk_result
+                    })
+                    .collect()
+            } else {
+                let mut result = Vec::with_capacity(size);
+                for i in 0..size {
                     let mut idx = offset;
                     let mut tmp_i = i;
 
@@ -659,9 +1024,10 @@ pub fn cmp_scalar_map<T: Copy + Send + Sync, F: Fn(T, Scalar) -> bool + Send + S
                     }
 
                     let v = unsafe { storage.get_unchecked(idx) };
-                    f(*v, scalar)
-                })
-                .collect()
+                    result.push(f(*v, scalar));
+                }
+                result
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -696,7 +1062,12 @@ pub fn unary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T) -> U + S
     if layout.is_contiguous() {
         #[cfg(feature = "rayon")]
         {
-            storage[offset..offset + size].par_iter().map(|&v| f(v)).collect()
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                storage[offset..offset + size].par_iter().map(|&v| f(v)).collect()
+            } else {
+                storage[offset..offset + size].iter().map(|&v| f(v)).collect()
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -709,9 +1080,34 @@ pub fn unary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T) -> U + S
 
         #[cfg(feature = "rayon")]
         {
-            (0..size)
-                .into_par_iter()
-                .map(|i| {
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                let chunks = size.div_ceil(PARALLEL_CHUNK_SIZE);
+                (0..chunks)
+                    .into_par_iter()
+                    .flat_map(|chunk_idx| {
+                        let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                        let end = (start + PARALLEL_CHUNK_SIZE).min(size);
+                        let mut chunk_result = Vec::with_capacity(end - start);
+                        for i in start..end {
+                            let mut idx = offset;
+                            let mut tmp_i = i;
+
+                            for d in (0..dims.len()).rev() {
+                                let i_dim = tmp_i % dims[d];
+                                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                                tmp_i /= dims[d];
+                            }
+
+                            let v = unsafe { storage.get_unchecked(idx) };
+                            chunk_result.push(f(*v));
+                        }
+                        chunk_result
+                    })
+                    .collect()
+            } else {
+                let mut result = Vec::with_capacity(size);
+                for i in 0..size {
                     let mut idx = offset;
                     let mut tmp_i = i;
 
@@ -722,9 +1118,10 @@ pub fn unary_map<T: Copy + Send + Sync, U: Copy + Send + Sync, F: Fn(T) -> U + S
                     }
 
                     let v = unsafe { storage.get_unchecked(idx) };
-                    f(*v)
-                })
-                .collect()
+                    result.push(f(*v));
+                }
+                result
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -759,7 +1156,12 @@ pub fn unary_logical_map<T: Copy + Send + Sync, F: Fn(T) -> bool + Send + Sync>(
     if layout.is_contiguous() {
         #[cfg(feature = "rayon")]
         {
-            storage[offset..offset + size].par_iter().map(|&v| f(v)).collect()
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                storage[offset..offset + size].par_iter().map(|&v| f(v)).collect()
+            } else {
+                storage[offset..offset + size].iter().map(|&v| f(v)).collect()
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -772,9 +1174,34 @@ pub fn unary_logical_map<T: Copy + Send + Sync, F: Fn(T) -> bool + Send + Sync>(
 
         #[cfg(feature = "rayon")]
         {
-            (0..size)
-                .into_par_iter()
-                .map(|i| {
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                let chunks = size.div_ceil(PARALLEL_CHUNK_SIZE);
+                (0..chunks)
+                    .into_par_iter()
+                    .flat_map(|chunk_idx| {
+                        let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                        let end = (start + PARALLEL_CHUNK_SIZE).min(size);
+                        let mut chunk_result = Vec::with_capacity(end - start);
+                        for i in start..end {
+                            let mut idx = offset;
+                            let mut tmp_i = i;
+
+                            for d in (0..dims.len()).rev() {
+                                let i_dim = tmp_i % dims[d];
+                                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                                tmp_i /= dims[d];
+                            }
+
+                            let v = unsafe { storage.get_unchecked(idx) };
+                            chunk_result.push(f(*v));
+                        }
+                        chunk_result
+                    })
+                    .collect()
+            } else {
+                let mut result = Vec::with_capacity(size);
+                for i in 0..size {
                     let mut idx = offset;
                     let mut tmp_i = i;
 
@@ -785,9 +1212,10 @@ pub fn unary_logical_map<T: Copy + Send + Sync, F: Fn(T) -> bool + Send + Sync>(
                     }
 
                     let v = unsafe { storage.get_unchecked(idx) };
-                    f(*v)
-                })
-                .collect()
+                    result.push(f(*v));
+                }
+                result
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -823,10 +1251,15 @@ pub fn unary_scalar_map<T: Copy + Send + Sync, F: Fn(T, Scalar) -> T + Send + Sy
     if layout.is_contiguous() {
         #[cfg(feature = "rayon")]
         {
-            storage[offset..offset + size]
-                .par_iter()
-                .map(|&v| f(v, scalar))
-                .collect()
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                storage[offset..offset + size]
+                    .par_iter()
+                    .map(|&v| f(v, scalar))
+                    .collect()
+            } else {
+                storage[offset..offset + size].iter().map(|&v| f(v, scalar)).collect()
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
@@ -839,9 +1272,34 @@ pub fn unary_scalar_map<T: Copy + Send + Sync, F: Fn(T, Scalar) -> T + Send + Sy
 
         #[cfg(feature = "rayon")]
         {
-            (0..size)
-                .into_par_iter()
-                .map(|i| {
+            if size >= PARALLEL_THRESHOLD {
+                use rayon::prelude::*;
+                let chunks = size.div_ceil(PARALLEL_CHUNK_SIZE);
+                (0..chunks)
+                    .into_par_iter()
+                    .flat_map(|chunk_idx| {
+                        let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                        let end = (start + PARALLEL_CHUNK_SIZE).min(size);
+                        let mut chunk_result = Vec::with_capacity(end - start);
+                        for i in start..end {
+                            let mut idx = offset;
+                            let mut tmp_i = i;
+
+                            for d in (0..dims.len()).rev() {
+                                let i_dim = tmp_i % dims[d];
+                                idx += if strides[d] != 0 { i_dim * strides[d] } else { 0 };
+                                tmp_i /= dims[d];
+                            }
+
+                            let v = unsafe { storage.get_unchecked(idx) };
+                            chunk_result.push(f(*v, scalar));
+                        }
+                        chunk_result
+                    })
+                    .collect()
+            } else {
+                let mut result = Vec::with_capacity(size);
+                for i in 0..size {
                     let mut idx = offset;
                     let mut tmp_i = i;
 
@@ -852,9 +1310,10 @@ pub fn unary_scalar_map<T: Copy + Send + Sync, F: Fn(T, Scalar) -> T + Send + Sy
                     }
 
                     let v = unsafe { storage.get_unchecked(idx) };
-                    f(*v, scalar)
-                })
-                .collect()
+                    result.push(f(*v, scalar));
+                }
+                result
+            }
         }
 
         #[cfg(not(feature = "rayon"))]
