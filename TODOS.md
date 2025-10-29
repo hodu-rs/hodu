@@ -45,8 +45,8 @@ Items may be added at any time.
 - [ ] Implement RMSNorm (🟡 Important)
 
 **Activation Functions:** (🟡 Important)
-- [ ] Implement Swish/SiLU, Mish
-- [ ] Implement PReLU, RReLU
+- [x] Implement Swish/SiLU, Mish
+- [x] Implement PReLU, RReLU
 
 **Loss Functions:** (🟡 Important)
 - [ ] Implement SmoothL1Loss
@@ -66,4 +66,4 @@ Items may be added at any time.
 - [ ] ONNX integration
 
 ## hodu_utils (🟡 Important)
-- [ ] Implement Dataset
+- [x] Implement Dataset

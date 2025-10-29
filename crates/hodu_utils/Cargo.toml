@@ -9,7 +9,11 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
-std = []
+std = ["hodu_core/std", "rand/std", "rand_distr/std"]
+serde = ["hodu_core/serde"]
 
 [dependencies]
 hodu_core = { path = "../hodu_core", version = "0.1.8" }
+hodu_utils_macros = { path = "macros", version = "0.1.8" }
+rand = { workspace = true, default-features = false, features = ["small_rng"] }
+rand_distr = { workspace = true, default-features = false }

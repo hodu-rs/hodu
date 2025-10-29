@@ -4,6 +4,10 @@ pub trait Sampler {
     fn iter(&self) -> Box<dyn Iterator<Item = usize>>;
 
     fn len(&self) -> usize;
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 pub struct SequentialSampler {
@@ -31,14 +35,35 @@ pub struct RandomSampler {
 }
 
 impl RandomSampler {
-    pub fn new(length: usize) -> Self {
-        // TODO: Implement proper shuffling when we have RNG support
-        let indices: Vec<usize> = (0..length).collect();
+    pub fn new(length: usize, seed: Option<u64>) -> Self {
+        use rand::prelude::*;
+        use rand::rngs::SmallRng;
+
+        let mut indices: Vec<usize> = (0..length).collect();
+
+        // Fisher-Yates shuffle
+        let mut rng = SmallRng::seed_from_u64(seed.unwrap_or(0));
+
+        for i in (1..length).rev() {
+            let j = rng.random_range(0..=i);
+            indices.swap(i, j);
+        }
+
         Self { indices }
     }
 
-    pub fn with_indices(indices: Vec<usize>) -> Self {
-        // TODO: Shuffle the indices
+    pub fn with_indices(mut indices: Vec<usize>, seed: Option<u64>) -> Self {
+        use rand::prelude::*;
+        use rand::rngs::SmallRng;
+
+        let length = indices.len();
+        let mut rng = SmallRng::seed_from_u64(seed.unwrap_or(0));
+
+        for i in (1..length).rev() {
+            let j = rng.random_range(0..=i);
+            indices.swap(i, j);
+        }
+
         Self { indices }
     }
 }

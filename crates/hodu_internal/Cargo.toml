@@ -10,7 +10,7 @@ repository = "https://github.com/hodu-rs/hodu"
 
 [features]
 std = ["hodu_core/std", "hodu_nn/std", "hodu_utils/std"]
-serde = ["hodu_core/serde", "hodu_nn/serde"]
+serde = ["hodu_core/serde", "hodu_nn/serde", "hodu_utils/serde"]
 rayon = ["std", "hodu_core/rayon"]
 
 cuda = ["hodu_core/cuda"]

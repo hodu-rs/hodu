@@ -1,5 +1,5 @@
 use crate::{
-    backends::be_hodu::{cpu::storage::CpuStorage, device::HoduDeviceT, storage::HoduStorageT},
+    be_hodu::{cpu::storage::CpuStorage, device::HoduDeviceT, storage::HoduStorageT},
     compat::*,
     error::HoduResult,
     scalar::Scalar,
@@ -64,11 +64,11 @@ pub mod storage {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn binary_impl<B: crate::backends::op::BinaryOpT>(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self> {
+        fn binary_impl<B: crate::op::BinaryOpT>(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn binary_logical_impl<B: crate::backends::op::BinaryLogicalOpT>(
+        fn binary_logical_impl<B: crate::op::BinaryLogicalOpT>(
             &self,
             _: &Self,
             _: &Layout,
@@ -77,23 +77,23 @@ pub mod storage {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn cmp_impl<C: crate::backends::op::CmpOpT>(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self> {
+        fn cmp_impl<C: crate::op::CmpOpT>(&self, _: &Self, _: &Layout, _: &Layout) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn cmp_scalar_impl<C: crate::backends::op::CmpScalarOpT>(&self, _: &Layout, _: Scalar) -> HoduResult<Self> {
+        fn cmp_scalar_impl<C: crate::op::CmpScalarOpT>(&self, _: &Layout, _: Scalar) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn unary_impl<U: crate::backends::op::UnaryOpT>(&self, _: &Layout) -> HoduResult<Self> {
+        fn unary_impl<U: crate::op::UnaryOpT>(&self, _: &Layout) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn unary_logical_impl<U: crate::backends::op::UnaryLogicalOpT>(&self, _: &Layout) -> HoduResult<Self> {
+        fn unary_logical_impl<U: crate::op::UnaryLogicalOpT>(&self, _: &Layout) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn unary_scalar_impl<U: crate::backends::op::UnaryScalarOpT>(&self, _: &Layout, _: Scalar) -> HoduResult<Self> {
+        fn unary_scalar_impl<U: crate::op::UnaryScalarOpT>(&self, _: &Layout, _: Scalar) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
@@ -105,7 +105,7 @@ pub mod storage {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn reduce(&self, _: crate::backends::op::ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self> {
+        fn reduce(&self, _: crate::op::ReduceOp, _: &Layout, _: &[usize], _: bool) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
@@ -145,33 +145,15 @@ pub mod storage {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn conv1d(
-            &self,
-            _: &Self,
-            _: &Layout,
-            _: &Layout,
-            _: &crate::backends::op::conv::ParamsConv1D,
-        ) -> HoduResult<Self> {
+        fn conv1d(&self, _: &Self, _: &Layout, _: &Layout, _: &crate::op::conv::ParamsConv1D) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn conv2d(
-            &self,
-            _: &Self,
-            _: &Layout,
-            _: &Layout,
-            _: &crate::backends::op::conv::ParamsConv2D,
-        ) -> HoduResult<Self> {
+        fn conv2d(&self, _: &Self, _: &Layout, _: &Layout, _: &crate::op::conv::ParamsConv2D) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
-        fn conv3d(
-            &self,
-            _: &Self,
-            _: &Layout,
-            _: &Layout,
-            _: &crate::backends::op::conv::ParamsConv3D,
-        ) -> HoduResult<Self> {
+        fn conv3d(&self, _: &Self, _: &Layout, _: &Layout, _: &crate::op::conv::ParamsConv3D) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
 
@@ -180,7 +162,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConvTranspose1D,
+            _: &crate::op::conv::ParamsConvTranspose1D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -190,7 +172,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConvTranspose2D,
+            _: &crate::op::conv::ParamsConvTranspose2D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -200,7 +182,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConvTranspose3D,
+            _: &crate::op::conv::ParamsConvTranspose3D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -210,7 +192,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConv1D,
+            _: &crate::op::conv::ParamsConv1D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -220,7 +202,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConv2D,
+            _: &crate::op::conv::ParamsConv2D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -230,7 +212,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConv3D,
+            _: &crate::op::conv::ParamsConv3D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -240,7 +222,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConvTranspose1D,
+            _: &crate::op::conv::ParamsConvTranspose1D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -250,7 +232,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConvTranspose2D,
+            _: &crate::op::conv::ParamsConvTranspose2D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -260,7 +242,7 @@ pub mod storage {
             _: &Self,
             _: &Layout,
             _: &Layout,
-            _: &crate::backends::op::conv::ParamsConvTranspose3D,
+            _: &crate::op::conv::ParamsConvTranspose3D,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }
@@ -271,7 +253,7 @@ pub mod storage {
             _: &[usize],
             _: &[usize],
             _: &[(usize, usize)],
-            _: crate::backends::op::window_reduction::WindowReduction,
+            _: crate::op::window_reduction::WindowReduction,
         ) -> HoduResult<Self> {
             panic!("Metal feature is not enabled. Please enable the 'metal' feature to use Metal backend.")
         }

@@ -8,7 +8,7 @@ pub type CollateFn = fn(Vec<DataItem>) -> HoduResult<Batch>;
 
 pub fn default_collate(items: Vec<DataItem>) -> HoduResult<Batch> {
     if items.is_empty() {
-        return Err(hodu_core::error::HoduError::InvalidArgument(
+        return Err(hodu_core::error::HoduError::InternalError(
             "Cannot collate empty items".into(),
         ));
     }
@@ -84,6 +84,7 @@ pub struct DataLoaderBuilder<D: Dataset> {
     shuffle: bool,
     drop_last: bool,
     collate_fn: CollateFn,
+    seed: Option<u64>,
 }
 
 impl<D: Dataset> DataLoaderBuilder<D> {
@@ -94,6 +95,7 @@ impl<D: Dataset> DataLoaderBuilder<D> {
             shuffle: false,
             drop_last: false,
             collate_fn: default_collate,
+            seed: None,
         }
     }
 
@@ -117,6 +119,11 @@ impl<D: Dataset> DataLoaderBuilder<D> {
         self
     }
 
+    pub fn seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+
     pub fn build(self) -> DataLoader<D> {
         DataLoader::new_with_config(
             self.dataset,
@@ -124,6 +131,7 @@ impl<D: Dataset> DataLoaderBuilder<D> {
             self.shuffle,
             self.drop_last,
             self.collate_fn,
+            self.seed,
         )
     }
 }
@@ -136,11 +144,13 @@ pub struct DataLoader<D: Dataset> {
     collate_fn: CollateFn,
     indices: Vec<usize>,
     current_idx: usize,
+    seed: Option<u64>,
+    epoch: u64,
 }
 
 impl<D: Dataset> DataLoader<D> {
     pub fn new(dataset: D, batch_size: usize) -> Self {
-        Self::new_with_config(dataset, batch_size, false, false, default_collate)
+        Self::new_with_config(dataset, batch_size, false, false, default_collate, None)
     }
 
     pub fn new_with_config(
@@ -149,16 +159,12 @@ impl<D: Dataset> DataLoader<D> {
         shuffle: bool,
         drop_last: bool,
         collate_fn: CollateFn,
+        seed: Option<u64>,
     ) -> Self {
         let len = dataset.len();
-        let mut indices: Vec<usize> = (0..len).collect();
+        let indices: Vec<usize> = (0..len).collect();
 
-        if shuffle {
-            // TODO: Implement proper shuffling when we have RNG support
-            // For now, just use the sequential indices
-        }
-
-        Self {
+        let mut loader = Self {
             dataset,
             batch_size,
             shuffle,
@@ -166,6 +172,28 @@ impl<D: Dataset> DataLoader<D> {
             collate_fn,
             indices,
             current_idx: 0,
+            seed,
+            epoch: 0,
+        };
+
+        if shuffle {
+            loader.shuffle_indices();
+        }
+
+        loader
+    }
+
+    fn shuffle_indices(&mut self) {
+        use rand::prelude::*;
+        use rand::rngs::SmallRng;
+
+        let length = self.indices.len();
+        let seed_base = self.seed.unwrap_or(0) + self.epoch;
+        let mut rng = SmallRng::seed_from_u64(seed_base);
+
+        for i in (1..length).rev() {
+            let j = rng.random_range(0..=i);
+            self.indices.swap(i, j);
         }
     }
 
@@ -182,14 +210,15 @@ impl<D: Dataset> DataLoader<D> {
         if self.drop_last {
             len / self.batch_size
         } else {
-            (len + self.batch_size - 1) / self.batch_size
+            len.div_ceil(self.batch_size)
         }
     }
 
     pub fn reset(&mut self) {
         self.current_idx = 0;
+        self.epoch += 1;
         if self.shuffle {
-            // TODO: Implement proper shuffling
+            self.shuffle_indices();
         }
     }
 
@@ -227,7 +256,7 @@ impl<D: Dataset> DataLoader<D> {
         Ok(Some(batch))
     }
 
-    pub fn iter_batches(&mut self) -> DataLoaderIterator<D> {
+    pub fn iter_batches(&mut self) -> DataLoaderIterator<'_, D> {
         DataLoaderIterator { loader: self }
     }
 }
