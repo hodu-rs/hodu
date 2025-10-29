@@ -534,7 +534,7 @@ def plot_results(json_path, save_plot=False):
 
     df = pd.DataFrame(df_data)
 
-    if df.empty:
+    if df.empty:  # type: ignore
         print_color(RED, "No valid data to plot")
         return
 
@@ -551,7 +551,7 @@ def plot_results(json_path, save_plot=False):
     cpu_baseline = None
     gpu_baseline = None
 
-    for impl in df["impl"].unique():
+    for impl in df["impl"].unique():  # type: ignore
         if "PyTorch" in impl and ("Dynamic CPU" in impl or "dynamic-cpu" in impl):
             cpu_baseline = impl
         if "PyTorch" in impl and (
@@ -563,12 +563,12 @@ def plot_results(json_path, save_plot=False):
             gpu_baseline = impl
 
     # Calculate ratios for CPU
-    if cpu_baseline and not df_cpu.empty:
+    if cpu_baseline and not df_cpu.empty:  # type: ignore
         baseline_data = df_cpu[df_cpu["impl"] == cpu_baseline]
-        for size in df_cpu["size"].unique():
+        for size in df_cpu["size"].unique():  # type: ignore
             baseline_time = baseline_data[baseline_data["size"] == size]["time_ms"]
-            if not baseline_time.empty:
-                baseline_time = baseline_time.values[0]
+            if not baseline_time.empty:  # type: ignore
+                baseline_time = baseline_time.values[0]  # type: ignore
                 mask = df_cpu["size"] == size
                 df_cpu.loc[mask, "ratio"] = baseline_time / df_cpu.loc[mask, "time_ms"]
             else:
@@ -578,12 +578,12 @@ def plot_results(json_path, save_plot=False):
         df_cpu["ratio"] = 1.0
 
     # Calculate ratios for GPU
-    if gpu_baseline and not df_gpu.empty:
+    if gpu_baseline and not df_gpu.empty:  # type: ignore
         baseline_data = df_gpu[df_gpu["impl"] == gpu_baseline]
-        for size in df_gpu["size"].unique():
+        for size in df_gpu["size"].unique():  # type: ignore
             baseline_time = baseline_data[baseline_data["size"] == size]["time_ms"]
-            if not baseline_time.empty:
-                baseline_time = baseline_time.values[0]
+            if not baseline_time.empty:  # type: ignore
+                baseline_time = baseline_time.values[0]  # type: ignore
                 mask = df_gpu["size"] == size
                 df_gpu.loc[mask, "ratio"] = baseline_time / df_gpu.loc[mask, "time_ms"]
             else:
@@ -619,8 +619,8 @@ def plot_results(json_path, save_plot=False):
     }
 
     # Create figure with subplots
-    has_cpu = not df_cpu.empty
-    has_gpu = not df_gpu.empty
+    has_cpu = not df_cpu.empty  # type: ignore
+    has_gpu = not df_gpu.empty  # type: ignore
     n_plots = (1 if has_cpu else 0) + (1 if has_gpu else 0)
 
     if n_plots == 0:
@@ -634,15 +634,16 @@ def plot_results(json_path, save_plot=False):
     plot_idx = 0
 
     # Plot CPU results
-    if not df_cpu.empty:
+    if not df_cpu.empty:  # type: ignore
         ax = axes[plot_idx]
         plot_idx += 1
 
         sizes = sorted(
-            df_cpu["size"].unique(), key=lambda s: [int(x) for x in s.split("x")]
+            df_cpu["size"].unique(),  # type: ignore
+            key=lambda s: [int(x) for x in s.split("x")],  # type: ignore
         )
 
-        impls = sorted(df_cpu["impl"].unique())
+        impls = sorted(df_cpu["impl"].unique())  # type: ignore
         n_impls = len(impls)
         n_sizes = len(sizes)
 
@@ -653,13 +654,13 @@ def plot_results(json_path, save_plot=False):
         for idx, impl in enumerate(impls):
             impl_data = df_cpu[df_cpu["impl"] == impl]
             ratios = [
-                impl_data[impl_data["size"] == s]["ratio"].values[0]
-                if s in impl_data["size"].values
+                impl_data[impl_data["size"] == s]["ratio"].values[0]  # type: ignore
+                if s in impl_data["size"].values  # type: ignore
                 else 0
                 for s in sizes
             ]
 
-            framework = impl_data["framework"].iloc[0]
+            framework = impl_data["framework"].iloc[0]  # type: ignore
             color = framework_colors.get(framework, "#607D8B")
 
             # Style differentiation
@@ -739,14 +740,15 @@ def plot_results(json_path, save_plot=False):
         )
 
     # Plot GPU results
-    if not df_gpu.empty:
+    if not df_gpu.empty:  # type: ignore
         ax = axes[plot_idx]
 
         sizes = sorted(
-            df_gpu["size"].unique(), key=lambda s: [int(x) for x in s.split("x")]
+            df_gpu["size"].unique(),  # type: ignore
+            key=lambda s: [int(x) for x in s.split("x")],  # type: ignore
         )
 
-        impls = sorted(df_gpu["impl"].unique())
+        impls = sorted(df_gpu["impl"].unique())  # type: ignore
         n_impls = len(impls)
         n_sizes = len(sizes)
 
@@ -757,13 +759,13 @@ def plot_results(json_path, save_plot=False):
         for idx, impl in enumerate(impls):
             impl_data = df_gpu[df_gpu["impl"] == impl]
             ratios = [
-                impl_data[impl_data["size"] == s]["ratio"].values[0]
-                if s in impl_data["size"].values
+                impl_data[impl_data["size"] == s]["ratio"].values[0]  # type: ignore
+                if s in impl_data["size"].values  # type: ignore
                 else 0
                 for s in sizes
             ]
 
-            framework = impl_data["framework"].iloc[0]
+            framework = impl_data["framework"].iloc[0]  # type: ignore
             color = framework_colors.get(framework, "#607D8B")
 
             # Style differentiation
@@ -807,7 +809,7 @@ def plot_results(json_path, save_plot=False):
         )
 
         # Determine GPU type
-        gpu_type = "Metal" if "Metal" in df_gpu["impl"].iloc[0] else "CUDA"
+        gpu_type = "Metal" if "Metal" in df_gpu["impl"].iloc[0] else "CUDA"  # type: ignore
         ax.set_xlabel("Problem Size", fontsize=14, fontweight="600", color="#2c3e50")
         ax.set_ylabel(
             "Speedup (relative to baseline)",
