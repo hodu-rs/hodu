@@ -202,6 +202,8 @@ Guide
 - [Tensor Operations Guide](docs/tensor_ops.md) - Tensor operations guide (only English)
 - [Neural Network Modules Guide (Korean)](docs/tensor_nn_modules_ko.md) - 신경망 모듈 가이드
 - [Neural Network Modules Guide (English)](docs/tensor_nn_modules_en.md) - Neural network modules guide
+- [Tensor Utils Guide (Korean)](docs/tensor_utils_ko.md) - 텐서 유틸리티 가이드 (DataLoader, Dataset, Sampler)
+- [Tensor Utils Guide (English)](docs/tensor_utils_en.md) - Tensor utilities guide (DataLoader, Dataset, Sampler)
 - [Builder/Script Guide (Korean)](docs/builder_and_script_ko.md) - Builder/Script 가이드
 - [Builder/Script Guide (English)](docs/builder_and_script_en.md) - Builder/Script guide
 - [Gradient Tape Management Guide (Korean)](docs/tensor_gradient_tape_ko.md) - 그래디언트 테이프 관리 가이드
