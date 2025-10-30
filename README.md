@@ -154,6 +154,13 @@ let mut script = builder.build()?;
 | `metal` | Apple Metal GPU support | Metal framework | `std` |
 | `xla` | Google XLA compiler backend | XLA libraries | `std` |
 
+#### XLA Feature Requirements
+
+Building with the `xla` feature requires:
+- **LLVM** and **Clang** installed on your system
+- **RAM**: 8GB+ free memory
+- **Disk Space**: 20GB+ free storage
+
 ### Optional Data Type Features
 
 By default, Hodu supports these data types: `bool`, `f8e4m3`, `f8e5m2`, `bf16`, `f16`, `f32`, `f64`, `u16`, `i8`, `i32`.
@@ -169,13 +176,6 @@ Additional integer types can be enabled with feature flags to reduce compilation
 | `i64` | Enable signed 64-bit integer support |
 
 **Compilation Performance**: Disabling unused data types can reduce compilation time by up to 30-40%. If you don't need these specific integer types, consider building without these features.
-
-#### XLA Feature Requirements
-
-Building with the `xla` feature requires:
-- **LLVM** and **Clang** installed on your system
-- **RAM**: 8GB+ free memory
-- **Disk Space**: 20GB+ free storage
 
 ## Supported Platforms
 
