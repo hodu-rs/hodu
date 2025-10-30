@@ -6,6 +6,8 @@ use crate::{
 
 #[cfg(feature = "rayon")]
 const PARALLEL_THRESHOLD: usize = 4096;
+#[cfg(feature = "rayon")]
+const PARALLEL_CHUNK_SIZE: usize = 1024;
 
 // Helper function to convert flat index to multi-dimensional indices
 #[allow(dead_code)]
@@ -18,6 +20,7 @@ fn flat_to_indices(mut flat_idx: usize, shape: &[usize]) -> Vec<usize> {
     indices
 }
 
+#[cfg(feature = "rayon")]
 pub fn index_select_map<T: Copy + Send + Sync>(
     storage: &[T],
     layout: &Layout,
@@ -25,6 +28,8 @@ pub fn index_select_map<T: Copy + Send + Sync>(
     indices_layout: &Layout,
     dim: usize,
 ) -> HoduResult<Vec<T>> {
+    use rayon::prelude::*;
+
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -47,13 +52,16 @@ pub fn index_select_map<T: Copy + Send + Sync>(
     output_shape[dim] = indices_size;
     let output_size: usize = output_shape.iter().product();
 
-    #[cfg(feature = "rayon")]
-    {
-        if output_size >= PARALLEL_THRESHOLD {
-            use rayon::prelude::*;
-            let result: Result<Vec<T>, HoduError> = (0..output_size)
-                .into_par_iter()
-                .map(|flat_idx| {
+    if output_size >= PARALLEL_THRESHOLD {
+        let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+        (0..chunks)
+            .into_par_iter()
+            .map(|chunk_idx| {
+                let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                let mut chunk_result = Vec::with_capacity(end - start);
+
+                for flat_idx in start..end {
                     let output_indices = flat_to_indices(flat_idx, &output_shape);
 
                     // Calculate which index to use
@@ -87,69 +95,19 @@ pub fn index_select_map<T: Copy + Send + Sync>(
                         flat_index += actual_idx * strides[i];
                     }
 
-                    Ok(storage[flat_index])
-                })
-                .collect();
-
-            result
-        } else {
-            let mut result = Vec::with_capacity(output_size);
-            let mut output_indices = vec![0; ndim];
-
-            for _ in 0..output_size {
-                let index_pos = output_indices[dim];
-
-                let mut indices_idx = indices_offset;
-                if indices_layout.is_contiguous() {
-                    indices_idx += index_pos;
-                } else {
-                    let mut tmp_pos = index_pos;
-                    for d in (0..indices_shape.len()).rev() {
-                        let i_dim = tmp_pos % indices_shape[d];
-                        indices_idx += i_dim * indices_strides[d];
-                        tmp_pos /= indices_shape[d];
-                    }
+                    chunk_result.push(storage[flat_index]);
                 }
-
-                let idx = indices_storage[indices_idx];
-                if idx < 0 || idx >= shape[dim] as i32 {
-                    return Err(HoduError::InternalError(format!(
-                        "index {} out of bounds for dimension {} with size {}",
-                        idx, dim, shape[dim]
-                    )));
-                }
-
-                let mut flat_index = offset;
-                for i in 0..ndim {
-                    let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
-                    flat_index += actual_idx * strides[i];
-                }
-
-                result.push(storage[flat_index]);
-
-                for i in (0..ndim).rev() {
-                    output_indices[i] += 1;
-                    if output_indices[i] < output_shape[i] {
-                        break;
-                    }
-                    output_indices[i] = 0;
-                }
-            }
-
-            Ok(result)
-        }
-    }
-
-    #[cfg(not(feature = "rayon"))]
-    {
+                Ok(chunk_result)
+            })
+            .collect::<HoduResult<Vec<Vec<T>>>>()
+            .map(|chunks| chunks.into_iter().flatten().collect())
+    } else {
         let mut result = Vec::with_capacity(output_size);
         let mut output_indices = vec![0; ndim];
 
         for _ in 0..output_size {
-            // Calculate which index to use
             let index_pos = output_indices[dim];
 
-            // Get the actual index value from indices tensor
             let mut indices_idx = indices_offset;
             if indices_layout.is_contiguous() {
                 indices_idx += index_pos;
@@ -170,7 +128,6 @@ pub fn index_select_map<T: Copy + Send + Sync>(
                 )));
             }
 
-            // Calculate flat index in source tensor
             let mut flat_index = offset;
             for i in 0..ndim {
                 let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
@@ -179,7 +136,6 @@ pub fn index_select_map<T: Copy + Send + Sync>(
 
             result.push(storage[flat_index]);
 
-            // Increment output indices
             for i in (0..ndim).rev() {
                 output_indices[i] += 1;
                 if output_indices[i] < output_shape[i] {
@@ -191,6 +147,86 @@ pub fn index_select_map<T: Copy + Send + Sync>(
 
         Ok(result)
     }
+}
+
+#[cfg(not(feature = "rayon"))]
+pub fn index_select_map<T: Copy + Send + Sync>(
+    storage: &[T],
+    layout: &Layout,
+    indices_storage: &[i32],
+    indices_layout: &Layout,
+    dim: usize,
+) -> HoduResult<Vec<T>> {
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    if dim >= ndim {
+        return Err(HoduError::InternalError(format!(
+            "index_select - dimension {} out of range for {}-dimensional tensor",
+            dim, ndim
+        )));
+    }
+
+    let indices_offset = indices_layout.get_offset();
+    let indices_size = indices_layout.get_size();
+    let indices_strides = indices_layout.get_strides();
+    let indices_shape = indices_layout.get_shape();
+
+    // Output shape: replace the indexed dimension with indices size
+    let mut output_shape = shape.to_vec();
+    output_shape[dim] = indices_size;
+    let output_size: usize = output_shape.iter().product();
+
+    let mut result = Vec::with_capacity(output_size);
+    let mut output_indices = vec![0; ndim];
+
+    for _ in 0..output_size {
+        // Calculate which index to use
+        let index_pos = output_indices[dim];
+
+        // Get the actual index value from indices tensor
+        let mut indices_idx = indices_offset;
+        if indices_layout.is_contiguous() {
+            indices_idx += index_pos;
+        } else {
+            let mut tmp_pos = index_pos;
+            for d in (0..indices_shape.len()).rev() {
+                let i_dim = tmp_pos % indices_shape[d];
+                indices_idx += i_dim * indices_strides[d];
+                tmp_pos /= indices_shape[d];
+            }
+        }
+
+        let idx = indices_storage[indices_idx];
+        if idx < 0 || idx >= shape[dim] as i32 {
+            return Err(HoduError::InternalError(format!(
+                "index {} out of bounds for dimension {} with size {}",
+                idx, dim, shape[dim]
+            )));
+        }
+
+        // Calculate flat index in source tensor
+        let mut flat_index = offset;
+        for i in 0..ndim {
+            let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+            flat_index += actual_idx * strides[i];
+        }
+
+        result.push(storage[flat_index]);
+
+        // Increment output indices
+        for i in (0..ndim).rev() {
+            output_indices[i] += 1;
+            if output_indices[i] < output_shape[i] {
+                break;
+            }
+            output_indices[i] = 0;
+        }
+    }
+
+    Ok(result)
 }
 
 pub fn index_put_map<T: Copy>(
@@ -294,6 +330,123 @@ pub fn index_put_map<T: Copy>(
     Ok(result)
 }
 
+#[cfg(feature = "rayon")]
+pub fn gather_map<T: Copy + Send + Sync>(
+    storage: &[T],
+    layout: &Layout,
+    indices_storage: &[i32],
+    indices_layout: &Layout,
+    dim: usize,
+) -> HoduResult<Vec<T>> {
+    use rayon::prelude::*;
+
+    let shape = layout.get_shape();
+    let strides = layout.get_strides();
+    let offset = layout.get_offset();
+    let ndim = shape.len();
+
+    if dim >= ndim {
+        return Err(HoduError::InternalError(format!(
+            "gather - dimension {} out of range for {}-dimensional tensor",
+            dim, ndim
+        )));
+    }
+
+    let indices_shape = indices_layout.get_shape();
+    let indices_strides = indices_layout.get_strides();
+    let indices_offset = indices_layout.get_offset();
+    let indices_ndim = indices_shape.len();
+
+    if indices_ndim != ndim {
+        return Err(HoduError::IncompatibleShapes {
+            lhs: shape.to_vec(),
+            rhs: indices_shape.to_vec(),
+            op: "gather - indices must have same number of dimensions as input".to_string(),
+        });
+    }
+
+    // Output has same shape as indices
+    let output_size: usize = indices_shape.iter().product();
+
+    if output_size >= PARALLEL_THRESHOLD {
+        let chunks = output_size.div_ceil(PARALLEL_CHUNK_SIZE);
+        (0..chunks)
+            .into_par_iter()
+            .map(|chunk_idx| {
+                let start = chunk_idx * PARALLEL_CHUNK_SIZE;
+                let end = (start + PARALLEL_CHUNK_SIZE).min(output_size);
+                let mut chunk_result = Vec::with_capacity(end - start);
+
+                for flat_idx in start..end {
+                    let output_indices = flat_to_indices(flat_idx, indices_shape);
+
+                    // Get index from indices tensor
+                    let mut indices_idx = indices_offset;
+                    for i in 0..ndim {
+                        indices_idx += output_indices[i] * indices_strides[i];
+                    }
+
+                    let idx = indices_storage[indices_idx];
+                    if idx < 0 || idx >= shape[dim] as i32 {
+                        return Err(HoduError::InternalError(format!(
+                            "index {} out of bounds for dimension {} with size {}",
+                            idx, dim, shape[dim]
+                        )));
+                    }
+
+                    // Calculate flat index in source tensor
+                    let mut flat_index = offset;
+                    for i in 0..ndim {
+                        let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+                        flat_index += actual_idx * strides[i];
+                    }
+
+                    chunk_result.push(storage[flat_index]);
+                }
+                Ok(chunk_result)
+            })
+            .collect::<HoduResult<Vec<Vec<T>>>>()
+            .map(|chunks| chunks.into_iter().flatten().collect())
+    } else {
+        let mut result = Vec::with_capacity(output_size);
+        let mut output_indices = vec![0; ndim];
+
+        for _ in 0..output_size {
+            let mut indices_idx = indices_offset;
+            for i in 0..ndim {
+                indices_idx += output_indices[i] * indices_strides[i];
+            }
+
+            let idx = indices_storage[indices_idx];
+            if idx < 0 || idx >= shape[dim] as i32 {
+                return Err(HoduError::InternalError(format!(
+                    "index {} out of bounds for dimension {} with size {}",
+                    idx, dim, shape[dim]
+                )));
+            }
+
+            let mut flat_index = offset;
+            for i in 0..ndim {
+                let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+                flat_index += actual_idx * strides[i];
+            }
+
+            result.push(storage[flat_index]);
+
+            for i in (0..ndim).rev() {
+                output_indices[i] += 1;
+                if output_indices[i] < indices_shape[i] {
+                    break;
+                }
+                output_indices[i] = 0;
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+#[cfg(not(feature = "rayon"))]
 pub fn gather_map<T: Copy + Send + Sync>(
     storage: &[T],
     layout: &Layout,
@@ -329,121 +482,44 @@ pub fn gather_map<T: Copy + Send + Sync>(
     // Output has same shape as indices
     let output_size: usize = indices_shape.iter().product();
 
-    #[cfg(feature = "rayon")]
-    {
-        if output_size >= PARALLEL_THRESHOLD {
-            use rayon::prelude::*;
-            let result: Result<Vec<T>, HoduError> = (0..output_size)
-                .into_par_iter()
-                .map(|flat_idx| {
-                    let output_indices = flat_to_indices(flat_idx, indices_shape);
+    let mut result = Vec::with_capacity(output_size);
+    let mut output_indices = vec![0; ndim];
 
-                    // Get index from indices tensor
-                    let mut indices_idx = indices_offset;
-                    for i in 0..ndim {
-                        indices_idx += output_indices[i] * indices_strides[i];
-                    }
+    for _ in 0..output_size {
+        // Get index from indices tensor
+        let mut indices_idx = indices_offset;
+        for i in 0..ndim {
+            indices_idx += output_indices[i] * indices_strides[i];
+        }
 
-                    let idx = indices_storage[indices_idx];
-                    if idx < 0 || idx >= shape[dim] as i32 {
-                        return Err(HoduError::InternalError(format!(
-                            "index {} out of bounds for dimension {} with size {}",
-                            idx, dim, shape[dim]
-                        )));
-                    }
+        let idx = indices_storage[indices_idx];
+        if idx < 0 || idx >= shape[dim] as i32 {
+            return Err(HoduError::InternalError(format!(
+                "index {} out of bounds for dimension {} with size {}",
+                idx, dim, shape[dim]
+            )));
+        }
 
-                    // Calculate flat index in source tensor
-                    let mut flat_index = offset;
-                    for i in 0..ndim {
-                        let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
-                        flat_index += actual_idx * strides[i];
-                    }
+        // Calculate flat index in source tensor
+        let mut flat_index = offset;
+        for i in 0..ndim {
+            let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
+            flat_index += actual_idx * strides[i];
+        }
 
-                    Ok(storage[flat_index])
-                })
-                .collect();
+        result.push(storage[flat_index]);
 
-            result
-        } else {
-            let mut result = Vec::with_capacity(output_size);
-            let mut output_indices = vec![0; ndim];
-
-            for _ in 0..output_size {
-                let mut indices_idx = indices_offset;
-                for i in 0..ndim {
-                    indices_idx += output_indices[i] * indices_strides[i];
-                }
-
-                let idx = indices_storage[indices_idx];
-                if idx < 0 || idx >= shape[dim] as i32 {
-                    return Err(HoduError::InternalError(format!(
-                        "index {} out of bounds for dimension {} with size {}",
-                        idx, dim, shape[dim]
-                    )));
-                }
-
-                let mut flat_index = offset;
-                for i in 0..ndim {
-                    let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
-                    flat_index += actual_idx * strides[i];
-                }
-
-                result.push(storage[flat_index]);
-
-                for i in (0..ndim).rev() {
-                    output_indices[i] += 1;
-                    if output_indices[i] < indices_shape[i] {
-                        break;
-                    }
-                    output_indices[i] = 0;
-                }
+        // Increment output indices
+        for i in (0..ndim).rev() {
+            output_indices[i] += 1;
+            if output_indices[i] < indices_shape[i] {
+                break;
             }
-
-            Ok(result)
+            output_indices[i] = 0;
         }
     }
 
-    #[cfg(not(feature = "rayon"))]
-    {
-        let mut result = Vec::with_capacity(output_size);
-        let mut output_indices = vec![0; ndim];
-
-        for _ in 0..output_size {
-            // Get index from indices tensor
-            let mut indices_idx = indices_offset;
-            for i in 0..ndim {
-                indices_idx += output_indices[i] * indices_strides[i];
-            }
-
-            let idx = indices_storage[indices_idx];
-            if idx < 0 || idx >= shape[dim] as i32 {
-                return Err(HoduError::InternalError(format!(
-                    "index {} out of bounds for dimension {} with size {}",
-                    idx, dim, shape[dim]
-                )));
-            }
-
-            // Calculate flat index in source tensor
-            let mut flat_index = offset;
-            for i in 0..ndim {
-                let actual_idx = if i == dim { idx as usize } else { output_indices[i] };
-                flat_index += actual_idx * strides[i];
-            }
-
-            result.push(storage[flat_index]);
-
-            // Increment output indices
-            for i in (0..ndim).rev() {
-                output_indices[i] += 1;
-                if output_indices[i] < indices_shape[i] {
-                    break;
-                }
-                output_indices[i] = 0;
-            }
-        }
-
-        Ok(result)
-    }
+    Ok(result)
 }
 
 pub fn scatter_map<T: Copy>(

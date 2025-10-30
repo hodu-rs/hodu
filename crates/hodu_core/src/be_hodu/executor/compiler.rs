@@ -68,39 +68,9 @@ impl HoduExecutor {
         #[cfg(not(feature = "std"))]
         let mut tensor_layouts = HashMap::new();
 
-        #[cfg(all(feature = "std", feature = "rayon"))]
-        {
-            let node_layouts: Vec<_> = script_ir
-                .graph
-                .topology
-                .nodes
-                .par_iter()
-                .flat_map(|node| {
-                    let mut layouts = Vec::new();
-                    for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
-                        layouts.push((tensor_id, layout.clone()));
-                    }
-                    for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
-                        layouts.push((tensor_id, layout.clone()));
-                    }
-                    layouts
-                })
-                .collect();
-
-            for (tensor_id, layout) in node_layouts {
-                tensor_layouts.insert(tensor_id, layout);
-            }
-        }
-        #[cfg(not(all(feature = "std", feature = "rayon")))]
-        {
-            for node in &script_ir.graph.topology.nodes {
-                for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
-                    tensor_layouts.insert(tensor_id, layout.clone());
-                }
-                for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
-                    tensor_layouts.insert(tensor_id, layout.clone());
-                }
-            }
+        let node_layouts = collect_node_layouts(script_ir);
+        for (tensor_id, layout) in node_layouts {
+            tensor_layouts.insert(tensor_id, layout);
         }
 
         for input in &script_ir.graph.metadata.inputs {
@@ -137,27 +107,9 @@ impl HoduExecutor {
     pub(super) fn collect_tensor_dtypes(&self, script_ir: &ScriptIR, script: &Script) -> HashMap<TensorId, DType> {
         let mut tensor_dtypes = HashMap::new();
 
-        #[cfg(all(feature = "std", feature = "rayon"))]
-        {
-            let dtypes: Vec<_> = script_ir
-                .graph
-                .metadata
-                .tensor_info
-                .par_iter()
-                .filter_map(|(&tensor_id, tensor_info)| tensor_info.dtype.map(|dtype| (tensor_id, dtype)))
-                .collect();
-
-            for (tensor_id, dtype) in dtypes {
-                tensor_dtypes.insert(tensor_id, dtype);
-            }
-        }
-        #[cfg(not(all(feature = "std", feature = "rayon")))]
-        {
-            for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
-                if let Some(dtype) = tensor_info.dtype {
-                    tensor_dtypes.insert(tensor_id, dtype);
-                }
-            }
+        let dtypes = collect_dtypes_from_metadata(script_ir);
+        for (tensor_id, dtype) in dtypes {
+            tensor_dtypes.insert(tensor_id, dtype);
         }
 
         // Override dtypes for input tensors with actual runtime input dtypes
@@ -181,58 +133,9 @@ impl HoduExecutor {
         #[cfg(not(feature = "std"))]
         let mut constant_storage = HashMap::new();
 
-        #[cfg(all(feature = "std", feature = "rayon"))]
-        {
-            let constant_storages: Vec<_> = script_ir
-                .graph
-                .metadata
-                .constants
-                .par_iter()
-                .map(|(tensor_id, constant_node)| {
-                    let storage = match self.current_device {
-                        Device::CPU => {
-                            let storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                            Arc::new(HoduStorage::CPU(storage))
-                        },
-                        Device::CUDA(_) => {
-                            return Err(HoduError::InternalError(
-                                "CUDA constant conversion not implemented".to_string(),
-                            ));
-                        },
-                        Device::Metal => {
-                            let cpu_storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                            let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                            Arc::new(HoduStorage::Metal(metal_storage))
-                        },
-                    };
-                    Ok((*tensor_id, storage))
-                })
-                .collect::<HoduResult<Vec<_>>>()?;
-
-            for (tensor_id, storage) in constant_storages {
-                constant_storage.insert(tensor_id, storage);
-            }
-        }
-        #[cfg(not(all(feature = "std", feature = "rayon")))]
-        {
-            for (tensor_id, constant_node) in &script_ir.graph.metadata.constants {
-                match self.current_device {
-                    Device::CPU => {
-                        let storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                        constant_storage.insert(*tensor_id, Arc::new(HoduStorage::CPU(storage)));
-                    },
-                    Device::CUDA(_) => {
-                        return Err(HoduError::InternalError(
-                            "CUDA constant conversion not implemented".to_string(),
-                        ));
-                    },
-                    Device::Metal => {
-                        let cpu_storage = self.convert_constant_to_cpu_storage(constant_node)?;
-                        let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
-                        constant_storage.insert(*tensor_id, Arc::new(HoduStorage::Metal(metal_storage)));
-                    },
-                }
-            }
+        let constant_storages = prepare_constants(self, script_ir)?;
+        for (tensor_id, storage) in constant_storages {
+            constant_storage.insert(tensor_id, storage);
         }
 
         Ok(constant_storage)
@@ -405,4 +308,121 @@ impl HoduExecutor {
 
         Ok(cpu_storage)
     }
+}
+
+// Helper functions with function-level cfg
+
+#[cfg(all(feature = "std", feature = "rayon"))]
+fn collect_node_layouts(script_ir: &ScriptIR) -> Vec<(TensorId, Layout)> {
+    use rayon::prelude::*;
+
+    script_ir
+        .graph
+        .topology
+        .nodes
+        .par_iter()
+        .flat_map(|node| {
+            let mut layouts = Vec::new();
+            for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
+                layouts.push((tensor_id, layout.clone()));
+            }
+            for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
+                layouts.push((tensor_id, layout.clone()));
+            }
+            layouts
+        })
+        .collect()
+}
+
+#[cfg(not(all(feature = "std", feature = "rayon")))]
+fn collect_node_layouts(script_ir: &ScriptIR) -> Vec<(TensorId, Layout)> {
+    let mut layouts = Vec::new();
+    for node in &script_ir.graph.topology.nodes {
+        for (layout, &tensor_id) in node.input_layouts.iter().zip(&node.input_tensors) {
+            layouts.push((tensor_id, layout.clone()));
+        }
+        for (layout, &tensor_id) in node.output_layouts.iter().zip(&node.output_tensors) {
+            layouts.push((tensor_id, layout.clone()));
+        }
+    }
+    layouts
+}
+
+#[cfg(all(feature = "std", feature = "rayon"))]
+fn collect_dtypes_from_metadata(script_ir: &ScriptIR) -> Vec<(TensorId, DType)> {
+    use rayon::prelude::*;
+
+    script_ir
+        .graph
+        .metadata
+        .tensor_info
+        .par_iter()
+        .filter_map(|(&tensor_id, tensor_info)| tensor_info.dtype.map(|dtype| (tensor_id, dtype)))
+        .collect()
+}
+
+#[cfg(not(all(feature = "std", feature = "rayon")))]
+fn collect_dtypes_from_metadata(script_ir: &ScriptIR) -> Vec<(TensorId, DType)> {
+    let mut dtypes = Vec::new();
+    for (&tensor_id, tensor_info) in &script_ir.graph.metadata.tensor_info {
+        if let Some(dtype) = tensor_info.dtype {
+            dtypes.push((tensor_id, dtype));
+        }
+    }
+    dtypes
+}
+
+#[cfg(all(feature = "std", feature = "rayon"))]
+fn prepare_constants(executor: &HoduExecutor, script_ir: &ScriptIR) -> HoduResult<Vec<(TensorId, SharedStorage)>> {
+    use rayon::prelude::*;
+
+    script_ir
+        .graph
+        .metadata
+        .constants
+        .par_iter()
+        .map(|(tensor_id, constant_node)| {
+            let storage = match executor.current_device {
+                Device::CPU => {
+                    let storage = executor.convert_constant_to_cpu_storage(constant_node)?;
+                    Arc::new(HoduStorage::CPU(storage))
+                },
+                Device::CUDA(_) => {
+                    return Err(HoduError::InternalError(
+                        "CUDA constant conversion not implemented".to_string(),
+                    ));
+                },
+                Device::Metal => {
+                    let cpu_storage = executor.convert_constant_to_cpu_storage(constant_node)?;
+                    let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
+                    Arc::new(HoduStorage::Metal(metal_storage))
+                },
+            };
+            Ok((*tensor_id, storage))
+        })
+        .collect::<HoduResult<Vec<_>>>()
+}
+
+#[cfg(not(all(feature = "std", feature = "rayon")))]
+fn prepare_constants(executor: &HoduExecutor, script_ir: &ScriptIR) -> HoduResult<Vec<(TensorId, SharedStorage)>> {
+    let mut constants = Vec::new();
+    for (tensor_id, constant_node) in &script_ir.graph.metadata.constants {
+        match executor.current_device {
+            Device::CPU => {
+                let storage = executor.convert_constant_to_cpu_storage(constant_node)?;
+                constants.push((*tensor_id, Arc::new(HoduStorage::CPU(storage))));
+            },
+            Device::CUDA(_) => {
+                return Err(HoduError::InternalError(
+                    "CUDA constant conversion not implemented".to_string(),
+                ));
+            },
+            Device::Metal => {
+                let cpu_storage = executor.convert_constant_to_cpu_storage(constant_node)?;
+                let metal_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
+                constants.push((*tensor_id, Arc::new(HoduStorage::Metal(metal_storage))));
+            },
+        }
+    }
+    Ok(constants)
 }

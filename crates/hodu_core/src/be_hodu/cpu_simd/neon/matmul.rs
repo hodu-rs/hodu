@@ -74,7 +74,7 @@ impl_pack!(pack_a_i32, pack_b_i32, i32, 6, 4, 0i32);
 // ============================================================================
 // F32 Kernel (6x4) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_6x4_f32_packed(
     packed_a: &[f32],
     packed_b: &[f32],
@@ -140,7 +140,7 @@ unsafe fn kernel_6x4_f32_packed(
 // ============================================================================
 // F64 Kernel (4x2) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_4x2_f64_packed(
     packed_a: &[f64],
     packed_b: &[f64],
@@ -204,7 +204,7 @@ unsafe fn kernel_4x2_f64_packed(
 // ============================================================================
 // I8 Kernel (8x16) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_8x16_i8_packed(
     packed_a: &[i8],
     packed_b: &[i8],
@@ -255,7 +255,7 @@ unsafe fn kernel_8x16_i8_packed(
 // ============================================================================
 // I16 Kernel (8x8) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_8x8_i16_packed(
     packed_a: &[i16],
     packed_b: &[i16],
@@ -307,7 +307,7 @@ unsafe fn kernel_8x8_i16_packed(
 // ============================================================================
 // I32 Kernel (6x4) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_6x4_i32_packed(
     packed_a: &[i32],
     packed_b: &[i32],
@@ -372,7 +372,7 @@ unsafe fn kernel_6x4_i32_packed(
 // ============================================================================
 // U8 Kernel (8x16) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_8x16_u8_packed(
     packed_a: &[u8],
     packed_b: &[u8],
@@ -423,7 +423,7 @@ unsafe fn kernel_8x16_u8_packed(
 // ============================================================================
 // U16 Kernel (8x8) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_8x8_u16_packed(
     packed_a: &[u16],
     packed_b: &[u16],
@@ -474,7 +474,7 @@ unsafe fn kernel_8x8_u16_packed(
 // ============================================================================
 // U32 Kernel (6x4) - NEON optimized
 // ============================================================================
-#[inline(always)]
+#[inline]
 unsafe fn kernel_6x4_u32_packed(
     packed_a: &[u32],
     packed_b: &[u32],

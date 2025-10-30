@@ -110,30 +110,9 @@ impl ExecutorT for HoduExecutor {
         }
 
         // Convert input tensors to storage
-        #[cfg(all(feature = "std", feature = "rayon"))]
-        {
-            let input_storages: Vec<_> = inputs
-                .par_iter()
-                .filter_map(|(input_name, input_tensor)| {
-                    compiled.input_mapping.get(*input_name).map(|&tensor_id| {
-                        self.tensor_to_storage(input_tensor)
-                            .map(|storage| (tensor_id, Arc::new(storage)))
-                    })
-                })
-                .collect::<HoduResult<Vec<_>>>()?;
-
-            for (tensor_id, storage) in input_storages {
-                tensor_storage.insert(tensor_id, storage);
-            }
-        }
-        #[cfg(not(all(feature = "std", feature = "rayon")))]
-        {
-            for (input_name, input_tensor) in &inputs {
-                if let Some(&tensor_id) = compiled.input_mapping.get(*input_name) {
-                    let storage = self.tensor_to_storage(input_tensor)?;
-                    tensor_storage.insert(tensor_id, Arc::new(storage));
-                }
-            }
+        let input_storages = convert_inputs_to_storage(self, &inputs, compiled)?;
+        for (tensor_id, storage) in input_storages {
+            tensor_storage.insert(tensor_id, storage);
         }
 
         // Execute computation graph
@@ -153,60 +132,9 @@ impl ExecutorT for HoduExecutor {
         #[cfg(not(feature = "std"))]
         let mut outputs = HashMap::new();
 
-        #[cfg(all(feature = "std", feature = "rayon"))]
-        {
-            let output_tensors: Vec<_> = compiled
-                .output_mapping
-                .par_iter()
-                .map(|(output_name, &tensor_id)| {
-                    let storage = tensor_storage.get(&tensor_id).ok_or_else(|| {
-                        HoduError::InternalError(format!("Storage not found for output tensor {tensor_id:?}"))
-                    })?;
-                    let layout = compiled.tensor_layouts.get(&tensor_id).ok_or_else(|| {
-                        HoduError::InternalError(format!("Layout not found for output tensor {tensor_id:?}"))
-                    })?;
-
-                    let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
-                        Ok(storage) => storage,
-                        Err(shared_storage) => match shared_storage.as_ref() {
-                            HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
-                            HoduStorage::Metal(metal_storage) => HoduStorage::Metal(metal_storage.clone()),
-                        },
-                    };
-                    let output_tensor = from_storage(output_storage, layout.clone(), false);
-                    Ok((output_name.clone(), output_tensor))
-                })
-                .collect::<HoduResult<Vec<_>>>()?;
-
-            for (output_name, tensor) in output_tensors {
-                outputs.insert(output_name, tensor);
-            }
-        }
-        #[cfg(not(all(feature = "std", feature = "rayon")))]
-        {
-            for (output_name, &tensor_id) in &compiled.output_mapping {
-                if let Some(storage) = tensor_storage.get(&tensor_id) {
-                    if let Some(layout) = compiled.tensor_layouts.get(&tensor_id) {
-                        let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
-                            Ok(storage) => storage,
-                            Err(shared_storage) => match shared_storage.as_ref() {
-                                HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
-                                HoduStorage::Metal(metal_storage) => HoduStorage::Metal(metal_storage.clone()),
-                            },
-                        };
-                        let output_tensor = from_storage(output_storage, layout.clone(), false);
-                        outputs.insert(output_name.clone(), output_tensor);
-                    } else {
-                        return Err(HoduError::InternalError(format!(
-                            "Layout not found for output tensor {tensor_id:?}"
-                        )));
-                    }
-                } else {
-                    return Err(HoduError::InternalError(format!(
-                        "Storage not found for output tensor {tensor_id:?}"
-                    )));
-                }
-            }
+        let output_tensors = convert_storage_to_outputs(&tensor_storage, compiled)?;
+        for (output_name, tensor) in output_tensors {
+            outputs.insert(output_name, tensor);
         }
 
         Ok(outputs)
@@ -216,4 +144,106 @@ impl ExecutorT for HoduExecutor {
         // Nothing to cleanup for now
         Ok(())
     }
+}
+
+// Helper functions with function-level cfg
+
+#[cfg(all(feature = "std", feature = "rayon"))]
+fn convert_inputs_to_storage(
+    executor: &HoduExecutor,
+    inputs: &ExecutionInputs<'_>,
+    compiled: &HoduCompiledScript,
+) -> HoduResult<Vec<(TensorId, SharedStorage)>> {
+    use rayon::prelude::*;
+
+    inputs
+        .par_iter()
+        .filter_map(|(input_name, input_tensor)| {
+            compiled.input_mapping.get(*input_name).map(|&tensor_id| {
+                executor
+                    .tensor_to_storage(input_tensor)
+                    .map(|storage| (tensor_id, Arc::new(storage)))
+            })
+        })
+        .collect::<HoduResult<Vec<_>>>()
+}
+
+#[cfg(not(all(feature = "std", feature = "rayon")))]
+fn convert_inputs_to_storage(
+    executor: &HoduExecutor,
+    inputs: &ExecutionInputs<'_>,
+    compiled: &HoduCompiledScript,
+) -> HoduResult<Vec<(TensorId, SharedStorage)>> {
+    let mut input_storages = Vec::new();
+    for (input_name, input_tensor) in inputs {
+        if let Some(&tensor_id) = compiled.input_mapping.get(*input_name) {
+            let storage = executor.tensor_to_storage(input_tensor)?;
+            input_storages.push((tensor_id, Arc::new(storage)));
+        }
+    }
+    Ok(input_storages)
+}
+
+#[cfg(all(feature = "std", feature = "rayon"))]
+fn convert_storage_to_outputs(
+    tensor_storage: &HashMap<TensorId, SharedStorage>,
+    compiled: &HoduCompiledScript,
+) -> HoduResult<Vec<(String, crate::tensor::Tensor)>> {
+    use rayon::prelude::*;
+
+    compiled
+        .output_mapping
+        .par_iter()
+        .map(|(output_name, &tensor_id)| {
+            let storage = tensor_storage.get(&tensor_id).ok_or_else(|| {
+                HoduError::InternalError(format!("Storage not found for output tensor {tensor_id:?}"))
+            })?;
+            let layout = compiled
+                .tensor_layouts
+                .get(&tensor_id)
+                .ok_or_else(|| HoduError::InternalError(format!("Layout not found for output tensor {tensor_id:?}")))?;
+
+            let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
+                Ok(storage) => storage,
+                Err(shared_storage) => match shared_storage.as_ref() {
+                    HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
+                    HoduStorage::Metal(metal_storage) => HoduStorage::Metal(metal_storage.clone()),
+                },
+            };
+            let output_tensor = from_storage(output_storage, layout.clone(), false);
+            Ok((output_name.clone(), output_tensor))
+        })
+        .collect::<HoduResult<Vec<_>>>()
+}
+
+#[cfg(not(all(feature = "std", feature = "rayon")))]
+fn convert_storage_to_outputs(
+    tensor_storage: &HashMap<TensorId, SharedStorage>,
+    compiled: &HoduCompiledScript,
+) -> HoduResult<Vec<(String, crate::tensor::Tensor)>> {
+    let mut output_tensors = Vec::new();
+    for (output_name, &tensor_id) in &compiled.output_mapping {
+        if let Some(storage) = tensor_storage.get(&tensor_id) {
+            if let Some(layout) = compiled.tensor_layouts.get(&tensor_id) {
+                let output_storage = match Arc::try_unwrap(Arc::clone(storage)) {
+                    Ok(storage) => storage,
+                    Err(shared_storage) => match shared_storage.as_ref() {
+                        HoduStorage::CPU(cpu_storage) => HoduStorage::CPU(cpu_storage.clone()),
+                        HoduStorage::Metal(metal_storage) => HoduStorage::Metal(metal_storage.clone()),
+                    },
+                };
+                let output_tensor = from_storage(output_storage, layout.clone(), false);
+                output_tensors.push((output_name.clone(), output_tensor));
+            } else {
+                return Err(HoduError::InternalError(format!(
+                    "Layout not found for output tensor {tensor_id:?}"
+                )));
+            }
+        } else {
+            return Err(HoduError::InternalError(format!(
+                "Storage not found for output tensor {tensor_id:?}"
+            )));
+        }
+    }
+    Ok(output_tensors)
 }
