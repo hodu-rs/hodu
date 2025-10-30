@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Test all feature combinations for hodu
-set -e
 
 # Modern color palette
 CYAN='\033[0;36m'
@@ -86,34 +85,85 @@ echo ""
 # Test Cargo feature combinations
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Cargo] Testing feature combinations...${NC}"
 
-# Base test cases: "features|description"
-tests=(
-    "|no features (no-std)"
-    "serde|serde only (no-std)"
-    "std|no features (std)"
-    "std,serde|serde only (std)"
-    "std,rayon|rayon only (std)"
-    "std,serde,rayon|serde + rayon (std)"
-    "std,xla|xla only (std)"
-    "std,serde,xla|serde + xla (std)"
-    "std,rayon,xla|rayon + xla (std)"
-    "std,serde,rayon,xla|serde + rayon + xla (std)"
+# Data type feature presets
+DTYPE_NONE=""
+DTYPE_ALL="u8,u32,u64,i16,i64"
+DTYPE_MINIMAL="u8,i64"
+
+# Initialize tests array
+tests=()
+
+echo -e "${DIM}Building test matrix...${NC}"
+
+# ============================================================================
+# PHASE 1: Basic configurations (no dtype features)
+# ============================================================================
+tests+=(
+    "|[basic] no features (no-std)"
+    "serde|[basic] serde (no-std)"
+    "std|[basic] std only"
+    "std,serde|[basic] std + serde"
+    "std,rayon|[basic] std + rayon"
+    "std,serde,rayon|[basic] std + serde + rayon"
 )
 
-# Add metal features only to std combinations
+# ============================================================================
+# PHASE 2: Data type feature combinations (no-std and std)
+# ============================================================================
+tests+=(
+    "$DTYPE_ALL|[dtype] all int types (no-std)"
+    "$DTYPE_MINIMAL|[dtype] minimal int types (no-std)"
+    "std,$DTYPE_ALL|[dtype] all int types (std)"
+    "std,$DTYPE_MINIMAL|[dtype] minimal int types (std)"
+    "std,serde,$DTYPE_ALL|[dtype] all int types + serde (std)"
+    "std,serde,$DTYPE_MINIMAL|[dtype] minimal int types + serde (std)"
+    "std,rayon,$DTYPE_ALL|[dtype] all int types + rayon (std)"
+    "std,rayon,$DTYPE_MINIMAL|[dtype] minimal int types + rayon (std)"
+    "std,serde,rayon,$DTYPE_ALL|[dtype] all int types + serde + rayon (std)"
+)
+
+# ============================================================================
+# PHASE 3: XLA backend combinations
+# ============================================================================
+tests+=(
+    "std,xla|[xla] xla only (std)"
+    "std,xla,$DTYPE_MINIMAL|[xla] xla + minimal dtypes (std)"
+    "std,serde,xla|[xla] xla + serde (std)"
+    "std,serde,xla,$DTYPE_MINIMAL|[xla] xla + serde + minimal dtypes (std)"
+    "std,rayon,xla|[xla] xla + rayon (std)"
+    "std,rayon,xla,$DTYPE_MINIMAL|[xla] xla + rayon + minimal dtypes (std)"
+    "std,serde,rayon,xla|[xla] xla + serde + rayon (std)"
+    "std,serde,rayon,xla,$DTYPE_ALL|[xla] xla + serde + rayon + all dtypes (std)"
+)
+
+# ============================================================================
+# PHASE 4: Metal backend combinations (macOS only)
+# ============================================================================
 if [ "$HAS_METAL" = true ]; then
-    # Add metal to std-based combinations
     tests+=(
-        "std,metal|metal (std)"
-        "std,serde,metal|serde + metal (std)"
-        "std,rayon,metal|rayon + metal (std)"
-        "std,serde,rayon,metal|serde + rayon + metal (std)"
-        "std,xla,metal|xla + metal (std)"
-        "std,serde,xla,metal|serde + xla + metal (std)"
-        "std,rayon,xla,metal|rayon + xla + metal (std)"
-        "std,serde,rayon,xla,metal|serde + rayon + xla + metal (std)"
+        "std,metal|[metal] metal only (std)"
+        "std,metal,$DTYPE_MINIMAL|[metal] metal + minimal dtypes (std)"
+        "std,serde,metal|[metal] metal + serde (std)"
+        "std,serde,metal,$DTYPE_MINIMAL|[metal] metal + serde + minimal dtypes (std)"
+        "std,rayon,metal|[metal] metal + rayon (std)"
+        "std,rayon,metal,$DTYPE_MINIMAL|[metal] metal + rayon + minimal dtypes (std)"
+        "std,serde,rayon,metal|[metal] metal + serde + rayon (std)"
+        "std,serde,rayon,metal,$DTYPE_ALL|[metal] metal + serde + rayon + all dtypes (std)"
+    )
+
+    # Metal + XLA combinations
+    tests+=(
+        "std,xla,metal|[metal+xla] xla + metal (std)"
+        "std,xla,metal,$DTYPE_MINIMAL|[metal+xla] xla + metal + minimal dtypes (std)"
+        "std,serde,xla,metal|[metal+xla] xla + metal + serde (std)"
+        "std,rayon,xla,metal|[metal+xla] xla + metal + rayon (std)"
+        "std,serde,rayon,xla,metal|[metal+xla] xla + metal + serde + rayon (std)"
+        "std,serde,rayon,xla,metal,$DTYPE_ALL|[metal+xla] all features + all dtypes (std)"
     )
 fi
+
+echo -e "${DIM}Total test cases: ${#tests[@]}${NC}"
+echo ""
 
 passed=0
 total=${#tests[@]}

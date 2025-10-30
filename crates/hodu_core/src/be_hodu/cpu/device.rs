@@ -23,13 +23,18 @@ impl HoduDeviceT for CpuDevice {
             DType::F16 => CpuStorage::F16(vec![f16::ZERO; elem_count]),
             DType::F32 => CpuStorage::F32(vec![0f32; elem_count]),
             DType::F64 => CpuStorage::F64(vec![0f64; elem_count]),
+            #[cfg(feature = "u8")]
             DType::U8 => CpuStorage::U8(vec![0u8; elem_count]),
             DType::U16 => CpuStorage::U16(vec![0u16; elem_count]),
+            #[cfg(feature = "u32")]
             DType::U32 => CpuStorage::U32(vec![0u32; elem_count]),
+            #[cfg(feature = "u64")]
             DType::U64 => CpuStorage::U64(vec![0u64; elem_count]),
             DType::I8 => CpuStorage::I8(vec![0i8; elem_count]),
+            #[cfg(feature = "i16")]
             DType::I16 => CpuStorage::I16(vec![0i16; elem_count]),
             DType::I32 => CpuStorage::I32(vec![0i32; elem_count]),
+            #[cfg(feature = "i64")]
             DType::I64 => CpuStorage::I64(vec![0i64; elem_count]),
         };
         Ok(storage)

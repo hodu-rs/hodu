@@ -14,21 +14,31 @@ pub const float32: DType = DType::F32;
 pub const f32: DType = DType::F32;
 pub const float64: DType = DType::F64;
 pub const f64: DType = DType::F64;
+#[cfg(feature = "u8")]
 pub const uint8: DType = DType::U8;
+#[cfg(feature = "u8")]
 pub const u8: DType = DType::U8;
 pub const uint16: DType = DType::U16;
 pub const u16: DType = DType::U16;
+#[cfg(feature = "u32")]
 pub const uint32: DType = DType::U32;
+#[cfg(feature = "u32")]
 pub const u32: DType = DType::U32;
+#[cfg(feature = "u64")]
 pub const uint64: DType = DType::U64;
+#[cfg(feature = "u64")]
 pub const u64: DType = DType::U64;
 pub const int8: DType = DType::I8;
 pub const i8: DType = DType::I8;
+#[cfg(feature = "i16")]
 pub const int16: DType = DType::I16;
+#[cfg(feature = "i16")]
 pub const i16: DType = DType::I16;
 pub const int32: DType = DType::I32;
 pub const i32: DType = DType::I32;
+#[cfg(feature = "i64")]
 pub const int64: DType = DType::I64;
+#[cfg(feature = "i64")]
 pub const i64: DType = DType::I64;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -42,13 +52,18 @@ pub enum DType {
     F16,
     F32,
     F64,
+    #[cfg(feature = "u8")]
     U8,
     U16,
+    #[cfg(feature = "u32")]
     U32,
+    #[cfg(feature = "u64")]
     U64,
     I8,
+    #[cfg(feature = "i16")]
     I16,
     I32,
+    #[cfg(feature = "i64")]
     I64,
 }
 
@@ -68,13 +83,18 @@ impl fmt::Display for DType {
             Self::F16 => "f16",
             Self::F32 => "f32",
             Self::F64 => "f64",
+            #[cfg(feature = "u8")]
             Self::U8 => "u8",
             Self::U16 => "u16",
+            #[cfg(feature = "u32")]
             Self::U32 => "u32",
+            #[cfg(feature = "u64")]
             Self::U64 => "u64",
             Self::I8 => "i8",
+            #[cfg(feature = "i16")]
             Self::I16 => "i16",
             Self::I32 => "i32",
+            #[cfg(feature = "i64")]
             Self::I64 => "i64",
         };
         write!(f, "{s}")
@@ -97,13 +117,18 @@ impl DType {
             Self::F16 => 2,
             Self::F32 => 4,
             Self::F64 => 8,
+            #[cfg(feature = "u8")]
             Self::U8 => 1,
             Self::U16 => 2,
+            #[cfg(feature = "u32")]
             Self::U32 => 4,
+            #[cfg(feature = "u64")]
             Self::U64 => 8,
             Self::I8 => 1,
+            #[cfg(feature = "i16")]
             Self::I16 => 2,
             Self::I32 => 4,
+            #[cfg(feature = "i64")]
             Self::I64 => 8,
         }
     }
@@ -120,10 +145,27 @@ impl DType {
     }
 
     pub fn is_uint(&self) -> bool {
-        matches!(self, Self::U8 | Self::U16 | Self::U32 | Self::U64)
+        match self {
+            #[cfg(feature = "u8")]
+            Self::U8 => true,
+            Self::U16 => true,
+            #[cfg(feature = "u32")]
+            Self::U32 => true,
+            #[cfg(feature = "u64")]
+            Self::U64 => true,
+            _ => false,
+        }
     }
 
     pub fn is_int(&self) -> bool {
-        matches!(self, Self::I8 | Self::I16 | Self::I32 | Self::I64)
+        match self {
+            Self::I8 => true,
+            #[cfg(feature = "i16")]
+            Self::I16 => true,
+            Self::I32 => true,
+            #[cfg(feature = "i64")]
+            Self::I64 => true,
+            _ => false,
+        }
     }
 }

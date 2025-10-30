@@ -64,13 +64,18 @@ impl MetalStorage {
             CpuStorage::BF16(v) => v.len(),
             CpuStorage::F16(v) => v.len(),
             CpuStorage::F32(v) => v.len(),
+            #[cfg(feature = "u8")]
             CpuStorage::U8(v) => v.len(),
             CpuStorage::U16(v) => v.len(),
+            #[cfg(feature = "u32")]
             CpuStorage::U32(v) => v.len(),
+            #[cfg(feature = "u64")]
             CpuStorage::U64(v) => v.len(),
             CpuStorage::I8(v) => v.len(),
+            #[cfg(feature = "i16")]
             CpuStorage::I16(v) => v.len(),
             CpuStorage::I32(v) => v.len(),
+            #[cfg(feature = "i64")]
             CpuStorage::I64(v) => v.len(),
             _ => {
                 return Err(HoduError::InternalError(format!(
@@ -106,12 +111,17 @@ impl HoduStorageT for MetalStorage {
             DType::F16 => Ok(CpuStorage::F16(self.to_cpu()?)),
             DType::F32 => Ok(CpuStorage::F32(self.to_cpu()?)),
             DType::I8 => Ok(CpuStorage::I8(self.to_cpu()?)),
+            #[cfg(feature = "i16")]
             DType::I16 => Ok(CpuStorage::I16(self.to_cpu()?)),
             DType::I32 => Ok(CpuStorage::I32(self.to_cpu()?)),
+            #[cfg(feature = "i64")]
             DType::I64 => Ok(CpuStorage::I64(self.to_cpu()?)),
+            #[cfg(feature = "u8")]
             DType::U8 => Ok(CpuStorage::U8(self.to_cpu()?)),
             DType::U16 => Ok(CpuStorage::U16(self.to_cpu()?)),
+            #[cfg(feature = "u32")]
             DType::U32 => Ok(CpuStorage::U32(self.to_cpu()?)),
+            #[cfg(feature = "u64")]
             DType::U64 => Ok(CpuStorage::U64(self.to_cpu()?)),
 
             // not supported
@@ -154,13 +164,18 @@ impl HoduStorageT for MetalStorage {
             (DType::BF16, s) => const_set_impl!(half::bf16, const_set::BF16, s.to_bf16()),
             (DType::F16, s) => const_set_impl!(half::f16, const_set::F16, s.to_f16()),
             (DType::F32, s) => const_set_impl!(f32, const_set::F32, s.to_f32()),
+            #[cfg(feature = "u8")]
             (DType::U8, s) => const_set_impl!(u8, const_set::U8, s.to_u8()),
             (DType::U16, s) => const_set_impl!(u16, const_set::U16, s.to_u16()),
+            #[cfg(feature = "u32")]
             (DType::U32, s) => const_set_impl!(u32, const_set::U32, s.to_u32()),
+            #[cfg(feature = "u64")]
             (DType::U64, s) => const_set_impl!(u64, const_set::U64, s.to_u64()),
             (DType::I8, s) => const_set_impl!(i8, const_set::I8, s.to_i8()),
+            #[cfg(feature = "i16")]
             (DType::I16, s) => const_set_impl!(i16, const_set::I16, s.to_i16()),
             (DType::I32, s) => const_set_impl!(i32, const_set::I32, s.to_i32()),
+            #[cfg(feature = "i64")]
             (DType::I64, s) => const_set_impl!(i64, const_set::I64, s.to_i64()),
 
             _ => {
@@ -226,6 +241,7 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "u8")]
             (DType::U8, DType::U8) => {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -234,10 +250,12 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "u32")]
             (DType::U32, DType::U32) => {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "u64")]
             (DType::U64, DType::U64) => {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -246,6 +264,7 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "i16")]
             (DType::I16, DType::I16) => {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -254,6 +273,7 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "i64")]
             (DType::I64, DType::I64) => {
                 let result_storage = matmul_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -280,6 +300,7 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "u8")]
             (DType::U8, DType::U8) => {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -288,10 +309,12 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "u32")]
             (DType::U32, DType::U32) => {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "u64")]
             (DType::U64, DType::U64) => {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -300,6 +323,7 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "i16")]
             (DType::I16, DType::I16) => {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
@@ -308,6 +332,7 @@ impl HoduStorageT for MetalStorage {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)
             },
+            #[cfg(feature = "i64")]
             (DType::I64, DType::I64) => {
                 let result_storage = dot_map(self, rhs_storage, lhs_layout, rhs_layout)?;
                 Ok(result_storage)

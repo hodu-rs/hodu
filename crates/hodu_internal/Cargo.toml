@@ -12,6 +12,11 @@ repository = "https://github.com/hodu-rs/hodu"
 std = ["hodu_core/std", "hodu_nn/std", "hodu_utils/std"]
 serde = ["hodu_core/serde", "hodu_nn/serde", "hodu_utils/serde"]
 rayon = ["std", "hodu_core/rayon"]
+u8 = ["hodu_core/u8"]
+u32 = ["hodu_core/u32"]
+u64 = ["hodu_core/u64"]
+i16 = ["hodu_core/i16"]
+i64 = ["hodu_core/i64"]
 
 cuda = ["hodu_core/cuda"]
 metal = ["hodu_core/metal"]

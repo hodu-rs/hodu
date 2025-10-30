@@ -146,6 +146,7 @@ pub fn conv3d_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_conv(
                         device.device(),
@@ -172,6 +173,7 @@ pub fn conv3d_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_conv(
                         device.device(),
@@ -185,6 +187,7 @@ pub fn conv3d_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_conv(
                         device.device(),
@@ -211,6 +214,7 @@ pub fn conv3d_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_conv(
                         device.device(),
@@ -224,6 +228,7 @@ pub fn conv3d_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_conv(
                         device.device(),

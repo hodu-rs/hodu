@@ -116,6 +116,7 @@ impl XlaExecutor {
                     .collect();
                 self.create_xla_constant(builder, &values, &dims, element_type)
             },
+            #[cfg(feature = "i64")]
             DType::I64 => {
                 let values: Vec<i64> = data
                     .chunks_exact(8)
@@ -127,6 +128,7 @@ impl XlaExecutor {
                     .collect();
                 self.create_xla_constant(builder, &values, &dims, element_type)
             },
+            #[cfg(feature = "i16")]
             DType::I16 => {
                 let values: Vec<i16> = data
                     .chunks_exact(2)
@@ -138,6 +140,7 @@ impl XlaExecutor {
                 let values: Vec<i8> = data.iter().map(|&b| b as i8).collect();
                 self.create_xla_constant(builder, &values, &dims, element_type)
             },
+            #[cfg(feature = "u32")]
             DType::U32 => {
                 let values: Vec<u32> = data
                     .chunks_exact(4)
@@ -145,6 +148,7 @@ impl XlaExecutor {
                     .collect();
                 self.create_xla_constant(builder, &values, &dims, element_type)
             },
+            #[cfg(feature = "u64")]
             DType::U64 => {
                 let values: Vec<u64> = data
                     .chunks_exact(8)
@@ -163,6 +167,7 @@ impl XlaExecutor {
                     .collect();
                 self.create_xla_constant(builder, &values, &dims, element_type)
             },
+            #[cfg(feature = "u8")]
             DType::U8 => self.create_xla_constant(builder, &data, &dims, element_type),
             DType::BOOL => {
                 let literal = hodu_xla::Literal::create_from_shape_and_untyped_data(

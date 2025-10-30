@@ -109,6 +109,7 @@ pub fn binary_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -143,6 +144,7 @@ pub fn binary_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -160,6 +162,7 @@ pub fn binary_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -194,6 +197,7 @@ pub fn binary_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -228,6 +232,7 @@ pub fn binary_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -387,6 +392,7 @@ pub fn binary_logical_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -421,6 +427,7 @@ pub fn binary_logical_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -438,6 +445,7 @@ pub fn binary_logical_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -472,6 +480,7 @@ pub fn binary_logical_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),
@@ -506,6 +515,7 @@ pub fn binary_logical_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     hodu_metal_kernels::kernels::call_binary(
                         device.device(),

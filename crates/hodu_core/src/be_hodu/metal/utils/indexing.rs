@@ -13,22 +13,86 @@ pub fn index_select_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_index_select, utils::BufferOffset};
 
+    let device = storage.get_hodu_device();
+
     // Convert indices to I32 if needed
     let indices_i32 = match indices_storage.get_dtype() {
         DType::I32 => indices_storage.clone(),
-        DType::I64 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
-            // Need to convert to I32
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
                 crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
@@ -37,10 +101,12 @@ pub fn index_select_map(
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
@@ -67,7 +133,6 @@ pub fn index_select_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -175,6 +240,7 @@ pub fn index_select_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_index_select(
                         device.device(),
@@ -209,6 +275,7 @@ pub fn index_select_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_index_select(
                         device.device(),
@@ -226,6 +293,7 @@ pub fn index_select_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_index_select(
                         device.device(),
@@ -260,6 +328,7 @@ pub fn index_select_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_index_select(
                         device.device(),
@@ -294,6 +363,7 @@ pub fn index_select_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_index_select(
                         device.device(),
@@ -337,21 +407,86 @@ pub fn index_put_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_index_put, utils::BufferOffset};
 
+    let device = storage.get_hodu_device();
+
     // Convert indices to I32 if needed
     let indices_i32 = match indices_storage.get_dtype() {
         DType::I32 => indices_storage.clone(),
-        DType::I64 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
                 crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
@@ -360,10 +495,12 @@ pub fn index_put_map(
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
                     let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                     crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
@@ -390,7 +527,6 @@ pub fn index_put_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -522,6 +658,7 @@ pub fn index_put_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_index_put(
                         device.device(),
@@ -562,6 +699,7 @@ pub fn index_put_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_index_put(
                         device.device(),
@@ -582,6 +720,7 @@ pub fn index_put_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_index_put(
                         device.device(),
@@ -622,6 +761,7 @@ pub fn index_put_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_index_put(
                         device.device(),
@@ -662,6 +802,7 @@ pub fn index_put_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_index_put(
                         device.device(),
@@ -706,40 +847,107 @@ pub fn gather_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_gather, utils::BufferOffset};
 
-    // Convert indices to I64 if needed
-    let indices_i64 = match indices_storage.get_dtype() {
-        DType::I64 => indices_storage.clone(),
-        DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
+    let device = storage.get_hodu_device();
+
+    // Convert indices to I32 if needed
+    let indices_i32 = match indices_storage.get_dtype() {
+        DType::I32 => indices_storage.clone(),
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    let converted: Vec<i64> = data.iter().map(|&v| v as i64).collect();
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(converted)
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -759,7 +967,6 @@ pub fn gather_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -788,8 +995,8 @@ pub fn gather_map(
     };
 
     let indices = BufferOffset {
-        buffer: indices_i64.buffer(),
-        offset_in_bytes: indices_layout.get_offset() * DType::I64.get_size_in_bytes(),
+        buffer: indices_i32.buffer(),
+        offset_in_bytes: indices_layout.get_offset() * DType::I32.get_size_in_bytes(),
     };
 
     let indices_strides = indices_layout.get_strides();
@@ -870,6 +1077,7 @@ pub fn gather_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_gather(
                         device.device(),
@@ -906,6 +1114,7 @@ pub fn gather_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_gather(
                         device.device(),
@@ -924,6 +1133,7 @@ pub fn gather_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_gather(
                         device.device(),
@@ -960,6 +1170,7 @@ pub fn gather_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_gather(
                         device.device(),
@@ -996,6 +1207,7 @@ pub fn gather_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_gather(
                         device.device(),
@@ -1039,32 +1251,107 @@ pub fn scatter_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_scatter, utils::BufferOffset};
 
-    let indices_i64 = match indices_storage.get_dtype() {
-        DType::I64 => indices_storage.clone(),
-        DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
+    let device = storage.get_hodu_device();
+
+    // Convert indices to I32 if needed
+    let indices_i32 = match indices_storage.get_dtype() {
+        DType::I32 => indices_storage.clone(),
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -1084,7 +1371,6 @@ pub fn scatter_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -1107,8 +1393,8 @@ pub fn scatter_map(
     };
 
     let indices = BufferOffset {
-        buffer: indices_i64.buffer(),
-        offset_in_bytes: indices_layout.get_offset() * DType::I64.get_size_in_bytes(),
+        buffer: indices_i32.buffer(),
+        offset_in_bytes: indices_layout.get_offset() * DType::I32.get_size_in_bytes(),
     };
 
     let src = BufferOffset {
@@ -1213,6 +1499,7 @@ pub fn scatter_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_scatter(
                         device.device(),
@@ -1257,6 +1544,7 @@ pub fn scatter_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_scatter(
                         device.device(),
@@ -1279,6 +1567,7 @@ pub fn scatter_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_scatter(
                         device.device(),
@@ -1323,6 +1612,7 @@ pub fn scatter_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_scatter(
                         device.device(),
@@ -1367,6 +1657,7 @@ pub fn scatter_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_scatter(
                         device.device(),
@@ -1414,32 +1705,107 @@ pub fn scatter_add_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_scatter, utils::BufferOffset};
 
-    let indices_i64 = match indices_storage.get_dtype() {
-        DType::I64 => indices_storage.clone(),
-        DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
+    let device = storage.get_hodu_device();
+
+    // Convert indices to I32 if needed
+    let indices_i32 = match indices_storage.get_dtype() {
+        DType::I32 => indices_storage.clone(),
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -1459,7 +1825,6 @@ pub fn scatter_add_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -1482,8 +1847,8 @@ pub fn scatter_add_map(
     };
 
     let indices = BufferOffset {
-        buffer: indices_i64.buffer(),
-        offset_in_bytes: indices_layout.get_offset() * DType::I64.get_size_in_bytes(),
+        buffer: indices_i32.buffer(),
+        offset_in_bytes: indices_layout.get_offset() * DType::I32.get_size_in_bytes(),
     };
 
     let src = BufferOffset {
@@ -1566,6 +1931,7 @@ pub fn scatter_add_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_scatter(
                         device.device(),
@@ -1610,6 +1976,7 @@ pub fn scatter_add_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_scatter(
                         device.device(),
@@ -1632,6 +1999,7 @@ pub fn scatter_add_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_scatter(
                         device.device(),
@@ -1676,6 +2044,7 @@ pub fn scatter_add_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_scatter(
                         device.device(),
@@ -1720,6 +2089,7 @@ pub fn scatter_add_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_scatter(
                         device.device(),
@@ -1767,32 +2137,107 @@ pub fn scatter_max_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_scatter, utils::BufferOffset};
 
-    let indices_i64 = match indices_storage.get_dtype() {
-        DType::I64 => indices_storage.clone(),
-        DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
+    let device = storage.get_hodu_device();
+
+    // Convert indices to I32 if needed
+    let indices_i32 = match indices_storage.get_dtype() {
+        DType::I32 => indices_storage.clone(),
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -1812,7 +2257,6 @@ pub fn scatter_max_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -1835,8 +2279,8 @@ pub fn scatter_max_map(
     };
 
     let indices = BufferOffset {
-        buffer: indices_i64.buffer(),
-        offset_in_bytes: indices_layout.get_offset() * DType::I64.get_size_in_bytes(),
+        buffer: indices_i32.buffer(),
+        offset_in_bytes: indices_layout.get_offset() * DType::I32.get_size_in_bytes(),
     };
 
     let src = BufferOffset {
@@ -1919,6 +2363,7 @@ pub fn scatter_max_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_scatter(
                         device.device(),
@@ -1963,6 +2408,7 @@ pub fn scatter_max_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_scatter(
                         device.device(),
@@ -1985,6 +2431,7 @@ pub fn scatter_max_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_scatter(
                         device.device(),
@@ -2029,6 +2476,7 @@ pub fn scatter_max_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_scatter(
                         device.device(),
@@ -2073,6 +2521,7 @@ pub fn scatter_max_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_scatter(
                         device.device(),
@@ -2120,32 +2569,107 @@ pub fn scatter_min_map(
 ) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::{kernels::call_scatter, utils::BufferOffset};
 
-    let indices_i64 = match indices_storage.get_dtype() {
-        DType::I64 => indices_storage.clone(),
-        DType::I32 | DType::U32 | DType::U64 | DType::I8 | DType::I16 | DType::U8 | DType::U16 => {
+    let device = storage.get_hodu_device();
+
+    // Convert indices to I32 if needed
+    let indices_i32 = match indices_storage.get_dtype() {
+        DType::I32 => indices_storage.clone(),
+        #[cfg(feature = "i64")]
+        DType::I64 => {
             let indices_cpu = indices_storage.to_cpu_storage()?;
             let converted_cpu = match indices_cpu {
-                crate::be_hodu::cpu::storage::CpuStorage::I64(_) => indices_cpu,
-                crate::be_hodu::cpu::storage::CpuStorage::I32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u32")]
+        DType::U32 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u64")]
+        DType::U64 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
                 crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "i16")]
+        DType::I16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        #[cfg(feature = "u8")]
+        DType::U8 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                _ => indices_cpu,
+            };
+            MetalStorage::from_cpu_storage(&converted_cpu)?
+        },
+        DType::I8 | DType::U16 => {
+            let indices_cpu = indices_storage.to_cpu_storage()?;
+            let converted_cpu = match indices_cpu {
+                crate::be_hodu::cpu::storage::CpuStorage::I32(_) => indices_cpu,
+                #[cfg(feature = "i64")]
+                crate::be_hodu::cpu::storage::CpuStorage::I64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u32")]
+                crate::be_hodu::cpu::storage::CpuStorage::U32(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
+                },
+                #[cfg(feature = "u64")]
+                crate::be_hodu::cpu::storage::CpuStorage::U64(data) => {
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::I8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "i16")]
                 crate::be_hodu::cpu::storage::CpuStorage::I16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
+                #[cfg(feature = "u8")]
                 crate::be_hodu::cpu::storage::CpuStorage::U8(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 crate::be_hodu::cpu::storage::CpuStorage::U16(data) => {
-                    crate::be_hodu::cpu::storage::CpuStorage::I64(data.iter().map(|&v| v as i64).collect())
+                    let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
+                    crate::be_hodu::cpu::storage::CpuStorage::I32(converted)
                 },
                 _ => {
                     return Err(HoduError::UnsupportedDType {
@@ -2165,7 +2689,6 @@ pub fn scatter_min_map(
     };
 
     let dtype = storage.get_dtype();
-    let device = storage.get_hodu_device();
     let shape = layout.get_shape();
     let strides = layout.get_strides();
     let offset = layout.get_offset();
@@ -2188,8 +2711,8 @@ pub fn scatter_min_map(
     };
 
     let indices = BufferOffset {
-        buffer: indices_i64.buffer(),
-        offset_in_bytes: indices_layout.get_offset() * DType::I64.get_size_in_bytes(),
+        buffer: indices_i32.buffer(),
+        offset_in_bytes: indices_layout.get_offset() * DType::I32.get_size_in_bytes(),
     };
 
     let src = BufferOffset {
@@ -2272,6 +2795,7 @@ pub fn scatter_min_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     call_scatter(
                         device.device(),
@@ -2316,6 +2840,7 @@ pub fn scatter_min_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     call_scatter(
                         device.device(),
@@ -2338,6 +2863,7 @@ pub fn scatter_min_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     call_scatter(
                         device.device(),
@@ -2382,6 +2908,7 @@ pub fn scatter_min_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     call_scatter(
                         device.device(),
@@ -2426,6 +2953,7 @@ pub fn scatter_min_map(
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     call_scatter(
                         device.device(),

@@ -105,6 +105,7 @@ mod serde_impls {
                     6u8.encode(encoder)?;
                     v.encode(encoder)
                 },
+                #[cfg(feature = "u8")]
                 Scalar::U8(v) => {
                     7u8.encode(encoder)?;
                     v.encode(encoder)
@@ -113,10 +114,12 @@ mod serde_impls {
                     8u8.encode(encoder)?;
                     v.encode(encoder)
                 },
+                #[cfg(feature = "u32")]
                 Scalar::U32(v) => {
                     9u8.encode(encoder)?;
                     v.encode(encoder)
                 },
+                #[cfg(feature = "u64")]
                 Scalar::U64(v) => {
                     10u8.encode(encoder)?;
                     v.encode(encoder)
@@ -125,6 +128,7 @@ mod serde_impls {
                     11u8.encode(encoder)?;
                     v.encode(encoder)
                 },
+                #[cfg(feature = "i16")]
                 Scalar::I16(v) => {
                     12u8.encode(encoder)?;
                     v.encode(encoder)
@@ -133,6 +137,7 @@ mod serde_impls {
                     13u8.encode(encoder)?;
                     v.encode(encoder)
                 },
+                #[cfg(feature = "i64")]
                 Scalar::I64(v) => {
                     14u8.encode(encoder)?;
                     v.encode(encoder)
@@ -164,13 +169,18 @@ mod serde_impls {
                 },
                 5 => Ok(Scalar::F32(f32::decode(decoder)?)),
                 6 => Ok(Scalar::F64(f64::decode(decoder)?)),
+                #[cfg(feature = "u8")]
                 7 => Ok(Scalar::U8(u8::decode(decoder)?)),
                 8 => Ok(Scalar::U16(u16::decode(decoder)?)),
+                #[cfg(feature = "u32")]
                 9 => Ok(Scalar::U32(u32::decode(decoder)?)),
+                #[cfg(feature = "u64")]
                 10 => Ok(Scalar::U64(u64::decode(decoder)?)),
                 11 => Ok(Scalar::I8(i8::decode(decoder)?)),
+                #[cfg(feature = "i16")]
                 12 => Ok(Scalar::I16(i16::decode(decoder)?)),
                 13 => Ok(Scalar::I32(i32::decode(decoder)?)),
+                #[cfg(feature = "i64")]
                 14 => Ok(Scalar::I64(i64::decode(decoder)?)),
                 _ => Err(DecodeError::UnexpectedVariant {
                     allowed: &bincode::error::AllowedEnumVariants::Range { min: 0, max: 14 },
@@ -226,13 +236,18 @@ pub enum Scalar {
     F16(f16),
     F32(f32),
     F64(f64),
+    #[cfg(feature = "u8")]
     U8(u8),
     U16(u16),
+    #[cfg(feature = "u32")]
     U32(u32),
+    #[cfg(feature = "u64")]
     U64(u64),
     I8(i8),
+    #[cfg(feature = "i16")]
     I16(i16),
     I32(i32),
+    #[cfg(feature = "i64")]
     I64(i64),
 }
 
@@ -282,13 +297,18 @@ impl fmt::Display for Scalar {
                     write!(f, "{v}")
                 }
             },
+            #[cfg(feature = "u8")]
             Self::U8(v) => write!(f, "{v}"),
             Self::U16(v) => write!(f, "{v}"),
+            #[cfg(feature = "u32")]
             Self::U32(v) => write!(f, "{v}"),
+            #[cfg(feature = "u64")]
             Self::U64(v) => write!(f, "{v}"),
             Self::I8(v) => write!(f, "{v}"),
+            #[cfg(feature = "i16")]
             Self::I16(v) => write!(f, "{v}"),
             Self::I32(v) => write!(f, "{v}"),
+            #[cfg(feature = "i64")]
             Self::I64(v) => write!(f, "{v}"),
         }
     }
@@ -304,13 +324,18 @@ impl fmt::Debug for Scalar {
             Self::F16(v) => write!(f, "Scalar(dtype=f16, value={:.8})", v.to_f32()),
             Self::F32(v) => write!(f, "Scalar(dtype=f32, value={v:.8})"),
             Self::F64(v) => write!(f, "Scalar(dtype=f64, value={v:.8})"),
+            #[cfg(feature = "u8")]
             Self::U8(v) => write!(f, "Scalar(dtype=u8, value={v})"),
             Self::U16(v) => write!(f, "Scalar(dtype=u16, value={v})"),
+            #[cfg(feature = "u32")]
             Self::U32(v) => write!(f, "Scalar(dtype=u32, value={v})"),
+            #[cfg(feature = "u64")]
             Self::U64(v) => write!(f, "Scalar(dtype=u64, value={v})"),
             Self::I8(v) => write!(f, "Scalar(dtype=i8, value={v})"),
+            #[cfg(feature = "i16")]
             Self::I16(v) => write!(f, "Scalar(dtype=i16, value={v})"),
             Self::I32(v) => write!(f, "Scalar(dtype=i32, value={v})"),
+            #[cfg(feature = "i64")]
             Self::I64(v) => write!(f, "Scalar(dtype=i64, value={v})"),
         }
     }
@@ -330,13 +355,18 @@ impl Scalar {
             DType::F16 => Self::F16(f16::ZERO),
             DType::F32 => Self::F32(0.0),
             DType::F64 => Self::F64(0.0),
+            #[cfg(feature = "u8")]
             DType::U8 => Self::U8(0),
             DType::U16 => Self::U16(0),
+            #[cfg(feature = "u32")]
             DType::U32 => Self::U32(0),
+            #[cfg(feature = "u64")]
             DType::U64 => Self::U64(0),
             DType::I8 => Self::I8(0),
+            #[cfg(feature = "i16")]
             DType::I16 => Self::I16(0),
             DType::I32 => Self::I32(0),
+            #[cfg(feature = "i64")]
             DType::I64 => Self::I64(0),
         }
     }
@@ -350,13 +380,18 @@ impl Scalar {
             DType::F16 => Self::F16(f16::ONE),
             DType::F32 => Self::F32(1.0),
             DType::F64 => Self::F64(1.0),
+            #[cfg(feature = "u8")]
             DType::U8 => Self::U8(1),
             DType::U16 => Self::U16(1),
+            #[cfg(feature = "u32")]
             DType::U32 => Self::U32(1),
+            #[cfg(feature = "u64")]
             DType::U64 => Self::U64(1),
             DType::I8 => Self::I8(1),
+            #[cfg(feature = "i16")]
             DType::I16 => Self::I16(1),
             DType::I32 => Self::I32(1),
+            #[cfg(feature = "i64")]
             DType::I64 => Self::I64(1),
         }
     }
@@ -370,13 +405,18 @@ impl Scalar {
             DType::F16 => Self::F16(f16::from_f32(value)),
             DType::F32 => Self::F32(value),
             DType::F64 => Self::F64(value as f64),
+            #[cfg(feature = "u8")]
             DType::U8 => Self::U8(value as u8),
             DType::U16 => Self::U16(value as u16),
+            #[cfg(feature = "u32")]
             DType::U32 => Self::U32(value as u32),
+            #[cfg(feature = "u64")]
             DType::U64 => Self::U64(value as u64),
             DType::I8 => Self::I8(value as i8),
+            #[cfg(feature = "i16")]
             DType::I16 => Self::I16(value as i16),
             DType::I32 => Self::I32(value as i32),
+            #[cfg(feature = "i64")]
             DType::I64 => Self::I64(value as i64),
         }
     }
@@ -391,13 +431,23 @@ impl Scalar {
             Self::F16(_) => DType::F16,
             Self::F32(_) => DType::F32,
             Self::F64(_) => DType::F64,
+            #[cfg(feature = "u8")]
+            #[cfg(feature = "u8")]
             Self::U8(_) => DType::U8,
             Self::U16(_) => DType::U16,
+            #[cfg(feature = "u32")]
+            #[cfg(feature = "u32")]
             Self::U32(_) => DType::U32,
+            #[cfg(feature = "u64")]
+            #[cfg(feature = "u64")]
             Self::U64(_) => DType::U64,
             Self::I8(_) => DType::I8,
+            #[cfg(feature = "i16")]
+            #[cfg(feature = "i16")]
             Self::I16(_) => DType::I16,
             Self::I32(_) => DType::I32,
+            #[cfg(feature = "i64")]
+            #[cfg(feature = "i64")]
             Self::I64(_) => DType::I64,
         }
     }
@@ -416,13 +466,18 @@ impl Scalar {
             DType::F16 => Scalar::F16(f16::from_f32(self.to_f32())),
             DType::F32 => Scalar::F32(self.to_f32()),
             DType::F64 => Scalar::F64(self.to_f64()),
+            #[cfg(feature = "u8")]
             DType::U8 => Scalar::U8(self.to_u8()),
             DType::U16 => Scalar::U16(self.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => Scalar::U32(self.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => Scalar::U64(self.to_u64()),
             DType::I8 => Scalar::I8(self.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => Scalar::I16(self.to_i16()),
             DType::I32 => Scalar::I32(self.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => Scalar::I64(self.to_i64()),
         }
     }
@@ -488,13 +543,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32() != 0.0,
             Self::F32(x) => x != 0.0,
             Self::F64(x) => x != 0.0,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x != 0,
             Self::U16(x) => x != 0,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x != 0,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x != 0,
             Self::I8(x) => x != 0,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x != 0,
             Self::I32(x) => x != 0,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x != 0,
         }
     }
@@ -509,13 +569,18 @@ impl Scalar {
             Self::F16(x) => F8E4M3::from_f32(x.to_f32()),
             Self::F32(x) => F8E4M3::from_f32(x),
             Self::F64(x) => F8E4M3::from_f32(x as f32),
+            #[cfg(feature = "u8")]
             Self::U8(x) => F8E4M3::from_f32(x as f32),
             Self::U16(x) => F8E4M3::from_f32(x as f32),
+            #[cfg(feature = "u32")]
             Self::U32(x) => F8E4M3::from_f32(x as f32),
+            #[cfg(feature = "u64")]
             Self::U64(x) => F8E4M3::from_f32(x as f32),
             Self::I8(x) => F8E4M3::from_f32(x as f32),
+            #[cfg(feature = "i16")]
             Self::I16(x) => F8E4M3::from_f32(x as f32),
             Self::I32(x) => F8E4M3::from_f32(x as f32),
+            #[cfg(feature = "i64")]
             Self::I64(x) => F8E4M3::from_f32(x as f32),
         }
     }
@@ -530,13 +595,18 @@ impl Scalar {
             Self::F16(x) => F8E5M2::from_f32(x.to_f32()),
             Self::F32(x) => F8E5M2::from_f32(x),
             Self::F64(x) => F8E5M2::from_f32(x as f32),
+            #[cfg(feature = "u8")]
             Self::U8(x) => F8E5M2::from_f32(x as f32),
             Self::U16(x) => F8E5M2::from_f32(x as f32),
+            #[cfg(feature = "u32")]
             Self::U32(x) => F8E5M2::from_f32(x as f32),
+            #[cfg(feature = "u64")]
             Self::U64(x) => F8E5M2::from_f32(x as f32),
             Self::I8(x) => F8E5M2::from_f32(x as f32),
+            #[cfg(feature = "i16")]
             Self::I16(x) => F8E5M2::from_f32(x as f32),
             Self::I32(x) => F8E5M2::from_f32(x as f32),
+            #[cfg(feature = "i64")]
             Self::I64(x) => F8E5M2::from_f32(x as f32),
         }
     }
@@ -551,13 +621,18 @@ impl Scalar {
             Self::F16(x) => bf16::from_f32(x.to_f32()),
             Self::F32(x) => bf16::from_f32(x),
             Self::F64(x) => bf16::from_f32(x as f32),
+            #[cfg(feature = "u8")]
             Self::U8(x) => bf16::from_f32(x as f32),
             Self::U16(x) => bf16::from_f32(x as f32),
+            #[cfg(feature = "u32")]
             Self::U32(x) => bf16::from_f32(x as f32),
+            #[cfg(feature = "u64")]
             Self::U64(x) => bf16::from_f32(x as f32),
             Self::I8(x) => bf16::from_f32(x as f32),
+            #[cfg(feature = "i16")]
             Self::I16(x) => bf16::from_f32(x as f32),
             Self::I32(x) => bf16::from_f32(x as f32),
+            #[cfg(feature = "i64")]
             Self::I64(x) => bf16::from_f32(x as f32),
         }
     }
@@ -572,13 +647,18 @@ impl Scalar {
             Self::F16(x) => x,
             Self::F32(x) => f16::from_f32(x),
             Self::F64(x) => f16::from_f32(x as f32),
+            #[cfg(feature = "u8")]
             Self::U8(x) => f16::from_f32(x as f32),
             Self::U16(x) => f16::from_f32(x as f32),
+            #[cfg(feature = "u32")]
             Self::U32(x) => f16::from_f32(x as f32),
+            #[cfg(feature = "u64")]
             Self::U64(x) => f16::from_f32(x as f32),
             Self::I8(x) => f16::from_f32(x as f32),
+            #[cfg(feature = "i16")]
             Self::I16(x) => f16::from_f32(x as f32),
             Self::I32(x) => f16::from_f32(x as f32),
+            #[cfg(feature = "i64")]
             Self::I64(x) => f16::from_f32(x as f32),
         }
     }
@@ -599,13 +679,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32(),
             Self::F32(x) => x,
             Self::F64(x) => x as f32,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as f32,
             Self::U16(x) => x as f32,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x as f32,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x as f32,
             Self::I8(x) => x as f32,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x as f32,
             Self::I32(x) => x as f32,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x as f32,
         }
     }
@@ -626,13 +711,18 @@ impl Scalar {
             Self::F16(x) => x.to_f64(),
             Self::F32(x) => x as f64,
             Self::F64(x) => x,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as f64,
             Self::U16(x) => x as f64,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x as f64,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x as f64,
             Self::I8(x) => x as f64,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x as f64,
             Self::I32(x) => x as f64,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x as f64,
         }
     }
@@ -653,13 +743,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32().clamp(0.0, u8::MAX as f32) as u8,
             Self::F32(x) => x.clamp(0.0, u8::MAX as f32) as u8,
             Self::F64(x) => x.clamp(0.0, u8::MAX as f64) as u8,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x,
             Self::U16(x) => x.min(u8::MAX as u16) as u8,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x.min(u8::MAX as u32) as u8,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(u8::MAX as u64) as u8,
             Self::I8(x) => x.max(0) as u8,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x.clamp(0, u8::MAX as i16) as u8,
             Self::I32(x) => x.clamp(0, u8::MAX as i32) as u8,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.clamp(0, u8::MAX as i64) as u8,
         }
     }
@@ -680,13 +775,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32().clamp(0.0, u16::MAX as f32) as u16,
             Self::F32(x) => x.clamp(0.0, u16::MAX as f32) as u16,
             Self::F64(x) => x.clamp(0.0, u16::MAX as f64) as u16,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as u16,
             Self::U16(x) => x,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x.min(u16::MAX as u32) as u16,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(u16::MAX as u64) as u16,
             Self::I8(x) => x.max(0) as u16,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x.max(0) as u16,
             Self::I32(x) => x.clamp(0, u16::MAX as i32) as u16,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.clamp(0, u16::MAX as i64) as u16,
         }
     }
@@ -707,13 +807,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32().clamp(0.0, u32::MAX as f32) as u32,
             Self::F32(x) => x.clamp(0.0, u32::MAX as f32) as u32,
             Self::F64(x) => x.clamp(0.0, u32::MAX as f64) as u32,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as u32,
             Self::U16(x) => x as u32,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(u32::MAX as u64) as u32,
             Self::I8(x) => x.max(0) as u32,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x.max(0) as u32,
             Self::I32(x) => x.max(0) as u32,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.clamp(0, u32::MAX as i64) as u32,
         }
     }
@@ -734,13 +839,18 @@ impl Scalar {
             Self::F16(x) => x.to_f64().max(0.0) as u64,
             Self::F32(x) => x.max(0.0) as u64,
             Self::F64(x) => x.max(0.0) as u64,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as u64,
             Self::U16(x) => x as u64,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x as u64,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x,
             Self::I8(x) => x.max(0) as u64,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x.max(0) as u64,
             Self::I32(x) => x.max(0) as u64,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.max(0) as u64,
         }
     }
@@ -761,13 +871,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32().clamp(i8::MIN as f32, i8::MAX as f32) as i8,
             Self::F32(x) => x.clamp(i8::MIN as f32, i8::MAX as f32) as i8,
             Self::F64(x) => x.clamp(i8::MIN as f64, i8::MAX as f64) as i8,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x.min(i8::MAX as u8) as i8,
             Self::U16(x) => x.min(i8::MAX as u16) as i8,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x.min(i8::MAX as u32) as i8,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(i8::MAX as u64) as i8,
             Self::I8(x) => x,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x.clamp(i8::MIN as i16, i8::MAX as i16) as i8,
             Self::I32(x) => x.clamp(i8::MIN as i32, i8::MAX as i32) as i8,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.clamp(i8::MIN as i64, i8::MAX as i64) as i8,
         }
     }
@@ -788,13 +903,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32().clamp(i16::MIN as f32, i16::MAX as f32) as i16,
             Self::F32(x) => x.clamp(i16::MIN as f32, i16::MAX as f32) as i16,
             Self::F64(x) => x.clamp(i16::MIN as f64, i16::MAX as f64) as i16,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as i16,
             Self::U16(x) => x.min(i16::MAX as u16) as i16,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x.min(i16::MAX as u32) as i16,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(i16::MAX as u64) as i16,
             Self::I8(x) => x as i16,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x,
             Self::I32(x) => x.clamp(i16::MIN as i32, i16::MAX as i32) as i16,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.clamp(i16::MIN as i64, i16::MAX as i64) as i16,
         }
     }
@@ -815,13 +935,18 @@ impl Scalar {
             Self::F16(x) => x.to_f32() as i32,
             Self::F32(x) => x as i32,
             Self::F64(x) => x.clamp(i32::MIN as f64, i32::MAX as f64) as i32,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as i32,
             Self::U16(x) => x as i32,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x.min(i32::MAX as u32) as i32,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(i32::MAX as u64) as i32,
             Self::I8(x) => x as i32,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x as i32,
             Self::I32(x) => x,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x.clamp(i32::MIN as i64, i32::MAX as i64) as i32,
         }
     }
@@ -842,13 +967,18 @@ impl Scalar {
             Self::F16(x) => x.to_f64() as i64,
             Self::F32(x) => x as i64,
             Self::F64(x) => x as i64,
+            #[cfg(feature = "u8")]
             Self::U8(x) => x as i64,
             Self::U16(x) => x as i64,
+            #[cfg(feature = "u32")]
             Self::U32(x) => x as i64,
+            #[cfg(feature = "u64")]
             Self::U64(x) => x.min(i64::MAX as u64) as i64,
             Self::I8(x) => x as i64,
+            #[cfg(feature = "i16")]
             Self::I16(x) => x as i64,
             Self::I32(x) => x as i64,
+            #[cfg(feature = "i64")]
             Self::I64(x) => x,
         }
     }
@@ -906,7 +1036,14 @@ impl From<f64> for Scalar {
 impl From<u8> for Scalar {
     #[inline]
     fn from(x: u8) -> Self {
-        Self::U8(x)
+        #[cfg(feature = "u8")]
+        {
+            Self::U8(x)
+        }
+        #[cfg(not(feature = "u8"))]
+        {
+            Self::U16(x as u16)
+        }
     }
 }
 
@@ -920,25 +1057,43 @@ impl From<u16> for Scalar {
 impl From<u32> for Scalar {
     #[inline]
     fn from(x: u32) -> Self {
-        Self::U32(x)
+        #[cfg(feature = "u32")]
+        {
+            Self::U32(x)
+        }
+        #[cfg(not(feature = "u32"))]
+        {
+            Self::U16(x as u16)
+        }
     }
 }
 
 impl From<u64> for Scalar {
     #[inline]
     fn from(x: u64) -> Self {
-        Self::U64(x)
+        #[cfg(feature = "u64")]
+        {
+            Self::U64(x)
+        }
+        #[cfg(not(feature = "u64"))]
+        {
+            Self::U16(x as u16)
+        }
     }
 }
 
 impl From<usize> for Scalar {
     #[inline]
     fn from(x: usize) -> Self {
+        #[cfg(feature = "u32")]
         if x <= u32::MAX as usize {
-            Scalar::U32(x as u32)
-        } else {
-            Scalar::F64(x as f64)
+            return Scalar::U32(x as u32);
         }
+        #[cfg(not(feature = "u32"))]
+        if x <= u16::MAX as usize {
+            return Scalar::U16(x as u16);
+        }
+        Scalar::F64(x as f64)
     }
 }
 
@@ -952,7 +1107,14 @@ impl From<i8> for Scalar {
 impl From<i16> for Scalar {
     #[inline]
     fn from(x: i16) -> Self {
-        Self::I16(x)
+        #[cfg(feature = "i16")]
+        {
+            Self::I16(x)
+        }
+        #[cfg(not(feature = "i16"))]
+        {
+            Self::I32(x as i32)
+        }
     }
 }
 
@@ -966,7 +1128,14 @@ impl From<i32> for Scalar {
 impl From<i64> for Scalar {
     #[inline]
     fn from(x: i64) -> Self {
-        Self::I64(x)
+        #[cfg(feature = "i64")]
+        {
+            Self::I64(x)
+        }
+        #[cfg(not(feature = "i64"))]
+        {
+            Self::I32(x as i32)
+        }
     }
 }
 
@@ -974,9 +1143,15 @@ impl From<isize> for Scalar {
     #[inline]
     fn from(x: isize) -> Self {
         if x >= i32::MIN as isize && x <= i32::MAX as isize {
-            Scalar::I32(x as i32)
-        } else {
+            return Scalar::I32(x as i32);
+        }
+        #[cfg(feature = "i64")]
+        {
             Scalar::I64(x as i64)
+        }
+        #[cfg(not(feature = "i64"))]
+        {
+            Scalar::F64(x as f64)
         }
     }
 }
@@ -987,13 +1162,18 @@ impl ops::Add for Scalar {
     fn add(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a || b),
+            #[cfg(feature = "u8")]
             (Self::U8(a), Self::U8(b)) => Self::U8(a + b),
             (Self::U16(a), Self::U16(b)) => Self::U16(a + b),
+            #[cfg(feature = "u32")]
             (Self::U32(a), Self::U32(b)) => Self::U32(a + b),
+            #[cfg(feature = "u64")]
             (Self::U64(a), Self::U64(b)) => Self::U64(a + b),
             (Self::I8(a), Self::I8(b)) => Self::I8(a + b),
+            #[cfg(feature = "i16")]
             (Self::I16(a), Self::I16(b)) => Self::I16(a + b),
             (Self::I32(a), Self::I32(b)) => Self::I32(a + b),
+            #[cfg(feature = "i64")]
             (Self::I64(a), Self::I64(b)) => Self::I64(a + b),
             (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a + b),
             (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a + b),
@@ -1012,13 +1192,18 @@ impl ops::Sub for Scalar {
     fn sub(self, rhs: Self) -> Self {
         match (self, rhs) {
             (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && !b),
+            #[cfg(feature = "u8")]
             (Self::U8(a), Self::U8(b)) => Self::U8(a - b),
             (Self::U16(a), Self::U16(b)) => Self::U16(a - b),
+            #[cfg(feature = "u32")]
             (Self::U32(a), Self::U32(b)) => Self::U32(a - b),
+            #[cfg(feature = "u64")]
             (Self::U64(a), Self::U64(b)) => Self::U64(a - b),
             (Self::I8(a), Self::I8(b)) => Self::I8(a - b),
+            #[cfg(feature = "i16")]
             (Self::I16(a), Self::I16(b)) => Self::I16(a - b),
             (Self::I32(a), Self::I32(b)) => Self::I32(a - b),
+            #[cfg(feature = "i64")]
             (Self::I64(a), Self::I64(b)) => Self::I64(a - b),
             (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a - b),
             (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a - b),
@@ -1037,13 +1222,18 @@ impl ops::Mul for Scalar {
     fn mul(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && b),
+            #[cfg(feature = "u8")]
             (Self::U8(a), Self::U8(b)) => Self::U8(a * b),
             (Self::U16(a), Self::U16(b)) => Self::U16(a * b),
+            #[cfg(feature = "u32")]
             (Self::U32(a), Self::U32(b)) => Self::U32(a * b),
+            #[cfg(feature = "u64")]
             (Self::U64(a), Self::U64(b)) => Self::U64(a * b),
             (Self::I8(a), Self::I8(b)) => Self::I8(a * b),
+            #[cfg(feature = "i16")]
             (Self::I16(a), Self::I16(b)) => Self::I16(a * b),
             (Self::I32(a), Self::I32(b)) => Self::I32(a * b),
+            #[cfg(feature = "i64")]
             (Self::I64(a), Self::I64(b)) => Self::I64(a * b),
             (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a * b),
             (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a * b),
@@ -1062,13 +1252,18 @@ impl ops::Div for Scalar {
     fn div(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && b),
+            #[cfg(feature = "u8")]
             (Self::U8(a), Self::U8(b)) => Self::U8(a / b),
             (Self::U16(a), Self::U16(b)) => Self::U16(a / b),
+            #[cfg(feature = "u32")]
             (Self::U32(a), Self::U32(b)) => Self::U32(a / b),
+            #[cfg(feature = "u64")]
             (Self::U64(a), Self::U64(b)) => Self::U64(a / b),
             (Self::I8(a), Self::I8(b)) => Self::I8(a / b),
+            #[cfg(feature = "i16")]
             (Self::I16(a), Self::I16(b)) => Self::I16(a / b),
             (Self::I32(a), Self::I32(b)) => Self::I32(a / b),
+            #[cfg(feature = "i64")]
             (Self::I64(a), Self::I64(b)) => Self::I64(a / b),
             (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a / b),
             (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a / b),
@@ -1087,13 +1282,18 @@ impl ops::Rem for Scalar {
     fn rem(self, rhs: Self) -> Self::Output {
         match (self, rhs) {
             (Self::BOOL(a), Self::BOOL(b)) => Self::BOOL(a && b),
+            #[cfg(feature = "u8")]
             (Self::U8(a), Self::U8(b)) => Self::U8(a % b),
             (Self::U16(a), Self::U16(b)) => Self::U16(a % b),
+            #[cfg(feature = "u32")]
             (Self::U32(a), Self::U32(b)) => Self::U32(a % b),
+            #[cfg(feature = "u64")]
             (Self::U64(a), Self::U64(b)) => Self::U64(a % b),
             (Self::I8(a), Self::I8(b)) => Self::I8(a % b),
+            #[cfg(feature = "i16")]
             (Self::I16(a), Self::I16(b)) => Self::I16(a % b),
             (Self::I32(a), Self::I32(b)) => Self::I32(a % b),
+            #[cfg(feature = "i64")]
             (Self::I64(a), Self::I64(b)) => Self::I64(a % b),
             (Self::F8E4M3(a), Self::F8E4M3(b)) => Self::F8E4M3(a % b),
             (Self::F8E5M2(a), Self::F8E5M2(b)) => Self::F8E5M2(a % b),
@@ -1116,13 +1316,18 @@ impl Scalar {
                     Self::BOOL(*a)
                 }
             },
+            #[cfg(feature = "u8")]
             Self::U8(a) => Self::U8(a.pow(exp as u32)),
             Self::U16(a) => Self::U16(a.pow(exp as u32)),
+            #[cfg(feature = "u32")]
             Self::U32(a) => Self::U32(a.pow(exp as u32)),
+            #[cfg(feature = "u64")]
             Self::U64(a) => Self::U64(a.pow(exp as u32)),
             Self::I8(a) => Self::I8(a.pow(exp as u32)),
+            #[cfg(feature = "i16")]
             Self::I16(a) => Self::I16(a.pow(exp as u32)),
             Self::I32(a) => Self::I32(a.pow(exp as u32)),
+            #[cfg(feature = "i64")]
             Self::I64(a) => Self::I64(a.pow(exp as u32)),
             Self::F8E4M3(a) => Self::F8E4M3(a.powi(exp)),
             Self::F8E5M2(a) => Self::F8E5M2(a.powi(exp)),
@@ -1136,13 +1341,18 @@ impl Scalar {
     pub fn sqrt(&self) -> Self {
         match self {
             Self::BOOL(a) => Self::BOOL(*a),
+            #[cfg(feature = "u8")]
             Self::U8(a) => Scalar::U8(((*a as f32).sqrt()).clamp(0.0, u8::MAX as f32) as u8),
             Self::U16(a) => Scalar::U16(((*a as f32).sqrt()).clamp(0.0, u16::MAX as f32) as u16),
+            #[cfg(feature = "u32")]
             Self::U32(a) => Scalar::U32(((*a as f32).sqrt()).clamp(0.0, u32::MAX as f32) as u32),
+            #[cfg(feature = "u64")]
             Self::U64(a) => Scalar::U64(((*a as f32).sqrt()).clamp(0.0, u64::MAX as f32) as u64),
             Self::I8(a) => Scalar::I8(((*a as f32).sqrt()).clamp(0.0, i8::MAX as f32) as i8),
+            #[cfg(feature = "i16")]
             Self::I16(a) => Scalar::I16(((*a as f32).sqrt()).clamp(0.0, i16::MAX as f32) as i16),
             Self::I32(a) => Scalar::I32(((*a as f32).sqrt()).clamp(0.0, i32::MAX as f32) as i32),
+            #[cfg(feature = "i64")]
             Self::I64(a) => Scalar::I64(((*a as f32).sqrt()).clamp(0.0, i64::MAX as f32) as i64),
             Self::F8E4M3(a) => Self::F8E4M3(a.sqrt()),
             Self::F8E5M2(a) => Self::F8E5M2(a.sqrt()),

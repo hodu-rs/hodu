@@ -68,6 +68,7 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     hodu_metal_kernels::kernels::call_unary(
                         device.device(),
@@ -96,6 +97,7 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     hodu_metal_kernels::kernels::call_unary(
                         device.device(),
@@ -110,6 +112,7 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     hodu_metal_kernels::kernels::call_unary(
                         device.device(),
@@ -138,6 +141,7 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     hodu_metal_kernels::kernels::call_unary(
                         device.device(),
@@ -166,6 +170,7 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
                     )
                     .map_err(|e| HoduError::Metal(e.into()))?;
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     hodu_metal_kernels::kernels::call_unary(
                         device.device(),
@@ -283,6 +288,7 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
                 &output,
             )
             .map_err(|e| HoduError::Metal(e.into()))?,
+            #[cfg(feature = "u8")]
             DType::U8 => hodu_metal_kernels::kernels::call_unary(
                 device.device(),
                 &command_buffer,
@@ -307,6 +313,7 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
                 &output,
             )
             .map_err(|e| HoduError::Metal(e.into()))?,
+            #[cfg(feature = "u32")]
             DType::U32 => hodu_metal_kernels::kernels::call_unary(
                 device.device(),
                 &command_buffer,
@@ -319,6 +326,7 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
                 &output,
             )
             .map_err(|e| HoduError::Metal(e.into()))?,
+            #[cfg(feature = "u64")]
             DType::U64 => hodu_metal_kernels::kernels::call_unary(
                 device.device(),
                 &command_buffer,
@@ -343,6 +351,7 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
                 &output,
             )
             .map_err(|e| HoduError::Metal(e.into()))?,
+            #[cfg(feature = "i16")]
             DType::I16 => hodu_metal_kernels::kernels::call_unary(
                 device.device(),
                 &command_buffer,
@@ -367,6 +376,7 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
                 &output,
             )
             .map_err(|e| HoduError::Metal(e.into()))?,
+            #[cfg(feature = "i64")]
             DType::I64 => hodu_metal_kernels::kernels::call_unary(
                 device.device(),
                 &command_buffer,
@@ -444,13 +454,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(add_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(add_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(add_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(add_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(add_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(add_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(add_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(add_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(add_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(add_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(add_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -463,13 +478,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(sub_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(sub_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(sub_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(sub_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(sub_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(sub_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(sub_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(sub_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(sub_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(sub_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(sub_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -482,13 +502,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(mul_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(mul_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(mul_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(mul_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(mul_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(mul_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(mul_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(mul_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(mul_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(mul_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(mul_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -501,13 +526,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(div_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(div_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(div_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(div_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(div_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(div_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(div_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(div_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(div_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(div_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(div_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -520,13 +550,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(pow_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(pow_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(pow_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(pow_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(pow_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(pow_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(pow_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(pow_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(pow_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(pow_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(pow_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -539,13 +574,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(maximum_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(maximum_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(maximum_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(maximum_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(maximum_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(maximum_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(maximum_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(maximum_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(maximum_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(maximum_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(maximum_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -558,13 +598,18 @@ pub fn unary_scalar_map(
             DType::BF16 => dispatch_unary_scalar!(minimum_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_unary_scalar!(minimum_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_unary_scalar!(minimum_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_unary_scalar!(minimum_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_unary_scalar!(minimum_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_unary_scalar!(minimum_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_unary_scalar!(minimum_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_unary_scalar!(minimum_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_unary_scalar!(minimum_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_unary_scalar!(minimum_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_unary_scalar!(minimum_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {

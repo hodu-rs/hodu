@@ -159,13 +159,18 @@ impl MetalDevice {
             CpuStorage::BF16(data) => self.new_buffer_with_data(data),
             CpuStorage::F16(data) => self.new_buffer_with_data(data),
             CpuStorage::F32(data) => self.new_buffer_with_data(data),
+            #[cfg(feature = "u8")]
             CpuStorage::U8(data) => self.new_buffer_with_data(data),
             CpuStorage::U16(data) => self.new_buffer_with_data(data),
+            #[cfg(feature = "u32")]
             CpuStorage::U32(data) => self.new_buffer_with_data(data),
+            #[cfg(feature = "u64")]
             CpuStorage::U64(data) => self.new_buffer_with_data(data),
             CpuStorage::I8(data) => self.new_buffer_with_data(data),
+            #[cfg(feature = "i16")]
             CpuStorage::I16(data) => self.new_buffer_with_data(data),
             CpuStorage::I32(data) => self.new_buffer_with_data(data),
+            #[cfg(feature = "i64")]
             CpuStorage::I64(data) => self.new_buffer_with_data(data),
             _ => Err(HoduError::InternalError(format!(
                 "Unsupported dtype for Metal buffer: {:?}",

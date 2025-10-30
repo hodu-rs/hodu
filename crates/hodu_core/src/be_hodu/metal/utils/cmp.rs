@@ -108,6 +108,7 @@ pub fn cmp_map(
                     &output,
                 )
                 .map_err(|e| HoduError::Metal(e.into()))?,
+                #[cfg(feature = "u8")]
                 DType::U8 => hodu_metal_kernels::kernels::call_binary(
                     device.device(),
                     &command_buffer,
@@ -138,6 +139,7 @@ pub fn cmp_map(
                     &output,
                 )
                 .map_err(|e| HoduError::Metal(e.into()))?,
+                #[cfg(feature = "u32")]
                 DType::U32 => hodu_metal_kernels::kernels::call_binary(
                     device.device(),
                     &command_buffer,
@@ -153,6 +155,7 @@ pub fn cmp_map(
                     &output,
                 )
                 .map_err(|e| HoduError::Metal(e.into()))?,
+                #[cfg(feature = "u64")]
                 DType::U64 => hodu_metal_kernels::kernels::call_binary(
                     device.device(),
                     &command_buffer,
@@ -183,6 +186,7 @@ pub fn cmp_map(
                     &output,
                 )
                 .map_err(|e| HoduError::Metal(e.into()))?,
+                #[cfg(feature = "i16")]
                 DType::I16 => hodu_metal_kernels::kernels::call_binary(
                     device.device(),
                     &command_buffer,
@@ -213,6 +217,7 @@ pub fn cmp_map(
                     &output,
                 )
                 .map_err(|e| HoduError::Metal(e.into()))?,
+                #[cfg(feature = "i64")]
                 DType::I64 => hodu_metal_kernels::kernels::call_binary(
                     device.device(),
                     &command_buffer,
@@ -306,13 +311,18 @@ pub fn cmp_scalar_map(
             DType::BF16 => dispatch_cmp_scalar!(eq_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_cmp_scalar!(eq_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_cmp_scalar!(eq_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_cmp_scalar!(eq_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_cmp_scalar!(eq_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_cmp_scalar!(eq_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_cmp_scalar!(eq_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_cmp_scalar!(eq_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_cmp_scalar!(eq_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_cmp_scalar!(eq_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_cmp_scalar!(eq_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -326,13 +336,18 @@ pub fn cmp_scalar_map(
             DType::BF16 => dispatch_cmp_scalar!(ne_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_cmp_scalar!(ne_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_cmp_scalar!(ne_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_cmp_scalar!(ne_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_cmp_scalar!(ne_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_cmp_scalar!(ne_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_cmp_scalar!(ne_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_cmp_scalar!(ne_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_cmp_scalar!(ne_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_cmp_scalar!(ne_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_cmp_scalar!(ne_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -346,13 +361,18 @@ pub fn cmp_scalar_map(
             DType::BF16 => dispatch_cmp_scalar!(lt_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_cmp_scalar!(lt_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_cmp_scalar!(lt_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_cmp_scalar!(lt_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_cmp_scalar!(lt_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_cmp_scalar!(lt_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_cmp_scalar!(lt_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_cmp_scalar!(lt_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_cmp_scalar!(lt_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_cmp_scalar!(lt_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_cmp_scalar!(lt_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -366,13 +386,18 @@ pub fn cmp_scalar_map(
             DType::BF16 => dispatch_cmp_scalar!(le_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_cmp_scalar!(le_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_cmp_scalar!(le_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_cmp_scalar!(le_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_cmp_scalar!(le_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_cmp_scalar!(le_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_cmp_scalar!(le_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_cmp_scalar!(le_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_cmp_scalar!(le_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_cmp_scalar!(le_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_cmp_scalar!(le_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -386,13 +411,18 @@ pub fn cmp_scalar_map(
             DType::BF16 => dispatch_cmp_scalar!(gt_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_cmp_scalar!(gt_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_cmp_scalar!(gt_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_cmp_scalar!(gt_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_cmp_scalar!(gt_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_cmp_scalar!(gt_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_cmp_scalar!(gt_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_cmp_scalar!(gt_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_cmp_scalar!(gt_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_cmp_scalar!(gt_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_cmp_scalar!(gt_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -406,13 +436,18 @@ pub fn cmp_scalar_map(
             DType::BF16 => dispatch_cmp_scalar!(ge_scalar, BF16, half::bf16, scalar.to_bf16()),
             DType::F16 => dispatch_cmp_scalar!(ge_scalar, F16, half::f16, scalar.to_f16()),
             DType::F32 => dispatch_cmp_scalar!(ge_scalar, F32, f32, scalar.to_f32()),
+            #[cfg(feature = "u8")]
             DType::U8 => dispatch_cmp_scalar!(ge_scalar, U8, u8, scalar.to_u8()),
             DType::U16 => dispatch_cmp_scalar!(ge_scalar, U16, u16, scalar.to_u16()),
+            #[cfg(feature = "u32")]
             DType::U32 => dispatch_cmp_scalar!(ge_scalar, U32, u32, scalar.to_u32()),
+            #[cfg(feature = "u64")]
             DType::U64 => dispatch_cmp_scalar!(ge_scalar, U64, u64, scalar.to_u64()),
             DType::I8 => dispatch_cmp_scalar!(ge_scalar, I8, i8, scalar.to_i8()),
+            #[cfg(feature = "i16")]
             DType::I16 => dispatch_cmp_scalar!(ge_scalar, I16, i16, scalar.to_i16()),
             DType::I32 => dispatch_cmp_scalar!(ge_scalar, I32, i32, scalar.to_i32()),
+            #[cfg(feature = "i64")]
             DType::I64 => dispatch_cmp_scalar!(ge_scalar, I64, i64, scalar.to_i64()),
             _ => {
                 return Err(HoduError::UnsupportedDType {

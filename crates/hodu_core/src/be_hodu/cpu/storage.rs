@@ -28,13 +28,18 @@ pub enum CpuStorage {
     F16(Vec<f16>),
     F32(Vec<f32>),
     F64(Vec<f64>),
+    #[cfg(feature = "u8")]
     U8(Vec<u8>),
     U16(Vec<u16>),
+    #[cfg(feature = "u32")]
     U32(Vec<u32>),
+    #[cfg(feature = "u64")]
     U64(Vec<u64>),
     I8(Vec<i8>),
+    #[cfg(feature = "i16")]
     I16(Vec<i16>),
     I32(Vec<i32>),
+    #[cfg(feature = "i64")]
     I64(Vec<i64>),
 }
 
@@ -47,13 +52,18 @@ pub enum CpuStorageRef<'a> {
     F16(&'a [f16]),
     F32(&'a [f32]),
     F64(&'a [f64]),
+    #[cfg(feature = "u8")]
     U8(&'a [u8]),
     U16(&'a [u16]),
+    #[cfg(feature = "u32")]
     U32(&'a [u32]),
+    #[cfg(feature = "u64")]
     U64(&'a [u64]),
     I8(&'a [i8]),
+    #[cfg(feature = "i16")]
     I16(&'a [i16]),
     I32(&'a [i32]),
+    #[cfg(feature = "i64")]
     I64(&'a [i64]),
 }
 
@@ -82,27 +92,32 @@ impl CpuStorage {
         if let Some(v) = any_vec.downcast_ref::<Vec<f64>>() {
             return Self::F64(v.clone());
         }
+        #[cfg(feature = "u8")]
         if let Some(v) = any_vec.downcast_ref::<Vec<u8>>() {
             return Self::U8(v.clone());
         }
         if let Some(v) = any_vec.downcast_ref::<Vec<u16>>() {
             return Self::U16(v.clone());
         }
+        #[cfg(feature = "u32")]
         if let Some(v) = any_vec.downcast_ref::<Vec<u32>>() {
             return Self::U32(v.clone());
         }
+        #[cfg(feature = "u64")]
         if let Some(v) = any_vec.downcast_ref::<Vec<u64>>() {
             return Self::U64(v.clone());
         }
         if let Some(v) = any_vec.downcast_ref::<Vec<i8>>() {
             return Self::I8(v.clone());
         }
+        #[cfg(feature = "i16")]
         if let Some(v) = any_vec.downcast_ref::<Vec<i16>>() {
             return Self::I16(v.clone());
         }
         if let Some(v) = any_vec.downcast_ref::<Vec<i32>>() {
             return Self::I32(v.clone());
         }
+        #[cfg(feature = "i64")]
         if let Some(v) = any_vec.downcast_ref::<Vec<i64>>() {
             return Self::I64(v.clone());
         }
@@ -161,6 +176,7 @@ impl CpuStorage {
                 }
                 bytes
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => data.clone(),
             Self::U16(data) => {
                 let mut bytes = Vec::with_capacity(data.len() * 2);
@@ -169,6 +185,7 @@ impl CpuStorage {
                 }
                 bytes
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let mut bytes = Vec::with_capacity(data.len() * 4);
                 for &n in data {
@@ -176,6 +193,7 @@ impl CpuStorage {
                 }
                 bytes
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let mut bytes = Vec::with_capacity(data.len() * 8);
                 for &n in data {
@@ -190,6 +208,7 @@ impl CpuStorage {
                 }
                 bytes
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let mut bytes = Vec::with_capacity(data.len() * 2);
                 for &n in data {
@@ -204,6 +223,7 @@ impl CpuStorage {
                 }
                 bytes
             },
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let mut bytes = Vec::with_capacity(data.len() * 8);
                 for &n in data {
@@ -227,13 +247,18 @@ impl HoduStorageT for CpuStorage {
             Self::F16(_) => DType::F16,
             Self::F32(_) => DType::F32,
             Self::F64(_) => DType::F64,
+            #[cfg(feature = "u8")]
             Self::U8(_) => DType::U8,
             Self::U16(_) => DType::U16,
+            #[cfg(feature = "u32")]
             Self::U32(_) => DType::U32,
+            #[cfg(feature = "u64")]
             Self::U64(_) => DType::U64,
             Self::I8(_) => DType::I8,
+            #[cfg(feature = "i16")]
             Self::I16(_) => DType::I16,
             Self::I32(_) => DType::I32,
+            #[cfg(feature = "i64")]
             Self::I64(_) => DType::I64,
         }
     }
@@ -294,13 +319,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(data), Scalar::F16(v)) => set_values(data, layout, v),
             (Self::F32(data), Scalar::F32(v)) => set_values(data, layout, v),
             (Self::F64(data), Scalar::F64(v)) => set_values(data, layout, v),
+            #[cfg(feature = "u8")]
             (Self::U8(data), Scalar::U8(v)) => set_values(data, layout, v),
             (Self::U16(data), Scalar::U16(v)) => set_values(data, layout, v),
+            #[cfg(feature = "u32")]
             (Self::U32(data), Scalar::U32(v)) => set_values(data, layout, v),
+            #[cfg(feature = "u64")]
             (Self::U64(data), Scalar::U64(v)) => set_values(data, layout, v),
             (Self::I8(data), Scalar::I8(v)) => set_values(data, layout, v),
+            #[cfg(feature = "i16")]
             (Self::I16(data), Scalar::I16(v)) => set_values(data, layout, v),
             (Self::I32(data), Scalar::I32(v)) => set_values(data, layout, v),
+            #[cfg(feature = "i64")]
             (Self::I64(data), Scalar::I64(v)) => set_values(data, layout, v),
             _ => {
                 return Err(HoduError::DTypeMismatch {
@@ -347,6 +377,7 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::f64);
                 Ok(Self::F64(data))
             },
+            #[cfg(feature = "u8")]
             (Self::U8(lhs_storage), Self::U8(rhs_storage)) => {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u8);
                 Ok(Self::U8(data))
@@ -355,10 +386,12 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u16);
                 Ok(Self::U16(data))
             },
+            #[cfg(feature = "u32")]
             (Self::U32(lhs_storage), Self::U32(rhs_storage)) => {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u32);
                 Ok(Self::U32(data))
             },
+            #[cfg(feature = "u64")]
             (Self::U64(lhs_storage), Self::U64(rhs_storage)) => {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u64);
                 Ok(Self::U64(data))
@@ -367,6 +400,7 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i8);
                 Ok(Self::I8(data))
             },
+            #[cfg(feature = "i16")]
             (Self::I16(lhs_storage), Self::I16(rhs_storage)) => {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i16);
                 Ok(Self::I16(data))
@@ -375,6 +409,7 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i32);
                 Ok(Self::I32(data))
             },
+            #[cfg(feature = "i64")]
             (Self::I64(lhs_storage), Self::I64(rhs_storage)) => {
                 let data = binary_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i64);
                 Ok(Self::I64(data))
@@ -422,6 +457,7 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::f64);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u8")]
             (Self::U8(lhs_storage), Self::U8(rhs_storage)) => {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u8);
                 Ok(CpuStorage::BOOL(data))
@@ -430,10 +466,12 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u16);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u32")]
             (Self::U32(lhs_storage), Self::U32(rhs_storage)) => {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u64")]
             (Self::U64(lhs_storage), Self::U64(rhs_storage)) => {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::u64);
                 Ok(CpuStorage::BOOL(data))
@@ -442,6 +480,7 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i8);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i16")]
             (Self::I16(lhs_storage), Self::I16(rhs_storage)) => {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i16);
                 Ok(CpuStorage::BOOL(data))
@@ -450,6 +489,7 @@ impl HoduStorageT for CpuStorage {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i64")]
             (Self::I64(lhs_storage), Self::I64(rhs_storage)) => {
                 let data = binary_logical_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, B::i64);
                 Ok(CpuStorage::BOOL(data))
@@ -497,6 +537,7 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::f64);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u8")]
             (Self::U8(lhs_storage), Self::U8(rhs_storage)) => {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::u8);
                 Ok(CpuStorage::BOOL(data))
@@ -505,10 +546,12 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::u16);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u32")]
             (Self::U32(lhs_storage), Self::U32(rhs_storage)) => {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::u32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u64")]
             (Self::U64(lhs_storage), Self::U64(rhs_storage)) => {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::u64);
                 Ok(CpuStorage::BOOL(data))
@@ -517,6 +560,7 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::i8);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i16")]
             (Self::I16(lhs_storage), Self::I16(rhs_storage)) => {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::i16);
                 Ok(CpuStorage::BOOL(data))
@@ -525,6 +569,7 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::i32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i64")]
             (Self::I64(lhs_storage), Self::I64(rhs_storage)) => {
                 let data = cmp_map(lhs_storage, rhs_storage, lhs_layout, rhs_layout, C::i64);
                 Ok(CpuStorage::BOOL(data))
@@ -567,6 +612,7 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_scalar_map(storage, layout, scalar, C::f64);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u8")]
             Self::U8(storage) => {
                 let data = cmp_scalar_map(storage, layout, scalar, C::u8);
                 Ok(CpuStorage::BOOL(data))
@@ -575,10 +621,12 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_scalar_map(storage, layout, scalar, C::u16);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u32")]
             Self::U32(storage) => {
                 let data = cmp_scalar_map(storage, layout, scalar, C::u32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u64")]
             Self::U64(storage) => {
                 let data = cmp_scalar_map(storage, layout, scalar, C::u64);
                 Ok(CpuStorage::BOOL(data))
@@ -587,6 +635,7 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_scalar_map(storage, layout, scalar, C::i8);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i16")]
             Self::I16(storage) => {
                 let data = cmp_scalar_map(storage, layout, scalar, C::i16);
                 Ok(CpuStorage::BOOL(data))
@@ -595,6 +644,7 @@ impl HoduStorageT for CpuStorage {
                 let data = cmp_scalar_map(storage, layout, scalar, C::i32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i64")]
             Self::I64(storage) => {
                 let data = cmp_scalar_map(storage, layout, scalar, C::i64);
                 Ok(CpuStorage::BOOL(data))
@@ -632,6 +682,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_map(storage, layout, U::f64);
                 Ok(Self::F64(data))
             },
+            #[cfg(feature = "u8")]
             Self::U8(storage) => {
                 let data = unary_map(storage, layout, U::u8);
                 Ok(Self::U8(data))
@@ -640,10 +691,12 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_map(storage, layout, U::u16);
                 Ok(Self::U16(data))
             },
+            #[cfg(feature = "u32")]
             Self::U32(storage) => {
                 let data = unary_map(storage, layout, U::u32);
                 Ok(Self::U32(data))
             },
+            #[cfg(feature = "u64")]
             Self::U64(storage) => {
                 let data = unary_map(storage, layout, U::u64);
                 Ok(Self::U64(data))
@@ -652,6 +705,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_map(storage, layout, U::i8);
                 Ok(Self::I8(data))
             },
+            #[cfg(feature = "i16")]
             Self::I16(storage) => {
                 let data = unary_map(storage, layout, U::i16);
                 Ok(Self::I16(data))
@@ -660,6 +714,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_map(storage, layout, U::i32);
                 Ok(Self::I32(data))
             },
+            #[cfg(feature = "i64")]
             Self::I64(storage) => {
                 let data = unary_map(storage, layout, U::i64);
                 Ok(Self::I64(data))
@@ -697,6 +752,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_logical_map(storage, layout, U::f64);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u8")]
             Self::U8(storage) => {
                 let data = unary_logical_map(storage, layout, U::u8);
                 Ok(CpuStorage::BOOL(data))
@@ -705,10 +761,12 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_logical_map(storage, layout, U::u16);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u32")]
             Self::U32(storage) => {
                 let data = unary_logical_map(storage, layout, U::u32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "u64")]
             Self::U64(storage) => {
                 let data = unary_logical_map(storage, layout, U::u64);
                 Ok(CpuStorage::BOOL(data))
@@ -717,6 +775,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_logical_map(storage, layout, U::i8);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i16")]
             Self::I16(storage) => {
                 let data = unary_logical_map(storage, layout, U::i16);
                 Ok(CpuStorage::BOOL(data))
@@ -725,6 +784,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_logical_map(storage, layout, U::i32);
                 Ok(CpuStorage::BOOL(data))
             },
+            #[cfg(feature = "i64")]
             Self::I64(storage) => {
                 let data = unary_logical_map(storage, layout, U::i64);
                 Ok(CpuStorage::BOOL(data))
@@ -762,6 +822,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_scalar_map(storage, layout, scalar, U::f64);
                 Ok(Self::F64(data))
             },
+            #[cfg(feature = "u8")]
             Self::U8(storage) => {
                 let data = unary_scalar_map(storage, layout, scalar, U::u8);
                 Ok(Self::U8(data))
@@ -770,10 +831,12 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_scalar_map(storage, layout, scalar, U::u16);
                 Ok(Self::U16(data))
             },
+            #[cfg(feature = "u32")]
             Self::U32(storage) => {
                 let data = unary_scalar_map(storage, layout, scalar, U::u32);
                 Ok(Self::U32(data))
             },
+            #[cfg(feature = "u64")]
             Self::U64(storage) => {
                 let data = unary_scalar_map(storage, layout, scalar, U::u64);
                 Ok(Self::U64(data))
@@ -782,6 +845,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_scalar_map(storage, layout, scalar, U::i8);
                 Ok(Self::I8(data))
             },
+            #[cfg(feature = "i16")]
             Self::I16(storage) => {
                 let data = unary_scalar_map(storage, layout, scalar, U::i16);
                 Ok(Self::I16(data))
@@ -790,6 +854,7 @@ impl HoduStorageT for CpuStorage {
                 let data = unary_scalar_map(storage, layout, scalar, U::i32);
                 Ok(Self::I32(data))
             },
+            #[cfg(feature = "i64")]
             Self::I64(storage) => {
                 let data = unary_scalar_map(storage, layout, scalar, U::i64);
                 Ok(Self::I64(data))
@@ -823,6 +888,7 @@ impl HoduStorageT for CpuStorage {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::F64(result_data))
             },
+            #[cfg(feature = "u8")]
             (Self::U8(lhs_data), Self::U8(rhs_data)) => {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U8(result_data))
@@ -831,10 +897,12 @@ impl HoduStorageT for CpuStorage {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U16(result_data))
             },
+            #[cfg(feature = "u32")]
             (Self::U32(lhs_data), Self::U32(rhs_data)) => {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U32(result_data))
             },
+            #[cfg(feature = "u64")]
             (Self::U64(lhs_data), Self::U64(rhs_data)) => {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U64(result_data))
@@ -843,6 +911,7 @@ impl HoduStorageT for CpuStorage {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I8(result_data))
             },
+            #[cfg(feature = "i16")]
             (Self::I16(lhs_data), Self::I16(rhs_data)) => {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I16(result_data))
@@ -851,6 +920,7 @@ impl HoduStorageT for CpuStorage {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I32(result_data))
             },
+            #[cfg(feature = "i64")]
             (Self::I64(lhs_data), Self::I64(rhs_data)) => {
                 let result_data = matmul_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I64(result_data))
@@ -889,6 +959,7 @@ impl HoduStorageT for CpuStorage {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::F64(result_data))
             },
+            #[cfg(feature = "u8")]
             (Self::U8(lhs_data), Self::U8(rhs_data)) => {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U8(result_data))
@@ -897,10 +968,12 @@ impl HoduStorageT for CpuStorage {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U16(result_data))
             },
+            #[cfg(feature = "u32")]
             (Self::U32(lhs_data), Self::U32(rhs_data)) => {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U32(result_data))
             },
+            #[cfg(feature = "u64")]
             (Self::U64(lhs_data), Self::U64(rhs_data)) => {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::U64(result_data))
@@ -909,6 +982,7 @@ impl HoduStorageT for CpuStorage {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I8(result_data))
             },
+            #[cfg(feature = "i16")]
             (Self::I16(lhs_data), Self::I16(rhs_data)) => {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I16(result_data))
@@ -917,6 +991,7 @@ impl HoduStorageT for CpuStorage {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I32(result_data))
             },
+            #[cfg(feature = "i64")]
             (Self::I64(lhs_data), Self::I64(rhs_data)) => {
                 let result_data = dot_map(lhs_data, rhs_data, lhs_layout, rhs_layout)?;
                 Ok(Self::I64(result_data))
@@ -1131,6 +1206,7 @@ impl HoduStorageT for CpuStorage {
                 };
                 Ok(Self::F64(data))
             },
+            #[cfg(feature = "u8")]
             Self::U8(storage) => {
                 let (data, _shape) = match reduce_op {
                     ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
@@ -1197,6 +1273,7 @@ impl HoduStorageT for CpuStorage {
                 };
                 Ok(Self::U16(data))
             },
+            #[cfg(feature = "u32")]
             Self::U32(storage) => {
                 let (data, _shape) = match reduce_op {
                     ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
@@ -1230,6 +1307,7 @@ impl HoduStorageT for CpuStorage {
                 };
                 Ok(Self::U32(data))
             },
+            #[cfg(feature = "u64")]
             Self::U64(storage) => {
                 let (data, _shape) = match reduce_op {
                     ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
@@ -1296,6 +1374,7 @@ impl HoduStorageT for CpuStorage {
                 };
                 Ok(Self::I8(data))
             },
+            #[cfg(feature = "i16")]
             Self::I16(storage) => {
                 let (data, _shape) = match reduce_op {
                     ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
@@ -1362,6 +1441,7 @@ impl HoduStorageT for CpuStorage {
                 };
                 Ok(Self::I32(data))
             },
+            #[cfg(feature = "i64")]
             Self::I64(storage) => {
                 let (data, _shape) = match reduce_op {
                     ReduceOp::Sum => reduce_sum(storage, layout, dims, keep_dim)?,
@@ -1476,13 +1556,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(first), _) => concat_impl!(first, others, F16),
             (Self::F32(first), _) => concat_impl!(first, others, F32),
             (Self::F64(first), _) => concat_impl!(first, others, F64),
+            #[cfg(feature = "u8")]
             (Self::U8(first), _) => concat_impl!(first, others, U8),
             (Self::U16(first), _) => concat_impl!(first, others, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(first), _) => concat_impl!(first, others, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(first), _) => concat_impl!(first, others, U64),
             (Self::I8(first), _) => concat_impl!(first, others, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(first), _) => concat_impl!(first, others, I16),
             (Self::I32(first), _) => concat_impl!(first, others, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(first), _) => concat_impl!(first, others, I64),
         };
 
@@ -1529,13 +1614,18 @@ impl HoduStorageT for CpuStorage {
             Self::F16(storage) => split_impl!(storage, F16),
             Self::F32(storage) => split_impl!(storage, F32),
             Self::F64(storage) => split_impl!(storage, F64),
+            #[cfg(feature = "u8")]
             Self::U8(storage) => split_impl!(storage, U8),
             Self::U16(storage) => split_impl!(storage, U16),
+            #[cfg(feature = "u32")]
             Self::U32(storage) => split_impl!(storage, U32),
+            #[cfg(feature = "u64")]
             Self::U64(storage) => split_impl!(storage, U64),
             Self::I8(storage) => split_impl!(storage, I8),
+            #[cfg(feature = "i16")]
             Self::I16(storage) => split_impl!(storage, I16),
             Self::I32(storage) => split_impl!(storage, I32),
+            #[cfg(feature = "i64")]
             Self::I64(storage) => split_impl!(storage, I64),
         };
 
@@ -1551,14 +1641,17 @@ impl HoduStorageT for CpuStorage {
     ) -> HoduResult<Self> {
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
@@ -1567,10 +1660,12 @@ impl HoduStorageT for CpuStorage {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_select(layout, &Self::I32(converted), indices_layout, dim);
@@ -1602,13 +1697,18 @@ impl HoduStorageT for CpuStorage {
             Self::F16(storage) => index_select_impl!(storage, F16),
             Self::F32(storage) => index_select_impl!(storage, F32),
             Self::F64(storage) => index_select_impl!(storage, F64),
+            #[cfg(feature = "u8")]
             Self::U8(storage) => index_select_impl!(storage, U8),
             Self::U16(storage) => index_select_impl!(storage, U16),
+            #[cfg(feature = "u32")]
             Self::U32(storage) => index_select_impl!(storage, U32),
+            #[cfg(feature = "u64")]
             Self::U64(storage) => index_select_impl!(storage, U64),
             Self::I8(storage) => index_select_impl!(storage, I8),
+            #[cfg(feature = "i16")]
             Self::I16(storage) => index_select_impl!(storage, I16),
             Self::I32(storage) => index_select_impl!(storage, I32),
+            #[cfg(feature = "i64")]
             Self::I64(storage) => index_select_impl!(storage, I64),
         };
 
@@ -1634,6 +1734,7 @@ impl HoduStorageT for CpuStorage {
 
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_put(
@@ -1645,6 +1746,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_put(
@@ -1656,6 +1758,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_put(
@@ -1678,6 +1781,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_put(
@@ -1689,6 +1793,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.index_put(
@@ -1742,13 +1847,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(storage), Self::F16(values)) => index_put_impl!(storage, values, F16),
             (Self::F32(storage), Self::F32(values)) => index_put_impl!(storage, values, F32),
             (Self::F64(storage), Self::F64(values)) => index_put_impl!(storage, values, F64),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), Self::U8(values)) => index_put_impl!(storage, values, U8),
             (Self::U16(storage), Self::U16(values)) => index_put_impl!(storage, values, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), Self::U32(values)) => index_put_impl!(storage, values, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), Self::U64(values)) => index_put_impl!(storage, values, U64),
             (Self::I8(storage), Self::I8(values)) => index_put_impl!(storage, values, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), Self::I16(values)) => index_put_impl!(storage, values, I16),
             (Self::I32(storage), Self::I32(values)) => index_put_impl!(storage, values, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), Self::I64(values)) => index_put_impl!(storage, values, I64),
             _ => unreachable!(),
         };
@@ -1759,14 +1869,17 @@ impl HoduStorageT for CpuStorage {
     fn gather(&self, layout: &Layout, indices_storage: &Self, indices_layout: &Layout, dim: usize) -> HoduResult<Self> {
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.gather(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.gather(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.gather(layout, &Self::I32(converted), indices_layout, dim);
@@ -1775,10 +1888,12 @@ impl HoduStorageT for CpuStorage {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.gather(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.gather(layout, &Self::I32(converted), indices_layout, dim);
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.gather(layout, &Self::I32(converted), indices_layout, dim);
@@ -1810,13 +1925,18 @@ impl HoduStorageT for CpuStorage {
             Self::F16(storage) => gather_impl!(storage, F16),
             Self::F32(storage) => gather_impl!(storage, F32),
             Self::F64(storage) => gather_impl!(storage, F64),
+            #[cfg(feature = "u8")]
             Self::U8(storage) => gather_impl!(storage, U8),
             Self::U16(storage) => gather_impl!(storage, U16),
+            #[cfg(feature = "u32")]
             Self::U32(storage) => gather_impl!(storage, U32),
+            #[cfg(feature = "u64")]
             Self::U64(storage) => gather_impl!(storage, U64),
             Self::I8(storage) => gather_impl!(storage, I8),
+            #[cfg(feature = "i16")]
             Self::I16(storage) => gather_impl!(storage, I16),
             Self::I32(storage) => gather_impl!(storage, I32),
+            #[cfg(feature = "i64")]
             Self::I64(storage) => gather_impl!(storage, I64),
         };
 
@@ -1843,6 +1963,7 @@ impl HoduStorageT for CpuStorage {
 
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter(
@@ -1854,6 +1975,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter(
@@ -1865,6 +1987,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter(
@@ -1887,6 +2010,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter(
@@ -1898,6 +2022,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter(
@@ -1951,13 +2076,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(storage), Self::F16(src)) => scatter_impl!(storage, src, F16),
             (Self::F32(storage), Self::F32(src)) => scatter_impl!(storage, src, F32),
             (Self::F64(storage), Self::F64(src)) => scatter_impl!(storage, src, F64),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), Self::U8(src)) => scatter_impl!(storage, src, U8),
             (Self::U16(storage), Self::U16(src)) => scatter_impl!(storage, src, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), Self::U32(src)) => scatter_impl!(storage, src, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), Self::U64(src)) => scatter_impl!(storage, src, U64),
             (Self::I8(storage), Self::I8(src)) => scatter_impl!(storage, src, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), Self::I16(src)) => scatter_impl!(storage, src, I16),
             (Self::I32(storage), Self::I32(src)) => scatter_impl!(storage, src, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), Self::I64(src)) => scatter_impl!(storage, src, I64),
             _ => unreachable!(),
         };
@@ -1984,6 +2114,7 @@ impl HoduStorageT for CpuStorage {
 
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_add(
@@ -1995,6 +2126,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_add(
@@ -2006,6 +2138,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_add(
@@ -2028,6 +2161,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_add(
@@ -2039,6 +2173,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_add(
@@ -2091,13 +2226,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(storage), Self::F16(src)) => scatter_add_impl!(storage, src, F16),
             (Self::F32(storage), Self::F32(src)) => scatter_add_impl!(storage, src, F32),
             (Self::F64(storage), Self::F64(src)) => scatter_add_impl!(storage, src, F64),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), Self::U8(src)) => scatter_add_impl!(storage, src, U8),
             (Self::U16(storage), Self::U16(src)) => scatter_add_impl!(storage, src, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), Self::U32(src)) => scatter_add_impl!(storage, src, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), Self::U64(src)) => scatter_add_impl!(storage, src, U64),
             (Self::I8(storage), Self::I8(src)) => scatter_add_impl!(storage, src, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), Self::I16(src)) => scatter_add_impl!(storage, src, I16),
             (Self::I32(storage), Self::I32(src)) => scatter_add_impl!(storage, src, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), Self::I64(src)) => scatter_add_impl!(storage, src, I64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2129,6 +2269,7 @@ impl HoduStorageT for CpuStorage {
 
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_max(
@@ -2140,6 +2281,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_max(
@@ -2151,6 +2293,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_max(
@@ -2173,6 +2316,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_max(
@@ -2184,6 +2328,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_max(
@@ -2236,13 +2381,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(storage), Self::F16(src)) => scatter_max_impl!(storage, src, F16),
             (Self::F32(storage), Self::F32(src)) => scatter_max_impl!(storage, src, F32),
             (Self::F64(storage), Self::F64(src)) => scatter_max_impl!(storage, src, F64),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), Self::U8(src)) => scatter_max_impl!(storage, src, U8),
             (Self::U16(storage), Self::U16(src)) => scatter_max_impl!(storage, src, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), Self::U32(src)) => scatter_max_impl!(storage, src, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), Self::U64(src)) => scatter_max_impl!(storage, src, U64),
             (Self::I8(storage), Self::I8(src)) => scatter_max_impl!(storage, src, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), Self::I16(src)) => scatter_max_impl!(storage, src, I16),
             (Self::I32(storage), Self::I32(src)) => scatter_max_impl!(storage, src, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), Self::I64(src)) => scatter_max_impl!(storage, src, I64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2274,6 +2424,7 @@ impl HoduStorageT for CpuStorage {
 
         let indices_i32 = match indices_storage {
             Self::I32(data) => data.as_slice(),
+            #[cfg(feature = "i64")]
             Self::I64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_min(
@@ -2285,6 +2436,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u32")]
             Self::U32(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_min(
@@ -2296,6 +2448,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u64")]
             Self::U64(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_min(
@@ -2318,6 +2471,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "i16")]
             Self::I16(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_min(
@@ -2329,6 +2483,7 @@ impl HoduStorageT for CpuStorage {
                     dim,
                 );
             },
+            #[cfg(feature = "u8")]
             Self::U8(data) => {
                 let converted: Vec<i32> = data.iter().map(|&v| v as i32).collect();
                 return self.scatter_min(
@@ -2381,13 +2536,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(storage), Self::F16(src)) => scatter_min_impl!(storage, src, F16),
             (Self::F32(storage), Self::F32(src)) => scatter_min_impl!(storage, src, F32),
             (Self::F64(storage), Self::F64(src)) => scatter_min_impl!(storage, src, F64),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), Self::U8(src)) => scatter_min_impl!(storage, src, U8),
             (Self::U16(storage), Self::U16(src)) => scatter_min_impl!(storage, src, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), Self::U32(src)) => scatter_min_impl!(storage, src, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), Self::U64(src)) => scatter_min_impl!(storage, src, U64),
             (Self::I8(storage), Self::I8(src)) => scatter_min_impl!(storage, src, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), Self::I16(src)) => scatter_min_impl!(storage, src, I16),
             (Self::I32(storage), Self::I32(src)) => scatter_min_impl!(storage, src, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), Self::I64(src)) => scatter_min_impl!(storage, src, I64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2436,12 +2596,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(weight)) => conv1d_impl!(input, weight, F32),
             (Self::F64(input), Self::F64(weight)) => conv1d_impl!(input, weight, F64),
             (Self::I8(input), Self::I8(weight)) => conv1d_impl!(input, weight, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(weight)) => conv1d_impl!(input, weight, I16),
             (Self::I32(input), Self::I32(weight)) => conv1d_impl!(input, weight, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(weight)) => conv1d_impl!(input, weight, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(weight)) => conv1d_impl!(input, weight, U8),
             (Self::U16(input), Self::U16(weight)) => conv1d_impl!(input, weight, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(weight)) => conv1d_impl!(input, weight, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(weight)) => conv1d_impl!(input, weight, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2490,12 +2655,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(weight)) => conv2d_impl!(input, weight, F32),
             (Self::F64(input), Self::F64(weight)) => conv2d_impl!(input, weight, F64),
             (Self::I8(input), Self::I8(weight)) => conv2d_impl!(input, weight, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(weight)) => conv2d_impl!(input, weight, I16),
             (Self::I32(input), Self::I32(weight)) => conv2d_impl!(input, weight, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(weight)) => conv2d_impl!(input, weight, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(weight)) => conv2d_impl!(input, weight, U8),
             (Self::U16(input), Self::U16(weight)) => conv2d_impl!(input, weight, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(weight)) => conv2d_impl!(input, weight, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(weight)) => conv2d_impl!(input, weight, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2544,12 +2714,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(weight)) => conv3d_impl!(input, weight, F32),
             (Self::F64(input), Self::F64(weight)) => conv3d_impl!(input, weight, F64),
             (Self::I8(input), Self::I8(weight)) => conv3d_impl!(input, weight, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(weight)) => conv3d_impl!(input, weight, I16),
             (Self::I32(input), Self::I32(weight)) => conv3d_impl!(input, weight, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(weight)) => conv3d_impl!(input, weight, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(weight)) => conv3d_impl!(input, weight, U8),
             (Self::U16(input), Self::U16(weight)) => conv3d_impl!(input, weight, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(weight)) => conv3d_impl!(input, weight, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(weight)) => conv3d_impl!(input, weight, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2598,12 +2773,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(weight)) => conv_transpose1d_impl!(input, weight, F32),
             (Self::F64(input), Self::F64(weight)) => conv_transpose1d_impl!(input, weight, F64),
             (Self::I8(input), Self::I8(weight)) => conv_transpose1d_impl!(input, weight, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(weight)) => conv_transpose1d_impl!(input, weight, I16),
             (Self::I32(input), Self::I32(weight)) => conv_transpose1d_impl!(input, weight, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(weight)) => conv_transpose1d_impl!(input, weight, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(weight)) => conv_transpose1d_impl!(input, weight, U8),
             (Self::U16(input), Self::U16(weight)) => conv_transpose1d_impl!(input, weight, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(weight)) => conv_transpose1d_impl!(input, weight, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(weight)) => conv_transpose1d_impl!(input, weight, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2652,12 +2832,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(weight)) => conv_transpose2d_impl!(input, weight, F32),
             (Self::F64(input), Self::F64(weight)) => conv_transpose2d_impl!(input, weight, F64),
             (Self::I8(input), Self::I8(weight)) => conv_transpose2d_impl!(input, weight, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(weight)) => conv_transpose2d_impl!(input, weight, I16),
             (Self::I32(input), Self::I32(weight)) => conv_transpose2d_impl!(input, weight, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(weight)) => conv_transpose2d_impl!(input, weight, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(weight)) => conv_transpose2d_impl!(input, weight, U8),
             (Self::U16(input), Self::U16(weight)) => conv_transpose2d_impl!(input, weight, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(weight)) => conv_transpose2d_impl!(input, weight, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(weight)) => conv_transpose2d_impl!(input, weight, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2706,12 +2891,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(weight)) => conv_transpose3d_impl!(input, weight, F32),
             (Self::F64(input), Self::F64(weight)) => conv_transpose3d_impl!(input, weight, F64),
             (Self::I8(input), Self::I8(weight)) => conv_transpose3d_impl!(input, weight, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(weight)) => conv_transpose3d_impl!(input, weight, I16),
             (Self::I32(input), Self::I32(weight)) => conv_transpose3d_impl!(input, weight, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(weight)) => conv_transpose3d_impl!(input, weight, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(weight)) => conv_transpose3d_impl!(input, weight, U8),
             (Self::U16(input), Self::U16(weight)) => conv_transpose3d_impl!(input, weight, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(weight)) => conv_transpose3d_impl!(input, weight, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(weight)) => conv_transpose3d_impl!(input, weight, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2760,12 +2950,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F32),
             (Self::F64(input), Self::F64(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, F64),
             (Self::I8(input), Self::I8(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I16),
             (Self::I32(input), Self::I32(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U8),
             (Self::U16(input), Self::U16(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(grad_out)) => conv1d_grad_weight_impl!(input, grad_out, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2814,12 +3009,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F32),
             (Self::F64(input), Self::F64(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, F64),
             (Self::I8(input), Self::I8(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I16),
             (Self::I32(input), Self::I32(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U8),
             (Self::U16(input), Self::U16(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(grad_out)) => conv2d_grad_weight_impl!(input, grad_out, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2868,12 +3068,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F32),
             (Self::F64(input), Self::F64(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, F64),
             (Self::I8(input), Self::I8(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I16),
             (Self::I32(input), Self::I32(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U8),
             (Self::U16(input), Self::U16(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(grad_out)) => conv3d_grad_weight_impl!(input, grad_out, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2926,12 +3131,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, F32),
             (Self::F64(input), Self::F64(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, F64),
             (Self::I8(input), Self::I8(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I16),
             (Self::I32(input), Self::I32(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U8),
             (Self::U16(input), Self::U16(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(grad_out)) => conv_transpose1d_grad_weight_impl!(input, grad_out, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -2984,12 +3194,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, F32),
             (Self::F64(input), Self::F64(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, F64),
             (Self::I8(input), Self::I8(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I16),
             (Self::I32(input), Self::I32(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U8),
             (Self::U16(input), Self::U16(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(grad_out)) => conv_transpose2d_grad_weight_impl!(input, grad_out, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -3042,12 +3257,17 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(input), Self::F32(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, F32),
             (Self::F64(input), Self::F64(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, F64),
             (Self::I8(input), Self::I8(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I8),
+            #[cfg(feature = "i16")]
             (Self::I16(input), Self::I16(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I16),
             (Self::I32(input), Self::I32(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I32),
+            #[cfg(feature = "i64")]
             (Self::I64(input), Self::I64(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, I64),
+            #[cfg(feature = "u8")]
             (Self::U8(input), Self::U8(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U8),
             (Self::U16(input), Self::U16(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U16),
+            #[cfg(feature = "u32")]
             (Self::U32(input), Self::U32(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U32),
+            #[cfg(feature = "u64")]
             (Self::U64(input), Self::U64(grad_out)) => conv_transpose3d_grad_weight_impl!(input, grad_out, U64),
             _ => {
                 return Err(HoduError::UnsupportedDType {
@@ -3112,13 +3332,18 @@ impl HoduStorageT for CpuStorage {
             (Self::BOOL(storage), DType::F64) => {
                 Self::F64(convert_storage!(storage, |v| if v { 1.0f64 } else { 0.0f64 }))
             },
+            #[cfg(feature = "u8")]
             (Self::BOOL(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| if v { 1u8 } else { 0u8 })),
             (Self::BOOL(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| if v { 1u16 } else { 0u16 })),
+            #[cfg(feature = "u32")]
             (Self::BOOL(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| if v { 1u32 } else { 0u32 })),
+            #[cfg(feature = "u64")]
             (Self::BOOL(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| if v { 1u64 } else { 0u64 })),
             (Self::BOOL(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| if v { 1i8 } else { 0i8 })),
+            #[cfg(feature = "i16")]
             (Self::BOOL(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| if v { 1i16 } else { 0i16 })),
             (Self::BOOL(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| if v { 1i32 } else { 0i32 })),
+            #[cfg(feature = "i64")]
             (Self::BOOL(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| if v { 1i64 } else { 0i64 })),
 
             // F8E4M3 conversions
@@ -3133,13 +3358,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F8E4M3(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v.to_f32()))),
             (Self::F8E4M3(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v.to_f32())),
             (Self::F8E4M3(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v.to_f64())),
+            #[cfg(feature = "u8")]
             (Self::F8E4M3(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v.to_f32() as u8)),
             (Self::F8E4M3(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v.to_f32() as u16)),
+            #[cfg(feature = "u32")]
             (Self::F8E4M3(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v.to_f32() as u32)),
+            #[cfg(feature = "u64")]
             (Self::F8E4M3(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v.to_f32() as u64)),
             (Self::F8E4M3(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v.to_f32() as i8)),
+            #[cfg(feature = "i16")]
             (Self::F8E4M3(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v.to_f32() as i16)),
             (Self::F8E4M3(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v.to_f32() as i32)),
+            #[cfg(feature = "i64")]
             (Self::F8E4M3(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v.to_f32() as i64)),
 
             // F8E5M2 conversions
@@ -3154,13 +3384,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F8E5M2(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v.to_f32()))),
             (Self::F8E5M2(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v.to_f32())),
             (Self::F8E5M2(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v.to_f64())),
+            #[cfg(feature = "u8")]
             (Self::F8E5M2(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v.to_f32() as u8)),
             (Self::F8E5M2(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v.to_f32() as u16)),
+            #[cfg(feature = "u32")]
             (Self::F8E5M2(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v.to_f32() as u32)),
+            #[cfg(feature = "u64")]
             (Self::F8E5M2(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v.to_f32() as u64)),
             (Self::F8E5M2(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v.to_f32() as i8)),
+            #[cfg(feature = "i16")]
             (Self::F8E5M2(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v.to_f32() as i16)),
             (Self::F8E5M2(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v.to_f32() as i32)),
+            #[cfg(feature = "i64")]
             (Self::F8E5M2(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v.to_f32() as i64)),
 
             // BF16 conversions
@@ -3175,13 +3410,18 @@ impl HoduStorageT for CpuStorage {
             (Self::BF16(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v.to_f32()))),
             (Self::BF16(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v.to_f32())),
             (Self::BF16(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v.to_f64())),
+            #[cfg(feature = "u8")]
             (Self::BF16(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v.to_f32() as u8)),
             (Self::BF16(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v.to_f32() as u16)),
+            #[cfg(feature = "u32")]
             (Self::BF16(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v.to_f32() as u32)),
+            #[cfg(feature = "u64")]
             (Self::BF16(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v.to_f32() as u64)),
             (Self::BF16(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v.to_f32() as i8)),
+            #[cfg(feature = "i16")]
             (Self::BF16(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v.to_f32() as i16)),
             (Self::BF16(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v.to_f32() as i32)),
+            #[cfg(feature = "i64")]
             (Self::BF16(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v.to_f32() as i64)),
 
             // F16 conversions
@@ -3196,13 +3436,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F16(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| v)),
             (Self::F16(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v.to_f32())),
             (Self::F16(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v.to_f64())),
+            #[cfg(feature = "u8")]
             (Self::F16(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v.to_f32() as u8)),
             (Self::F16(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v.to_f32() as u16)),
+            #[cfg(feature = "u32")]
             (Self::F16(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v.to_f32() as u32)),
+            #[cfg(feature = "u64")]
             (Self::F16(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v.to_f32() as u64)),
             (Self::F16(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v.to_f32() as i8)),
+            #[cfg(feature = "i16")]
             (Self::F16(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v.to_f32() as i16)),
             (Self::F16(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v.to_f32() as i32)),
+            #[cfg(feature = "i64")]
             (Self::F16(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v.to_f32() as i64)),
 
             // F32 conversions
@@ -3213,13 +3458,18 @@ impl HoduStorageT for CpuStorage {
             (Self::F32(storage), DType::F16) => Self::F16(convert_storage!(storage, f16::from_f32)),
             (Self::F32(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v)),
             (Self::F32(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
             (Self::F32(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
             (Self::F32(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
             (Self::F32(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
             (Self::F32(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
             (Self::F32(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
             (Self::F32(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
             (Self::F32(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
             (Self::F32(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // F64 conversions
@@ -3230,30 +3480,55 @@ impl HoduStorageT for CpuStorage {
             (Self::F64(storage), DType::F16) => Self::F16(convert_storage!(storage, f16::from_f64)),
             (Self::F64(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
             (Self::F64(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "u8")]
             (Self::F64(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
             (Self::F64(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
             (Self::F64(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
             (Self::F64(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
             (Self::F64(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
             (Self::F64(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
             (Self::F64(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
             (Self::F64(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // U8 conversions
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::BOOL) => Self::BOOL(convert_storage!(storage, |v| v != 0)),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::F8E4M3) => Self::F8E4M3(convert_storage!(storage, |v| F8E4M3::from(v as f32))),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::F8E5M2) => Self::F8E5M2(convert_storage!(storage, |v| F8E5M2::from(v as f32))),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::BF16) => Self::BF16(convert_storage!(storage, |v| bf16::from_f32(v as f32))),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
+            #[cfg(feature = "u8")]
             (Self::U8(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // U16 conversions
@@ -3264,47 +3539,92 @@ impl HoduStorageT for CpuStorage {
             (Self::U16(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
             (Self::U16(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
             (Self::U16(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
             (Self::U16(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
             (Self::U16(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "u32")]
             (Self::U16(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
             (Self::U16(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
             (Self::U16(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
             (Self::U16(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
             (Self::U16(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
             (Self::U16(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // U32 conversions
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::BOOL) => Self::BOOL(convert_storage!(storage, |v| v != 0)),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::F8E4M3) => Self::F8E4M3(convert_storage!(storage, |v| F8E4M3::from(v as f32))),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::F8E5M2) => Self::F8E5M2(convert_storage!(storage, |v| F8E5M2::from(v as f32))),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::BF16) => Self::BF16(convert_storage!(storage, |v| bf16::from_f32(v as f32))),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "u64")]
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
+            #[cfg(feature = "u32")]
             (Self::U32(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // U64 conversions
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::BOOL) => Self::BOOL(convert_storage!(storage, |v| v != 0)),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::F8E4M3) => Self::F8E4M3(convert_storage!(storage, |v| F8E4M3::from(v as f32))),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::F8E5M2) => Self::F8E5M2(convert_storage!(storage, |v| F8E5M2::from(v as f32))),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::BF16) => Self::BF16(convert_storage!(storage, |v| bf16::from_f32(v as f32))),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
+            #[cfg(feature = "u64")]
             (Self::U64(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // I8 conversions
@@ -3315,30 +3635,55 @@ impl HoduStorageT for CpuStorage {
             (Self::I8(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
             (Self::I8(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
             (Self::I8(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
             (Self::I8(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
             (Self::I8(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
             (Self::I8(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
             (Self::I8(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
             (Self::I8(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "i16")]
             (Self::I8(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
             (Self::I8(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
             (Self::I8(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // I16 conversions
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::BOOL) => Self::BOOL(convert_storage!(storage, |v| v != 0)),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::F8E4M3) => Self::F8E4M3(convert_storage!(storage, |v| F8E4M3::from(v as f32))),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::F8E5M2) => Self::F8E5M2(convert_storage!(storage, |v| F8E5M2::from(v as f32))),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::BF16) => Self::BF16(convert_storage!(storage, |v| bf16::from_f32(v as f32))),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
+            #[cfg(feature = "i16")]
             (Self::I16(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // I32 conversions
@@ -3349,30 +3694,55 @@ impl HoduStorageT for CpuStorage {
             (Self::I32(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
             (Self::I32(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
             (Self::I32(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
             (Self::I32(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
             (Self::I32(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
             (Self::I32(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
             (Self::I32(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
             (Self::I32(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
             (Self::I32(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
             (Self::I32(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v)),
+            #[cfg(feature = "i64")]
             (Self::I32(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v as i64)),
 
             // I64 conversions
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::BOOL) => Self::BOOL(convert_storage!(storage, |v| v != 0)),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::F8E4M3) => Self::F8E4M3(convert_storage!(storage, |v| F8E4M3::from(v as f32))),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::F8E5M2) => Self::F8E5M2(convert_storage!(storage, |v| F8E5M2::from(v as f32))),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::BF16) => Self::BF16(convert_storage!(storage, |v| bf16::from_f32(v as f32))),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::F16) => Self::F16(convert_storage!(storage, |v| f16::from_f32(v as f32))),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::F32) => Self::F32(convert_storage!(storage, |v| v as f32)),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::F64) => Self::F64(convert_storage!(storage, |v| v as f64)),
+            #[cfg(feature = "u8")]
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::U8) => Self::U8(convert_storage!(storage, |v| v as u8)),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::U16) => Self::U16(convert_storage!(storage, |v| v as u16)),
+            #[cfg(feature = "u32")]
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::U32) => Self::U32(convert_storage!(storage, |v| v as u32)),
+            #[cfg(feature = "u64")]
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::U64) => Self::U64(convert_storage!(storage, |v| v as u64)),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::I8) => Self::I8(convert_storage!(storage, |v| v as i8)),
+            #[cfg(feature = "i16")]
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::I16) => Self::I16(convert_storage!(storage, |v| v as i16)),
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::I32) => Self::I32(convert_storage!(storage, |v| v as i32)),
+            #[cfg(feature = "i64")]
+            #[cfg(feature = "i64")]
             (Self::I64(storage), DType::I64) => Self::I64(convert_storage!(storage, |v| v)),
         };
 
@@ -3434,13 +3804,18 @@ impl HoduStorageT for CpuStorage {
             Self::F16(storage) => contiguous_impl!(storage, F16),
             Self::F32(storage) => contiguous_impl!(storage, F32),
             Self::F64(storage) => contiguous_impl!(storage, F64),
+            #[cfg(feature = "u8")]
             Self::U8(storage) => contiguous_impl!(storage, U8),
             Self::U16(storage) => contiguous_impl!(storage, U16),
+            #[cfg(feature = "u32")]
             Self::U32(storage) => contiguous_impl!(storage, U32),
+            #[cfg(feature = "u64")]
             Self::U64(storage) => contiguous_impl!(storage, U64),
             Self::I8(storage) => contiguous_impl!(storage, I8),
+            #[cfg(feature = "i16")]
             Self::I16(storage) => contiguous_impl!(storage, I16),
             Self::I32(storage) => contiguous_impl!(storage, I32),
+            #[cfg(feature = "i64")]
             Self::I64(storage) => contiguous_impl!(storage, I64),
         };
 

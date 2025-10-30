@@ -25,13 +25,18 @@ impl XlaExecutor {
             DType::F16 => Ok(ElementType::F16),
             DType::F32 => Ok(ElementType::F32),
             DType::F64 => Ok(ElementType::F64),
+            #[cfg(feature = "u8")]
             DType::U8 => Ok(ElementType::U8),
             DType::U16 => Ok(ElementType::U16),
+            #[cfg(feature = "u32")]
             DType::U32 => Ok(ElementType::U32),
+            #[cfg(feature = "u64")]
             DType::U64 => Ok(ElementType::U64),
             DType::I8 => Ok(ElementType::S8),
+            #[cfg(feature = "i16")]
             DType::I16 => Ok(ElementType::S16),
             DType::I32 => Ok(ElementType::S32),
+            #[cfg(feature = "i64")]
             DType::I64 => Ok(ElementType::S64),
             _ => Err(HoduError::InternalError(format!(
                 "XLA does not support {:?} dtype",
@@ -2600,8 +2605,8 @@ impl XlaExecutor {
                         }
 
                         let rank = match params[0] {
-                            Scalar::U32(r) => r as usize,
-                            _ => return Err(HoduError::InternalError("Expected U32 for rank".to_string())),
+                            Scalar::I32(r) => r as usize,
+                            _ => return Err(HoduError::InternalError("Expected I32 for rank".to_string())),
                         };
 
                         let expected_len = 1 + rank + rank + (rank * 2) + 1;
@@ -2617,8 +2622,8 @@ impl XlaExecutor {
                         let mut window_shape = Vec::with_capacity(rank);
                         for i in 0..rank {
                             match params[1 + i] {
-                                Scalar::U32(v) => window_shape.push(v as usize),
-                                _ => return Err(HoduError::InternalError("Expected U32 for window_shape".to_string())),
+                                Scalar::I32(v) => window_shape.push(v as usize),
+                                _ => return Err(HoduError::InternalError("Expected I32 for window_shape".to_string())),
                             }
                         }
 
@@ -2626,8 +2631,8 @@ impl XlaExecutor {
                         let mut strides = Vec::with_capacity(rank);
                         for i in 0..rank {
                             match params[1 + rank + i] {
-                                Scalar::U32(v) => strides.push(v as usize),
-                                _ => return Err(HoduError::InternalError("Expected U32 for strides".to_string())),
+                                Scalar::I32(v) => strides.push(v as usize),
+                                _ => return Err(HoduError::InternalError("Expected I32 for strides".to_string())),
                             }
                         }
 
@@ -2635,20 +2640,20 @@ impl XlaExecutor {
                         let mut padding = Vec::with_capacity(rank);
                         for i in 0..rank {
                             let pad_lo = match params[1 + rank + rank + (i * 2)] {
-                                Scalar::U32(v) => v as usize,
-                                _ => return Err(HoduError::InternalError("Expected U32 for padding low".to_string())),
+                                Scalar::I32(v) => v as usize,
+                                _ => return Err(HoduError::InternalError("Expected I32 for padding low".to_string())),
                             };
                             let pad_hi = match params[1 + rank + rank + (i * 2) + 1] {
-                                Scalar::U32(v) => v as usize,
-                                _ => return Err(HoduError::InternalError("Expected U32 for padding high".to_string())),
+                                Scalar::I32(v) => v as usize,
+                                _ => return Err(HoduError::InternalError("Expected I32 for padding high".to_string())),
                             };
                             padding.push((pad_lo, pad_hi));
                         }
 
                         // Extract reduction type
                         let reduction_type = match params[1 + rank + rank + (rank * 2)] {
-                            Scalar::U32(v) => v,
-                            _ => return Err(HoduError::InternalError("Expected U32 for reduction type".to_string())),
+                            Scalar::I32(v) => v,
+                            _ => return Err(HoduError::InternalError("Expected I32 for reduction type".to_string())),
                         };
 
                         // Get dtype from input tensor
@@ -3067,13 +3072,18 @@ impl XlaExecutor {
                                 DType::F16 => PrimitiveType::F16,
                                 DType::F32 => PrimitiveType::F32,
                                 DType::F64 => PrimitiveType::F64,
+                                #[cfg(feature = "u8")]
                                 DType::U8 => PrimitiveType::U8,
                                 DType::U16 => PrimitiveType::U16,
+                                #[cfg(feature = "u32")]
                                 DType::U32 => PrimitiveType::U32,
+                                #[cfg(feature = "u64")]
                                 DType::U64 => PrimitiveType::U64,
                                 DType::I8 => PrimitiveType::S8,
+                                #[cfg(feature = "i16")]
                                 DType::I16 => PrimitiveType::S16,
                                 DType::I32 => PrimitiveType::S32,
+                                #[cfg(feature = "i64")]
                                 DType::I64 => PrimitiveType::S64,
                             };
 
@@ -3210,6 +3220,7 @@ impl XlaExecutor {
                         )
                     }
                 },
+                #[cfg(feature = "u8")]
                 CpuStorage::U8(ref data) => {
                     if dims.is_empty() {
                         Ok(Literal::scalar(data[0]))
@@ -3239,6 +3250,7 @@ impl XlaExecutor {
                         )
                     }
                 },
+                #[cfg(feature = "u32")]
                 CpuStorage::U32(ref data) => {
                     if dims.is_empty() {
                         Ok(Literal::scalar(data[0]))
@@ -3256,6 +3268,7 @@ impl XlaExecutor {
                         )
                     }
                 },
+                #[cfg(feature = "u64")]
                 CpuStorage::U64(ref data) => {
                     if dims.is_empty() {
                         Ok(Literal::scalar(data[0]))
@@ -3290,6 +3303,7 @@ impl XlaExecutor {
                         )
                     }
                 },
+                #[cfg(feature = "i16")]
                 CpuStorage::I16(ref data) => {
                     if dims.is_empty() {
                         Ok(Literal::scalar(data[0]))
@@ -3324,6 +3338,7 @@ impl XlaExecutor {
                         )
                     }
                 },
+                #[cfg(feature = "i64")]
                 CpuStorage::I64(ref data) => {
                     if dims.is_empty() {
                         Ok(Literal::scalar(data[0]))
@@ -3391,6 +3406,7 @@ impl XlaExecutor {
                 })?;
                 CpuStorage::F64(data)
             },
+            #[cfg(feature = "u8")]
             DType::U8 => {
                 let data = literal.to_vec::<u8>().map_err(|e| {
                     HoduError::InternalError(format!("Failed to extract u8 data from literal: {:?}", e))
@@ -3403,12 +3419,14 @@ impl XlaExecutor {
                 })?;
                 CpuStorage::U16(data)
             },
+            #[cfg(feature = "u32")]
             DType::U32 => {
                 let data = literal.to_vec::<u32>().map_err(|e| {
                     HoduError::InternalError(format!("Failed to extract u32 data from literal: {:?}", e))
                 })?;
                 CpuStorage::U32(data)
             },
+            #[cfg(feature = "u64")]
             DType::U64 => {
                 let data = literal.to_vec::<u64>().map_err(|e| {
                     HoduError::InternalError(format!("Failed to extract u64 data from literal: {:?}", e))
@@ -3421,6 +3439,7 @@ impl XlaExecutor {
                 })?;
                 CpuStorage::I8(data)
             },
+            #[cfg(feature = "i16")]
             DType::I16 => {
                 let data = literal.to_vec::<i16>().map_err(|e| {
                     HoduError::InternalError(format!("Failed to extract i16 data from literal: {:?}", e))
@@ -3433,6 +3452,7 @@ impl XlaExecutor {
                 })?;
                 CpuStorage::I32(data)
             },
+            #[cfg(feature = "i64")]
             DType::I64 => {
                 let data = literal.to_vec::<i64>().map_err(|e| {
                     HoduError::InternalError(format!("Failed to extract i64 data from literal: {:?}", e))
@@ -3487,13 +3507,18 @@ impl XlaExecutor {
             ElementType::F64 => Some(DType::F64),
             ElementType::F16 => Some(DType::F16),
             ElementType::Bf16 => Some(DType::BF16),
+            #[cfg(feature = "u8")]
             ElementType::U8 => Some(DType::U8),
             ElementType::U16 => Some(DType::U16),
+            #[cfg(feature = "u32")]
             ElementType::U32 => Some(DType::U32),
+            #[cfg(feature = "u64")]
             ElementType::U64 => Some(DType::U64),
             ElementType::S8 => Some(DType::I8),
+            #[cfg(feature = "i16")]
             ElementType::S16 => Some(DType::I16),
             ElementType::S32 => Some(DType::I32),
+            #[cfg(feature = "i64")]
             ElementType::S64 => Some(DType::I64),
             ElementType::Pred => Some(DType::BOOL),
             _ => None,

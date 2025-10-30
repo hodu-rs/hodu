@@ -636,11 +636,16 @@ into_flattened_impl!(bf16, DType::BF16);
 into_flattened_impl!(f16, DType::F16);
 into_flattened_impl!(f32, DType::F32);
 into_flattened_impl!(f64, DType::F64);
+#[cfg(feature = "u8")]
 into_flattened_impl!(u8, DType::U8);
 into_flattened_impl!(u16, DType::U16);
+#[cfg(feature = "u32")]
 into_flattened_impl!(u32, DType::U32);
+#[cfg(feature = "u64")]
 into_flattened_impl!(u64, DType::U64);
 into_flattened_impl!(i8, DType::I8);
+#[cfg(feature = "i16")]
 into_flattened_impl!(i16, DType::I16);
 into_flattened_impl!(i32, DType::I32);
+#[cfg(feature = "i64")]
 into_flattened_impl!(i64, DType::I64);

@@ -417,6 +417,7 @@ impl fmt::Display for Tensor {
                         write!(f, "<error>")
                     }
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     if let Ok(data) = self.to_flatten_vec::<u8>() {
                         display_tensor_data(f, &data, layout.get_size(), layout.get_shape(), 0, false, None)
@@ -431,6 +432,7 @@ impl fmt::Display for Tensor {
                         write!(f, "<error>")
                     }
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     if let Ok(data) = self.to_flatten_vec::<u32>() {
                         display_tensor_data(f, &data, layout.get_size(), layout.get_shape(), 0, false, None)
@@ -438,6 +440,7 @@ impl fmt::Display for Tensor {
                         write!(f, "<error>")
                     }
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     if let Ok(data) = self.to_flatten_vec::<u64>() {
                         display_tensor_data(f, &data, layout.get_size(), layout.get_shape(), 0, false, None)
@@ -452,6 +455,7 @@ impl fmt::Display for Tensor {
                         write!(f, "<error>")
                     }
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     if let Ok(data) = self.to_flatten_vec::<i16>() {
                         display_tensor_data(f, &data, layout.get_size(), layout.get_shape(), 0, false, None)
@@ -466,6 +470,7 @@ impl fmt::Display for Tensor {
                         write!(f, "<error>")
                     }
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     if let Ok(data) = self.to_flatten_vec::<i64>() {
                         display_tensor_data(f, &data, layout.get_size(), layout.get_shape(), 0, false, None)
@@ -551,6 +556,7 @@ impl fmt::Debug for Tensor {
                         write!(f, "<error>")?;
                     }
                 },
+                #[cfg(feature = "u8")]
                 DType::U8 => {
                     if let Ok(data) = self.to_flatten_vec::<u8>() {
                         write!(f, "{}", debug_format_data(&data, false, shape))?;
@@ -565,6 +571,7 @@ impl fmt::Debug for Tensor {
                         write!(f, "<error>")?;
                     }
                 },
+                #[cfg(feature = "u32")]
                 DType::U32 => {
                     if let Ok(data) = self.to_flatten_vec::<u32>() {
                         write!(f, "{}", debug_format_data(&data, false, shape))?;
@@ -572,6 +579,7 @@ impl fmt::Debug for Tensor {
                         write!(f, "<error>")?;
                     }
                 },
+                #[cfg(feature = "u64")]
                 DType::U64 => {
                     if let Ok(data) = self.to_flatten_vec::<u64>() {
                         write!(f, "{}", debug_format_data(&data, false, shape))?;
@@ -586,6 +594,7 @@ impl fmt::Debug for Tensor {
                         write!(f, "<error>")?;
                     }
                 },
+                #[cfg(feature = "i16")]
                 DType::I16 => {
                     if let Ok(data) = self.to_flatten_vec::<i16>() {
                         write!(f, "{}", debug_format_data(&data, false, shape))?;
@@ -600,6 +609,7 @@ impl fmt::Debug for Tensor {
                         write!(f, "<error>")?;
                     }
                 },
+                #[cfg(feature = "i64")]
                 DType::I64 => {
                     if let Ok(data) = self.to_flatten_vec::<i64>() {
                         write!(f, "{}", debug_format_data(&data, false, shape))?;

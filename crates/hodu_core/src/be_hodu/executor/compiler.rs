@@ -240,6 +240,7 @@ impl HoduExecutor {
                     .collect();
                 CpuStorage::F64(values)
             },
+            #[cfg(feature = "u8")]
             DType::U8 => {
                 let values: Vec<u8> = data.into_iter().take(elem_count).collect();
                 CpuStorage::U8(values)
@@ -252,6 +253,7 @@ impl HoduExecutor {
                     .collect();
                 CpuStorage::U16(values)
             },
+            #[cfg(feature = "u32")]
             DType::U32 => {
                 let values: Vec<u32> = data
                     .chunks_exact(4)
@@ -260,6 +262,7 @@ impl HoduExecutor {
                     .collect();
                 CpuStorage::U32(values)
             },
+            #[cfg(feature = "u64")]
             DType::U64 => {
                 let values: Vec<u64> = data
                     .chunks_exact(8)
@@ -276,6 +279,7 @@ impl HoduExecutor {
                 let values: Vec<i8> = data.into_iter().take(elem_count).map(|b| b as i8).collect();
                 CpuStorage::I8(values)
             },
+            #[cfg(feature = "i16")]
             DType::I16 => {
                 let values: Vec<i16> = data
                     .chunks_exact(2)
@@ -292,6 +296,7 @@ impl HoduExecutor {
                     .collect();
                 CpuStorage::I32(values)
             },
+            #[cfg(feature = "i64")]
             DType::I64 => {
                 let values: Vec<i64> = data
                     .chunks_exact(8)

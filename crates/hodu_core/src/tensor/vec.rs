@@ -43,14 +43,12 @@ impl Tensor {
         let rows = dims[0];
         let cols = dims[1];
 
-        let mut result = Vec::with_capacity(rows);
-        for i in 0..rows {
-            let start = i * cols;
-            let end = start + cols;
-            result.push(flat_data[start..end].to_vec());
-        }
-
-        Ok(result)
+        Ok((0..rows)
+            .map(|i| {
+                let start = i * cols;
+                flat_data[start..start + cols].to_vec()
+            })
+            .collect())
     }
 
     pub fn to_vec3d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<T>>>> {
@@ -64,25 +62,20 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let dim0 = dims[0];
-        let dim1 = dims[1];
-        let dim2 = dims[2];
+        let (d0, d1, d2) = (dims[0], dims[1], dims[2]);
+        let stride1 = d1 * d2;
 
-        let mut result = Vec::with_capacity(dim0);
-        for i in 0..dim0 {
-            let mut slice_i = Vec::with_capacity(dim1);
-            for j in 0..dim1 {
-                let mut slice_j = Vec::with_capacity(dim2);
-                for k in 0..dim2 {
-                    let idx = (i * dim1 * dim2) + (j * dim2) + k;
-                    slice_j.push(flat_data[idx].clone());
-                }
-                slice_i.push(slice_j);
-            }
-            result.push(slice_i);
-        }
-
-        Ok(result)
+        Ok((0..d0)
+            .map(|i| {
+                let offset_i = i * stride1;
+                (0..d1)
+                    .map(|j| {
+                        let start = offset_i + j * d2;
+                        flat_data[start..start + d2].to_vec()
+                    })
+                    .collect()
+            })
+            .collect())
     }
 
     pub fn to_vec4d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<T>>>>> {
@@ -96,30 +89,26 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let dim0 = dims[0];
-        let dim1 = dims[1];
-        let dim2 = dims[2];
-        let dim3 = dims[3];
+        let (d0, d1, d2, d3) = (dims[0], dims[1], dims[2], dims[3]);
+        let stride1 = d1 * d2 * d3;
+        let stride2 = d2 * d3;
 
-        let mut result = Vec::with_capacity(dim0);
-        for i in 0..dim0 {
-            let mut slice_i = Vec::with_capacity(dim1);
-            for j in 0..dim1 {
-                let mut slice_j = Vec::with_capacity(dim2);
-                for k in 0..dim2 {
-                    let mut slice_k = Vec::with_capacity(dim3);
-                    for l in 0..dim3 {
-                        let idx = (i * dim1 * dim2 * dim3) + (j * dim2 * dim3) + (k * dim3) + l;
-                        slice_k.push(flat_data[idx].clone());
-                    }
-                    slice_j.push(slice_k);
-                }
-                slice_i.push(slice_j);
-            }
-            result.push(slice_i);
-        }
-
-        Ok(result)
+        Ok((0..d0)
+            .map(|i| {
+                let offset_i = i * stride1;
+                (0..d1)
+                    .map(|j| {
+                        let offset_j = offset_i + j * stride2;
+                        (0..d2)
+                            .map(|k| {
+                                let start = offset_j + k * d3;
+                                flat_data[start..start + d3].to_vec()
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect())
     }
 
     pub fn to_vec5d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<Vec<T>>>>>> {
@@ -133,39 +122,32 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let dim0 = dims[0];
-        let dim1 = dims[1];
-        let dim2 = dims[2];
-        let dim3 = dims[3];
-        let dim4 = dims[4];
+        let (d0, d1, d2, d3, d4) = (dims[0], dims[1], dims[2], dims[3], dims[4]);
+        let stride1 = d1 * d2 * d3 * d4;
+        let stride2 = d2 * d3 * d4;
+        let stride3 = d3 * d4;
 
-        let mut result = Vec::with_capacity(dim0);
-        for i in 0..dim0 {
-            let mut slice_i = Vec::with_capacity(dim1);
-            for j in 0..dim1 {
-                let mut slice_j = Vec::with_capacity(dim2);
-                for k in 0..dim2 {
-                    let mut slice_k = Vec::with_capacity(dim3);
-                    for l in 0..dim3 {
-                        let mut slice_l = Vec::with_capacity(dim4);
-                        for m in 0..dim4 {
-                            let idx = (i * dim1 * dim2 * dim3 * dim4)
-                                + (j * dim2 * dim3 * dim4)
-                                + (k * dim3 * dim4)
-                                + (l * dim4)
-                                + m;
-                            slice_l.push(flat_data[idx].clone());
-                        }
-                        slice_k.push(slice_l);
-                    }
-                    slice_j.push(slice_k);
-                }
-                slice_i.push(slice_j);
-            }
-            result.push(slice_i);
-        }
-
-        Ok(result)
+        Ok((0..d0)
+            .map(|i| {
+                let offset_i = i * stride1;
+                (0..d1)
+                    .map(|j| {
+                        let offset_j = offset_i + j * stride2;
+                        (0..d2)
+                            .map(|k| {
+                                let offset_k = offset_j + k * stride3;
+                                (0..d3)
+                                    .map(|l| {
+                                        let start = offset_k + l * d4;
+                                        flat_data[start..start + d4].to_vec()
+                                    })
+                                    .collect()
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect())
     }
 
     pub fn to_vec6d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<Vec<Vec<T>>>>>>> {
@@ -179,45 +161,38 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let dim0 = dims[0];
-        let dim1 = dims[1];
-        let dim2 = dims[2];
-        let dim3 = dims[3];
-        let dim4 = dims[4];
-        let dim5 = dims[5];
+        let (d0, d1, d2, d3, d4, d5) = (dims[0], dims[1], dims[2], dims[3], dims[4], dims[5]);
+        let stride1 = d1 * d2 * d3 * d4 * d5;
+        let stride2 = d2 * d3 * d4 * d5;
+        let stride3 = d3 * d4 * d5;
+        let stride4 = d4 * d5;
 
-        let mut result = Vec::with_capacity(dim0);
-        for i in 0..dim0 {
-            let mut slice_i = Vec::with_capacity(dim1);
-            for j in 0..dim1 {
-                let mut slice_j = Vec::with_capacity(dim2);
-                for k in 0..dim2 {
-                    let mut slice_k = Vec::with_capacity(dim3);
-                    for l in 0..dim3 {
-                        let mut slice_l = Vec::with_capacity(dim4);
-                        for m in 0..dim4 {
-                            let mut slice_m = Vec::with_capacity(dim5);
-                            for n in 0..dim5 {
-                                let idx = (i * dim1 * dim2 * dim3 * dim4 * dim5)
-                                    + (j * dim2 * dim3 * dim4 * dim5)
-                                    + (k * dim3 * dim4 * dim5)
-                                    + (l * dim4 * dim5)
-                                    + (m * dim5)
-                                    + n;
-                                slice_m.push(flat_data[idx].clone());
-                            }
-                            slice_l.push(slice_m);
-                        }
-                        slice_k.push(slice_l);
-                    }
-                    slice_j.push(slice_k);
-                }
-                slice_i.push(slice_j);
-            }
-            result.push(slice_i);
-        }
-
-        Ok(result)
+        Ok((0..d0)
+            .map(|i| {
+                let offset_i = i * stride1;
+                (0..d1)
+                    .map(|j| {
+                        let offset_j = offset_i + j * stride2;
+                        (0..d2)
+                            .map(|k| {
+                                let offset_k = offset_j + k * stride3;
+                                (0..d3)
+                                    .map(|l| {
+                                        let offset_l = offset_k + l * stride4;
+                                        (0..d4)
+                                            .map(|m| {
+                                                let start = offset_l + m * d5;
+                                                flat_data[start..start + d5].to_vec()
+                                            })
+                                            .collect()
+                                    })
+                                    .collect()
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect())
     }
 }
 
@@ -234,112 +209,39 @@ fn extract_vec_from_cpu_storage<T: Clone + 'static>(cpu_storage: &CpuStorage, la
     let total_elements = layout.get_shape().iter().product::<usize>();
     let mut result = Vec::with_capacity(total_elements);
 
+    macro_rules! extract_storage {
+        ($data:expr) => {
+            if let Ok(typed_data) = try_cast_slice::<T, _>($data) {
+                extract_with_layout(&mut result, typed_data, layout);
+            } else {
+                return Err(HoduError::InternalError(
+                    "Type mismatch in extraction".to_string(),
+                ));
+            }
+        };
+    }
+
     match &cpu_storage {
-        CpuStorage::BOOL(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::F8E4M3(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::F8E5M2(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::BF16(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::F16(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::F32(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::F64(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::U8(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::U16(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::U32(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::U64(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::I8(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::I16(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::I32(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
-        CpuStorage::I64(data) => {
-            if let Ok(typed_data) = try_cast_slice::<T, _>(data) {
-                extract_with_layout(&mut result, typed_data, layout);
-            } else {
-                return Err(HoduError::InternalError("Type mismatch in extraction".to_string()));
-            }
-        },
+        CpuStorage::BOOL(data) => extract_storage!(data),
+        CpuStorage::F8E4M3(data) => extract_storage!(data),
+        CpuStorage::F8E5M2(data) => extract_storage!(data),
+        CpuStorage::BF16(data) => extract_storage!(data),
+        CpuStorage::F16(data) => extract_storage!(data),
+        CpuStorage::F32(data) => extract_storage!(data),
+        CpuStorage::F64(data) => extract_storage!(data),
+        #[cfg(feature = "u8")]
+        CpuStorage::U8(data) => extract_storage!(data),
+        CpuStorage::U16(data) => extract_storage!(data),
+        #[cfg(feature = "u32")]
+        CpuStorage::U32(data) => extract_storage!(data),
+        #[cfg(feature = "u64")]
+        CpuStorage::U64(data) => extract_storage!(data),
+        CpuStorage::I8(data) => extract_storage!(data),
+        #[cfg(feature = "i16")]
+        CpuStorage::I16(data) => extract_storage!(data),
+        CpuStorage::I32(data) => extract_storage!(data),
+        #[cfg(feature = "i64")]
+        CpuStorage::I64(data) => extract_storage!(data),
     }
 
     Ok(result)
@@ -390,37 +292,66 @@ fn extract_with_layout<T: Clone>(result: &mut Vec<T>, data: &[T], layout: &Layou
 }
 
 fn get_dtype_for_type<T: 'static>() -> Option<DType> {
-    if core::any::TypeId::of::<T>() == core::any::TypeId::of::<bool>() {
-        Some(DType::BOOL)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<F8E4M3>() {
-        Some(DType::F8E4M3)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<F8E5M2>() {
-        Some(DType::F8E5M2)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<bf16>() {
-        Some(DType::BF16)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<f16>() {
-        Some(DType::F16)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<f32>() {
-        Some(DType::F32)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<f64>() {
-        Some(DType::F64)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<u8>() {
-        Some(DType::U8)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<u16>() {
-        Some(DType::U16)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<u32>() {
-        Some(DType::U32)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<u64>() {
-        Some(DType::U64)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<i8>() {
-        Some(DType::I8)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<i16>() {
-        Some(DType::I16)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<i32>() {
-        Some(DType::I32)
-    } else if core::any::TypeId::of::<T>() == core::any::TypeId::of::<i64>() {
-        Some(DType::I64)
-    } else {
-        None
+    let type_id = core::any::TypeId::of::<T>();
+
+    if type_id == core::any::TypeId::of::<bool>() {
+        return Some(DType::BOOL);
     }
+    if type_id == core::any::TypeId::of::<F8E4M3>() {
+        return Some(DType::F8E4M3);
+    }
+    if type_id == core::any::TypeId::of::<F8E5M2>() {
+        return Some(DType::F8E5M2);
+    }
+    if type_id == core::any::TypeId::of::<bf16>() {
+        return Some(DType::BF16);
+    }
+    if type_id == core::any::TypeId::of::<f16>() {
+        return Some(DType::F16);
+    }
+    if type_id == core::any::TypeId::of::<f32>() {
+        return Some(DType::F32);
+    }
+    if type_id == core::any::TypeId::of::<f64>() {
+        return Some(DType::F64);
+    }
+
+    #[cfg(feature = "u8")]
+    if type_id == core::any::TypeId::of::<u8>() {
+        return Some(DType::U8);
+    }
+
+    if type_id == core::any::TypeId::of::<u16>() {
+        return Some(DType::U16);
+    }
+
+    #[cfg(feature = "u32")]
+    if type_id == core::any::TypeId::of::<u32>() {
+        return Some(DType::U32);
+    }
+
+    #[cfg(feature = "u64")]
+    if type_id == core::any::TypeId::of::<u64>() {
+        return Some(DType::U64);
+    }
+
+    if type_id == core::any::TypeId::of::<i8>() {
+        return Some(DType::I8);
+    }
+
+    #[cfg(feature = "i16")]
+    if type_id == core::any::TypeId::of::<i16>() {
+        return Some(DType::I16);
+    }
+
+    if type_id == core::any::TypeId::of::<i32>() {
+        return Some(DType::I32);
+    }
+
+    #[cfg(feature = "i64")]
+    if type_id == core::any::TypeId::of::<i64>() {
+        return Some(DType::I64);
+    }
+
+    None
 }

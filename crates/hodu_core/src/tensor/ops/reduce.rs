@@ -90,7 +90,7 @@ impl Tensor {
 
     pub fn norm(&self, p: impl Into<Scalar>, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
         let p_scalar = p.into();
-        match p_scalar.to_u32() {
+        match p_scalar.to_i32() {
             1 => self.l1_norm(dims, keep_dim),
             2 => self.l2_norm(dims, keep_dim),
             _ => {
@@ -130,7 +130,7 @@ impl Tensor {
     fn reduce_operation(&self, reduce_op: op::ReduceOp, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
         // Validate dtype for device and operation
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), &reduce_op.to_string())?;
-        let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
+        let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::I32(d as i32)).collect();
         let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars.clone());
         validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -199,7 +199,7 @@ impl Tensor {
             let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && self.is_requires_grad() {
-                let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::U64(d as u64)).collect();
+                let dims_scalars: Vec<Scalar> = dims.iter().map(|&d| Scalar::I32(d as i32)).collect();
                 let op = Op::Reduce(reduce_op, self.id(), keep_dim, dims_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id()])?;
             }

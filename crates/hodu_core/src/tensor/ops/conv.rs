@@ -57,14 +57,14 @@ impl Tensor {
         validate_same_device(&[self, weight], "conv1d")?;
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv1d")?;
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(length_input as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_size as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(length_input as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_size as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
         let op = Op::Conv(op::ConvOp::Conv1d, self.id(), weight.id(), params_scalars.clone());
         validate_dtype_for_op(self.get_dtype(), &op)?;
@@ -114,14 +114,14 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let params_scalars = vec![
-                    Scalar::U32(batch_size as u32),
-                    Scalar::U32(length_input as u32),
-                    Scalar::U32(channels_output as u32),
-                    Scalar::U32(channels_input as u32),
-                    Scalar::U32(kernel_size as u32),
-                    Scalar::U32(padding as u32),
-                    Scalar::U32(stride as u32),
-                    Scalar::U32(dilation as u32),
+                    Scalar::I32(batch_size as i32),
+                    Scalar::I32(length_input as i32),
+                    Scalar::I32(channels_output as i32),
+                    Scalar::I32(channels_input as i32),
+                    Scalar::I32(kernel_size as i32),
+                    Scalar::I32(padding as i32),
+                    Scalar::I32(stride as i32),
+                    Scalar::I32(dilation as i32),
                 ];
                 let op = Op::Conv(op::ConvOp::Conv1d, self.id(), weight.id(), params_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id(), weight.id()])?;
@@ -174,16 +174,16 @@ impl Tensor {
         validate_same_device(&[self, weight], "conv2d")?;
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv2d")?;
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(input_height as u32),
-            Scalar::U32(input_width as u32),
-            Scalar::U32(kernel_height as u32),
-            Scalar::U32(kernel_width as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(input_height as i32),
+            Scalar::I32(input_width as i32),
+            Scalar::I32(kernel_height as i32),
+            Scalar::I32(kernel_width as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
         let op = Op::Conv(op::ConvOp::Conv2d, self.id(), weight.id(), params_scalars.clone());
         validate_dtype_for_op(self.get_dtype(), &op)?;
@@ -236,16 +236,16 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let params_scalars = vec![
-                    Scalar::U32(batch_size as u32),
-                    Scalar::U32(input_height as u32),
-                    Scalar::U32(input_width as u32),
-                    Scalar::U32(kernel_height as u32),
-                    Scalar::U32(kernel_width as u32),
-                    Scalar::U32(channels_output as u32),
-                    Scalar::U32(channels_input as u32),
-                    Scalar::U32(padding as u32),
-                    Scalar::U32(stride as u32),
-                    Scalar::U32(dilation as u32),
+                    Scalar::I32(batch_size as i32),
+                    Scalar::I32(input_height as i32),
+                    Scalar::I32(input_width as i32),
+                    Scalar::I32(kernel_height as i32),
+                    Scalar::I32(kernel_width as i32),
+                    Scalar::I32(channels_output as i32),
+                    Scalar::I32(channels_input as i32),
+                    Scalar::I32(padding as i32),
+                    Scalar::I32(stride as i32),
+                    Scalar::I32(dilation as i32),
                 ];
                 let op = Op::Conv(op::ConvOp::Conv2d, self.id(), weight.id(), params_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id(), weight.id()])?;
@@ -300,18 +300,18 @@ impl Tensor {
         validate_same_device(&[self, weight], "conv3d")?;
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv3d")?;
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(input_depth as u32),
-            Scalar::U32(input_height as u32),
-            Scalar::U32(input_width as u32),
-            Scalar::U32(kernel_depth as u32),
-            Scalar::U32(kernel_height as u32),
-            Scalar::U32(kernel_width as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(input_depth as i32),
+            Scalar::I32(input_height as i32),
+            Scalar::I32(input_width as i32),
+            Scalar::I32(kernel_depth as i32),
+            Scalar::I32(kernel_height as i32),
+            Scalar::I32(kernel_width as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
         let op = Op::Conv(op::ConvOp::Conv3d, self.id(), weight.id(), params_scalars.clone());
         validate_dtype_for_op(self.get_dtype(), &op)?;
@@ -367,18 +367,18 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let params_scalars = vec![
-                    Scalar::U32(batch_size as u32),
-                    Scalar::U32(input_depth as u32),
-                    Scalar::U32(input_height as u32),
-                    Scalar::U32(input_width as u32),
-                    Scalar::U32(kernel_depth as u32),
-                    Scalar::U32(kernel_height as u32),
-                    Scalar::U32(kernel_width as u32),
-                    Scalar::U32(channels_output as u32),
-                    Scalar::U32(channels_input as u32),
-                    Scalar::U32(padding as u32),
-                    Scalar::U32(stride as u32),
-                    Scalar::U32(dilation as u32),
+                    Scalar::I32(batch_size as i32),
+                    Scalar::I32(input_depth as i32),
+                    Scalar::I32(input_height as i32),
+                    Scalar::I32(input_width as i32),
+                    Scalar::I32(kernel_depth as i32),
+                    Scalar::I32(kernel_height as i32),
+                    Scalar::I32(kernel_width as i32),
+                    Scalar::I32(channels_output as i32),
+                    Scalar::I32(channels_input as i32),
+                    Scalar::I32(padding as i32),
+                    Scalar::I32(stride as i32),
+                    Scalar::I32(dilation as i32),
                 ];
                 let op = Op::Conv(op::ConvOp::Conv3d, self.id(), weight.id(), params_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id(), weight.id()])?;
@@ -436,15 +436,15 @@ impl Tensor {
         validate_same_device(&[self, weight], "conv_transpose1d")?;
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv_transpose1d")?;
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(length_input as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_size as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(output_padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(length_input as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_size as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(output_padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
         let op = Op::Conv(
             op::ConvOp::ConvTranspose1d,
@@ -500,15 +500,15 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let params_scalars = vec![
-                    Scalar::U32(batch_size as u32),
-                    Scalar::U32(length_input as u32),
-                    Scalar::U32(channels_output as u32),
-                    Scalar::U32(channels_input as u32),
-                    Scalar::U32(kernel_size as u32),
-                    Scalar::U32(padding as u32),
-                    Scalar::U32(output_padding as u32),
-                    Scalar::U32(stride as u32),
-                    Scalar::U32(dilation as u32),
+                    Scalar::I32(batch_size as i32),
+                    Scalar::I32(length_input as i32),
+                    Scalar::I32(channels_output as i32),
+                    Scalar::I32(channels_input as i32),
+                    Scalar::I32(kernel_size as i32),
+                    Scalar::I32(padding as i32),
+                    Scalar::I32(output_padding as i32),
+                    Scalar::I32(stride as i32),
+                    Scalar::I32(dilation as i32),
                 ];
                 let op = Op::Conv(op::ConvOp::ConvTranspose1d, self.id(), weight.id(), params_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id(), weight.id()])?;
@@ -568,17 +568,17 @@ impl Tensor {
         validate_same_device(&[self, weight], "conv_transpose2d")?;
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv_transpose2d")?;
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(input_height as u32),
-            Scalar::U32(input_width as u32),
-            Scalar::U32(kernel_height as u32),
-            Scalar::U32(kernel_width as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(output_padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(input_height as i32),
+            Scalar::I32(input_width as i32),
+            Scalar::I32(kernel_height as i32),
+            Scalar::I32(kernel_width as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(output_padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
         let op = Op::Conv(
             op::ConvOp::ConvTranspose2d,
@@ -639,17 +639,17 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let params_scalars = vec![
-                    Scalar::U32(batch_size as u32),
-                    Scalar::U32(input_height as u32),
-                    Scalar::U32(input_width as u32),
-                    Scalar::U32(kernel_height as u32),
-                    Scalar::U32(kernel_width as u32),
-                    Scalar::U32(channels_output as u32),
-                    Scalar::U32(channels_input as u32),
-                    Scalar::U32(padding as u32),
-                    Scalar::U32(output_padding as u32),
-                    Scalar::U32(stride as u32),
-                    Scalar::U32(dilation as u32),
+                    Scalar::I32(batch_size as i32),
+                    Scalar::I32(input_height as i32),
+                    Scalar::I32(input_width as i32),
+                    Scalar::I32(kernel_height as i32),
+                    Scalar::I32(kernel_width as i32),
+                    Scalar::I32(channels_output as i32),
+                    Scalar::I32(channels_input as i32),
+                    Scalar::I32(padding as i32),
+                    Scalar::I32(output_padding as i32),
+                    Scalar::I32(stride as i32),
+                    Scalar::I32(dilation as i32),
                 ];
                 let op = Op::Conv(op::ConvOp::ConvTranspose2d, self.id(), weight.id(), params_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id(), weight.id()])?;
@@ -712,19 +712,19 @@ impl Tensor {
         validate_same_device(&[self, weight], "conv_transpose3d")?;
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "conv_transpose3d")?;
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(input_depth as u32),
-            Scalar::U32(input_height as u32),
-            Scalar::U32(input_width as u32),
-            Scalar::U32(kernel_depth as u32),
-            Scalar::U32(kernel_height as u32),
-            Scalar::U32(kernel_width as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(output_padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(input_depth as i32),
+            Scalar::I32(input_height as i32),
+            Scalar::I32(input_width as i32),
+            Scalar::I32(kernel_depth as i32),
+            Scalar::I32(kernel_height as i32),
+            Scalar::I32(kernel_width as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(output_padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
         let op = Op::Conv(
             op::ConvOp::ConvTranspose3d,
@@ -788,19 +788,19 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let params_scalars = vec![
-                    Scalar::U32(batch_size as u32),
-                    Scalar::U32(input_depth as u32),
-                    Scalar::U32(input_height as u32),
-                    Scalar::U32(input_width as u32),
-                    Scalar::U32(kernel_depth as u32),
-                    Scalar::U32(kernel_height as u32),
-                    Scalar::U32(kernel_width as u32),
-                    Scalar::U32(channels_output as u32),
-                    Scalar::U32(channels_input as u32),
-                    Scalar::U32(padding as u32),
-                    Scalar::U32(output_padding as u32),
-                    Scalar::U32(stride as u32),
-                    Scalar::U32(dilation as u32),
+                    Scalar::I32(batch_size as i32),
+                    Scalar::I32(input_depth as i32),
+                    Scalar::I32(input_height as i32),
+                    Scalar::I32(input_width as i32),
+                    Scalar::I32(kernel_depth as i32),
+                    Scalar::I32(kernel_height as i32),
+                    Scalar::I32(kernel_width as i32),
+                    Scalar::I32(channels_output as i32),
+                    Scalar::I32(channels_input as i32),
+                    Scalar::I32(padding as i32),
+                    Scalar::I32(output_padding as i32),
+                    Scalar::I32(stride as i32),
+                    Scalar::I32(dilation as i32),
                 ];
                 let op = Op::Conv(op::ConvOp::ConvTranspose3d, self.id(), weight.id(), params_scalars);
                 gradient::record_operation(result.id(), op, vec![self.id(), weight.id()])?;
@@ -856,14 +856,14 @@ impl Tensor {
         let kernel_size = weight_shape[2];
 
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(length_input as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_size as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(length_input as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_size as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
 
         let op = Op::Conv(
@@ -958,16 +958,16 @@ impl Tensor {
         let kernel_w = weight_shape[3];
 
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(height_input as u32),
-            Scalar::U32(width_input as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_h as u32),
-            Scalar::U32(kernel_w as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(height_input as i32),
+            Scalar::I32(width_input as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_h as i32),
+            Scalar::I32(kernel_w as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
 
         let op = Op::Conv(
@@ -1066,18 +1066,18 @@ impl Tensor {
         let kernel_w = weight_shape[4];
 
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(depth_input as u32),
-            Scalar::U32(height_input as u32),
-            Scalar::U32(width_input as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_d as u32),
-            Scalar::U32(kernel_h as u32),
-            Scalar::U32(kernel_w as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(depth_input as i32),
+            Scalar::I32(height_input as i32),
+            Scalar::I32(width_input as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_d as i32),
+            Scalar::I32(kernel_h as i32),
+            Scalar::I32(kernel_w as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
 
         let op = Op::Conv(
@@ -1175,15 +1175,15 @@ impl Tensor {
         let kernel_size = weight_shape[2];
 
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(length_input as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_size as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(output_padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(length_input as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_size as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(output_padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
 
         let op = Op::Conv(
@@ -1280,17 +1280,17 @@ impl Tensor {
         let kernel_width = weight_shape[3];
 
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(input_height as u32),
-            Scalar::U32(input_width as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_height as u32),
-            Scalar::U32(kernel_width as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(output_padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(input_height as i32),
+            Scalar::I32(input_width as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_height as i32),
+            Scalar::I32(kernel_width as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(output_padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
 
         let op = Op::Conv(
@@ -1391,19 +1391,19 @@ impl Tensor {
         let kernel_width = weight_shape[4];
 
         let params_scalars = vec![
-            Scalar::U32(batch_size as u32),
-            Scalar::U32(input_depth as u32),
-            Scalar::U32(input_height as u32),
-            Scalar::U32(input_width as u32),
-            Scalar::U32(channels_output as u32),
-            Scalar::U32(channels_input as u32),
-            Scalar::U32(kernel_depth as u32),
-            Scalar::U32(kernel_height as u32),
-            Scalar::U32(kernel_width as u32),
-            Scalar::U32(padding as u32),
-            Scalar::U32(output_padding as u32),
-            Scalar::U32(stride as u32),
-            Scalar::U32(dilation as u32),
+            Scalar::I32(batch_size as i32),
+            Scalar::I32(input_depth as i32),
+            Scalar::I32(input_height as i32),
+            Scalar::I32(input_width as i32),
+            Scalar::I32(channels_output as i32),
+            Scalar::I32(channels_input as i32),
+            Scalar::I32(kernel_depth as i32),
+            Scalar::I32(kernel_height as i32),
+            Scalar::I32(kernel_width as i32),
+            Scalar::I32(padding as i32),
+            Scalar::I32(output_padding as i32),
+            Scalar::I32(stride as i32),
+            Scalar::I32(dilation as i32),
         ];
 
         let op = Op::Conv(

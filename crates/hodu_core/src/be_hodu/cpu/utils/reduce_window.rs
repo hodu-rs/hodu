@@ -196,27 +196,32 @@ pub fn reduce_window_impl(
             CpuStorage::F64(storage) => {
                 impl_reduce_window!(storage, f64, f64::MIN, |a: f64, b: f64| if a > b { a } else { b }, F64)
             },
+            #[cfg(feature = "u8")]
             CpuStorage::U8(storage) => {
                 impl_reduce_window!(storage, u8, u8::MIN, |a: u8, b: u8| if a > b { a } else { b }, U8)
             },
             CpuStorage::U16(storage) => {
                 impl_reduce_window!(storage, u16, u16::MIN, |a: u16, b: u16| if a > b { a } else { b }, U16)
             },
+            #[cfg(feature = "u32")]
             CpuStorage::U32(storage) => {
                 impl_reduce_window!(storage, u32, u32::MIN, |a: u32, b: u32| if a > b { a } else { b }, U32)
             },
+            #[cfg(feature = "u64")]
             CpuStorage::U64(storage) => {
                 impl_reduce_window!(storage, u64, u64::MIN, |a: u64, b: u64| if a > b { a } else { b }, U64)
             },
             CpuStorage::I8(storage) => {
                 impl_reduce_window!(storage, i8, i8::MIN, |a: i8, b: i8| if a > b { a } else { b }, I8)
             },
+            #[cfg(feature = "i16")]
             CpuStorage::I16(storage) => {
                 impl_reduce_window!(storage, i16, i16::MIN, |a: i16, b: i16| if a > b { a } else { b }, I16)
             },
             CpuStorage::I32(storage) => {
                 impl_reduce_window!(storage, i32, i32::MIN, |a: i32, b: i32| if a > b { a } else { b }, I32)
             },
+            #[cfg(feature = "i64")]
             CpuStorage::I64(storage) => {
                 impl_reduce_window!(storage, i64, i64::MIN, |a: i64, b: i64| if a > b { a } else { b }, I64)
             },
@@ -262,27 +267,32 @@ pub fn reduce_window_impl(
             CpuStorage::F64(storage) => {
                 impl_reduce_window!(storage, f64, f64::MAX, |a: f64, b: f64| if a < b { a } else { b }, F64)
             },
+            #[cfg(feature = "u8")]
             CpuStorage::U8(storage) => {
                 impl_reduce_window!(storage, u8, u8::MAX, |a: u8, b: u8| if a < b { a } else { b }, U8)
             },
             CpuStorage::U16(storage) => {
                 impl_reduce_window!(storage, u16, u16::MAX, |a: u16, b: u16| if a < b { a } else { b }, U16)
             },
+            #[cfg(feature = "u32")]
             CpuStorage::U32(storage) => {
                 impl_reduce_window!(storage, u32, u32::MAX, |a: u32, b: u32| if a < b { a } else { b }, U32)
             },
+            #[cfg(feature = "u64")]
             CpuStorage::U64(storage) => {
                 impl_reduce_window!(storage, u64, u64::MAX, |a: u64, b: u64| if a < b { a } else { b }, U64)
             },
             CpuStorage::I8(storage) => {
                 impl_reduce_window!(storage, i8, i8::MAX, |a: i8, b: i8| if a < b { a } else { b }, I8)
             },
+            #[cfg(feature = "i16")]
             CpuStorage::I16(storage) => {
                 impl_reduce_window!(storage, i16, i16::MAX, |a: i16, b: i16| if a < b { a } else { b }, I16)
             },
             CpuStorage::I32(storage) => {
                 impl_reduce_window!(storage, i32, i32::MAX, |a: i32, b: i32| if a < b { a } else { b }, I32)
             },
+            #[cfg(feature = "i64")]
             CpuStorage::I64(storage) => {
                 impl_reduce_window!(storage, i64, i64::MAX, |a: i64, b: i64| if a < b { a } else { b }, I64)
             },
@@ -298,13 +308,18 @@ pub fn reduce_window_impl(
             CpuStorage::BF16(storage) => impl_reduce_window!(storage, bf16, bf16::ZERO, |a, b| a + b, BF16),
             CpuStorage::F32(storage) => impl_reduce_window!(storage, f32, 0.0f32, |a, b| a + b, F32),
             CpuStorage::F64(storage) => impl_reduce_window!(storage, f64, 0.0f64, |a, b| a + b, F64),
+            #[cfg(feature = "u8")]
             CpuStorage::U8(storage) => impl_reduce_window!(storage, u8, 0u8, |a, b| a + b, U8),
             CpuStorage::U16(storage) => impl_reduce_window!(storage, u16, 0u16, |a, b| a + b, U16),
+            #[cfg(feature = "u32")]
             CpuStorage::U32(storage) => impl_reduce_window!(storage, u32, 0u32, |a, b| a + b, U32),
+            #[cfg(feature = "u64")]
             CpuStorage::U64(storage) => impl_reduce_window!(storage, u64, 0u64, |a, b| a + b, U64),
             CpuStorage::I8(storage) => impl_reduce_window!(storage, i8, 0i8, |a, b| a + b, I8),
+            #[cfg(feature = "i16")]
             CpuStorage::I16(storage) => impl_reduce_window!(storage, i16, 0i16, |a, b| a + b, I16),
             CpuStorage::I32(storage) => impl_reduce_window!(storage, i32, 0i32, |a, b| a + b, I32),
+            #[cfg(feature = "i64")]
             CpuStorage::I64(storage) => impl_reduce_window!(storage, i64, 0i64, |a, b| a + b, I64),
             _ => Err(HoduError::UnsupportedDType {
                 dtype: storage.get_dtype(),
@@ -469,27 +484,32 @@ pub fn reduce_window_impl(
             CpuStorage::F64(storage) => {
                 impl_reduce_window!(storage, f64, f64::MIN, |a: f64, b: f64| if a > b { a } else { b }, F64)
             },
+            #[cfg(feature = "u8")]
             CpuStorage::U8(storage) => {
                 impl_reduce_window!(storage, u8, u8::MIN, |a: u8, b: u8| if a > b { a } else { b }, U8)
             },
             CpuStorage::U16(storage) => {
                 impl_reduce_window!(storage, u16, u16::MIN, |a: u16, b: u16| if a > b { a } else { b }, U16)
             },
+            #[cfg(feature = "u32")]
             CpuStorage::U32(storage) => {
                 impl_reduce_window!(storage, u32, u32::MIN, |a: u32, b: u32| if a > b { a } else { b }, U32)
             },
+            #[cfg(feature = "u64")]
             CpuStorage::U64(storage) => {
                 impl_reduce_window!(storage, u64, u64::MIN, |a: u64, b: u64| if a > b { a } else { b }, U64)
             },
             CpuStorage::I8(storage) => {
                 impl_reduce_window!(storage, i8, i8::MIN, |a: i8, b: i8| if a > b { a } else { b }, I8)
             },
+            #[cfg(feature = "i16")]
             CpuStorage::I16(storage) => {
                 impl_reduce_window!(storage, i16, i16::MIN, |a: i16, b: i16| if a > b { a } else { b }, I16)
             },
             CpuStorage::I32(storage) => {
                 impl_reduce_window!(storage, i32, i32::MIN, |a: i32, b: i32| if a > b { a } else { b }, I32)
             },
+            #[cfg(feature = "i64")]
             CpuStorage::I64(storage) => {
                 impl_reduce_window!(storage, i64, i64::MIN, |a: i64, b: i64| if a > b { a } else { b }, I64)
             },
@@ -535,27 +555,32 @@ pub fn reduce_window_impl(
             CpuStorage::F64(storage) => {
                 impl_reduce_window!(storage, f64, f64::MAX, |a: f64, b: f64| if a < b { a } else { b }, F64)
             },
+            #[cfg(feature = "u8")]
             CpuStorage::U8(storage) => {
                 impl_reduce_window!(storage, u8, u8::MAX, |a: u8, b: u8| if a < b { a } else { b }, U8)
             },
             CpuStorage::U16(storage) => {
                 impl_reduce_window!(storage, u16, u16::MAX, |a: u16, b: u16| if a < b { a } else { b }, U16)
             },
+            #[cfg(feature = "u32")]
             CpuStorage::U32(storage) => {
                 impl_reduce_window!(storage, u32, u32::MAX, |a: u32, b: u32| if a < b { a } else { b }, U32)
             },
+            #[cfg(feature = "u64")]
             CpuStorage::U64(storage) => {
                 impl_reduce_window!(storage, u64, u64::MAX, |a: u64, b: u64| if a < b { a } else { b }, U64)
             },
             CpuStorage::I8(storage) => {
                 impl_reduce_window!(storage, i8, i8::MAX, |a: i8, b: i8| if a < b { a } else { b }, I8)
             },
+            #[cfg(feature = "i16")]
             CpuStorage::I16(storage) => {
                 impl_reduce_window!(storage, i16, i16::MAX, |a: i16, b: i16| if a < b { a } else { b }, I16)
             },
             CpuStorage::I32(storage) => {
                 impl_reduce_window!(storage, i32, i32::MAX, |a: i32, b: i32| if a < b { a } else { b }, I32)
             },
+            #[cfg(feature = "i64")]
             CpuStorage::I64(storage) => {
                 impl_reduce_window!(storage, i64, i64::MAX, |a: i64, b: i64| if a < b { a } else { b }, I64)
             },
@@ -571,13 +596,18 @@ pub fn reduce_window_impl(
             CpuStorage::BF16(storage) => impl_reduce_window!(storage, bf16, bf16::ZERO, |a, b| a + b, BF16),
             CpuStorage::F32(storage) => impl_reduce_window!(storage, f32, 0.0f32, |a, b| a + b, F32),
             CpuStorage::F64(storage) => impl_reduce_window!(storage, f64, 0.0f64, |a, b| a + b, F64),
+            #[cfg(feature = "u8")]
             CpuStorage::U8(storage) => impl_reduce_window!(storage, u8, 0u8, |a, b| a + b, U8),
             CpuStorage::U16(storage) => impl_reduce_window!(storage, u16, 0u16, |a, b| a + b, U16),
+            #[cfg(feature = "u32")]
             CpuStorage::U32(storage) => impl_reduce_window!(storage, u32, 0u32, |a, b| a + b, U32),
+            #[cfg(feature = "u64")]
             CpuStorage::U64(storage) => impl_reduce_window!(storage, u64, 0u64, |a, b| a + b, U64),
             CpuStorage::I8(storage) => impl_reduce_window!(storage, i8, 0i8, |a, b| a + b, I8),
+            #[cfg(feature = "i16")]
             CpuStorage::I16(storage) => impl_reduce_window!(storage, i16, 0i16, |a, b| a + b, I16),
             CpuStorage::I32(storage) => impl_reduce_window!(storage, i32, 0i32, |a, b| a + b, I32),
+            #[cfg(feature = "i64")]
             CpuStorage::I64(storage) => impl_reduce_window!(storage, i64, 0i64, |a, b| a + b, I64),
             _ => Err(HoduError::UnsupportedDType {
                 dtype: storage.get_dtype(),

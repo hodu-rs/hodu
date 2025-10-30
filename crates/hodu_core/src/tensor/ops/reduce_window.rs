@@ -65,18 +65,18 @@ impl Tensor {
         }
 
         // Pack parameters: rank, window_shape, strides, padding, reduction_type
-        let mut params_scalars = vec![Scalar::U32(rank as u32)];
+        let mut params_scalars = vec![Scalar::I32(rank as i32)];
         for &ws in window_shape {
-            params_scalars.push(Scalar::U32(ws as u32));
+            params_scalars.push(Scalar::I32(ws as i32));
         }
         for &s in strides {
-            params_scalars.push(Scalar::U32(s as u32));
+            params_scalars.push(Scalar::I32(s as i32));
         }
         for &(pad_lo, pad_hi) in padding {
-            params_scalars.push(Scalar::U32(pad_lo as u32));
-            params_scalars.push(Scalar::U32(pad_hi as u32));
+            params_scalars.push(Scalar::I32(pad_lo as i32));
+            params_scalars.push(Scalar::I32(pad_hi as i32));
         }
-        params_scalars.push(Scalar::U32(match reduction_type {
+        params_scalars.push(Scalar::I32(match reduction_type {
             op::window_reduction::WindowReduction::Max => 0,
             op::window_reduction::WindowReduction::Mean => 1,
             op::window_reduction::WindowReduction::Sum => 2,
@@ -123,18 +123,18 @@ impl Tensor {
             let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let mut params_scalars = vec![Scalar::U32(rank as u32)];
+                let mut params_scalars = vec![Scalar::I32(rank as i32)];
                 for &ws in window_shape {
-                    params_scalars.push(Scalar::U32(ws as u32));
+                    params_scalars.push(Scalar::I32(ws as i32));
                 }
                 for &s in strides {
-                    params_scalars.push(Scalar::U32(s as u32));
+                    params_scalars.push(Scalar::I32(s as i32));
                 }
                 for &(pad_lo, pad_hi) in padding {
-                    params_scalars.push(Scalar::U32(pad_lo as u32));
-                    params_scalars.push(Scalar::U32(pad_hi as u32));
+                    params_scalars.push(Scalar::I32(pad_lo as i32));
+                    params_scalars.push(Scalar::I32(pad_hi as i32));
                 }
-                params_scalars.push(Scalar::U32(match reduction_type {
+                params_scalars.push(Scalar::I32(match reduction_type {
                     op::window_reduction::WindowReduction::Max => 0,
                     op::window_reduction::WindowReduction::Mean => 1,
                     op::window_reduction::WindowReduction::Sum => 2,

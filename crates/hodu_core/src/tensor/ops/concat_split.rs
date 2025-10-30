@@ -121,7 +121,7 @@ impl Tensor {
         // Validate dtype for device and operation
         validate_dtype_for_device(self.get_dtype(), &self.get_device(), "split")?;
         let mut params = vec![dim_scalar];
-        params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
+        params.extend(sizes.iter().map(|&s| Scalar::I32(s as i32)));
         let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), 0);
         validate_dtype_for_op(self.get_dtype(), &op)?;
 
@@ -179,7 +179,7 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let mut params = vec![dim_scalar];
-                params.extend(sizes.iter().map(|&s| Scalar::U64(s as u64)));
+                params.extend(sizes.iter().map(|&s| Scalar::I32(s as i32)));
                 // Record operation for each split result with its output_index
                 for (output_index, result) in results.iter().enumerate() {
                     let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), output_index);
