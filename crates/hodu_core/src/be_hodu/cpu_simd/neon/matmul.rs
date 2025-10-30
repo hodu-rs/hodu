@@ -537,9 +537,64 @@ unsafe fn kernel_6x4_u32_packed(
 }
 
 // ============================================================================
-// Unified GEMM implementation macro
+// GEMM implementation macros - split into rayon and sequential versions
 // ============================================================================
-macro_rules! impl_gemm {
+
+#[cfg(feature = "rayon")]
+macro_rules! impl_gemm_rayon {
+    ($fn_name:ident, $ty:ty, $pack_a:ident, $pack_b:ident, $kernel:ident, $mr:expr, $nr:expr, $zero:expr) => {
+        pub unsafe fn $fn_name(a: &[$ty], b: &[$ty], c: &mut [$ty], m: usize, k: usize, n: usize) {
+            use rayon::prelude::*;
+
+            const MC: usize = 256;
+            const KC: usize = 256;
+            const NC: usize = 2048;
+            const MR: usize = $mr;
+            const NR: usize = $nr;
+
+            for jc in (0..n).step_by(NC) {
+                let nc = (jc + NC).min(n) - jc;
+                for pc in (0..k).step_by(KC) {
+                    let kc = (pc + KC).min(k) - pc;
+                    let packed_b_size = kc * nc.div_ceil(NR) * NR;
+                    let mut packed_b = vec![$zero; packed_b_size];
+                    $pack_b(b, &mut packed_b, n, pc, jc, kc, nc);
+
+                    let c_addr = c.as_mut_ptr() as usize;
+                    let c_len = c.len();
+                    let ic_indices: Vec<usize> = (0..m).step_by(MC).collect();
+                    ic_indices.into_par_iter().for_each(|ic| {
+                        let c_ptr = c_addr as *mut $ty;
+                        let mc = (ic + MC).min(m) - ic;
+                        let packed_a_size = mc.div_ceil(MR) * MR * kc;
+                        let mut packed_a = vec![$zero; packed_a_size];
+                        $pack_a(a, &mut packed_a, k, ic, pc, mc, kc);
+                        for ir in (0..mc).step_by(MR) {
+                            for jr in (0..nc).step_by(NR) {
+                                $kernel(
+                                    &packed_a,
+                                    &packed_b,
+                                    core::slice::from_raw_parts_mut(c_ptr, c_len),
+                                    ic + ir,
+                                    jc + jr,
+                                    ir,
+                                    jr,
+                                    kc,
+                                    n,
+                                    m,
+                                    n,
+                                );
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    };
+}
+
+#[cfg(not(feature = "rayon"))]
+macro_rules! impl_gemm_seq {
     ($fn_name:ident, $ty:ty, $pack_a:ident, $pack_b:ident, $kernel:ident, $mr:expr, $nr:expr, $zero:expr) => {
         pub unsafe fn $fn_name(a: &[$ty], b: &[$ty], c: &mut [$ty], m: usize, k: usize, n: usize) {
             const MC: usize = 256;
@@ -556,48 +611,14 @@ macro_rules! impl_gemm {
                     let mut packed_b = vec![$zero; packed_b_size];
                     $pack_b(b, &mut packed_b, n, pc, jc, kc, nc);
 
-                    #[cfg(feature = "rayon")]
-                    {
-                        let c_addr = c.as_mut_ptr() as usize;
-                        let c_len = c.len();
-                        let ic_indices: Vec<usize> = (0..m).step_by(MC).collect();
-                        ic_indices.into_par_iter().for_each(|ic| {
-                            let c_ptr = c_addr as *mut $ty;
-                            let mc = (ic + MC).min(m) - ic;
-                            let packed_a_size = mc.div_ceil(MR) * MR * kc;
-                            let mut packed_a = vec![$zero; packed_a_size];
-                            $pack_a(a, &mut packed_a, k, ic, pc, mc, kc);
-                            for ir in (0..mc).step_by(MR) {
-                                for jr in (0..nc).step_by(NR) {
-                                    $kernel(
-                                        &packed_a,
-                                        &packed_b,
-                                        core::slice::from_raw_parts_mut(c_ptr, c_len),
-                                        ic + ir,
-                                        jc + jr,
-                                        ir,
-                                        jr,
-                                        kc,
-                                        n,
-                                        m,
-                                        n,
-                                    );
-                                }
-                            }
-                        });
-                    }
-
-                    #[cfg(not(feature = "rayon"))]
-                    {
-                        for ic in (0..m).step_by(MC) {
-                            let mc = (ic + MC).min(m) - ic;
-                            let packed_a_size = mc.div_ceil(MR) * MR * kc;
-                            let mut packed_a = vec![$zero; packed_a_size];
-                            $pack_a(a, &mut packed_a, k, ic, pc, mc, kc);
-                            for ir in (0..mc).step_by(MR) {
-                                for jr in (0..nc).step_by(NR) {
-                                    $kernel(&packed_a, &packed_b, c, ic + ir, jc + jr, ir, jr, kc, n, m, n);
-                                }
+                    for ic in (0..m).step_by(MC) {
+                        let mc = (ic + MC).min(m) - ic;
+                        let packed_a_size = mc.div_ceil(MR) * MR * kc;
+                        let mut packed_a = vec![$zero; packed_a_size];
+                        $pack_a(a, &mut packed_a, k, ic, pc, mc, kc);
+                        for ir in (0..mc).step_by(MR) {
+                            for jr in (0..nc).step_by(NR) {
+                                $kernel(&packed_a, &packed_b, c, ic + ir, jc + jr, ir, jr, kc, n, m, n);
                             }
                         }
                     }
@@ -607,12 +628,42 @@ macro_rules! impl_gemm {
     };
 }
 
-// Generate GEMM functions (f32, f64, u8, u16, u32, i8, i16, i32)
-impl_gemm!(f32, f32, pack_a_f32, pack_b_f32, kernel_6x4_f32_packed, 6, 4, 0.0f32);
-impl_gemm!(f64, f64, pack_a_f64, pack_b_f64, kernel_4x2_f64_packed, 4, 2, 0.0f64);
-impl_gemm!(u8, u8, pack_a_u8, pack_b_u8, kernel_8x16_u8_packed, 8, 16, 0u8);
-impl_gemm!(u16, u16, pack_a_u16, pack_b_u16, kernel_8x8_u16_packed, 8, 8, 0u16);
-impl_gemm!(u32, u32, pack_a_u32, pack_b_u32, kernel_6x4_u32_packed, 6, 4, 0u32);
-impl_gemm!(i8, i8, pack_a_i8, pack_b_i8, kernel_8x16_i8_packed, 8, 16, 0i8);
-impl_gemm!(i16, i16, pack_a_i16, pack_b_i16, kernel_8x8_i16_packed, 8, 8, 0i16);
-impl_gemm!(i32, i32, pack_a_i32, pack_b_i32, kernel_6x4_i32_packed, 6, 4, 0i32);
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(f32, f32, pack_a_f32, pack_b_f32, kernel_6x4_f32_packed, 6, 4, 0.0f32);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(f32, f32, pack_a_f32, pack_b_f32, kernel_6x4_f32_packed, 6, 4, 0.0f32);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(f64, f64, pack_a_f64, pack_b_f64, kernel_4x2_f64_packed, 4, 2, 0.0f64);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(f64, f64, pack_a_f64, pack_b_f64, kernel_4x2_f64_packed, 4, 2, 0.0f64);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(u8, u8, pack_a_u8, pack_b_u8, kernel_8x16_u8_packed, 8, 16, 0u8);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(u8, u8, pack_a_u8, pack_b_u8, kernel_8x16_u8_packed, 8, 16, 0u8);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(u16, u16, pack_a_u16, pack_b_u16, kernel_8x8_u16_packed, 8, 8, 0u16);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(u16, u16, pack_a_u16, pack_b_u16, kernel_8x8_u16_packed, 8, 8, 0u16);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(u32, u32, pack_a_u32, pack_b_u32, kernel_6x4_u32_packed, 6, 4, 0u32);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(u32, u32, pack_a_u32, pack_b_u32, kernel_6x4_u32_packed, 6, 4, 0u32);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(i8, i8, pack_a_i8, pack_b_i8, kernel_8x16_i8_packed, 8, 16, 0i8);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(i8, i8, pack_a_i8, pack_b_i8, kernel_8x16_i8_packed, 8, 16, 0i8);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(i16, i16, pack_a_i16, pack_b_i16, kernel_8x8_i16_packed, 8, 8, 0i16);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(i16, i16, pack_a_i16, pack_b_i16, kernel_8x8_i16_packed, 8, 8, 0i16);
+
+#[cfg(feature = "rayon")]
+impl_gemm_rayon!(i32, i32, pack_a_i32, pack_b_i32, kernel_6x4_i32_packed, 6, 4, 0i32);
+#[cfg(not(feature = "rayon"))]
+impl_gemm_seq!(i32, i32, pack_a_i32, pack_b_i32, kernel_6x4_i32_packed, 6, 4, 0i32);
