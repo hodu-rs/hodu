@@ -5,6 +5,180 @@ use crate::{
     types::{dtype::DType, layout::Layout},
 };
 
+/// Common dtype dispatch macro for unary operations.
+/// Reduces code duplication across unary_map and unary_logical_map.
+macro_rules! dispatch_unary_dtype {
+    ($op:ident, $dtype:expr, $device:expr, $command_buffer:expr, $kernels:expr, $shape:expr, $input:expr, $strides:expr, $offset:expr, $output:expr, $kernel_name:expr) => {
+        match $dtype {
+            DType::BF16 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::BF16,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            DType::F16 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::F16,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            DType::F32 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::F32,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            #[cfg(feature = "u8")]
+            DType::U8 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::U8,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            DType::U16 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::U16,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            #[cfg(feature = "u32")]
+            DType::U32 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::U32,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            #[cfg(feature = "u64")]
+            DType::U64 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::U64,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            DType::I8 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::I8,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            #[cfg(feature = "i16")]
+            DType::I16 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::I16,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            DType::I32 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::I32,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            #[cfg(feature = "i64")]
+            DType::I64 => {
+                hodu_metal_kernels::kernels::call_unary(
+                    $device,
+                    $command_buffer,
+                    $kernels,
+                    hodu_metal_kernels::kernels::$op::I64,
+                    $shape,
+                    $input,
+                    $strides,
+                    $offset,
+                    $output,
+                )
+                .map_err(|e| HoduError::Metal(e.into()))?;
+            },
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype: $dtype,
+                    op: format!("unary operation '{}'", $kernel_name),
+                });
+            },
+        }
+    };
+}
+
 pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> HoduResult<MetalStorage> {
     use hodu_metal_kernels::utils::BufferOffset;
 
@@ -23,201 +197,293 @@ pub fn unary_map(storage: &MetalStorage, layout: &Layout, kernel_name: &str) -> 
         offset_in_bytes: offset * dtype.get_size_in_bytes(),
     };
 
-    macro_rules! dispatch_dtype {
-        ($op:ident) => {
-            match dtype {
-                DType::BF16 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::BF16,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                DType::F16 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::F16,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                DType::F32 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::F32,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                #[cfg(feature = "u8")]
-                DType::U8 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::U8,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                DType::U16 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::U16,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                #[cfg(feature = "u32")]
-                DType::U32 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::U32,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                #[cfg(feature = "u64")]
-                DType::U64 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::U64,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                DType::I8 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::I8,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                #[cfg(feature = "i16")]
-                DType::I16 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::I16,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                DType::I32 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::I32,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                #[cfg(feature = "i64")]
-                DType::I64 => {
-                    hodu_metal_kernels::kernels::call_unary(
-                        device.device(),
-                        &command_buffer,
-                        device.kernels(),
-                        hodu_metal_kernels::kernels::$op::I64,
-                        shape,
-                        input,
-                        strides,
-                        offset,
-                        &output,
-                    )
-                    .map_err(|e| HoduError::Metal(e.into()))?;
-                },
-                _ => {
-                    return Err(HoduError::UnsupportedDType {
-                        dtype,
-                        op: format!("unary operation '{}'", kernel_name),
-                    });
-                },
-            }
-        };
-    }
-
     match kernel_name {
-        "neg" => dispatch_dtype!(neg),
-        "abs" => dispatch_dtype!(abs),
-        "sign" => dispatch_dtype!(sign),
-        "square" => dispatch_dtype!(square),
-        "sqrt" => dispatch_dtype!(sqrt),
-        "recip" => dispatch_dtype!(recip),
-        "relu" => dispatch_dtype!(relu),
-        "sigmoid" => dispatch_dtype!(sigmoid),
-        "tanh" => dispatch_dtype!(tanh),
-        "gelu" => dispatch_dtype!(gelu),
-        "softplus" => dispatch_dtype!(softplus),
-        "silu" => dispatch_dtype!(silu),
-        "mish" => dispatch_dtype!(mish),
-        "sin" => dispatch_dtype!(sin),
-        "cos" => dispatch_dtype!(cos),
-        "tan" => dispatch_dtype!(tan),
-        "exp" => dispatch_dtype!(exp),
-        "exp2" => dispatch_dtype!(exp2),
-        "exp10" => dispatch_dtype!(exp10),
-        "ln" => dispatch_dtype!(ln),
-        "log2" => dispatch_dtype!(log2),
-        "log10" => dispatch_dtype!(log10),
+        "neg" => dispatch_unary_dtype!(
+            neg,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "abs" => dispatch_unary_dtype!(
+            abs,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "sign" => dispatch_unary_dtype!(
+            sign,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "square" => dispatch_unary_dtype!(
+            square,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "sqrt" => dispatch_unary_dtype!(
+            sqrt,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "recip" => dispatch_unary_dtype!(
+            recip,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "relu" => dispatch_unary_dtype!(
+            relu,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "sigmoid" => dispatch_unary_dtype!(
+            sigmoid,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "tanh" => dispatch_unary_dtype!(
+            tanh,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "gelu" => dispatch_unary_dtype!(
+            gelu,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "softplus" => dispatch_unary_dtype!(
+            softplus,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "silu" => dispatch_unary_dtype!(
+            silu,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "mish" => dispatch_unary_dtype!(
+            mish,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "sin" => dispatch_unary_dtype!(
+            sin,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "cos" => dispatch_unary_dtype!(
+            cos,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "tan" => dispatch_unary_dtype!(
+            tan,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "exp" => dispatch_unary_dtype!(
+            exp,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "exp2" => dispatch_unary_dtype!(
+            exp2,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "exp10" => dispatch_unary_dtype!(
+            exp10,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "ln" => dispatch_unary_dtype!(
+            ln,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "log2" => dispatch_unary_dtype!(
+            log2,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
+        "log10" => dispatch_unary_dtype!(
+            log10,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
         _ => {
             return Err(HoduError::UnsupportedDType {
                 dtype,
@@ -249,153 +515,20 @@ pub fn unary_logical_map(storage: &MetalStorage, layout: &Layout, kernel_name: &
         offset_in_bytes: offset * dtype.get_size_in_bytes(),
     };
 
-    // Only logical_not is supported
     match kernel_name {
-        "logical_not" => match dtype {
-            DType::BF16 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::BF16,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            DType::F16 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::F16,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            DType::F32 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::F32,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            #[cfg(feature = "u8")]
-            DType::U8 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::U8,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            DType::U16 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::U16,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            #[cfg(feature = "u32")]
-            DType::U32 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::U32,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            #[cfg(feature = "u64")]
-            DType::U64 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::U64,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            DType::I8 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::I8,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            #[cfg(feature = "i16")]
-            DType::I16 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::I16,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            DType::I32 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::I32,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            #[cfg(feature = "i64")]
-            DType::I64 => hodu_metal_kernels::kernels::call_unary(
-                device.device(),
-                &command_buffer,
-                device.kernels(),
-                hodu_metal_kernels::kernels::logical_not::I64,
-                shape,
-                input,
-                strides,
-                offset,
-                &output,
-            )
-            .map_err(|e| HoduError::Metal(e.into()))?,
-            _ => {
-                return Err(HoduError::UnsupportedDType {
-                    dtype,
-                    op: "logical_not".to_string(),
-                })
-            },
-        },
+        "logical_not" => dispatch_unary_dtype!(
+            logical_not,
+            dtype,
+            device.device(),
+            &command_buffer,
+            device.kernels(),
+            shape,
+            input,
+            strides,
+            offset,
+            &output,
+            kernel_name
+        ),
         _ => {
             return Err(HoduError::UnsupportedDType {
                 dtype,

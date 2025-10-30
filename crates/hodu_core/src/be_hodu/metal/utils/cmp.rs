@@ -12,8 +12,6 @@ pub fn cmp_map(
     rhs_layout: &Layout,
     kernel_name: &str,
 ) -> HoduResult<MetalStorage> {
-    // cmp operations return bool, so we need special handling
-    // For now, call binary_map which handles eq, ne, lt, le, gt, ge with bool output
     use hodu_metal_kernels::utils::BufferOffset;
 
     let dtype = lhs_storage.get_dtype();
@@ -59,197 +57,171 @@ pub fn cmp_map(
         offset_in_bytes: rhs_offset * dtype.get_size_in_bytes(),
     };
 
-    // The binary kernels for cmp already output bool
     macro_rules! dispatch_cmp {
-        ($op:ident) => {
-            match dtype {
-                DType::BF16 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::BF16,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                DType::F16 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::F16,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                DType::F32 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::F32,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                #[cfg(feature = "u8")]
-                DType::U8 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::U8,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                DType::U16 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::U16,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                #[cfg(feature = "u32")]
-                DType::U32 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::U32,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                #[cfg(feature = "u64")]
-                DType::U64 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::U64,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                DType::I8 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::I8,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                #[cfg(feature = "i16")]
-                DType::I16 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::I16,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                DType::I32 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::I32,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                #[cfg(feature = "i64")]
-                DType::I64 => hodu_metal_kernels::kernels::call_binary(
-                    device.device(),
-                    &command_buffer,
-                    device.kernels(),
-                    hodu_metal_kernels::kernels::$op::I64,
-                    &output_shape,
-                    lhs,
-                    lhs_strides,
-                    lhs_offset,
-                    rhs,
-                    rhs_strides,
-                    rhs_offset,
-                    &output,
-                )
-                .map_err(|e| HoduError::Metal(e.into()))?,
-                _ => {
-                    return Err(HoduError::UnsupportedDType {
-                        dtype,
-                        op: format!("comparison '{}'", kernel_name),
-                    })
-                },
-            }
-        };
+        ($op:ident, $dtype:ident) => {{
+            hodu_metal_kernels::kernels::call_binary(
+                device.device(),
+                &command_buffer,
+                device.kernels(),
+                hodu_metal_kernels::kernels::$op::$dtype,
+                &output_shape,
+                lhs,
+                lhs_strides,
+                lhs_offset,
+                rhs,
+                rhs_strides,
+                rhs_offset,
+                &output,
+            )
+            .map_err(|e| HoduError::Metal(e.into()))?
+        }};
     }
 
     match kernel_name {
-        "eq" => dispatch_cmp!(eq),
-        "ne" => dispatch_cmp!(ne),
-        "lt" => dispatch_cmp!(lt),
-        "le" => dispatch_cmp!(le),
-        "gt" => dispatch_cmp!(gt),
-        "ge" => dispatch_cmp!(ge),
+        "eq" => match dtype {
+            DType::BF16 => dispatch_cmp!(eq, BF16),
+            DType::F16 => dispatch_cmp!(eq, F16),
+            DType::F32 => dispatch_cmp!(eq, F32),
+            #[cfg(feature = "u8")]
+            DType::U8 => dispatch_cmp!(eq, U8),
+            DType::U16 => dispatch_cmp!(eq, U16),
+            #[cfg(feature = "u32")]
+            DType::U32 => dispatch_cmp!(eq, U32),
+            #[cfg(feature = "u64")]
+            DType::U64 => dispatch_cmp!(eq, U64),
+            DType::I8 => dispatch_cmp!(eq, I8),
+            #[cfg(feature = "i16")]
+            DType::I16 => dispatch_cmp!(eq, I16),
+            DType::I32 => dispatch_cmp!(eq, I32),
+            #[cfg(feature = "i64")]
+            DType::I64 => dispatch_cmp!(eq, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "eq".to_string(),
+                })
+            },
+        },
+        "ne" => match dtype {
+            DType::BF16 => dispatch_cmp!(ne, BF16),
+            DType::F16 => dispatch_cmp!(ne, F16),
+            DType::F32 => dispatch_cmp!(ne, F32),
+            #[cfg(feature = "u8")]
+            DType::U8 => dispatch_cmp!(ne, U8),
+            DType::U16 => dispatch_cmp!(ne, U16),
+            #[cfg(feature = "u32")]
+            DType::U32 => dispatch_cmp!(ne, U32),
+            #[cfg(feature = "u64")]
+            DType::U64 => dispatch_cmp!(ne, U64),
+            DType::I8 => dispatch_cmp!(ne, I8),
+            #[cfg(feature = "i16")]
+            DType::I16 => dispatch_cmp!(ne, I16),
+            DType::I32 => dispatch_cmp!(ne, I32),
+            #[cfg(feature = "i64")]
+            DType::I64 => dispatch_cmp!(ne, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "ne".to_string(),
+                })
+            },
+        },
+        "lt" => match dtype {
+            DType::BF16 => dispatch_cmp!(lt, BF16),
+            DType::F16 => dispatch_cmp!(lt, F16),
+            DType::F32 => dispatch_cmp!(lt, F32),
+            #[cfg(feature = "u8")]
+            DType::U8 => dispatch_cmp!(lt, U8),
+            DType::U16 => dispatch_cmp!(lt, U16),
+            #[cfg(feature = "u32")]
+            DType::U32 => dispatch_cmp!(lt, U32),
+            #[cfg(feature = "u64")]
+            DType::U64 => dispatch_cmp!(lt, U64),
+            DType::I8 => dispatch_cmp!(lt, I8),
+            #[cfg(feature = "i16")]
+            DType::I16 => dispatch_cmp!(lt, I16),
+            DType::I32 => dispatch_cmp!(lt, I32),
+            #[cfg(feature = "i64")]
+            DType::I64 => dispatch_cmp!(lt, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "lt".to_string(),
+                })
+            },
+        },
+        "le" => match dtype {
+            DType::BF16 => dispatch_cmp!(le, BF16),
+            DType::F16 => dispatch_cmp!(le, F16),
+            DType::F32 => dispatch_cmp!(le, F32),
+            #[cfg(feature = "u8")]
+            DType::U8 => dispatch_cmp!(le, U8),
+            DType::U16 => dispatch_cmp!(le, U16),
+            #[cfg(feature = "u32")]
+            DType::U32 => dispatch_cmp!(le, U32),
+            #[cfg(feature = "u64")]
+            DType::U64 => dispatch_cmp!(le, U64),
+            DType::I8 => dispatch_cmp!(le, I8),
+            #[cfg(feature = "i16")]
+            DType::I16 => dispatch_cmp!(le, I16),
+            DType::I32 => dispatch_cmp!(le, I32),
+            #[cfg(feature = "i64")]
+            DType::I64 => dispatch_cmp!(le, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "le".to_string(),
+                })
+            },
+        },
+        "gt" => match dtype {
+            DType::BF16 => dispatch_cmp!(gt, BF16),
+            DType::F16 => dispatch_cmp!(gt, F16),
+            DType::F32 => dispatch_cmp!(gt, F32),
+            #[cfg(feature = "u8")]
+            DType::U8 => dispatch_cmp!(gt, U8),
+            DType::U16 => dispatch_cmp!(gt, U16),
+            #[cfg(feature = "u32")]
+            DType::U32 => dispatch_cmp!(gt, U32),
+            #[cfg(feature = "u64")]
+            DType::U64 => dispatch_cmp!(gt, U64),
+            DType::I8 => dispatch_cmp!(gt, I8),
+            #[cfg(feature = "i16")]
+            DType::I16 => dispatch_cmp!(gt, I16),
+            DType::I32 => dispatch_cmp!(gt, I32),
+            #[cfg(feature = "i64")]
+            DType::I64 => dispatch_cmp!(gt, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "gt".to_string(),
+                })
+            },
+        },
+        "ge" => match dtype {
+            DType::BF16 => dispatch_cmp!(ge, BF16),
+            DType::F16 => dispatch_cmp!(ge, F16),
+            DType::F32 => dispatch_cmp!(ge, F32),
+            #[cfg(feature = "u8")]
+            DType::U8 => dispatch_cmp!(ge, U8),
+            DType::U16 => dispatch_cmp!(ge, U16),
+            #[cfg(feature = "u32")]
+            DType::U32 => dispatch_cmp!(ge, U32),
+            #[cfg(feature = "u64")]
+            DType::U64 => dispatch_cmp!(ge, U64),
+            DType::I8 => dispatch_cmp!(ge, I8),
+            #[cfg(feature = "i16")]
+            DType::I16 => dispatch_cmp!(ge, I16),
+            DType::I32 => dispatch_cmp!(ge, I32),
+            #[cfg(feature = "i64")]
+            DType::I64 => dispatch_cmp!(ge, I64),
+            _ => {
+                return Err(HoduError::UnsupportedDType {
+                    dtype,
+                    op: "ge".to_string(),
+                })
+            },
+        },
         _ => {
             return Err(HoduError::UnsupportedDType {
                 dtype,
