@@ -16,6 +16,9 @@ High-performance CPU kernels for tensor operations, supporting a wide range of d
 - **u8, u16, u32, u64**: Unsigned integers (8, 16, 32, 64 bits)
 - **i8, i16, i32, i64**: Signed integers (8, 16, 32, 64 bits)
 
+### Boolean Type
+- **bool**: Boolean type (1 byte)
+
 ## Supported Operations
 
 ### Unary Operations
@@ -32,6 +35,51 @@ High-performance CPU kernels for tensor operations, supporting a wide range of d
 - **Min/Max**: maximum, minimum
 - **Logical**: logical_and, logical_or, logical_xor
 - **Comparison**: eq, ne, lt, le, gt, ge
+
+### Reduce Operations
+- **Reduction Functions**: sum, max, min, mean
+- **Features**:
+  - Reduce along arbitrary dimensions
+  - Keep dimension option
+  - Strided tensor support
+
+### Matrix Operations
+- **matmul**: Batched matrix multiplication with broadcasting
+- **Features**:
+  - Batch dimension support
+  - Broadcasting for batch dimensions
+  - Strided input support
+
+### Convolution Operations
+- **conv1d, conv2d, conv3d**: 1D, 2D, and 3D convolution
+- **Features**:
+  - Padding support
+  - Stride support
+  - Dilation support
+  - Groups support
+
+### Windowing Operations
+- **reduce_window_max**: Sliding window maximum (pooling)
+- **reduce_window_min**: Sliding window minimum
+- **reduce_window_sum**: Sliding window sum
+- **reduce_window_mean**: Sliding window mean (average pooling)
+- **Features**:
+  - Arbitrary window shapes
+  - Configurable strides
+  - Padding support
+
+### Indexing Operations
+- **index_select**: Select elements along a dimension
+- **index_put**: Put values at specified indices
+- **gather**: Gather elements from tensor
+- **scatter**: Scatter values to indices
+- **scatter_add**: Scatter-add values to indices
+- **scatter_max**: Scatter-max values to indices
+- **scatter_min**: Scatter-min values to indices
+
+### Concat/Split Operations
+- **concat**: Concatenate tensors along a dimension
+- **split**: Split tensor into multiple tensors
 
 ## Architecture
 
@@ -51,14 +99,19 @@ High-performance CPU kernels for tensor operations, supporting a wide range of d
 
 ```
 kernels/
-├── constants.h      # Math and type constants
-├── types.h          # Data type definitions and conversions
-├── math_utils.h     # Math helper functions
-├── utils.h          # Tensor utilities (striding, contiguity checks)
-├── ops_unary.h      # Unary operation declarations
-├── ops_unary.c      # Unary operation implementations
-├── ops_binary.h     # Binary operation declarations
-└── ops_binary.c     # Binary operation implementations
+├── constants.h           # Math and type constants
+├── types.h              # Data type definitions and conversions
+├── math_utils.h         # Math helper functions
+├── utils.h              # Tensor utilities (striding, contiguity checks)
+├── atomic.h             # Atomic operations for thread safety
+├── ops_unary.h/c        # Unary operations
+├── ops_binary.h/c       # Binary operations
+├── ops_reduce.h/c       # Reduction operations
+├── ops_matrix.h/c       # Matrix operations (matmul)
+├── ops_conv.h/c         # Convolution operations
+├── ops_windowing.h/c    # Windowing operations (pooling)
+├── ops_indexing.h/c     # Indexing operations
+└── ops_concat_split.h/c # Concat and split operations
 ```
 
 ## Usage Example
@@ -66,6 +119,7 @@ kernels/
 ```c
 #include "ops_unary.h"
 #include "ops_binary.h"
+#include "ops_matrix.h"
 
 // Unary operation: relu on f32 array
 float input[100];
@@ -75,6 +129,11 @@ unary_relu_f32(input, output, 100, 0, NULL);
 // Binary operation: add two f32 arrays
 float lhs[100], rhs[100], result[100];
 binary_add_f32(lhs, rhs, result, 100, 0, NULL);
+
+// Matrix multiplication
+size_t metadata[] = {/* lhs_ndim, rhs_ndim, batch_ndim, shapes, strides, offsets, M, K, N */};
+float A[100], B[100], C[100];
+matmul_f32(A, B, C, 100, 2, metadata);
 ```
 
 ## Building
@@ -85,17 +144,26 @@ This crate uses Rust's build system to compile the C kernels. The C code is comp
 cargo build --release
 ```
 
-## Implementation Status
+### Testing
 
-- ✅ Core type system with f8, bf16, f16 support
-- ✅ Unary operations for float types (f32, f64)
-- ✅ Binary operations for float types (f32, f64)
-- ✅ Basic integer operations (u8, i32 examples)
-- 🚧 Complete coverage for all integer types
-- 🚧 Reduce operations
-- 🚧 Matrix operations (matmul, dot)
-- 🚧 Convolution operations
-- 🚧 Memory/indexing operations
+Run all tests including unit tests for each operation category:
+
+```bash
+cargo test
+```
+
+Run specific test suites:
+
+```bash
+cargo test --test unary
+cargo test --test binary
+cargo test --test reduce
+cargo test --test matrix
+cargo test --test conv
+cargo test --test windowing
+cargo test --test indexing
+cargo test --test concat_split
+```
 
 ## Notes
 
@@ -103,3 +171,4 @@ cargo build --release
 - All exotic float types (f8, bf16, f16) are converted to/from f32 for computation
 - Integer overflow behavior follows C semantics
 - Division by zero returns 0 (not NaN) for integer types
+- Windowing operations use padding values based on the reduction type (e.g., -∞ for max, +∞ for min, 0 for sum)

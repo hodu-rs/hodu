@@ -8,8 +8,8 @@
 **Optional (for specific features):**
 - CUDA Toolkit (for `cuda` feature)
 - Xcode Command Line Tools (for `metal` feature on macOS)
-- LLVM/Clang (for `xla` feature - requires 8GB+ RAM, 20GB+ disk)
-- clang-format (for Metal shader formatting)
+- LLVM/Clang (for C/C++ checking && for `xla` feature - requires 8GB+ RAM, 20GB+ disk)
+- clang-format (for C/C++/Metal shader formatting)
 - ruff (for Python formatting)
 
 ## Getting Started
