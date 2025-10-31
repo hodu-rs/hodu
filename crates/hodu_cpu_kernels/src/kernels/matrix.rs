@@ -1,5 +1,5 @@
-use crate::kernels::macros::ops;
-use std::ffi::c_void;
+use crate::{error::Result, kernels::macros::ops};
+use core::ffi::c_void;
 
 // Define all matrix operations using the macro
 ops!(matmul, dot);
@@ -11,13 +11,15 @@ pub fn call_matmul(
     rhs: *const c_void,
     output: *mut c_void,
     metadata: &[usize],
-) {
+) -> Result<()> {
     let num_els = metadata[0]; // First element should be num_els
     let num_dims = 0; // Not used for matrix ops, but kept for consistency
 
     unsafe {
         dispatch_matmul(kernel_name.0, lhs, rhs, output, num_els, num_dims, &metadata[1..]);
     }
+
+    Ok(())
 }
 
 /// Call dot operation by kernel name - tiled 2D matrix multiplication
@@ -27,7 +29,7 @@ pub fn call_dot(
     rhs: *const c_void,
     output: *mut c_void,
     metadata: &[usize],
-) {
+) -> Result<()> {
     let m = metadata[0];
     let n = metadata[2];
     let num_els = m * n;
@@ -36,6 +38,8 @@ pub fn call_dot(
     unsafe {
         dispatch_dot(kernel_name.0, lhs, rhs, output, num_els, num_dims, metadata.as_ptr());
     }
+
+    Ok(())
 }
 
 // Macro to automatically generate extern declarations and dispatch for matrix operations

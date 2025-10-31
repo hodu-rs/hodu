@@ -20,7 +20,8 @@ fn run_binary(lhs: &[f32], rhs: &[f32], kernel: Kernel) -> Vec<f32> {
         &strides,
         0,
         0,
-    );
+    )
+    .unwrap();
     output
 }
 
@@ -39,7 +40,8 @@ fn run_binary_to_bool(lhs: &[f32], rhs: &[f32], kernel: Kernel) -> Vec<u8> {
         &strides,
         0,
         0,
-    );
+    )
+    .unwrap();
     output
 }
 

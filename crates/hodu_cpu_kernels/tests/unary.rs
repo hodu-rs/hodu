@@ -16,7 +16,8 @@ fn run_unary(input: &[f32], kernel: Kernel) -> Vec<f32> {
         &shape,
         &strides,
         0,
-    );
+    )
+    .unwrap();
     output
 }
 
@@ -31,7 +32,8 @@ fn run_unary_to_bool(input: &[f32], kernel: Kernel) -> Vec<u8> {
         &shape,
         &strides,
         0,
-    );
+    )
+    .unwrap();
     output
 }
 
@@ -47,7 +49,8 @@ fn run_unary_scalar(input: &[f32], kernel: Kernel, scalar: f32) -> Vec<f32> {
         &strides,
         0,
         scalar,
-    );
+    )
+    .unwrap();
     output
 }
 
@@ -63,7 +66,8 @@ fn run_unary_scalar_to_bool(input: &[f32], kernel: Kernel, scalar: f32) -> Vec<u
         &strides,
         0,
         scalar,
-    );
+    )
+    .unwrap();
     output
 }
 

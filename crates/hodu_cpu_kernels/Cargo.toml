@@ -9,6 +9,7 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
+std = []
 
 [build-dependencies]
 cc = "1.0"

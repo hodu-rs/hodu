@@ -1,5 +1,5 @@
-use crate::kernels::macros::ops;
-use std::ffi::c_void;
+use crate::{error::Result, kernels::macros::ops};
+use core::ffi::c_void;
 
 // Define all reduce operations using the macro
 ops!(
@@ -23,7 +23,7 @@ pub fn call_reduce(
     input: *const c_void,
     output: *mut c_void,
     metadata: &[usize],
-) {
+) -> Result<()> {
     // metadata layout: [shape_len, shape..., strides..., offset, output_shape_len, output_shape...,
     //                   num_reduce_dims, reduce_dims..., keep_dim, reduce_size]
     let shape_len = metadata[0];
@@ -55,6 +55,8 @@ pub fn call_reduce(
             reduce_size,
         );
     }
+
+    Ok(())
 }
 
 // Macro to declare extern C functions and dispatch for reduce operations

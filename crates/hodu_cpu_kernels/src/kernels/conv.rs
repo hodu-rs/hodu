@@ -1,5 +1,8 @@
-use crate::kernels::macros::{ops, Kernel};
-use std::ffi::c_void;
+use crate::{
+    error::Result,
+    kernels::macros::{ops, Kernel},
+};
+use core::ffi::c_void;
 
 ops!(
     conv1d,
@@ -541,7 +544,7 @@ pub fn call_conv(
     output: *mut c_void,
     num_els: usize,
     metadata: &[usize],
-) {
+) -> Result<()> {
     unsafe {
         match kernel {
             conv1d::F8E4M3 => conv1d_f8e4m3(input, weight, output, num_els, metadata.as_ptr()),
@@ -583,6 +586,8 @@ pub fn call_conv(
             _ => panic!("Unsupported conv kernel: {:?}", kernel),
         }
     }
+
+    Ok(())
 }
 
 pub fn call_conv_grad_weight(
@@ -592,7 +597,7 @@ pub fn call_conv_grad_weight(
     grad_weight: *mut c_void,
     num_els: usize,
     metadata: &[usize],
-) {
+) -> Result<()> {
     unsafe {
         match kernel {
             conv1d_grad_weight::F8E4M3 => {
@@ -706,4 +711,6 @@ pub fn call_conv_grad_weight(
             _ => panic!("Unsupported conv grad_weight kernel: {:?}", kernel),
         }
     }
+
+    Ok(())
 }

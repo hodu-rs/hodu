@@ -1,5 +1,7 @@
-use crate::kernels::macros::ops;
-use std::ffi::c_void;
+use crate::{error::Result, kernels::macros::ops};
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+use core::ffi::c_void;
 
 // Define all unary operations using the macro
 ops!(
@@ -49,7 +51,7 @@ pub fn call_unary(
     shape: &[usize],
     strides: &[usize],
     offset: usize,
-) {
+) -> Result<()> {
     let num_els: usize = shape.iter().product();
     let num_dims = shape.len();
 
@@ -61,6 +63,8 @@ pub fn call_unary(
     unsafe {
         dispatch_unary(kernel_name.0, input, output, num_els, num_dims, metadata.as_ptr());
     }
+
+    Ok(())
 }
 
 /// Call unary operation with scalar by kernel name
@@ -72,7 +76,7 @@ pub fn call_unary_scalar<T>(
     strides: &[usize],
     offset: usize,
     scalar_val: T,
-) {
+) -> Result<()> {
     let num_els: usize = shape.iter().product();
     let num_dims = shape.len();
 
@@ -92,6 +96,8 @@ pub fn call_unary_scalar<T>(
             &scalar_val as *const T as *const c_void,
         );
     }
+
+    Ok(())
 }
 
 // Macro to automatically generate extern declarations and dispatch for all operations and types

@@ -52,7 +52,8 @@ fn test_matmul_f32_2d() {
         rhs.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // Expected: [[1*7+2*9+3*11, 1*8+2*10+3*12], [4*7+5*9+6*11, 4*8+5*10+6*12]]
     //         = [[58, 64], [139, 154]]
@@ -106,7 +107,8 @@ fn test_matmul_f32_batch() {
         rhs.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // Expected:
     // Batch 0: [[1*5+2*7, 1*6+2*8], [3*5+4*7, 3*6+4*8]] = [[19, 22], [43, 50]]
@@ -136,7 +138,8 @@ fn test_dot_f32_simple() {
         rhs.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // Expected: [[1*7+2*9+3*11, 1*8+2*10+3*12], [4*7+5*9+6*11, 4*8+5*10+6*12]]
     //         = [[58, 64], [139, 154]]

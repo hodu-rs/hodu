@@ -42,7 +42,8 @@ fn test_conv1d_f32() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(output, 4), vec![-2.0, -2.0, -2.0]);
 }
@@ -84,7 +85,8 @@ fn test_conv1d_f32_stride() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(output, 4), vec![4.0, 12.0, 20.0, 20.0]);
 }
@@ -138,7 +140,8 @@ fn test_conv2d_f32() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_height * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(output, 4), vec![6.0, 8.0, 12.0, 14.0]);
 }
@@ -192,7 +195,8 @@ fn test_conv2d_f32_with_padding() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_height * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(output, 4), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
 }
@@ -261,7 +265,8 @@ fn test_conv3d_f32() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_depth * out_height * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
         approx(output, 4),
@@ -306,7 +311,8 @@ fn test_conv_transpose1d_f32() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(output, 4), vec![1.0, 2.0, 2.0, 4.0, 3.0, 6.0]);
 }
@@ -360,7 +366,8 @@ fn test_conv_transpose2d_f32() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_height * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
         approx(output, 4),
@@ -429,7 +436,8 @@ fn test_conv_transpose3d_f32() {
         output.as_mut_ptr() as *mut std::ffi::c_void,
         batch * out_channels * out_depth * out_height * out_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output.iter().sum::<f32>(), 288.0);
 }
@@ -471,7 +479,8 @@ fn test_conv1d_grad_weight_f32() {
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
         out_channels * in_channels * kernel_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(grad_weight, 4), vec![6.0, 9.0, 12.0]);
 }
@@ -525,7 +534,8 @@ fn test_conv2d_grad_weight_f32() {
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
         out_channels * in_channels * kernel_height * kernel_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(grad_weight, 4), vec![12.0, 16.0, 24.0, 28.0]);
 }
@@ -591,7 +601,8 @@ fn test_conv3d_grad_weight_f32() {
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
         out_channels * in_channels * kernel_depth * kernel_height * kernel_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(grad_weight, 4), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 }
@@ -633,7 +644,8 @@ fn test_conv_transpose1d_grad_weight_f32() {
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
         in_channels * out_channels * kernel_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(grad_weight, 4), vec![6.0, 6.0]);
 }
@@ -687,7 +699,8 @@ fn test_conv_transpose2d_grad_weight_f32() {
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
         in_channels * out_channels * kernel_height * kernel_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(approx(grad_weight, 4), vec![10.0, 10.0, 10.0, 10.0]);
 }
@@ -753,7 +766,8 @@ fn test_conv_transpose3d_grad_weight_f32() {
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
         in_channels * out_channels * kernel_depth * kernel_height * kernel_width,
         &metadata,
-    );
+    )
+    .unwrap();
 
     assert_eq!(grad_weight.iter().sum::<f32>(), 288.0);
 }

@@ -25,7 +25,8 @@ fn test_index_select_f32_1d() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 3.0, 5.0]);
 }
@@ -55,7 +56,8 @@ fn test_index_select_f32_2d_dim0() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 2.0, 3.0, 7.0, 8.0, 9.0]);
 }
@@ -85,7 +87,8 @@ fn test_index_select_f32_2d_dim1() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 3.0, 4.0, 6.0]);
 }
@@ -115,7 +118,8 @@ fn test_index_select_negative_indices() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![5.0, 4.0]);
 }
@@ -143,7 +147,8 @@ fn test_index_select_i32() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![20, 40]);
 }
@@ -180,7 +185,8 @@ fn test_index_put_f32_1d() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 10.0, 3.0, 20.0, 5.0]);
 }
@@ -217,7 +223,8 @@ fn test_index_put_f32_2d() {
         dim,
         num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![10.0, 11.0, 12.0, 4.0, 5.0, 6.0, 13.0, 14.0, 15.0]);
 }
@@ -250,7 +257,8 @@ fn test_gather_f32_1d() {
         indices.len(),
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 3.0, 5.0, 2.0]);
 }
@@ -281,7 +289,8 @@ fn test_gather_i32() {
         indices.len(),
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![50, 30, 10, 40]);
 }
@@ -314,7 +323,8 @@ fn test_gather_f32_2d() {
         indices.len(),
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 3.0, 2.0, 4.0, 6.0, 5.0]);
 }
@@ -347,7 +357,8 @@ fn test_gather_f32_3d() {
         indices.len(),
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![2.0, 1.0, 4.0, 3.0, 6.0, 5.0, 8.0, 7.0]);
 }
@@ -388,7 +399,8 @@ fn test_scatter_f32_1d() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![10.0, 2.0, 20.0, 4.0, 30.0]);
 }
@@ -429,7 +441,8 @@ fn test_scatter_f32_2d() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![10.0, 11.0, 3.0, 4.0, 12.0, 13.0]);
 }
@@ -470,7 +483,8 @@ fn test_scatter_add_f32_1d() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![41.0, 2.0, 23.0, 4.0, 5.0]);
 }
@@ -508,7 +522,8 @@ fn test_scatter_add_i32() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1, 42, 3, 24, 5]); // 2+10+30=42, 4+20=24
 }
@@ -549,7 +564,8 @@ fn test_scatter_max_f32_1d() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![10.0, 2.0, 20.0, 4.0, 5.0]);
 }
@@ -587,7 +603,8 @@ fn test_scatter_max_i32() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![5, 50, 15, 30, 25]); // max(10,50,8)=50, max(20,30)=30
 }
@@ -628,7 +645,8 @@ fn test_scatter_min_f32_1d() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![5.0, 20.0, 25.0, 40.0, 50.0]);
 }
@@ -666,7 +684,8 @@ fn test_scatter_min_i32() {
         src_offset,
         dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![50, 5, 30, 15, 10]); // min(40,5,60)=5, min(20,15)=15
 }

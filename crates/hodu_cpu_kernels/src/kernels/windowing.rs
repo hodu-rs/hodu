@@ -1,5 +1,8 @@
-use crate::kernels::{macros::ops, Kernel};
-use std::ffi::c_void;
+use crate::{
+    error::Result,
+    kernels::{macros::ops, Kernel},
+};
+use core::ffi::c_void;
 
 ops!(
     reduce_window_max,
@@ -357,7 +360,7 @@ pub fn call_reduce_window(
     num_els: usize,
     num_dims: usize,
     metadata: &[usize],
-) {
+) -> Result<()> {
     let kernel_str = kernel_name.0;
     unsafe {
         match kernel_str {
@@ -420,4 +423,6 @@ pub fn call_reduce_window(
             _ => panic!("Unsupported reduce_window kernel: {:?}", kernel_name),
         }
     }
+
+    Ok(())
 }

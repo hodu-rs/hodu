@@ -1,5 +1,7 @@
-use crate::kernels::macros::ops;
-use std::ffi::c_void;
+use crate::{error::Result, kernels::macros::ops};
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+use core::ffi::c_void;
 
 ops!(
     index_select,
@@ -306,7 +308,7 @@ pub fn call_index_select(
     dim: usize,
     num_indices: usize,
     output: *mut c_void,
-) {
+) -> Result<()> {
     let num_dims = shape.len();
 
     let mut output_shape = shape.to_vec();
@@ -331,6 +333,8 @@ pub fn call_index_select(
             metadata.as_ptr(),
         );
     }
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -347,7 +351,7 @@ pub fn call_index_put(
     dim: usize,
     num_indices: usize,
     output: *mut c_void,
-) {
+) -> Result<()> {
     let num_dims = input_shape.len();
     let num_els: usize = input_shape.iter().product();
 
@@ -372,6 +376,8 @@ pub fn call_index_put(
             metadata.as_ptr(),
         );
     }
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -387,7 +393,7 @@ pub fn call_gather(
     indices_len: usize,
     dim: usize,
     output: *mut c_void,
-) {
+) -> Result<()> {
     let num_dims = input_shape.len();
     let num_els: usize = input_shape
         .iter()
@@ -415,6 +421,8 @@ pub fn call_gather(
             metadata.as_ptr(),
         );
     }
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -433,7 +441,7 @@ pub fn call_scatter(
     src_offset: usize,
     dim: usize,
     output: *mut c_void,
-) {
+) -> Result<()> {
     let num_dims = input_shape.len();
     let num_els: usize = src_shape.iter().product();
 
@@ -460,4 +468,6 @@ pub fn call_scatter(
             dispatch_scatter(name, input, indices, src, output, num_els, num_dims, metadata.as_ptr());
         }
     }
+
+    Ok(())
 }

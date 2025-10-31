@@ -1,5 +1,7 @@
-use crate::kernels::macros::ops;
-use std::ffi::c_void;
+use crate::{error::Result, kernels::macros::ops};
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+use core::ffi::c_void;
 
 ops!(concat, split);
 
@@ -136,7 +138,7 @@ pub fn call_concat(
     input_buffer_offsets: &[usize],
     input: *const c_void,
     output: *mut c_void,
-) {
+) -> Result<()> {
     let num_dims = output_shape.len();
     let num_els: usize = output_shape.iter().product();
     let num_inputs = input_offsets.len();
@@ -156,6 +158,8 @@ pub fn call_concat(
     unsafe {
         dispatch_concat(kernel_name.0, input, output, num_els, num_dims, metadata.as_ptr());
     }
+
+    Ok(())
 }
 
 /// Call split operation - split tensor into multiple outputs along a dimension
@@ -170,7 +174,7 @@ pub fn call_split(
     output_size_on_dim: usize,
     split_offset: usize,
     output: *mut c_void,
-) {
+) -> Result<()> {
     let num_dims = input_shape.len();
 
     // Calculate output shape
@@ -190,4 +194,6 @@ pub fn call_split(
     unsafe {
         dispatch_split(kernel_name.0, input, output, num_els, num_dims, metadata.as_ptr());
     }
+
+    Ok(())
 }

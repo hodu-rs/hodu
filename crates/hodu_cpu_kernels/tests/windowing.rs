@@ -40,7 +40,8 @@ fn run_reduce_window_f32(
         output_size,
         input_shape.len(),
         &metadata,
-    );
+    )
+    .unwrap();
 
     output
 }

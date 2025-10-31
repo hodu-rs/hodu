@@ -31,7 +31,8 @@ fn test_concat_f32_dim0() {
         &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
 }
@@ -67,7 +68,8 @@ fn test_concat_f32_dim1() {
         &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 2.0, 5.0, 6.0, 3.0, 4.0, 7.0, 8.0]);
 }
@@ -97,7 +99,8 @@ fn test_concat_i32_dim0() {
         &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1, 2, 3, 4, 5, 6, 7, 8]);
 }
@@ -134,7 +137,8 @@ fn test_concat_3_tensors() {
         &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(
         output,
@@ -165,7 +169,8 @@ fn test_split_f32_dim0() {
         output_size_on_dim,
         split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 2.0, 3.0, 4.0]);
 }
@@ -193,7 +198,8 @@ fn test_split_f32_dim0_offset() {
         output_size_on_dim,
         split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![5.0, 6.0, 7.0, 8.0]);
 }
@@ -221,7 +227,8 @@ fn test_split_f32_dim1() {
         output_size_on_dim,
         split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 2.0, 5.0, 6.0]);
 }
@@ -249,7 +256,8 @@ fn test_split_f32_dim1_offset() {
         output_size_on_dim,
         split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![3.0, 4.0, 7.0, 8.0]);
 }
@@ -277,7 +285,8 @@ fn test_split_i32_dim0() {
         output_size_on_dim,
         split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1, 2, 3, 4]);
 }
@@ -307,7 +316,8 @@ fn test_split_3d_tensor() {
         output_size_on_dim,
         split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-    );
+    )
+    .unwrap();
 
     assert_eq!(output, vec![1.0, 2.0, 3.0, 4.0, 7.0, 8.0, 9.0, 10.0]);
 }

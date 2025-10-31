@@ -64,7 +64,8 @@ fn test_reduce_sum_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2, 3], [4, 5, 6]] -> sum along dim 1 -> [6, 15]
     assert_eq!(approx(output, 4), vec![6.0, 15.0]);
@@ -98,7 +99,8 @@ fn test_reduce_sum_f32_dim0() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2], [3, 4]] -> sum along dim 0 -> [4, 6]
     assert_eq!(approx(output, 4), vec![4.0, 6.0]);
@@ -132,7 +134,8 @@ fn test_reduce_sum_3d() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // Sum along last dimension (groups of 4)
     // [1,2,3,4] -> 10, [5,6,7,8] -> 26, [9,10,11,12] -> 42,
@@ -168,7 +171,8 @@ fn test_reduce_sum_f32_keep_dim() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2, 3], [4, 5, 6]] -> sum along dim 1 with keep_dim -> [[6], [15]]
     // Output shape: [2, 1], flattened: [6, 15]
@@ -203,7 +207,8 @@ fn test_reduce_sum_i32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2, 3], [4, 5, 6]] -> sum along dim 1 -> [6, 15]
     assert_eq!(output, vec![6, 15]);
@@ -238,7 +243,8 @@ fn test_reduce_mean_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[2, 4, 6], [8, 10, 12]] -> mean along dim 1 -> [4, 10]
     assert_eq!(approx(output, 4), vec![4.0, 10.0]);
@@ -273,7 +279,8 @@ fn test_reduce_max_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 5, 3], [2, 8, 1]] -> max along dim 1 -> [5, 8]
     assert_eq!(approx(output, 4), vec![5.0, 8.0]);
@@ -307,7 +314,8 @@ fn test_reduce_max_f32_keep_dim() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 5, 3], [2, 8, 1]] -> max along dim 1 with keep_dim -> [[5], [8]]
     assert_eq!(approx(output, 4), vec![5.0, 8.0]);
@@ -342,7 +350,8 @@ fn test_reduce_min_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 5, 3], [2, 8, 1]] -> min along dim 1 -> [1, 1]
     assert_eq!(approx(output, 4), vec![1.0, 1.0]);
@@ -377,7 +386,8 @@ fn test_reduce_prod_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2, 3], [4, 5, 6]] -> prod along dim 1 -> [6, 120]
     assert_eq!(approx(output, 4), vec![6.0, 120.0]);
@@ -417,7 +427,8 @@ fn test_reduce_std_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // Expected std ≈ 0.8165 for both rows
     assert_eq!(approx(output, 2), vec![0.82, 0.82]);
@@ -457,7 +468,8 @@ fn test_reduce_var_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // Expected var ≈ 0.6667 for both rows
     assert_eq!(approx(output, 2), vec![0.67, 0.67]);
@@ -492,7 +504,8 @@ fn test_reduce_norm_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[3, 4], [5, 12]] -> L2 norm along dim 1 -> [5, 13]
     // sqrt(3^2 + 4^2) = sqrt(25) = 5
@@ -529,7 +542,8 @@ fn test_reduce_argmax_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 5, 3], [2, 8, 1]] -> argmax along dim 1 -> [1, 1]
     assert_eq!(output, vec![1, 1]);
@@ -564,7 +578,8 @@ fn test_reduce_argmin_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 5, 3], [2, 8, 1]] -> argmin along dim 1 -> [0, 2]
     assert_eq!(output, vec![0, 2]);
@@ -599,7 +614,8 @@ fn test_reduce_any_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[0, 1, 0], [0, 2, 0]] -> any along dim 1 -> [true, true]
     assert_eq!(output, vec![1, 1]);
@@ -633,7 +649,8 @@ fn test_reduce_any_f32_all_zeros() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[0, 0], [0, 0]] -> any along dim 1 -> [false, false]
     assert_eq!(output, vec![0, 0]);
@@ -667,7 +684,8 @@ fn test_reduce_any_i32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[0, 1, 0], [0, 2, 0]] -> any along dim 1 -> [true, true]
     assert_eq!(output, vec![1, 1]);
@@ -702,7 +720,8 @@ fn test_reduce_all_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2, 3], [4, 5, 6]] -> all along dim 1 -> [true, true]
     assert_eq!(output, vec![1, 1]);
@@ -736,7 +755,8 @@ fn test_reduce_all_f32_with_zero() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 0, 3], [4, 5, 6]] -> all along dim 1 -> [false, true]
     assert_eq!(output, vec![0, 1]);
@@ -770,7 +790,8 @@ fn test_reduce_all_i32() {
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
         &metadata,
-    );
+    )
+    .unwrap();
 
     // [[1, 2, 3], [4, 5, 6]] -> all along dim 1 -> [true, true]
     assert_eq!(output, vec![1, 1]);

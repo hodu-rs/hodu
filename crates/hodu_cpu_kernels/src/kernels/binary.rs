@@ -1,5 +1,7 @@
-use crate::kernels::macros::ops;
-use std::ffi::c_void;
+use crate::{error::Result, kernels::macros::ops};
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
+use core::ffi::c_void;
 
 // Define all binary operations using the macro
 ops!(
@@ -33,7 +35,7 @@ pub fn call_binary(
     rhs_strides: &[usize],
     lhs_offset: usize,
     rhs_offset: usize,
-) {
+) -> Result<()> {
     let num_els: usize = shape.iter().product();
     let num_dims = shape.len();
 
@@ -47,6 +49,8 @@ pub fn call_binary(
     unsafe {
         dispatch_binary(kernel_name.0, lhs, rhs, output, num_els, num_dims, metadata.as_ptr());
     }
+
+    Ok(())
 }
 
 // Macro to automatically generate extern declarations and dispatch for all binary operations and types
