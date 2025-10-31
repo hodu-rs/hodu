@@ -1,4 +1,4 @@
-use crate::layer::compat::{fmt, Vec};
+use crate::layer::compat::*;
 
 /// Shape represents the dimensions of a tensor using u32 for memory efficiency.
 ///

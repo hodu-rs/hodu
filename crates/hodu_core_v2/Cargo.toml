@@ -12,6 +12,7 @@ repository = "https://github.com/hodu-rs/hodu"
 std = [
     "dep:dashmap",
     "half/std",
+    "hodu_cpu_kernels/std",
     "num-traits/std",
     "rand/std",
     "rand_distr/std",

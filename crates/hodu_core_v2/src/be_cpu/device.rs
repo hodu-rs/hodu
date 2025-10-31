@@ -2,6 +2,7 @@ use crate::{
     be::device::BackendDeviceT,
     be_cpu::storage::CpuStorage,
     error::{HoduError, HoduResult},
+    layer::compat::*,
     types::{DType, Shape},
 };
 use float8::F8E4M3;

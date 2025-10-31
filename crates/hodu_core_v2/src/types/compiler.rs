@@ -1,4 +1,4 @@
-use crate::{layer::compat::fmt, types::device::Device};
+use crate::{layer::compat::*, types::device::Device};
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Compiler {

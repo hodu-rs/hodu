@@ -1,15 +1,20 @@
-pub mod be;
-pub mod be_cpu;
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
+
+pub(crate) mod be;
+pub(crate) mod be_cpu;
 #[cfg(feature = "metal")]
-pub mod be_metal;
+pub(crate) mod be_metal;
 pub mod builder;
+pub(crate) mod cache;
 pub mod compiler;
 pub mod error;
-pub mod layer;
+pub(crate) mod layer;
 pub mod ops;
 pub mod prelude;
 pub mod scalar;
 pub mod script;
 pub mod tensor;
 pub mod types;
-pub mod utils;
+pub(crate) mod utils;

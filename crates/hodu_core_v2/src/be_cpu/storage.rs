@@ -1,7 +1,12 @@
+mod ops_binary;
+mod ops_unary;
+
 use crate::{
     be::storage::BackendStorageT,
     be_cpu::device::CpuDevice,
     error::{HoduError, HoduResult},
+    layer::compat::*,
+    ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout},
 };
@@ -271,5 +276,39 @@ impl BackendStorageT for CpuStorage {
         }
 
         Ok(())
+    }
+
+    fn call_binary(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_binary::call_binary(self, rhs_storage, lhs_layout, rhs_layout, op)
+    }
+
+    fn call_binary_logical(
+        &self,
+        rhs_storage: &Self,
+        lhs_layout: &Layout,
+        rhs_layout: &Layout,
+        op: Op,
+    ) -> HoduResult<Self> {
+        ops_binary::call_binary_logical(self, rhs_storage, lhs_layout, rhs_layout, op)
+    }
+
+    fn call_cmp(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_binary::call_cmp(self, rhs_storage, lhs_layout, rhs_layout, op)
+    }
+
+    fn call_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
+        ops_unary::call_cmp_scalar(self, layout, scalar, op)
+    }
+
+    fn call_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_unary::call_unary(self, layout, op)
+    }
+
+    fn call_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_unary::call_unary_logical(self, layout, op)
+    }
+
+    fn call_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
+        ops_unary::call_unary_scalar(self, layout, scalar, op)
     }
 }

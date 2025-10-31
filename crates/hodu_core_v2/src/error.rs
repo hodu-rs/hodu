@@ -1,5 +1,5 @@
 use crate::{
-    layer::compat::{fmt, format, String},
+    layer::compat::*,
     ops::Op,
     types::{Compiler, DType, Device, Shape},
 };
@@ -178,7 +178,14 @@ impl From<std::io::Error> for HoduError {
 #[cfg(feature = "std")]
 impl From<std::string::FromUtf8Error> for HoduError {
     fn from(e: std::string::FromUtf8Error) -> Self {
-        HoduError::InternalError(format!("UTF-8 conversion error: {}", e))
+        HoduError::InternalError(format!("utf-8 conversion error: {}", e))
+    }
+}
+
+// Conversion from hodu_cpu_kernels error
+impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
+    fn from(e: hodu_cpu_kernels::CpuKernelError) -> Self {
+        HoduError::InternalError(format!("cpu kernel error: {}", e))
     }
 }
 

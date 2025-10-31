@@ -1,6 +1,6 @@
 use crate::{
     error::{HoduError, HoduResult},
-    layer::compat::{fmt, format, vec, Vec},
+    layer::compat::*,
     ops::{Op, ShapeOp},
     types::shape::Shape,
 };
