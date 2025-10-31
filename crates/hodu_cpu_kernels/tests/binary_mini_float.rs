@@ -1,7 +1,9 @@
+use float8::{F8E4M3, F8E5M2};
+use half::{bf16, f16};
 use hodu_cpu_kernels::*;
 
-fn run_binary_f8e4m3(lhs: &[u8], rhs: &[u8], kernel: Kernel) -> Vec<u8> {
-    let mut output = vec![0u8; lhs.len()];
+fn run_binary_f8e4m3(lhs: &[F8E4M3], rhs: &[F8E4M3], kernel: Kernel) -> Vec<F8E4M3> {
+    let mut output = vec![F8E4M3::ZERO; lhs.len()];
     let shape = vec![lhs.len()];
     let strides = vec![1];
     let num_els: usize = shape.iter().product();
@@ -26,8 +28,8 @@ fn run_binary_f8e4m3(lhs: &[u8], rhs: &[u8], kernel: Kernel) -> Vec<u8> {
     output
 }
 
-fn run_binary_f8e5m2(lhs: &[u8], rhs: &[u8], kernel: Kernel) -> Vec<u8> {
-    let mut output = vec![0u8; lhs.len()];
+fn run_binary_f8e5m2(lhs: &[F8E5M2], rhs: &[F8E5M2], kernel: Kernel) -> Vec<F8E5M2> {
+    let mut output = vec![F8E5M2::ZERO; lhs.len()];
     let shape = vec![lhs.len()];
     let strides = vec![1];
     let num_els: usize = shape.iter().product();
@@ -52,8 +54,8 @@ fn run_binary_f8e5m2(lhs: &[u8], rhs: &[u8], kernel: Kernel) -> Vec<u8> {
     output
 }
 
-fn run_binary_bf16(lhs: &[u16], rhs: &[u16], kernel: Kernel) -> Vec<u16> {
-    let mut output = vec![0u16; lhs.len()];
+fn run_binary_bf16(lhs: &[bf16], rhs: &[bf16], kernel: Kernel) -> Vec<bf16> {
+    let mut output = vec![bf16::ZERO; lhs.len()];
     let shape = vec![lhs.len()];
     let strides = vec![1];
     let num_els: usize = shape.iter().product();
@@ -78,8 +80,8 @@ fn run_binary_bf16(lhs: &[u16], rhs: &[u16], kernel: Kernel) -> Vec<u16> {
     output
 }
 
-fn run_binary_f16(lhs: &[u16], rhs: &[u16], kernel: Kernel) -> Vec<u16> {
-    let mut output = vec![0u16; lhs.len()];
+fn run_binary_f16(lhs: &[f16], rhs: &[f16], kernel: Kernel) -> Vec<f16> {
+    let mut output = vec![f16::ZERO; lhs.len()];
     let shape = vec![lhs.len()];
     let strides = vec![1];
     let num_els: usize = shape.iter().product();
@@ -102,98 +104,21 @@ fn run_binary_f16(lhs: &[u16], rhs: &[u16], kernel: Kernel) -> Vec<u16> {
     )
     .unwrap();
     output
-}
-
-fn float_to_f8e4m3(val: f32) -> u8 {
-    if val == 0.0 {
-        return 0;
-    }
-    let sign = if val < 0.0 { 1u8 } else { 0u8 };
-    let abs_val = val.abs();
-
-    if abs_val.is_infinite() || abs_val > 448.0 {
-        return (sign << 7) | 0x7F;
-    }
-    if abs_val < 0.001953125 {
-        return sign << 7;
-    }
-
-    let exp = abs_val.log2().floor() as i32 + 7;
-    let exp = exp.clamp(0, 14);
-
-    let mant_val = abs_val / 2.0f32.powi(exp - 7);
-    let mant = ((mant_val - 1.0) * 8.0).round() as u8;
-    let mant = mant.min(7);
-
-    (sign << 7) | ((exp as u8) << 3) | mant
-}
-
-fn float_to_f8e5m2(val: f32) -> u8 {
-    if val == 0.0 {
-        return 0;
-    }
-    let sign = if val < 0.0 { 1u8 } else { 0u8 };
-    let abs_val = val.abs();
-
-    if abs_val.is_infinite() || abs_val > 57344.0 {
-        return (sign << 7) | 0x7F;
-    }
-    if abs_val < 0.0000152587890625 {
-        return sign << 7;
-    }
-
-    let exp = abs_val.log2().floor() as i32 + 15;
-    let exp = exp.clamp(0, 30);
-
-    let mant_val = abs_val / 2.0f32.powi(exp - 15);
-    let mant = ((mant_val - 1.0) * 4.0).round() as u8;
-    let mant = mant.min(3);
-
-    (sign << 7) | ((exp as u8) << 2) | mant
-}
-
-fn float_to_bf16(val: f32) -> u16 {
-    let bits = val.to_bits();
-    (bits >> 16) as u16
-}
-
-fn float_to_f16(val: f32) -> u16 {
-    if val == 0.0 {
-        return 0;
-    }
-    let sign = if val < 0.0 { 1u16 } else { 0u16 };
-    let abs_val = val.abs();
-
-    if abs_val.is_infinite() || abs_val > 65504.0 {
-        return (sign << 15) | 0x7C00;
-    }
-    if abs_val < 0.00006103515625 {
-        return sign << 15;
-    }
-
-    let exp = abs_val.log2().floor() as i32 + 15;
-    let exp = exp.clamp(0, 30);
-
-    let mant_val = abs_val / 2.0f32.powi(exp - 15);
-    let mant = ((mant_val - 1.0) * 1024.0).round() as u16;
-    let mant = mant.min(1023);
-
-    (sign << 15) | ((exp as u16) << 10) | mant
 }
 
 #[test]
 fn test_add_f8e4m3() {
     let lhs = vec![
-        float_to_f8e4m3(1.0),
-        float_to_f8e4m3(2.0),
-        float_to_f8e4m3(3.0),
-        float_to_f8e4m3(4.0),
+        F8E4M3::from_f32(1.0),
+        F8E4M3::from_f32(2.0),
+        F8E4M3::from_f32(3.0),
+        F8E4M3::from_f32(4.0),
     ];
     let rhs = vec![
-        float_to_f8e4m3(0.5),
-        float_to_f8e4m3(1.0),
-        float_to_f8e4m3(1.5),
-        float_to_f8e4m3(2.0),
+        F8E4M3::from_f32(0.5),
+        F8E4M3::from_f32(1.0),
+        F8E4M3::from_f32(1.5),
+        F8E4M3::from_f32(2.0),
     ];
 
     let result = run_binary_f8e4m3(&lhs, &rhs, add::F8E4M3);
@@ -203,16 +128,16 @@ fn test_add_f8e4m3() {
 #[test]
 fn test_mul_f8e4m3() {
     let lhs = vec![
-        float_to_f8e4m3(2.0),
-        float_to_f8e4m3(3.0),
-        float_to_f8e4m3(4.0),
-        float_to_f8e4m3(5.0),
+        F8E4M3::from_f32(2.0),
+        F8E4M3::from_f32(3.0),
+        F8E4M3::from_f32(4.0),
+        F8E4M3::from_f32(5.0),
     ];
     let rhs = vec![
-        float_to_f8e4m3(2.0),
-        float_to_f8e4m3(2.0),
-        float_to_f8e4m3(2.0),
-        float_to_f8e4m3(2.0),
+        F8E4M3::from_f32(2.0),
+        F8E4M3::from_f32(2.0),
+        F8E4M3::from_f32(2.0),
+        F8E4M3::from_f32(2.0),
     ];
 
     let result = run_binary_f8e4m3(&lhs, &rhs, mul::F8E4M3);
@@ -222,16 +147,16 @@ fn test_mul_f8e4m3() {
 #[test]
 fn test_add_f8e5m2() {
     let lhs = vec![
-        float_to_f8e5m2(1.0),
-        float_to_f8e5m2(2.0),
-        float_to_f8e5m2(3.0),
-        float_to_f8e5m2(4.0),
+        F8E5M2::from_f32(1.0),
+        F8E5M2::from_f32(2.0),
+        F8E5M2::from_f32(3.0),
+        F8E5M2::from_f32(4.0),
     ];
     let rhs = vec![
-        float_to_f8e5m2(0.5),
-        float_to_f8e5m2(1.0),
-        float_to_f8e5m2(1.5),
-        float_to_f8e5m2(2.0),
+        F8E5M2::from_f32(0.5),
+        F8E5M2::from_f32(1.0),
+        F8E5M2::from_f32(1.5),
+        F8E5M2::from_f32(2.0),
     ];
 
     let result = run_binary_f8e5m2(&lhs, &rhs, add::F8E5M2);
@@ -241,16 +166,16 @@ fn test_add_f8e5m2() {
 #[test]
 fn test_mul_f8e5m2() {
     let lhs = vec![
-        float_to_f8e5m2(2.0),
-        float_to_f8e5m2(3.0),
-        float_to_f8e5m2(4.0),
-        float_to_f8e5m2(5.0),
+        F8E5M2::from_f32(2.0),
+        F8E5M2::from_f32(3.0),
+        F8E5M2::from_f32(4.0),
+        F8E5M2::from_f32(5.0),
     ];
     let rhs = vec![
-        float_to_f8e5m2(2.0),
-        float_to_f8e5m2(2.0),
-        float_to_f8e5m2(2.0),
-        float_to_f8e5m2(2.0),
+        F8E5M2::from_f32(2.0),
+        F8E5M2::from_f32(2.0),
+        F8E5M2::from_f32(2.0),
+        F8E5M2::from_f32(2.0),
     ];
 
     let result = run_binary_f8e5m2(&lhs, &rhs, mul::F8E5M2);
@@ -260,16 +185,16 @@ fn test_mul_f8e5m2() {
 #[test]
 fn test_add_bf16() {
     let lhs = vec![
-        float_to_bf16(1.0),
-        float_to_bf16(2.0),
-        float_to_bf16(3.0),
-        float_to_bf16(4.0),
+        bf16::from_f32(1.0),
+        bf16::from_f32(2.0),
+        bf16::from_f32(3.0),
+        bf16::from_f32(4.0),
     ];
     let rhs = vec![
-        float_to_bf16(0.5),
-        float_to_bf16(1.0),
-        float_to_bf16(1.5),
-        float_to_bf16(2.0),
+        bf16::from_f32(0.5),
+        bf16::from_f32(1.0),
+        bf16::from_f32(1.5),
+        bf16::from_f32(2.0),
     ];
 
     let result = run_binary_bf16(&lhs, &rhs, add::BF16);
@@ -279,16 +204,16 @@ fn test_add_bf16() {
 #[test]
 fn test_mul_bf16() {
     let lhs = vec![
-        float_to_bf16(2.0),
-        float_to_bf16(3.0),
-        float_to_bf16(4.0),
-        float_to_bf16(5.0),
+        bf16::from_f32(2.0),
+        bf16::from_f32(3.0),
+        bf16::from_f32(4.0),
+        bf16::from_f32(5.0),
     ];
     let rhs = vec![
-        float_to_bf16(2.0),
-        float_to_bf16(2.0),
-        float_to_bf16(2.0),
-        float_to_bf16(2.0),
+        bf16::from_f32(2.0),
+        bf16::from_f32(2.0),
+        bf16::from_f32(2.0),
+        bf16::from_f32(2.0),
     ];
 
     let result = run_binary_bf16(&lhs, &rhs, mul::BF16);
@@ -298,16 +223,16 @@ fn test_mul_bf16() {
 #[test]
 fn test_add_f16() {
     let lhs = vec![
-        float_to_f16(1.0),
-        float_to_f16(2.0),
-        float_to_f16(3.0),
-        float_to_f16(4.0),
+        f16::from_f32(1.0),
+        f16::from_f32(2.0),
+        f16::from_f32(3.0),
+        f16::from_f32(4.0),
     ];
     let rhs = vec![
-        float_to_f16(0.5),
-        float_to_f16(1.0),
-        float_to_f16(1.5),
-        float_to_f16(2.0),
+        f16::from_f32(0.5),
+        f16::from_f32(1.0),
+        f16::from_f32(1.5),
+        f16::from_f32(2.0),
     ];
 
     let result = run_binary_f16(&lhs, &rhs, add::F16);
@@ -317,16 +242,16 @@ fn test_add_f16() {
 #[test]
 fn test_mul_f16() {
     let lhs = vec![
-        float_to_f16(2.0),
-        float_to_f16(3.0),
-        float_to_f16(4.0),
-        float_to_f16(5.0),
+        f16::from_f32(2.0),
+        f16::from_f32(3.0),
+        f16::from_f32(4.0),
+        f16::from_f32(5.0),
     ];
     let rhs = vec![
-        float_to_f16(2.0),
-        float_to_f16(2.0),
-        float_to_f16(2.0),
-        float_to_f16(2.0),
+        f16::from_f32(2.0),
+        f16::from_f32(2.0),
+        f16::from_f32(2.0),
+        f16::from_f32(2.0),
     ];
 
     let result = run_binary_f16(&lhs, &rhs, mul::F16);
@@ -335,8 +260,8 @@ fn test_mul_f16() {
 
 #[test]
 fn test_sub_f8e4m3() {
-    let lhs = vec![float_to_f8e4m3(5.0), float_to_f8e4m3(10.0), float_to_f8e4m3(15.0)];
-    let rhs = vec![float_to_f8e4m3(2.0), float_to_f8e4m3(3.0), float_to_f8e4m3(5.0)];
+    let lhs = vec![F8E4M3::from_f32(5.0), F8E4M3::from_f32(10.0), F8E4M3::from_f32(15.0)];
+    let rhs = vec![F8E4M3::from_f32(2.0), F8E4M3::from_f32(3.0), F8E4M3::from_f32(5.0)];
 
     let result = run_binary_f8e4m3(&lhs, &rhs, sub::F8E4M3);
     assert_eq!(result.len(), 3);
@@ -344,8 +269,8 @@ fn test_sub_f8e4m3() {
 
 #[test]
 fn test_div_bf16() {
-    let lhs = vec![float_to_bf16(10.0), float_to_bf16(20.0), float_to_bf16(30.0)];
-    let rhs = vec![float_to_bf16(2.0), float_to_bf16(4.0), float_to_bf16(5.0)];
+    let lhs = vec![bf16::from_f32(10.0), bf16::from_f32(20.0), bf16::from_f32(30.0)];
+    let rhs = vec![bf16::from_f32(2.0), bf16::from_f32(4.0), bf16::from_f32(5.0)];
 
     let result = run_binary_bf16(&lhs, &rhs, div::BF16);
     assert_eq!(result.len(), 3);
@@ -353,8 +278,8 @@ fn test_div_bf16() {
 
 #[test]
 fn test_maximum_f16() {
-    let lhs = vec![float_to_f16(1.0), float_to_f16(5.0), float_to_f16(3.0)];
-    let rhs = vec![float_to_f16(2.0), float_to_f16(4.0), float_to_f16(6.0)];
+    let lhs = vec![f16::from_f32(1.0), f16::from_f32(5.0), f16::from_f32(3.0)];
+    let rhs = vec![f16::from_f32(2.0), f16::from_f32(4.0), f16::from_f32(6.0)];
 
     let result = run_binary_f16(&lhs, &rhs, maximum::F16);
     assert_eq!(result.len(), 3);
@@ -362,8 +287,8 @@ fn test_maximum_f16() {
 
 #[test]
 fn test_minimum_f8e5m2() {
-    let lhs = vec![float_to_f8e5m2(1.0), float_to_f8e5m2(5.0), float_to_f8e5m2(3.0)];
-    let rhs = vec![float_to_f8e5m2(2.0), float_to_f8e5m2(4.0), float_to_f8e5m2(6.0)];
+    let lhs = vec![F8E5M2::from_f32(1.0), F8E5M2::from_f32(5.0), F8E5M2::from_f32(3.0)];
+    let rhs = vec![F8E5M2::from_f32(2.0), F8E5M2::from_f32(4.0), F8E5M2::from_f32(6.0)];
 
     let result = run_binary_f8e5m2(&lhs, &rhs, minimum::F8E5M2);
     assert_eq!(result.len(), 3);
