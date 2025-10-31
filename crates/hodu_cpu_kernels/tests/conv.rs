@@ -22,7 +22,7 @@ fn test_conv1d_f32() {
     let mut output = vec![0.0f32; batch * out_channels * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_width,
         in_channels,
         out_channels,
         in_width,
@@ -40,7 +40,6 @@ fn test_conv1d_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_width,
         &metadata,
     )
     .unwrap();
@@ -65,7 +64,7 @@ fn test_conv1d_f32_stride() {
     let mut output = vec![0.0f32; batch * out_channels * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_width,
         in_channels,
         out_channels,
         in_width,
@@ -83,7 +82,6 @@ fn test_conv1d_f32_stride() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_width,
         &metadata,
     )
     .unwrap();
@@ -114,7 +112,7 @@ fn test_conv2d_f32() {
     let mut output = vec![0.0f32; batch * out_channels * out_height * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_height * out_width,
         in_channels,
         out_channels,
         in_height,
@@ -138,7 +136,6 @@ fn test_conv2d_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_height * out_width,
         &metadata,
     )
     .unwrap();
@@ -169,7 +166,7 @@ fn test_conv2d_f32_with_padding() {
     let mut output = vec![0.0f32; batch * out_channels * out_height * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_height * out_width,
         in_channels,
         out_channels,
         in_height,
@@ -193,7 +190,6 @@ fn test_conv2d_f32_with_padding() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_height * out_width,
         &metadata,
     )
     .unwrap();
@@ -233,7 +229,7 @@ fn test_conv3d_f32() {
     let mut output = vec![0.0f32; batch * out_channels * out_depth * out_height * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_depth * out_height * out_width,
         in_channels,
         out_channels,
         in_depth,
@@ -263,7 +259,6 @@ fn test_conv3d_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_depth * out_height * out_width,
         &metadata,
     )
     .unwrap();
@@ -291,7 +286,7 @@ fn test_conv_transpose1d_f32() {
     let mut output = vec![0.0f32; batch * out_channels * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_width,
         in_channels,
         out_channels,
         in_width,
@@ -309,7 +304,6 @@ fn test_conv_transpose1d_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_width,
         &metadata,
     )
     .unwrap();
@@ -340,7 +334,7 @@ fn test_conv_transpose2d_f32() {
     let mut output = vec![0.0f32; batch * out_channels * out_height * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_height * out_width,
         in_channels,
         out_channels,
         in_height,
@@ -364,7 +358,6 @@ fn test_conv_transpose2d_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_height * out_width,
         &metadata,
     )
     .unwrap();
@@ -404,7 +397,7 @@ fn test_conv_transpose3d_f32() {
     let mut output = vec![0.0f32; batch * out_channels * out_depth * out_height * out_width];
 
     let metadata = vec![
-        batch,
+        batch * out_channels * out_depth * out_height * out_width,
         in_channels,
         out_channels,
         in_depth,
@@ -434,7 +427,6 @@ fn test_conv_transpose3d_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         weight.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        batch * out_channels * out_depth * out_height * out_width,
         &metadata,
     )
     .unwrap();
@@ -444,7 +436,6 @@ fn test_conv_transpose3d_f32() {
 
 #[test]
 fn test_conv1d_grad_weight_f32() {
-    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_width = 5;
@@ -459,7 +450,7 @@ fn test_conv1d_grad_weight_f32() {
     let mut grad_weight = vec![0.0f32; out_channels * in_channels * kernel_width];
 
     let metadata = vec![
-        batch,
+        out_channels * in_channels * kernel_width,
         in_channels,
         out_channels,
         in_width,
@@ -477,7 +468,6 @@ fn test_conv1d_grad_weight_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         grad_output.as_ptr() as *const std::ffi::c_void,
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
-        out_channels * in_channels * kernel_width,
         &metadata,
     )
     .unwrap();
@@ -487,7 +477,6 @@ fn test_conv1d_grad_weight_f32() {
 
 #[test]
 fn test_conv2d_grad_weight_f32() {
-    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_height = 3;
@@ -508,7 +497,7 @@ fn test_conv2d_grad_weight_f32() {
     let mut grad_weight = vec![0.0f32; out_channels * in_channels * kernel_height * kernel_width];
 
     let metadata = vec![
-        batch,
+        out_channels * in_channels * kernel_height * kernel_width,
         in_channels,
         out_channels,
         in_height,
@@ -532,7 +521,6 @@ fn test_conv2d_grad_weight_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         grad_output.as_ptr() as *const std::ffi::c_void,
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
-        out_channels * in_channels * kernel_height * kernel_width,
         &metadata,
     )
     .unwrap();
@@ -542,7 +530,6 @@ fn test_conv2d_grad_weight_f32() {
 
 #[test]
 fn test_conv3d_grad_weight_f32() {
-    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_depth = 2;
@@ -569,7 +556,7 @@ fn test_conv3d_grad_weight_f32() {
     let mut grad_weight = vec![0.0f32; out_channels * in_channels * kernel_depth * kernel_height * kernel_width];
 
     let metadata = vec![
-        batch,
+        out_channels * in_channels * kernel_depth * kernel_height * kernel_width,
         in_channels,
         out_channels,
         in_depth,
@@ -599,7 +586,6 @@ fn test_conv3d_grad_weight_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         grad_output.as_ptr() as *const std::ffi::c_void,
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
-        out_channels * in_channels * kernel_depth * kernel_height * kernel_width,
         &metadata,
     )
     .unwrap();
@@ -609,7 +595,6 @@ fn test_conv3d_grad_weight_f32() {
 
 #[test]
 fn test_conv_transpose1d_grad_weight_f32() {
-    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_width = 3;
@@ -624,7 +609,7 @@ fn test_conv_transpose1d_grad_weight_f32() {
     let mut grad_weight = vec![0.0f32; in_channels * out_channels * kernel_width];
 
     let metadata = vec![
-        batch,
+        in_channels * out_channels * kernel_width,
         in_channels,
         out_channels,
         in_width,
@@ -642,7 +627,6 @@ fn test_conv_transpose1d_grad_weight_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         grad_output.as_ptr() as *const std::ffi::c_void,
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
-        in_channels * out_channels * kernel_width,
         &metadata,
     )
     .unwrap();
@@ -652,7 +636,6 @@ fn test_conv_transpose1d_grad_weight_f32() {
 
 #[test]
 fn test_conv_transpose2d_grad_weight_f32() {
-    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_height = 2;
@@ -673,7 +656,7 @@ fn test_conv_transpose2d_grad_weight_f32() {
     let mut grad_weight = vec![0.0f32; in_channels * out_channels * kernel_height * kernel_width];
 
     let metadata = vec![
-        batch,
+        in_channels * out_channels * kernel_height * kernel_width,
         in_channels,
         out_channels,
         in_height,
@@ -697,7 +680,6 @@ fn test_conv_transpose2d_grad_weight_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         grad_output.as_ptr() as *const std::ffi::c_void,
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
-        in_channels * out_channels * kernel_height * kernel_width,
         &metadata,
     )
     .unwrap();
@@ -707,7 +689,6 @@ fn test_conv_transpose2d_grad_weight_f32() {
 
 #[test]
 fn test_conv_transpose3d_grad_weight_f32() {
-    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_depth = 2;
@@ -734,7 +715,7 @@ fn test_conv_transpose3d_grad_weight_f32() {
     let mut grad_weight = vec![0.0f32; in_channels * out_channels * kernel_depth * kernel_height * kernel_width];
 
     let metadata = vec![
-        batch,
+        in_channels * out_channels * kernel_depth * kernel_height * kernel_width,
         in_channels,
         out_channels,
         in_depth,
@@ -764,7 +745,6 @@ fn test_conv_transpose3d_grad_weight_f32() {
         input.as_ptr() as *const std::ffi::c_void,
         grad_output.as_ptr() as *const std::ffi::c_void,
         grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
-        in_channels * out_channels * kernel_depth * kernel_height * kernel_width,
         &metadata,
     )
     .unwrap();

@@ -11,6 +11,9 @@ fn test_concat_f32_dim0() {
 
     let output_shape = vec![4, 2];
     let concat_dim = 0;
+    let num_dims = 2;
+    let num_inputs = 2;
+    let num_els = 8;
 
     // Input shapes for 2 inputs: [2, 2, 2, 2] (flattened)
     let input_shapes = vec![2, 2, 2, 2];
@@ -21,16 +24,23 @@ fn test_concat_f32_dim0() {
     // Buffer offsets (in elements): [0, 4] (second matrix starts at index 4)
     let input_buffer_offsets = vec![0, 4];
 
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&output_shape);
+    metadata.push(concat_dim);
+    metadata.push(num_inputs);
+    metadata.extend(&input_shapes);
+    metadata.extend(&input_strides);
+    metadata.extend(&input_offsets);
+    metadata.extend(&input_buffer_offsets);
+
     call_concat(
         concat::F32,
-        &output_shape,
-        concat_dim,
-        &input_shapes,
-        &input_strides,
-        &input_offsets,
-        &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -48,6 +58,9 @@ fn test_concat_f32_dim1() {
 
     let output_shape = vec![2, 4];
     let concat_dim = 1;
+    let num_dims = 2;
+    let num_inputs = 2;
+    let num_els = 8;
 
     // Input shapes for 2 inputs: [2, 2, 2, 2] (flattened)
     let input_shapes = vec![2, 2, 2, 2];
@@ -58,16 +71,23 @@ fn test_concat_f32_dim1() {
     // Buffer offsets (in elements): [0, 4] (second matrix starts at index 4)
     let input_buffer_offsets = vec![0, 4];
 
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&output_shape);
+    metadata.push(concat_dim);
+    metadata.push(num_inputs);
+    metadata.extend(&input_shapes);
+    metadata.extend(&input_strides);
+    metadata.extend(&input_offsets);
+    metadata.extend(&input_buffer_offsets);
+
     call_concat(
         concat::F32,
-        &output_shape,
-        concat_dim,
-        &input_shapes,
-        &input_strides,
-        &input_offsets,
-        &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -83,22 +103,32 @@ fn test_concat_i32_dim0() {
 
     let output_shape = vec![4, 2];
     let concat_dim = 0;
+    let num_dims = 2;
+    let num_inputs = 2;
+    let num_els = 8;
 
     let input_shapes = vec![2, 2, 2, 2];
     let input_strides = vec![2, 1, 2, 1];
     let input_offsets = vec![0, 0];
     let input_buffer_offsets = vec![0, 4];
 
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&output_shape);
+    metadata.push(concat_dim);
+    metadata.push(num_inputs);
+    metadata.extend(&input_shapes);
+    metadata.extend(&input_strides);
+    metadata.extend(&input_offsets);
+    metadata.extend(&input_buffer_offsets);
+
     call_concat(
         concat::I32,
-        &output_shape,
-        concat_dim,
-        &input_shapes,
-        &input_strides,
-        &input_offsets,
-        &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -117,6 +147,9 @@ fn test_concat_3_tensors() {
 
     let output_shape = vec![6, 2];
     let concat_dim = 0;
+    let num_dims = 2;
+    let num_inputs = 3;
+    let num_els = 12;
 
     // Input shapes for 3 inputs: [2, 2, 2, 2, 2, 2] (flattened)
     let input_shapes = vec![2, 2, 2, 2, 2, 2];
@@ -127,16 +160,23 @@ fn test_concat_3_tensors() {
     // Buffer offsets (in elements): [0, 4, 8]
     let input_buffer_offsets = vec![0, 4, 8];
 
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&output_shape);
+    metadata.push(concat_dim);
+    metadata.push(num_inputs);
+    metadata.extend(&input_shapes);
+    metadata.extend(&input_strides);
+    metadata.extend(&input_offsets);
+    metadata.extend(&input_buffer_offsets);
+
     call_concat(
         concat::F32,
-        &output_shape,
-        concat_dim,
-        &input_shapes,
-        &input_strides,
-        &input_offsets,
-        &input_buffer_offsets,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -158,17 +198,25 @@ fn test_split_f32_dim0() {
     let split_dim = 0;
     let output_size_on_dim = 2; // Take 2 rows
     let split_offset = 0; // Start from beginning
+    let num_dims = 2;
+    let num_els = 4; // output elements
+
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0); // input_offset
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
 
     call_split(
         split::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -187,17 +235,24 @@ fn test_split_f32_dim0_offset() {
     let split_dim = 0;
     let output_size_on_dim = 2;
     let split_offset = 2; // Start from row 2
+    let num_dims = 2;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
 
     call_split(
         split::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -216,17 +271,24 @@ fn test_split_f32_dim1() {
     let split_dim = 1;
     let output_size_on_dim = 2; // Take 2 columns
     let split_offset = 0; // Start from beginning
+    let num_dims = 2;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
 
     call_split(
         split::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -245,17 +307,24 @@ fn test_split_f32_dim1_offset() {
     let split_dim = 1;
     let output_size_on_dim = 2;
     let split_offset = 2; // Start from column 2
+    let num_dims = 2;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
 
     call_split(
         split::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -274,17 +343,24 @@ fn test_split_i32_dim0() {
     let split_dim = 0;
     let output_size_on_dim = 2;
     let split_offset = 0;
+    let num_dims = 2;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
 
     call_split(
         split::I32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -305,17 +381,24 @@ fn test_split_3d_tensor() {
     let split_dim = 1;
     let output_size_on_dim = 2; // Take 2 rows
     let split_offset = 0;
+    let num_dims = 3;
+    let num_els = 8;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
 
     call_split(
         split::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 

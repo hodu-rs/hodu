@@ -5,19 +5,38 @@
 // ============================================================================
 // CONCATENATION OPERATIONS
 // ============================================================================
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in output)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: output_shape (shape of concatenated output)
+// - metadata[2+num_dims]: concat_dim (dimension along which to concatenate)
+// - metadata[2+num_dims+1]: num_inputs (number of input tensors)
+// - metadata[2+num_dims+2..]: input_shapes (flattened: num_inputs * num_dims elements)
+// - ...: input_strides (flattened: num_inputs * num_dims elements)
+// - ...: input_offsets (num_inputs elements)
+// - ...: input_buffer_offsets (num_inputs elements)
+//
+// Algorithm:
+// For each output element, determine which input tensor it comes from by
+// checking the index along concat_dim, then map to the corresponding input
+// element using the input's shape and strides.
 
-// Generic concatenation macro
-// Concatenates multiple input tensors along a specified dimension
+/// Macro to implement a concatenation operation
+///
+/// @param TYPENAME C type for the operation
+/// @param FN_NAME Function name
 #define CONCAT_OP(TYPENAME, FN_NAME)                                                               \
-    void FN_NAME(const void *input_ptr, void *output_ptr, size_t num_els, size_t num_dims,         \
-                 const size_t *metadata) {                                                         \
+    void FN_NAME(const void *input_ptr, void *output_ptr, const size_t *metadata) {                \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
                                                                                                    \
-        const size_t *output_shape = metadata;                                                     \
-        const size_t concat_dim = metadata[num_dims];                                              \
-        const size_t num_inputs = metadata[num_dims + 1];                                          \
-        const size_t *input_shapes = metadata + num_dims + 2;                                      \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *output_shape = metadata + 2;                                                 \
+        const size_t concat_dim = metadata[2 + num_dims];                                          \
+        const size_t num_inputs = metadata[2 + num_dims + 1];                                      \
+        const size_t *input_shapes = metadata + 2 + num_dims + 2;                                  \
         const size_t *input_strides = input_shapes + num_inputs * num_dims;                        \
         const size_t *input_offsets = input_strides + num_inputs * num_dims;                       \
         const size_t *input_buffer_offsets = input_offsets + num_inputs;                           \
@@ -82,21 +101,38 @@ CONCAT_OP(uint64_t, concat_u64)
 // ============================================================================
 // SPLIT OPERATIONS
 // ============================================================================
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in output)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape (shape of input tensor)
+// - metadata[2+num_dims..2+2*num_dims]: input_strides (strides of input tensor)
+// - metadata[2+2*num_dims]: input_offset (starting offset in input tensor)
+// - metadata[2+2*num_dims+1]: split_dim (dimension along which to split)
+// - metadata[2+2*num_dims+2]: output_size_on_dim (size of output along split dimension)
+// - metadata[2+2*num_dims+3]: split_offset (offset along split dimension where output starts)
+//
+// Algorithm:
+// For each output element, compute its indices in the output space, then
+// map to the input space by adding split_offset to the index along split_dim.
 
-// Generic split macro
-// Splits one tensor into multiple outputs along a specified dimension
+/// Macro to implement a split operation
+///
+/// @param TYPENAME C type for the operation
+/// @param FN_NAME Function name
 #define SPLIT_OP(TYPENAME, FN_NAME)                                                                \
-    void FN_NAME(const void *input_ptr, void *output_ptr, size_t num_els, size_t num_dims,         \
-                 const size_t *metadata) {                                                         \
+    void FN_NAME(const void *input_ptr, void *output_ptr, const size_t *metadata) {                \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
                                                                                                    \
-        const size_t *input_shape = metadata;                                                      \
-        const size_t *input_strides = metadata + num_dims;                                         \
-        const size_t input_offset = metadata[2 * num_dims];                                        \
-        const size_t split_dim = metadata[2 * num_dims + 1];                                       \
-        const size_t output_size_on_dim = metadata[2 * num_dims + 2];                              \
-        const size_t split_offset = metadata[2 * num_dims + 3];                                    \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+        const size_t split_dim = metadata[2 + 2 * num_dims + 1];                                   \
+        const size_t output_size_on_dim = metadata[2 + 2 * num_dims + 2];                          \
+        const size_t split_offset = metadata[2 + 2 * num_dims + 3];                                \
                                                                                                    \
         /* Calculate output shape */                                                               \
         size_t output_shape[16];                                                                   \

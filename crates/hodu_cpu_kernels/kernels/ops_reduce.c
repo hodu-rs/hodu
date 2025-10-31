@@ -9,22 +9,62 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+// ============================================================================
+// GENERIC REDUCTION OPERATIONS
+// ============================================================================
+//
+// All reduction operations follow the same metadata layout:
+// - metadata[0]: num_dims (number of dimensions in input)
+// - metadata[1..1+num_dims]: dims (shape of input)
+// - metadata[1+num_dims..1+2*num_dims]: strides (strides of input)
+// - metadata[1+2*num_dims]: offset (starting offset in input)
+// - metadata[2+2*num_dims]: output_shape_len (number of dimensions in output)
+// - metadata[3+2*num_dims..3+2*num_dims+output_shape_len]: output_shape
+// - metadata[3+2*num_dims+output_shape_len]: num_reduce_dims (number of dims to reduce)
+// - metadata[4+2*num_dims+output_shape_len..]: reduce_dims (dimension indices to reduce)
+// - metadata[...+num_reduce_dims]: keep_dim (1 to keep, 0 to squeeze)
+// - metadata[...+1]: reduce_size (total elements to reduce per output)
+//
+// Algorithm:
+// For each output element:
+// 1. Compute output multi-dimensional indices
+// 2. Map to input indices (accounting for keep_dim and reduced dimensions)
+// 3. Iterate over all reduced dimension combinations
+// 4. Accumulate values according to the reduction operation
+//
+// keep_dim behavior:
+// - If keep_dim=true: output shape matches input but reduced dims have size 1
+// - If keep_dim=false: reduced dimensions are squeezed out of output
+
+/// Macro to implement a generic reduction operation
+///
+/// @param IN_TYPE Input C type
+/// @param OUT_TYPE Output C type (same as input for most ops)
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param INIT_VAL Initial accumulator value
+/// @param ACCUMULATE Expression to accumulate values (e.g., acc += val)
 #define REDUCE_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX, INIT_VAL, ACCUMULATE)                            \
-    void reduce_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,             \
-                              size_t num_dims, const size_t *metadata, size_t reduce_size) {       \
+    void reduce_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             OUT_TYPE acc = INIT_VAL;                                                               \
@@ -97,6 +137,7 @@ REDUCE_OP(uint16_t, uint16_t, sum_u16, 0u, acc += val)
 REDUCE_OP(uint32_t, uint32_t, sum_u32, 0u, acc += val)
 REDUCE_OP(uint64_t, uint64_t, sum_u64, 0u, acc += val)
 
+// Max reduction operations
 REDUCE_OP(f8e4m3_t, f8e4m3_t, max_f8e4m3, -INFINITY, acc = MAX(acc, val))
 REDUCE_OP(f8e5m2_t, f8e5m2_t, max_f8e5m2, -INFINITY, acc = MAX(acc, val))
 REDUCE_OP(bf16_t, bf16_t, max_bf16, -INFINITY, acc = MAX(acc, val))
@@ -112,6 +153,7 @@ REDUCE_OP(uint16_t, uint16_t, max_u16, 0u, acc = MAX(acc, val))
 REDUCE_OP(uint32_t, uint32_t, max_u32, 0u, acc = MAX(acc, val))
 REDUCE_OP(uint64_t, uint64_t, max_u64, 0u, acc = MAX(acc, val))
 
+// Min reduction operations
 REDUCE_OP(f8e4m3_t, f8e4m3_t, min_f8e4m3, INFINITY, acc = MIN(acc, val))
 REDUCE_OP(f8e5m2_t, f8e5m2_t, min_f8e5m2, INFINITY, acc = MIN(acc, val))
 REDUCE_OP(bf16_t, bf16_t, min_bf16, INFINITY, acc = MIN(acc, val))
@@ -127,6 +169,7 @@ REDUCE_OP(uint16_t, uint16_t, min_u16, UINT16_MAX, acc = MIN(acc, val))
 REDUCE_OP(uint32_t, uint32_t, min_u32, UINT32_MAX, acc = MIN(acc, val))
 REDUCE_OP(uint64_t, uint64_t, min_u64, UINT64_MAX, acc = MIN(acc, val))
 
+// Product reduction operations
 REDUCE_OP(f8e4m3_t, f8e4m3_t, prod_f8e4m3, 1, acc *= val)
 REDUCE_OP(f8e5m2_t, f8e5m2_t, prod_f8e5m2, 1, acc *= val)
 REDUCE_OP(bf16_t, bf16_t, prod_bf16, 1, acc *= val)
@@ -142,22 +185,42 @@ REDUCE_OP(uint16_t, uint16_t, prod_u16, 1u, acc *= val)
 REDUCE_OP(uint32_t, uint32_t, prod_u32, 1u, acc *= val)
 REDUCE_OP(uint64_t, uint64_t, prod_u64, 1u, acc *= val)
 
+// ============================================================================
+// STANDARD DEVIATION REDUCTION
+// ============================================================================
+//
+// Computes population standard deviation: sqrt(E[X²] - E[X]²)
+// Two-pass algorithm: accumulate sum and sum of squares, then compute std.
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement standard deviation reduction (float types only)
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_STD_OP(TYPE, TYPE_SUFFIX)                                                           \
-    void reduce_std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,         \
-                                  size_t num_dims, const size_t *metadata, size_t reduce_size) {   \
+    void reduce_std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
+                                  const size_t *metadata) {                                        \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             TYPE sum = 0;                                                                          \
@@ -226,22 +289,42 @@ REDUCE_STD_OP(f16_t, f16)
 REDUCE_STD_OP(f32_t, f32)
 REDUCE_STD_OP(f64_t, f64)
 
+// ============================================================================
+// VARIANCE REDUCTION
+// ============================================================================
+//
+// Computes population variance: E[X²] - E[X]²
+// Same as std but without the sqrt.
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement variance reduction (float types only)
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_VAR_OP(TYPE, TYPE_SUFFIX)                                                           \
-    void reduce_var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,         \
-                                  size_t num_dims, const size_t *metadata, size_t reduce_size) {   \
+    void reduce_var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
+                                  const size_t *metadata) {                                        \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             TYPE sum = 0;                                                                          \
@@ -309,10 +392,32 @@ REDUCE_VAR_OP(f16_t, f16)
 REDUCE_VAR_OP(f32_t, f32)
 REDUCE_VAR_OP(f64_t, f64)
 
+// ============================================================================
+// MEAN REDUCTION
+// ============================================================================
+//
+// Computes arithmetic mean by calling sum and dividing by reduce_size.
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement mean reduction (float types only)
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_MEAN_OP(TYPE, TYPE_SUFFIX)                                                          \
-    void reduce_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,        \
-                                   size_t num_dims, const size_t *metadata, size_t reduce_size) {  \
-        reduce_sum_##TYPE_SUFFIX(input_ptr, output_ptr, num_els, num_dims, metadata, reduce_size); \
+    void reduce_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                        \
+                                   const size_t *metadata) {                                       \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+        reduce_sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                                 \
         TYPE *output = (TYPE *)output_ptr;                                                         \
         for (size_t i = 0; i < num_els; i++) {                                                     \
             output[i] /= (TYPE)reduce_size;                                                        \
@@ -326,22 +431,41 @@ REDUCE_MEAN_OP(f16_t, f16)
 REDUCE_MEAN_OP(f32_t, f32)
 REDUCE_MEAN_OP(f64_t, f64)
 
+// ============================================================================
+// NORM REDUCTION (L2 NORM)
+// ============================================================================
+//
+// Computes L2 norm: sqrt(sum(X²))
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement L2 norm reduction (float types only)
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_NORM_OP(TYPE, TYPE_SUFFIX)                                                          \
-    void reduce_norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,        \
-                                   size_t num_dims, const size_t *metadata, size_t reduce_size) {  \
+    void reduce_norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                        \
+                                   const size_t *metadata) {                                       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             TYPE sum_squares = 0;                                                                  \
@@ -406,23 +530,42 @@ REDUCE_NORM_OP(f16_t, f16)
 REDUCE_NORM_OP(f32_t, f32)
 REDUCE_NORM_OP(f64_t, f64)
 
+// ============================================================================
+// ARGMAX REDUCTION
+// ============================================================================
+//
+// Returns the index of the maximum value along the first reduce dimension.
+// Output type is always int32.
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement argmax reduction (returns int32 indices)
+///
+/// @param IN_TYPE Input C type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ARGMAX_OP(IN_TYPE, TYPE_SUFFIX)                                                     \
-    void reduce_argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,      \
-                                     size_t num_dims, const size_t *metadata,                      \
-                                     size_t reduce_size) {                                         \
+    void reduce_argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             IN_TYPE max_val;                                                                       \
@@ -488,23 +631,42 @@ REDUCE_NORM_OP(f64_t, f64)
         }                                                                                          \
     }
 
+// ============================================================================
+// ARGMIN REDUCTION
+// ============================================================================
+//
+// Returns the index of the minimum value along the first reduce dimension.
+// Output type is always int32.
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement argmin reduction (returns int32 indices)
+///
+/// @param IN_TYPE Input C type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ARGMIN_OP(IN_TYPE, TYPE_SUFFIX)                                                     \
-    void reduce_argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,      \
-                                     size_t num_dims, const size_t *metadata,                      \
-                                     size_t reduce_size) {                                         \
+    void reduce_argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             IN_TYPE min_val;                                                                       \
@@ -602,24 +764,44 @@ REDUCE_ARGMIN_OP(uint16_t, u16)
 REDUCE_ARGMIN_OP(uint32_t, u32)
 REDUCE_ARGMIN_OP(uint64_t, u64)
 
+// ============================================================================
+// ANY REDUCTION (LOGICAL OR)
+// ============================================================================
+//
+// Returns true if any element is non-zero along reduce dimensions.
+// Output type is always bool. Short-circuits on first true value.
+//
+// Metadata layout: Same as generic reduction operations
+
 #define IS_NONZERO(val) ((val) != 0)
 
+/// Macro to implement any reduction (logical OR, returns bool)
+///
+/// @param IN_TYPE Input C type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ANY_OP(IN_TYPE, TYPE_SUFFIX)                                                        \
-    void reduce_any_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,         \
-                                  size_t num_dims, const size_t *metadata, size_t reduce_size) {   \
+    void reduce_any_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
+                                  const size_t *metadata) {                                        \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         bool *output = (bool *)output_ptr;                                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             bool result = false;                                                                   \
@@ -679,22 +861,42 @@ REDUCE_ARGMIN_OP(uint64_t, u64)
         }                                                                                          \
     }
 
+// ============================================================================
+// ALL REDUCTION (LOGICAL AND)
+// ============================================================================
+//
+// Returns true if all elements are non-zero along reduce dimensions.
+// Output type is always bool. Short-circuits on first false value.
+//
+// Metadata layout: Same as generic reduction operations
+
+/// Macro to implement all reduction (logical AND, returns bool)
+///
+/// @param IN_TYPE Input C type
+/// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ALL_OP(IN_TYPE, TYPE_SUFFIX)                                                        \
-    void reduce_all_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,         \
-                                  size_t num_dims, const size_t *metadata, size_t reduce_size) {   \
+    void reduce_all_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
+                                  const size_t *metadata) {                                        \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         bool *output = (bool *)output_ptr;                                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata + num_dims;                                               \
-        const size_t offset = metadata[2 * num_dims];                                              \
-        const size_t output_shape_len = metadata[2 * num_dims + 1];                                \
-        const size_t *output_shape = metadata + 2 * num_dims + 2;                                  \
-        const size_t num_reduce_dims = metadata[2 * num_dims + 2 + output_shape_len];              \
-        const size_t *reduce_dims = metadata + 2 * num_dims + 3 + output_shape_len;                \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
         const size_t keep_dim_val =                                                                \
-            metadata[2 * num_dims + 3 + output_shape_len + num_reduce_dims];                       \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
         const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
             bool result = true;                                                                    \

@@ -4,16 +4,40 @@
 // ============================================================================
 // UNARY OPERATION IMPLEMENTATION MACROS
 // ============================================================================
+//
+// These macros generate element-wise unary operations for various data types.
+// All operations support both contiguous and strided tensor access patterns.
+//
+// Metadata layout (same for all operations):
+// - metadata[0]: num_els (total number of elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: dims (shape)
+// - metadata[2+num_dims..2+2*num_dims]: strides
+// - metadata[2+2*num_dims]: offset (starting offset in input)
+//
+// The implementation optimizes for contiguous tensors with a fast path.
 
+/**
+ * @brief Macro to implement standard unary operations
+ *
+ * Generates a function that applies a unary operation element-wise.
+ * Supports both contiguous and strided access patterns.
+ *
+ * @param TYPE C type of the tensor elements
+ * @param TYPE_SUFFIX Suffix for the function name (e.g., f32, i32)
+ * @param OP_NAME Operation name (e.g., neg, abs, sqrt)
+ * @param FUNC Expression to compute the result (uses variable 'x')
+ */
 #define IMPL_UNARY_OP(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                            \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata) {                                         \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         TYPE *out = (TYPE *)output;                                                                \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -38,16 +62,29 @@
         }                                                                                          \
     }
 
+/**
+ * @brief Macro to implement unary operations with a scalar parameter
+ *
+ * Generates a function that combines each tensor element with a scalar value.
+ * Used for operations like add_scalar, mul_scalar, pow_scalar, etc.
+ *
+ * @param TYPE C type of the tensor elements
+ * @param TYPE_SUFFIX Suffix for the function name
+ * @param OP_NAME Operation name (e.g., add_scalar, mul_scalar)
+ * @param FUNC Expression using 'x' (element) and 'const_val' (scalar)
+ */
 #define IMPL_UNARY_WITH_SCALAR(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                   \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata, const void *scalar) {                     \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
+                                 const void *scalar) {                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         TYPE *out = (TYPE *)output;                                                                \
         TYPE const_val = *(const TYPE *)scalar;                                                    \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -72,15 +109,27 @@
         }                                                                                          \
     }
 
+/**
+ * @brief Macro to implement unary operations that output boolean values
+ *
+ * Generates a function that produces a boolean (uint8_t) output tensor.
+ * Used for logical operations like logical_not.
+ *
+ * @param TYPE C type of the input tensor elements
+ * @param TYPE_SUFFIX Suffix for the function name
+ * @param OP_NAME Operation name (e.g., logical_not)
+ * @param FUNC Boolean expression using variable 'x'
+ */
 #define IMPL_UNARY_TO_BOOL(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                       \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata) {                                         \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         uint8_t *out = (uint8_t *)output;                                                          \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -98,16 +147,30 @@
         }                                                                                          \
     }
 
+/**
+ * @brief Macro to implement comparison operations with scalar that output boolean
+ *
+ * Generates a function that compares each tensor element with a scalar value
+ * and produces a boolean (uint8_t) output. Used for eq_scalar, ne_scalar,
+ * lt_scalar, le_scalar, gt_scalar, ge_scalar.
+ *
+ * @param TYPE C type of the tensor elements
+ * @param TYPE_SUFFIX Suffix for the function name
+ * @param OP_NAME Operation name (e.g., eq_scalar, lt_scalar)
+ * @param FUNC Comparison expression using 'x' and 'const_val'
+ */
 #define IMPL_UNARY_CMP_SCALAR_TO_BOOL(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                            \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata, const void *scalar) {                     \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
+                                 const void *scalar) {                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         uint8_t *out = (uint8_t *)output;                                                          \
         TYPE const_val = *(const TYPE *)scalar;                                                    \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -125,16 +188,30 @@
         }                                                                                          \
     }
 
-// Macros for FP8/FP16/BF16 with float conversion
+/**
+ * @brief Macro to implement unary operations for low-precision float types
+ *
+ * Generates a function for FP8/FP16/BF16 types that converts to float32,
+ * performs the operation, and converts back. Used when native operations
+ * are not available for these types.
+ *
+ * @param TYPE C type of the tensor elements (e.g., uint8_t for FP8)
+ * @param TYPE_SUFFIX Suffix for the function name
+ * @param OP_NAME Operation name
+ * @param FUNC Expression using float variable 'x'
+ * @param TO_FLOAT Function to convert TYPE to float
+ * @param FROM_FLOAT Function to convert float to TYPE
+ */
 #define IMPL_UNARY_OP_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)              \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata) {                                         \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         TYPE *out = (TYPE *)output;                                                                \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -160,15 +237,17 @@
     }
 
 #define IMPL_UNARY_WITH_SCALAR_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)     \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata, const void *scalar) {                     \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
+                                 const void *scalar) {                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         TYPE *out = (TYPE *)output;                                                                \
         float const_val = TO_FLOAT(*(const TYPE *)scalar);                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -194,14 +273,15 @@
     }
 
 #define IMPL_UNARY_TO_BOOL_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT)                     \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata) {                                         \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         uint8_t *out = (uint8_t *)output;                                                          \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -220,15 +300,17 @@
     }
 
 #define IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT)          \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, size_t num_els, size_t num_dims, \
-                                 const size_t *metadata, const void *scalar) {                     \
+    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
+                                 const void *scalar) {                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
         uint8_t *out = (uint8_t *)output;                                                          \
         float const_val = TO_FLOAT(*(const TYPE *)scalar);                                         \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *strides = metadata ? metadata + num_dims : NULL;                             \
-        const size_t offset = (metadata && num_dims > 0) ? metadata[2 * num_dims] : 0;             \
+        const size_t *dims = metadata + 2;                                                         \
+        const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;                         \
+        const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;         \
                                                                                                    \
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
@@ -249,7 +331,7 @@
 // ============================================================================
 // F32 OPERATIONS
 // ============================================================================
-
+// Basic arithmetic operations
 IMPL_UNARY_OP(f32_t, f32, neg, -x)
 IMPL_UNARY_OP(f32_t, f32, abs, fabsf(x))
 IMPL_UNARY_OP(f32_t, f32, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f))
@@ -257,6 +339,7 @@ IMPL_UNARY_OP(f32_t, f32, square, x *x)
 IMPL_UNARY_OP(f32_t, f32, sqrt, sqrtf(x))
 IMPL_UNARY_OP(f32_t, f32, recip, 1.0f / x)
 
+// Activation functions
 IMPL_UNARY_OP(f32_t, f32, relu, (x > 0.0f) ? x : 0.0f)
 IMPL_UNARY_OP(f32_t, f32, sigmoid, 1.0f / (1.0f + expf(-x)))
 IMPL_UNARY_OP(f32_t, f32, tanh, tanhf(x))
@@ -265,10 +348,12 @@ IMPL_UNARY_OP(f32_t, f32, softplus, softplus_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, silu, silu_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, mish, mish_helper_f32(x))
 
+// Trigonometric functions
 IMPL_UNARY_OP(f32_t, f32, sin, sinf(x))
 IMPL_UNARY_OP(f32_t, f32, cos, cosf(x))
 IMPL_UNARY_OP(f32_t, f32, tan, tanf_opt(x))
 
+// Exponential and logarithmic functions
 IMPL_UNARY_OP(f32_t, f32, exp, expf(x))
 IMPL_UNARY_OP(f32_t, f32, exp2, exp2f(x))
 IMPL_UNARY_OP(f32_t, f32, exp10, exp10f_opt(x))
@@ -276,8 +361,10 @@ IMPL_UNARY_OP(f32_t, f32, ln, logf(x))
 IMPL_UNARY_OP(f32_t, f32, log2, log2f(x))
 IMPL_UNARY_OP(f32_t, f32, log10, log10f(x))
 
+// Logical operations
 IMPL_UNARY_TO_BOOL(f32_t, f32, logical_not, x == 0.0f)
 
+// Scalar arithmetic operations
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, sub_scalar, x - const_val)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, mul_scalar, x *const_val)
@@ -286,6 +373,7 @@ IMPL_UNARY_WITH_SCALAR(f32_t, f32, pow_scalar, powf_opt(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, minimum_scalar, MINIMUM(x, const_val))
 
+// Scalar comparison operations
 IMPL_UNARY_CMP_SCALAR_TO_BOOL(f32_t, f32, eq_scalar, x == const_val)
 IMPL_UNARY_CMP_SCALAR_TO_BOOL(f32_t, f32, ne_scalar, x != const_val)
 IMPL_UNARY_CMP_SCALAR_TO_BOOL(f32_t, f32, lt_scalar, x < const_val)

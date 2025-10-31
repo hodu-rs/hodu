@@ -1,3 +1,16 @@
+/**
+ * @file ops_binary.h
+ * @brief Binary tensor operations header
+ *
+ * Declares all element-wise binary operations for tensors including:
+ * - Arithmetic operations (add, sub, mul, div, pow, maximum, minimum)
+ * - Logical operations (logical_and, logical_or, logical_xor)
+ * - Comparison operations (eq, ne, lt, le, gt, ge)
+ *
+ * All operations support multiple data types and handle both contiguous
+ * and strided tensor layouts efficiently.
+ */
+
 #ifndef HODU_CPU_KERNELS_OPS_BINARY_H
 #define HODU_CPU_KERNELS_OPS_BINARY_H
 
@@ -10,44 +23,68 @@ extern "C" {
 // ============================================================================
 // BINARY OPERATION FUNCTION SIGNATURES
 // ============================================================================
+//
+// All binary operations follow a consistent signature:
+//   void op_type(const void *lhs, const void *rhs, void *output, const size_t *metadata)
+//
+// Parameters:
+//   lhs      - Pointer to left-hand side tensor data
+//   rhs      - Pointer to right-hand side tensor data
+//   output   - Pointer to output buffer (pre-allocated)
+//   metadata - Array describing tensor layout (see below)
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: lhs_shape
+// - metadata[2+num_dims..2+2*num_dims]: rhs_shape
+// - metadata[2+2*num_dims..2+3*num_dims]: lhs_strides
+// - metadata[2+3*num_dims..2+4*num_dims]: rhs_strides
+// - metadata[2+4*num_dims]: lhs_offset
+// - metadata[2+4*num_dims+1]: rhs_offset
+//
+// Note: Broadcasting must be handled by the caller; these functions assume
+// compatible shapes and perform element-wise operations only.
 
+/// Macro to declare arithmetic binary operations for a given type
+/// Declares: add, sub, mul, div, pow, maximum, minimum
 #define DECLARE_BINARY_OP(TYPE_SUFFIX)                                                             \
-    void add_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,         \
-                           size_t num_dims, const size_t *metadata);                               \
-    void sub_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,         \
-                           size_t num_dims, const size_t *metadata);                               \
-    void mul_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,         \
-                           size_t num_dims, const size_t *metadata);                               \
-    void div_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,         \
-                           size_t num_dims, const size_t *metadata);                               \
-    void pow_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,         \
-                           size_t num_dims, const size_t *metadata);                               \
-    void maximum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,     \
-                               size_t num_dims, const size_t *metadata);                           \
-    void minimum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,     \
-                               size_t num_dims, const size_t *metadata);
+    void add_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
+                           const size_t *metadata);                                                \
+    void sub_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
+                           const size_t *metadata);                                                \
+    void mul_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
+                           const size_t *metadata);                                                \
+    void div_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
+                           const size_t *metadata);                                                \
+    void pow_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
+                           const size_t *metadata);                                                \
+    void maximum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                     \
+                               const size_t *metadata);                                            \
+    void minimum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                     \
+                               const size_t *metadata);
 
+/// Macro to declare logical binary operations for a given type
+/// Declares: logical_and, logical_or, logical_xor
+/// All return boolean results (uint8_t: 0 for false, 1 for true)
 #define DECLARE_BINARY_LOGICAL(TYPE_SUFFIX)                                                        \
-    void logical_and_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els, \
-                                   size_t num_dims, const size_t *metadata);                       \
-    void logical_or_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,  \
-                                  size_t num_dims, const size_t *metadata);                        \
-    void logical_xor_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els, \
-                                   size_t num_dims, const size_t *metadata);
+    void logical_and_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);                                        \
+    void logical_or_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                  \
+                                  const size_t *metadata);                                         \
+    void logical_xor_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);
 
+/// Macro to declare comparison binary operations for a given type
+/// Declares: eq, ne, lt, le, gt, ge
+/// All return boolean results (uint8_t: 0 for false, 1 for true)
 #define DECLARE_BINARY_CMP(TYPE_SUFFIX)                                                            \
-    void eq_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,          \
-                          size_t num_dims, const size_t *metadata);                                \
-    void ne_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,          \
-                          size_t num_dims, const size_t *metadata);                                \
-    void lt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,          \
-                          size_t num_dims, const size_t *metadata);                                \
-    void le_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,          \
-                          size_t num_dims, const size_t *metadata);                                \
-    void gt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,          \
-                          size_t num_dims, const size_t *metadata);                                \
-    void ge_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,          \
-                          size_t num_dims, const size_t *metadata);
+    void eq_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
+    void ne_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
+    void lt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
+    void le_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
+    void gt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
+    void ge_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata);
 
 // Bool type
 DECLARE_BINARY_OP(bool)

@@ -6,20 +6,52 @@
 // ============================================================================
 // BATCHED MATRIX MULTIPLICATION (MATMUL)
 // ============================================================================
+//
+// Performs batched matrix multiplication with broadcasting support.
+// Computes C[..., i, j] = sum_k A[..., i, k] * B[..., k, j]
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: lhs_ndim (number of dimensions in lhs)
+// - metadata[2]: rhs_ndim (number of dimensions in rhs)
+// - metadata[3]: batch_ndim (number of batch dimensions in output)
+// - metadata[4..4+lhs_ndim]: lhs_shape
+// - metadata[4+lhs_ndim..4+lhs_ndim+rhs_ndim]: rhs_shape
+// - metadata[4+lhs_ndim+rhs_ndim..4+lhs_ndim+rhs_ndim+batch_ndim]: batch_shape
+// - metadata[...+lhs_ndim]: lhs_strides
+// - metadata[...+rhs_ndim]: rhs_strides
+// - metadata[...]: lhs_offset
+// - metadata[...+1]: rhs_offset
+// - metadata[...+2]: M (rows of lhs matrix)
+// - metadata[...+3]: K (cols of lhs / rows of rhs)
+// - metadata[...+4]: N (cols of rhs matrix)
+//
+// Algorithm:
+// For each output element (batch_idx, i, j):
+// 1. Decompose flat batch_idx into multi-dimensional batch indices
+// 2. Map batch indices to lhs/rhs with broadcasting (size 1 dims stay at 0)
+// 3. Compute dot product: sum_k lhs[batch, i, k] * rhs[batch, k, j]
+//
+// Broadcasting:
+// Batch dimensions of size 1 are broadcast by using index 0 for that dimension.
 
+/// Macro to implement batched matrix multiplication
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define MATMUL_OP(TYPE, TYPE_SUFFIX)                                                               \
     void matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,          \
-                              size_t num_els, size_t num_dims, const size_t *metadata) {           \
-        (void)num_dims; /* Unused parameter */                                                     \
+                              const size_t *metadata) {                                            \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
         const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
-        const size_t lhs_ndim = metadata[0];                                                       \
-        const size_t rhs_ndim = metadata[1];                                                       \
-        const size_t batch_ndim = metadata[2];                                                     \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t lhs_ndim = metadata[1];                                                       \
+        const size_t rhs_ndim = metadata[2];                                                       \
+        const size_t batch_ndim = metadata[3];                                                     \
                                                                                                    \
-        const size_t *lhs_shape = metadata + 3;                                                    \
+        const size_t *lhs_shape = metadata + 4;                                                    \
         const size_t *rhs_shape = lhs_shape + lhs_ndim;                                            \
         const size_t *batch_shape = rhs_shape + rhs_ndim;                                          \
         const size_t *lhs_strides = batch_shape + batch_ndim;                                      \
@@ -104,14 +136,35 @@ MATMUL_OP(uint32_t, u32)
 MATMUL_OP(uint64_t, u64)
 
 // ============================================================================
-// TILED 2D DOT PRODUCT
+// 2D MATRIX MULTIPLICATION (DOT)
 // ============================================================================
+//
+// Performs simple 2D matrix multiplication without batching.
+// Computes C[i, j] = sum_k A[i, k] * B[k, j]
+//
+// Metadata layout:
+// - metadata[0]: M (number of rows in lhs)
+// - metadata[1]: K (number of cols in lhs / rows in rhs)
+// - metadata[2]: N (number of cols in rhs)
+// - metadata[3]: lhs_stride_m (stride for lhs rows)
+// - metadata[4]: lhs_stride_k (stride for lhs cols)
+// - metadata[5]: rhs_stride_k (stride for rhs rows)
+// - metadata[6]: rhs_stride_n (stride for rhs cols)
+// - metadata[7]: lhs_offset (starting offset in lhs)
+// - metadata[8]: rhs_offset (starting offset in rhs)
+//
+// Algorithm:
+// Simple triple-nested loop over (row, col, k) for matrix multiplication.
+// No tiling or cache optimization as CPU doesn't benefit from shared memory
+// tiling like GPUs do.
 
+/// Macro to implement 2D matrix multiplication
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define DOT_OP(TYPE, TYPE_SUFFIX)                                                                  \
     void dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,             \
-                           size_t num_els, size_t num_dims, const size_t *metadata) {              \
-        (void)num_els;  /* Unused parameter */                                                     \
-        (void)num_dims; /* Unused parameter */                                                     \
+                           const size_t *metadata) {                                               \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
         const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \

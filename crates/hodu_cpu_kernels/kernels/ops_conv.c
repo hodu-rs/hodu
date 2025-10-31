@@ -4,13 +4,35 @@
 #include <stdint.h>
 #include <string.h>
 
+// ============================================================================
+// 1D CONVOLUTION OPERATIONS
+// ============================================================================
+//
+// Metadata layout for conv1d:
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: in_channels
+// - metadata[2]: out_channels
+// - metadata[3]: in_width
+// - metadata[4]: kernel_width
+// - metadata[5]: out_width
+// - metadata[6]: stride
+// - metadata[7]: padding
+// - metadata[8]: dilation
+// - metadata[9]: input_offset
+// - metadata[10]: weight_offset
+
+/// Macro to implement 1D convolution operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define CONV1D_OP(TYPE, TYPE_SUFFIX)                                                               \
     void conv1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              size_t num_els, const size_t *metadata) {                            \
+                              const size_t *metadata) {                                            \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
+        const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_width = metadata[3];                                                       \
@@ -52,12 +74,41 @@ CONV1D_OP(f16_t, f16)
 CONV1D_OP(float, f32)
 CONV1D_OP(double, f64)
 
+// ============================================================================
+// 2D CONVOLUTION OPERATIONS
+// ============================================================================
+//
+// Metadata layout for conv2d:
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: in_channels
+// - metadata[2]: out_channels
+// - metadata[3]: in_height
+// - metadata[4]: in_width
+// - metadata[5]: kernel_height
+// - metadata[6]: kernel_width
+// - metadata[7]: out_height
+// - metadata[8]: out_width
+// - metadata[9]: stride_h
+// - metadata[10]: stride_w
+// - metadata[11]: padding_h
+// - metadata[12]: padding_w
+// - metadata[13]: dilation_h
+// - metadata[14]: dilation_w
+// - metadata[15]: input_offset
+// - metadata[16]: weight_offset
+
+/// Macro to implement 2D convolution operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define CONV2D_OP(TYPE, TYPE_SUFFIX)                                                               \
     void conv2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              size_t num_els, const size_t *metadata) {                            \
+                              const size_t *metadata) {                                            \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
                                                                                                    \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
@@ -113,12 +164,47 @@ CONV2D_OP(f16_t, f16)
 CONV2D_OP(float, f32)
 CONV2D_OP(double, f64)
 
+// ============================================================================
+// 3D CONVOLUTION OPERATIONS
+// ============================================================================
+//
+// Metadata layout for conv3d:
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: in_channels
+// - metadata[2]: out_channels
+// - metadata[3]: in_depth
+// - metadata[4]: in_height
+// - metadata[5]: in_width
+// - metadata[6]: kernel_depth
+// - metadata[7]: kernel_height
+// - metadata[8]: kernel_width
+// - metadata[9]: out_depth
+// - metadata[10]: out_height
+// - metadata[11]: out_width
+// - metadata[12]: stride_d
+// - metadata[13]: stride_h
+// - metadata[14]: stride_w
+// - metadata[15]: padding_d
+// - metadata[16]: padding_h
+// - metadata[17]: padding_w
+// - metadata[18]: dilation_d
+// - metadata[19]: dilation_h
+// - metadata[20]: dilation_w
+// - metadata[21]: input_offset
+// - metadata[22]: weight_offset
+
+/// Macro to implement 3D convolution operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define CONV3D_OP(TYPE, TYPE_SUFFIX)                                                               \
     void conv3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              size_t num_els, const size_t *metadata) {                            \
+                              const size_t *metadata) {                                            \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
                                                                                                    \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
@@ -191,13 +277,27 @@ CONV3D_OP(f16_t, f16)
 CONV3D_OP(float, f32)
 CONV3D_OP(double, f64)
 
+// ============================================================================
+// 1D TRANSPOSED CONVOLUTION OPERATIONS
+// ============================================================================
+//
+// Transposed convolution (deconvolution) is the inverse of convolution,
+// commonly used in decoder networks and generative models.
+//
+// Metadata layout: Same as conv1d
+
+/// Macro to implement 1D transposed convolution operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define CONV_TRANSPOSE1D_OP(TYPE, TYPE_SUFFIX)                                                     \
     void conv_transpose1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, size_t num_els,                          \
-                                        const size_t *metadata) {                                  \
+                                        void *output_ptr, const size_t *metadata) {                \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
                                                                                                    \
         memset(output, 0, num_els * sizeof(TYPE));                                                 \
                                                                                                    \
@@ -244,13 +344,24 @@ CONV_TRANSPOSE1D_OP(f16_t, f16)
 CONV_TRANSPOSE1D_OP(float, f32)
 CONV_TRANSPOSE1D_OP(double, f64)
 
+// ============================================================================
+// 2D TRANSPOSED CONVOLUTION OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv2d
+
+/// Macro to implement 2D transposed convolution operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define CONV_TRANSPOSE2D_OP(TYPE, TYPE_SUFFIX)                                                     \
     void conv_transpose2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, size_t num_els,                          \
-                                        const size_t *metadata) {                                  \
+                                        void *output_ptr, const size_t *metadata) {                \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
                                                                                                    \
         memset(output, 0, num_els * sizeof(TYPE));                                                 \
                                                                                                    \
@@ -316,13 +427,24 @@ CONV_TRANSPOSE2D_OP(f16_t, f16)
 CONV_TRANSPOSE2D_OP(float, f32)
 CONV_TRANSPOSE2D_OP(double, f64)
 
+// ============================================================================
+// 3D TRANSPOSED CONVOLUTION OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv3d
+
+/// Macro to implement 3D transposed convolution operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
 #define CONV_TRANSPOSE3D_OP(TYPE, TYPE_SUFFIX)                                                     \
     void conv_transpose3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, size_t num_els,                          \
-                                        const size_t *metadata) {                                  \
+                                        void *output_ptr, const size_t *metadata) {                \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
                                                                                                    \
         memset(output, 0, num_els * sizeof(TYPE));                                                 \
                                                                                                    \
@@ -410,17 +532,31 @@ CONV_TRANSPOSE3D_OP(f16_t, f16)
 CONV_TRANSPOSE3D_OP(float, f32)
 CONV_TRANSPOSE3D_OP(double, f64)
 
+// ============================================================================
+// 1D CONVOLUTION GRADIENT WEIGHT OPERATIONS
+// ============================================================================
+//
+// Computes gradients with respect to convolution weights for backpropagation.
+// Uses atomic operations to handle concurrent updates from multiple threads.
+//
+// Metadata layout: Same as conv1d
+
+/// Macro to implement 1D convolution gradient weight operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV1D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                                    \
     void conv1d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, size_t num_els,                   \
-                                          const size_t *metadata) {                                \
+                                          void *grad_weight_ptr, const size_t *metadata) {         \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
                                                                                                    \
-        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t batch = metadata[1];                                                          \
                                                                                                    \
-        const size_t batch = metadata[0];                                                          \
+        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_width = metadata[3];                                                       \
@@ -466,17 +602,28 @@ CONV1D_GRAD_WEIGHT_OP(f16_t, f16, atomic_add_f16)
 CONV1D_GRAD_WEIGHT_OP(float, f32, atomic_add_f32)
 CONV1D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 
+// ============================================================================
+// 2D CONVOLUTION GRADIENT WEIGHT OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv2d
+
+/// Macro to implement 2D convolution gradient weight operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV2D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                                    \
     void conv2d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, size_t num_els,                   \
-                                          const size_t *metadata) {                                \
+                                          void *grad_weight_ptr, const size_t *metadata) {         \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
                                                                                                    \
-        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t batch = metadata[1];                                                          \
                                                                                                    \
-        const size_t batch = metadata[0];                                                          \
+        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_height = metadata[3];                                                      \
@@ -539,17 +686,28 @@ CONV2D_GRAD_WEIGHT_OP(f16_t, f16, atomic_add_f16)
 CONV2D_GRAD_WEIGHT_OP(float, f32, atomic_add_f32)
 CONV2D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 
+// ============================================================================
+// 3D CONVOLUTION GRADIENT WEIGHT OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv3d
+
+/// Macro to implement 3D convolution gradient weight operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV3D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                                    \
     void conv3d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, size_t num_els,                   \
-                                          const size_t *metadata) {                                \
+                                          void *grad_weight_ptr, const size_t *metadata) {         \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
                                                                                                    \
-        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t batch = metadata[1];                                                          \
                                                                                                    \
-        const size_t batch = metadata[0];                                                          \
+        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_depth = metadata[3];                                                       \
@@ -635,17 +793,29 @@ CONV3D_GRAD_WEIGHT_OP(f16_t, f16, atomic_add_f16)
 CONV3D_GRAD_WEIGHT_OP(float, f32, atomic_add_f32)
 CONV3D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 
+// ============================================================================
+// 1D TRANSPOSED CONVOLUTION GRADIENT WEIGHT OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv_transpose1d
+
+/// Macro to implement 1D transposed convolution gradient weight operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                          \
     void conv_transpose1d_grad_weight_##TYPE_SUFFIX(                                               \
-        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr, size_t num_els, \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
                                                                                                    \
-        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t batch = metadata[1];                                                          \
                                                                                                    \
-        const size_t batch = metadata[0];                                                          \
+        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_width = metadata[3];                                                       \
@@ -692,17 +862,29 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(f16_t, f16, atomic_add_f16)
 CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(float, f32, atomic_add_f32)
 CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 
+// ============================================================================
+// 2D TRANSPOSED CONVOLUTION GRADIENT WEIGHT OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv_transpose2d
+
+/// Macro to implement 2D transposed convolution gradient weight operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                          \
     void conv_transpose2d_grad_weight_##TYPE_SUFFIX(                                               \
-        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr, size_t num_els, \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
                                                                                                    \
-        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t batch = metadata[1];                                                          \
                                                                                                    \
-        const size_t batch = metadata[0];                                                          \
+        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_height = metadata[3];                                                      \
@@ -766,17 +948,29 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(f16_t, f16, atomic_add_f16)
 CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(float, f32, atomic_add_f32)
 CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 
+// ============================================================================
+// 3D TRANSPOSED CONVOLUTION GRADIENT WEIGHT OPERATIONS
+// ============================================================================
+//
+// Metadata layout: Same as conv_transpose3d
+
+/// Macro to implement 3D transposed convolution gradient weight operation
+///
+/// @param TYPE C type for the operation
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE3D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                          \
     void conv_transpose3d_grad_weight_##TYPE_SUFFIX(                                               \
-        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr, size_t num_els, \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
                                                                                                    \
-        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t batch = metadata[1];                                                          \
                                                                                                    \
-        const size_t batch = metadata[0];                                                          \
+        memset(grad_weight, 0, num_els * sizeof(TYPE));                                            \
         const size_t in_channels = metadata[1];                                                    \
         const size_t out_channels = metadata[2];                                                   \
         const size_t in_depth = metadata[3];                                                       \

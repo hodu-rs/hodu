@@ -1,3 +1,15 @@
+//! Reduction operations for aggregating tensor values along dimensions
+//!
+//! This module provides various reduction operations:
+//! - Aggregations: `reduce_sum`, `reduce_mean`, `reduce_prod`
+//! - Statistics: `reduce_std`, `reduce_var`, `reduce_norm`
+//! - Extrema: `reduce_max`, `reduce_min`
+//! - Indices: `reduce_argmax`, `reduce_argmin`
+//! - Logical: `reduce_any`, `reduce_all`
+//!
+//! All operations support multi-dimensional reductions with configurable dimensions
+//! and optional dimension preservation (keep_dim).
+
 use crate::{error::Result, kernels::macros::ops};
 use core::ffi::c_void;
 
@@ -17,69 +29,84 @@ ops!(
     reduce_all
 );
 
-/// Call reduce operation by kernel name
+/// Execute a reduction operation
+///
+/// Reduces input tensor along specified dimensions using the given reduction operation.
+/// The reduction can preserve dimensions (keep_dim=true) or squeeze them (keep_dim=false).
+///
+/// # Arguments
+/// * `kernel_name` - The reduction kernel to execute (e.g., reduce_sum::F32, reduce_mean::F64)
+/// * `input` - Pointer to input tensor data
+/// * `output` - Pointer to output tensor buffer
+/// * `metadata` - Tensor metadata array (see layout below)
+///
+/// # Metadata layout
+/// - metadata[0]: shape_len (number of dimensions in input)
+/// - metadata[1..1+shape_len]: shape (shape of input tensor)
+/// - metadata[1+shape_len..1+2*shape_len]: strides (strides of input tensor)
+/// - metadata[1+2*shape_len]: offset (starting offset in input)
+/// - metadata[2+2*shape_len]: output_shape_len (number of dimensions in output)
+/// - metadata[3+2*shape_len..3+2*shape_len+output_shape_len]: output_shape (shape of output tensor)
+/// - metadata[3+2*shape_len+output_shape_len]: num_reduce_dims (number of dimensions to reduce)
+/// - metadata[4+2*shape_len+output_shape_len..4+2*shape_len+output_shape_len+num_reduce_dims]: reduce_dims (dimension indices to reduce)
+/// - metadata[4+2*shape_len+output_shape_len+num_reduce_dims]: keep_dim (1 to keep dimensions as size 1, 0 to squeeze)
+/// - metadata[5+2*shape_len+output_shape_len+num_reduce_dims]: reduce_size (total number of elements to reduce per output element)
+///
+/// # Operation-specific behaviors
+/// - `reduce_sum`, `reduce_mean`, `reduce_prod`: Available for all numeric types
+/// - `reduce_std`, `reduce_var`, `reduce_norm`, `reduce_mean`: Float types only
+/// - `reduce_max`, `reduce_min`: Available for all numeric types
+/// - `reduce_argmax`, `reduce_argmin`: Return int32 indices, available for all types including bool
+/// - `reduce_any`, `reduce_all`: Return bool, available for all types including bool
+///
+/// # Safety
+/// This function uses unsafe FFI calls to C kernels. Caller must ensure:
+/// - All pointers are valid and properly aligned
+/// - Metadata accurately describes tensor layout
+/// - Output buffer has sufficient capacity
+/// - reduce_dims contains valid dimension indices
+///
+/// # Returns
+/// Returns `Ok(())` on success.
 pub fn call_reduce(
     kernel_name: crate::kernels::macros::Kernel,
     input: *const c_void,
     output: *mut c_void,
     metadata: &[usize],
 ) -> Result<()> {
-    // metadata layout: [shape_len, shape..., strides..., offset, output_shape_len, output_shape...,
-    //                   num_reduce_dims, reduce_dims..., keep_dim, reduce_size]
-    let shape_len = metadata[0];
-    let offset_idx = 1 + shape_len * 2; // After shape and strides
-    let output_shape_len_idx = offset_idx + 1;
-    let output_shape_len = metadata[output_shape_len_idx];
-
-    // Calculate num_els (output elements)
-    let output_shape_start = output_shape_len_idx + 1;
-    let output_shape_end = output_shape_start + output_shape_len;
-    let num_els: usize = metadata[output_shape_start..output_shape_end].iter().product();
-
-    // Get reduce_size from the end of metadata
-    let reduce_size = metadata[metadata.len() - 1];
-
-    let num_dims = shape_len;
-
-    // Prepare metadata for C function (skip shape_len)
-    let c_metadata = &metadata[1..];
-
     unsafe {
-        dispatch_reduce(
-            kernel_name.0,
-            input,
-            output,
-            num_els,
-            num_dims,
-            c_metadata.as_ptr(),
-            reduce_size,
-        );
+        dispatch_reduce(kernel_name.0, input, output, metadata.as_ptr());
     }
 
     Ok(())
 }
 
-// Macro to declare extern C functions and dispatch for reduce operations
+/// Macro to declare extern C functions and dispatch for reduce operations
+///
+/// This macro generates FFI bindings for reduction operations with different type support:
+/// - all_types: Supports all numeric types (sum, max, min, prod)
+/// - float_types: Supports only floating point types (mean, std, var, norm)
+/// - all_and_bool_types: Supports all types including bool (argmax, argmin, any, all)
 macro_rules! declare_reduce_ops {
     // All types (sum, max, min, prod)
     (all_types: $($op:ident),* $(,)?) => {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<$op _f8e4m3>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f8e5m2>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _bf16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i8>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u8>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
+                    fn [<$op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
             }
         }
@@ -90,12 +117,12 @@ macro_rules! declare_reduce_ops {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<$op _f8e4m3>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f8e5m2>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _bf16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
+                    fn [<$op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
             }
         }
@@ -106,21 +133,21 @@ macro_rules! declare_reduce_ops {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<$op _bool>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f8e4m3>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f8e5m2>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _bf16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _f64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i8>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _i64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u8>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u16>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u32>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
-                    fn [<$op _u64>](input: *const c_void, output: *mut c_void, num_els: usize, num_dims: usize, metadata: *const usize, reduce_size: usize);
+                    fn [<$op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<$op _u64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
             }
         }
@@ -134,24 +161,24 @@ declare_reduce_ops!(all_and_bool_types: reduce_argmax, reduce_argmin, reduce_any
 
 // Macro to generate dispatch match arms
 macro_rules! dispatch_all_types {
-    ($name:expr, $input:expr, $output:expr, $num_els:expr, $num_dims:expr, $metadata:expr, $reduce_size:expr, $($op:ident),* $(,)?) => {
+    ($name:expr, $input:expr, $output:expr, $metadata:expr, $($op:ident),* $(,)?) => {
         paste::paste! {
             match $name {
                 $(
-                    concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_bf16") => [<$op _bf16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f16") => [<$op _f16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f32") => [<$op _f32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f64") => [<$op _f64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i8") => [<$op _i8>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i16") => [<$op _i16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i32") => [<$op _i32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i64") => [<$op _i64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u8") => [<$op _u8>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u16") => [<$op _u16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u32") => [<$op _u32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u64") => [<$op _u64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
+                    concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_bf16") => [<$op _bf16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f16") => [<$op _f16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f32") => [<$op _f32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f64") => [<$op _f64>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i8") => [<$op _i8>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i16") => [<$op _i16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i32") => [<$op _i32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i64") => [<$op _i64>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u8") => [<$op _u8>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u16") => [<$op _u16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u32") => [<$op _u32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u64") => [<$op _u64>]($input, $output, $metadata),
                 )*
                 _ => {}
             }
@@ -160,16 +187,16 @@ macro_rules! dispatch_all_types {
 }
 
 macro_rules! dispatch_float_types {
-    ($name:expr, $input:expr, $output:expr, $num_els:expr, $num_dims:expr, $metadata:expr, $reduce_size:expr, $($op:ident),* $(,)?) => {
+    ($name:expr, $input:expr, $output:expr, $metadata:expr, $($op:ident),* $(,)?) => {
         paste::paste! {
             match $name {
                 $(
-                    concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_bf16") => [<$op _bf16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f16") => [<$op _f16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f32") => [<$op _f32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f64") => [<$op _f64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
+                    concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_bf16") => [<$op _bf16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f16") => [<$op _f16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f32") => [<$op _f32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f64") => [<$op _f64>]($input, $output, $metadata),
                 )*
                 _ => {}
             }
@@ -178,25 +205,25 @@ macro_rules! dispatch_float_types {
 }
 
 macro_rules! dispatch_all_and_bool_types {
-    ($name:expr, $input:expr, $output:expr, $num_els:expr, $num_dims:expr, $metadata:expr, $reduce_size:expr, $($op:ident),* $(,)?) => {
+    ($name:expr, $input:expr, $output:expr, $metadata:expr, $($op:ident),* $(,)?) => {
         paste::paste! {
             match $name {
                 $(
-                    concat!(stringify!($op), "_bool") => [<$op _bool>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_bf16") => [<$op _bf16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f16") => [<$op _f16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f32") => [<$op _f32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_f64") => [<$op _f64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i8") => [<$op _i8>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i16") => [<$op _i16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i32") => [<$op _i32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_i64") => [<$op _i64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u8") => [<$op _u8>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u16") => [<$op _u16>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u32") => [<$op _u32>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
-                    concat!(stringify!($op), "_u64") => [<$op _u64>]($input, $output, $num_els, $num_dims, $metadata, $reduce_size),
+                    concat!(stringify!($op), "_bool") => [<$op _bool>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_bf16") => [<$op _bf16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f16") => [<$op _f16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f32") => [<$op _f32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_f64") => [<$op _f64>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i8") => [<$op _i8>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i16") => [<$op _i16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i32") => [<$op _i32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_i64") => [<$op _i64>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u8") => [<$op _u8>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u16") => [<$op _u16>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u32") => [<$op _u32>]($input, $output, $metadata),
+                    concat!(stringify!($op), "_u64") => [<$op _u64>]($input, $output, $metadata),
                 )*
                 _ => {}
             }
@@ -205,23 +232,12 @@ macro_rules! dispatch_all_and_bool_types {
 }
 
 // Dispatch function for reduce operations
-unsafe fn dispatch_reduce(
-    name: &str,
-    input: *const c_void,
-    output: *mut c_void,
-    num_els: usize,
-    num_dims: usize,
-    metadata: *const usize,
-    reduce_size: usize,
-) {
+unsafe fn dispatch_reduce(name: &str, input: *const c_void, output: *mut c_void, metadata: *const usize) {
     dispatch_all_types!(
         name,
         input,
         output,
-        num_els,
-        num_dims,
         metadata,
-        reduce_size,
         reduce_sum,
         reduce_max,
         reduce_min,
@@ -232,10 +248,7 @@ unsafe fn dispatch_reduce(
         name,
         input,
         output,
-        num_els,
-        num_dims,
         metadata,
-        reduce_size,
         reduce_std,
         reduce_var,
         reduce_mean,
@@ -246,10 +259,7 @@ unsafe fn dispatch_reduce(
         name,
         input,
         output,
-        num_els,
-        num_dims,
         metadata,
-        reduce_size,
         reduce_argmax,
         reduce_argmin,
         reduce_any,

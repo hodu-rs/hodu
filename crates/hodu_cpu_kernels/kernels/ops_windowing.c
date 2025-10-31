@@ -9,19 +9,56 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
+// ============================================================================
+// WINDOWING OPERATION IMPLEMENTATION MACROS
+// ============================================================================
+//
+// These macros generate sliding window reduction operations for various types.
+//
+// Metadata layout (same for all operations):
+// - metadata[0]: output_size (total number of elements in output)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset (starting offset in input)
+// - metadata[3+2*num_dims..3+3*num_dims]: window_shape (size of window in each dimension)
+// - metadata[3+3*num_dims..3+4*num_dims]: strides (step size in each dimension)
+// - metadata[3+4*num_dims..3+4*num_dims+2*num_dims]: padding (before and after for each dimension)
+// - metadata[3+6*num_dims..]: output_shape
+//
+// Algorithm:
+// 1. For each output element, compute its coordinates
+// 2. For each position in the window:
+//    - Compute corresponding input coordinates with stride and padding
+//    - Check if position is within bounds (considering padding)
+//    - Apply reduction operation on valid values
+// 3. Out-of-bounds values are treated according to operation:
+//    - max: -infinity, min: +infinity, sum/mean: 0
+
+/**
+ * @brief Macro to implement windowing reduction operations (max, min, sum)
+ *
+ * @param IN_TYPE C type of input elements
+ * @param OUT_TYPE C type of output elements
+ * @param TYPE_SUFFIX Suffix for function name
+ * @param INIT_VAL Initial value for accumulator
+ * @param ACCUMULATE Statement to accumulate values (uses 'acc' and 'val')
+ */
 #define REDUCE_WINDOW_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX, INIT_VAL, ACCUMULATE)                     \
-    void reduce_window_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els,      \
-                                     size_t num_dims, const size_t *metadata) {                    \
+    void reduce_window_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \
-        const size_t *input_shape = metadata;                                                      \
-        const size_t *input_strides = metadata + num_dims;                                         \
-        const size_t input_offset = metadata[2 * num_dims];                                        \
-        const size_t *window_shape = metadata + 2 * num_dims + 1;                                  \
-        const size_t *strides = metadata + 3 * num_dims + 1;                                       \
-        const size_t *padding = metadata + 4 * num_dims + 1;                                       \
-        const size_t *output_shape = metadata + 6 * num_dims + 1;                                  \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+        const size_t *window_shape = metadata + 2 + 2 * num_dims + 1;                              \
+        const size_t *strides = metadata + 2 + 3 * num_dims + 1;                                   \
+        const size_t *padding = metadata + 2 + 4 * num_dims + 1;                                   \
+        const size_t *output_shape = metadata + 2 + 6 * num_dims + 1;                              \
                                                                                                    \
         for (size_t out_idx = 0; out_idx < num_els; out_idx++) {                                   \
             size_t out_coords[16];                                                                 \
@@ -81,19 +118,32 @@
         }                                                                                          \
     }
 
+/**
+ * @brief Macro to implement windowing mean operation
+ *
+ * Computes the average of values in each window. Padding areas are treated as 0.
+ * Only available for floating-point types.
+ *
+ * @param IN_TYPE C type of input elements (float type)
+ * @param OUT_TYPE C type of output elements (float type)
+ * @param TYPE_SUFFIX Suffix for function name
+ */
 #define REDUCE_WINDOW_MEAN_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX)                                      \
-    void reduce_window_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, size_t num_els, \
-                                          size_t num_dims, const size_t *metadata) {               \
+    void reduce_window_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                 \
+                                          const size_t *metadata) {                                \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \
-        const size_t *input_shape = metadata;                                                      \
-        const size_t *input_strides = metadata + num_dims;                                         \
-        const size_t input_offset = metadata[2 * num_dims];                                        \
-        const size_t *window_shape = metadata + 2 * num_dims + 1;                                  \
-        const size_t *strides = metadata + 3 * num_dims + 1;                                       \
-        const size_t *padding = metadata + 4 * num_dims + 1;                                       \
-        const size_t *output_shape = metadata + 6 * num_dims + 1;                                  \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+                                                                                                   \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+        const size_t *window_shape = metadata + 2 + 2 * num_dims + 1;                              \
+        const size_t *strides = metadata + 2 + 3 * num_dims + 1;                                   \
+        const size_t *padding = metadata + 2 + 4 * num_dims + 1;                                   \
+        const size_t *output_shape = metadata + 2 + 6 * num_dims + 1;                              \
                                                                                                    \
         for (size_t out_idx = 0; out_idx < num_els; out_idx++) {                                   \
             size_t out_coords[16];                                                                 \

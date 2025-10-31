@@ -9,13 +9,19 @@ fn run_unary(input: &[f32], kernel: Kernel) -> Vec<f32> {
     let mut output = vec![0.0f32; input.len()];
     let shape = vec![input.len()];
     let strides = vec![1];
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
     call_unary(
         kernel,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        &shape,
-        &strides,
-        0,
+        &metadata,
     )
     .unwrap();
     output
@@ -25,13 +31,19 @@ fn run_unary_to_bool(input: &[f32], kernel: Kernel) -> Vec<u8> {
     let mut output = vec![0u8; input.len()];
     let shape = vec![input.len()];
     let strides = vec![1];
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
     call_unary(
         kernel,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        &shape,
-        &strides,
-        0,
+        &metadata,
     )
     .unwrap();
     output
@@ -41,13 +53,19 @@ fn run_unary_scalar(input: &[f32], kernel: Kernel, scalar: f32) -> Vec<f32> {
     let mut output = vec![0.0f32; input.len()];
     let shape = vec![input.len()];
     let strides = vec![1];
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
     call_unary_scalar(
         kernel,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        &shape,
-        &strides,
-        0,
+        &metadata,
         scalar,
     )
     .unwrap();
@@ -58,13 +76,19 @@ fn run_unary_scalar_to_bool(input: &[f32], kernel: Kernel, scalar: f32) -> Vec<u
     let mut output = vec![0u8; input.len()];
     let shape = vec![input.len()];
     let strides = vec![1];
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
     call_unary_scalar(
         kernel,
         input.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        &shape,
-        &strides,
-        0,
+        &metadata,
         scalar,
     )
     .unwrap();

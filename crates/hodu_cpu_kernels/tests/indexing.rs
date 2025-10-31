@@ -14,17 +14,24 @@ fn test_index_select_f32_1d() {
     let input_offset = 0;
     let dim = 0;
     let num_indices = 3;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(input_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_select(
         index_select::F32,
-        &shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        input_offset,
         indices.as_ptr(),
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -45,17 +52,24 @@ fn test_index_select_f32_2d_dim0() {
     let input_offset = 0;
     let dim = 0;
     let num_indices = 2;
+    let num_dims = 2;
+    let num_els = 6;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(input_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_select(
         index_select::F32,
-        &shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        input_offset,
         indices.as_ptr(),
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -76,17 +90,24 @@ fn test_index_select_f32_2d_dim1() {
     let input_offset = 0;
     let dim = 1;
     let num_indices = 2;
+    let num_dims = 2;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(input_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_select(
         index_select::F32,
-        &shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        input_offset,
         indices.as_ptr(),
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -107,17 +128,24 @@ fn test_index_select_negative_indices() {
     let input_offset = 0;
     let dim = 0;
     let num_indices = 2;
+    let num_dims = 1;
+    let num_els = 2;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(input_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_select(
         index_select::F32,
-        &shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        input_offset,
         indices.as_ptr(),
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -136,17 +164,24 @@ fn test_index_select_i32() {
     let input_offset = 0;
     let dim = 0;
     let num_indices = 2;
+    let num_dims = 1;
+    let num_els = 2;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(input_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_select(
         index_select::I32,
-        &shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &strides,
-        input_offset,
         indices.as_ptr(),
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -171,20 +206,27 @@ fn test_index_put_f32_1d() {
     let values_offset = 0;
     let dim = 0;
     let num_indices = 2;
+    let num_dims = 1;
+    let num_els = 5;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&values_strides);
+    metadata.push(input_offset);
+    metadata.push(values_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_put(
         index_put::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
         values.as_ptr() as *const std::ffi::c_void,
-        &values_strides,
-        values_offset,
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -209,20 +251,27 @@ fn test_index_put_f32_2d() {
     let values_offset = 0;
     let dim = 0;
     let num_indices = 2;
+    let num_dims = 2;
+    let num_els = 9;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&values_strides);
+    metadata.push(input_offset);
+    metadata.push(values_offset);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     call_index_put(
         index_put::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
         values.as_ptr() as *const std::ffi::c_void,
-        &values_strides,
-        values_offset,
-        dim,
-        num_indices,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -244,19 +293,26 @@ fn test_gather_f32_1d() {
     let input_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
+    metadata.push(indices.len());
 
     call_gather(
         gather::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
-        indices.len(),
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -276,19 +332,26 @@ fn test_gather_i32() {
     let input_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
+    metadata.push(indices.len());
 
     call_gather(
         gather::I32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
-        indices.len(),
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -310,19 +373,26 @@ fn test_gather_f32_2d() {
     let input_offset = 0;
     let indices_offset = 0;
     let dim = 1;
+    let num_dims = 2;
+    let num_els = 6;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
+    metadata.push(indices.len());
 
     call_gather(
         gather::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
-        indices.len(),
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -344,19 +414,26 @@ fn test_gather_f32_3d() {
     let input_offset = 0;
     let indices_offset = 0;
     let dim = 2;
+    let num_dims = 3;
+    let num_els = 8;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
+    metadata.push(indices.len());
 
     call_gather(
         gather::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
-        indices.len(),
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -383,22 +460,29 @@ fn test_scatter_f32_1d() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -425,22 +509,29 @@ fn test_scatter_f32_2d() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 2;
+    let num_els = 4;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -467,22 +558,29 @@ fn test_scatter_add_f32_1d() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter_add::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -506,22 +604,29 @@ fn test_scatter_add_i32() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter_add::I32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -548,22 +653,29 @@ fn test_scatter_max_f32_1d() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter_max::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -587,22 +699,29 @@ fn test_scatter_max_i32() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter_max::I32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -629,22 +748,29 @@ fn test_scatter_min_f32_1d() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter_min::F32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 
@@ -668,22 +794,29 @@ fn test_scatter_min_i32() {
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
+    let num_dims = 1;
+    let num_els = 3;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&input_strides);
+    metadata.extend(&src_shape);
+    metadata.extend(&src_strides);
+    metadata.extend(&indices_strides);
+    metadata.push(input_offset);
+    metadata.push(src_offset);
+    metadata.push(indices_offset);
+    metadata.push(dim);
 
     call_scatter(
         scatter_min::I32,
-        &input_shape,
         input.as_ptr() as *const std::ffi::c_void,
-        &input_strides,
-        input_offset,
         indices.as_ptr(),
-        &indices_strides,
-        indices_offset,
         src.as_ptr() as *const std::ffi::c_void,
-        &src_shape,
-        &src_strides,
-        src_offset,
-        dim,
         output.as_mut_ptr() as *mut std::ffi::c_void,
+        &metadata,
     )
     .unwrap();
 

@@ -23,8 +23,11 @@ fn run_reduce_window_f32(
     let mut output = vec![0.0f32; output_size];
 
     let input_strides = calculate_strides(input_shape);
+    let num_dims = input_shape.len();
 
     let mut metadata = Vec::new();
+    metadata.push(output_size);
+    metadata.push(num_dims);
     metadata.extend(input_shape);
     metadata.extend(&input_strides);
     metadata.push(0);
@@ -37,8 +40,6 @@ fn run_reduce_window_f32(
         name,
         input.as_ptr() as *const c_void,
         output.as_mut_ptr() as *mut c_void,
-        output_size,
-        input_shape.len(),
         &metadata,
     )
     .unwrap();

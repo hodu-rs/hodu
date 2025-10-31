@@ -4,29 +4,57 @@
 // ============================================================================
 // BINARY OPERATION IMPLEMENTATION MACROS
 // ============================================================================
-
+//
+// This file implements element-wise binary operations for tensors.
+// Operations are optimized by checking tensor contiguity to use faster loops.
+//
+// Four optimization paths:
+// 1. Both tensors contiguous: Simple linear iteration
+// 2. LHS contiguous, RHS strided: Compute RHS indices only
+// 3. LHS strided, RHS contiguous: Compute LHS indices only
+// 4. Both strided: Compute both indices
+//
 // Metadata layout:
-// - dims: num_dims size_t values
-// - lhs_strides: num_dims size_t values
-// - rhs_strides: num_dims size_t values
-// - lhs_offset: 1 size_t value
-// - rhs_offset: 1 size_t value
+// - metadata[0]: num_els (total number of elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: lhs_shape
+// - metadata[2+num_dims..2+2*num_dims]: rhs_shape
+// - metadata[2+2*num_dims..2+3*num_dims]: lhs_strides
+// - metadata[2+3*num_dims..2+4*num_dims]: rhs_strides
+// - metadata[2+4*num_dims]: lhs_offset
+// - metadata[2+4*num_dims+1]: rhs_offset
 
+/// Macro to implement a binary operation returning the same type
+///
+/// Generates optimized implementations with contiguity checks.
+///
+/// @param TYPE C type for the operation (e.g., f32_t, i32_t)
+/// @param TYPE_SUFFIX Suffix for function naming (e.g., f32, i32)
+/// @param OP_NAME Operation name (e.g., add, mul)
+/// @param FUNC Expression defining the operation (e.g., x + y, x * y)
+///
+/// Edge cases:
+/// - Division by zero: Handled in FUNC expression (e.g., div uses x / y which produces inf/nan)
+/// - Integer overflow: Not checked for performance; wraps according to C semantics
+/// - Unsigned underflow: Checked explicitly (e.g., sub uses (x > y) ? (x - y) : 0)
 #define IMPL_BINARY_OP(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                           \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,   \
-                                 size_t num_dims, const size_t *metadata) {                        \
+    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
+                                 const size_t *metadata) {                                         \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         TYPE *out = (TYPE *)output;                                                                \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *lhs_strides = metadata ? metadata + num_dims : NULL;                         \
-        const size_t *rhs_strides = metadata ? metadata + 2 * num_dims : NULL;                     \
-        const size_t lhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims] : 0;         \
-        const size_t rhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims + 1] : 0;     \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *lhs_shape = metadata + 2;                                                    \
+        const size_t *rhs_shape = metadata + 2 + num_dims;                                         \
+        const size_t *lhs_strides = metadata + 2 + 2 * num_dims;                                   \
+        const size_t *rhs_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
                                                                                                    \
-        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, lhs_strides);          \
-        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, rhs_strides);          \
+        bool lhs_cont = is_contiguous(num_dims, lhs_shape, lhs_strides);                           \
+        bool rhs_cont = is_contiguous(num_dims, rhs_shape, rhs_strides);                           \
                                                                                                    \
         if (lhs_cont && rhs_cont) {                                                                \
             for (size_t i = 0; i < num_els; i++) {                                                 \
@@ -36,22 +64,26 @@
             }                                                                                      \
         } else if (lhs_cont) {                                                                     \
             for (size_t i = 0; i < num_els; i++) {                                                 \
-                size_t rhs_i = rhs_offset + get_strided_index(i, num_dims, dims, rhs_strides);     \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
                 TYPE x = l[lhs_offset + i];                                                        \
                 TYPE y = r[rhs_i];                                                                 \
                 out[i] = FUNC;                                                                     \
             }                                                                                      \
         } else if (rhs_cont) {                                                                     \
             for (size_t i = 0; i < num_els; i++) {                                                 \
-                size_t lhs_i = lhs_offset + get_strided_index(i, num_dims, dims, lhs_strides);     \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
                 TYPE x = l[lhs_i];                                                                 \
                 TYPE y = r[rhs_offset + i];                                                        \
                 out[i] = FUNC;                                                                     \
             }                                                                                      \
         } else {                                                                                   \
             for (size_t i = 0; i < num_els; i++) {                                                 \
-                size_t lhs_i = lhs_offset + get_strided_index(i, num_dims, dims, lhs_strides);     \
-                size_t rhs_i = rhs_offset + get_strided_index(i, num_dims, dims, rhs_strides);     \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
                 TYPE x = l[lhs_i];                                                                 \
                 TYPE y = r[rhs_i];                                                                 \
                 out[i] = FUNC;                                                                     \
@@ -59,21 +91,33 @@
         }                                                                                          \
     }
 
+/// Macro to implement a binary operation returning boolean (uint8_t)
+///
+/// Used for logical and comparison operations. Output is always uint8_t
+/// where 0 represents false and 1 represents true.
+///
+/// @param TYPE C type for the input operands
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param OP_NAME Operation name
+/// @param FUNC Boolean expression to evaluate (e.g., x < y, x && y)
 #define IMPL_BINARY_TO_BOOL(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                      \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,   \
-                                 size_t num_dims, const size_t *metadata) {                        \
+    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
+                                 const size_t *metadata) {                                         \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         uint8_t *out = (uint8_t *)output;                                                          \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *lhs_strides = metadata ? metadata + num_dims : NULL;                         \
-        const size_t *rhs_strides = metadata ? metadata + 2 * num_dims : NULL;                     \
-        const size_t lhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims] : 0;         \
-        const size_t rhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims + 1] : 0;     \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *lhs_shape = metadata + 2;                                                    \
+        const size_t *rhs_shape = metadata + 2 + num_dims;                                         \
+        const size_t *lhs_strides = metadata + 2 + 2 * num_dims;                                   \
+        const size_t *rhs_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
                                                                                                    \
-        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, lhs_strides);          \
-        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, rhs_strides);          \
+        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, lhs_shape, lhs_strides);     \
+        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, rhs_shape, rhs_strides);     \
                                                                                                    \
         if (lhs_cont && rhs_cont) {                                                                \
             for (size_t i = 0; i < num_els; i++) {                                                 \
@@ -84,11 +128,13 @@
         } else {                                                                                   \
             for (size_t i = 0; i < num_els; i++) {                                                 \
                 size_t lhs_i =                                                                     \
-                    lhs_cont ? (lhs_offset + i)                                                    \
-                             : (lhs_offset + get_strided_index(i, num_dims, dims, lhs_strides));   \
+                    lhs_cont                                                                       \
+                        ? (lhs_offset + i)                                                         \
+                        : (lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides));   \
                 size_t rhs_i =                                                                     \
-                    rhs_cont ? (rhs_offset + i)                                                    \
-                             : (rhs_offset + get_strided_index(i, num_dims, dims, rhs_strides));   \
+                    rhs_cont                                                                       \
+                        ? (rhs_offset + i)                                                         \
+                        : (rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides));   \
                 TYPE x = l[lhs_i];                                                                 \
                 TYPE y = r[rhs_i];                                                                 \
                 out[i] = (FUNC) ? 1 : 0;                                                           \
@@ -96,22 +142,36 @@
         }                                                                                          \
     }
 
+/// Macro to implement a binary operation with type conversion for reduced-precision floats
+///
+/// For FP8, FP16, and BF16 types, operations are performed in FP32 for accuracy.
+/// Values are converted to float, operation is performed, then converted back.
+///
+/// @param TYPE Storage type (uint8_t for FP8, uint16_t for FP16/BF16)
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param OP_NAME Operation name
+/// @param FUNC Expression defining the operation (in float precision)
+/// @param TO_FLOAT Function to convert from storage type to float
+/// @param FROM_FLOAT Function to convert from float to storage type
 // Macros for FP8/FP16/BF16 with float conversion
 #define IMPL_BINARY_OP_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)             \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,   \
-                                 size_t num_dims, const size_t *metadata) {                        \
+    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
+                                 const size_t *metadata) {                                         \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         TYPE *out = (TYPE *)output;                                                                \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *lhs_strides = metadata ? metadata + num_dims : NULL;                         \
-        const size_t *rhs_strides = metadata ? metadata + 2 * num_dims : NULL;                     \
-        const size_t lhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims] : 0;         \
-        const size_t rhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims + 1] : 0;     \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *lhs_shape = metadata + 2;                                                    \
+        const size_t *rhs_shape = metadata + 2 + num_dims;                                         \
+        const size_t *lhs_strides = metadata + 2 + 2 * num_dims;                                   \
+        const size_t *rhs_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
                                                                                                    \
-        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, lhs_strides);          \
-        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, rhs_strides);          \
+        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, lhs_shape, lhs_strides);     \
+        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, rhs_shape, rhs_strides);     \
                                                                                                    \
         if (lhs_cont && rhs_cont) {                                                                \
             for (size_t i = 0; i < num_els; i++) {                                                 \
@@ -121,22 +181,26 @@
             }                                                                                      \
         } else if (lhs_cont) {                                                                     \
             for (size_t i = 0; i < num_els; i++) {                                                 \
-                size_t rhs_i = rhs_offset + get_strided_index(i, num_dims, dims, rhs_strides);     \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
                 float x = TO_FLOAT(l[lhs_offset + i]);                                             \
                 float y = TO_FLOAT(r[rhs_i]);                                                      \
                 out[i] = FROM_FLOAT(FUNC);                                                         \
             }                                                                                      \
         } else if (rhs_cont) {                                                                     \
             for (size_t i = 0; i < num_els; i++) {                                                 \
-                size_t lhs_i = lhs_offset + get_strided_index(i, num_dims, dims, lhs_strides);     \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
                 float x = TO_FLOAT(l[lhs_i]);                                                      \
                 float y = TO_FLOAT(r[rhs_offset + i]);                                             \
                 out[i] = FROM_FLOAT(FUNC);                                                         \
             }                                                                                      \
         } else {                                                                                   \
             for (size_t i = 0; i < num_els; i++) {                                                 \
-                size_t lhs_i = lhs_offset + get_strided_index(i, num_dims, dims, lhs_strides);     \
-                size_t rhs_i = rhs_offset + get_strided_index(i, num_dims, dims, rhs_strides);     \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
                 float x = TO_FLOAT(l[lhs_i]);                                                      \
                 float y = TO_FLOAT(r[rhs_i]);                                                      \
                 out[i] = FROM_FLOAT(FUNC);                                                         \
@@ -144,21 +208,33 @@
         }                                                                                          \
     }
 
+/// Macro to implement a boolean-returning operation with type conversion
+///
+/// Combines IMPL_BINARY_TO_BOOL and type conversion for reduced-precision floats.
+///
+/// @param TYPE Storage type (uint8_t for FP8, uint16_t for FP16/BF16)
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param OP_NAME Operation name
+/// @param FUNC Boolean expression (evaluated in float precision)
+/// @param TO_FLOAT Function to convert from storage type to float
 #define IMPL_BINARY_TO_BOOL_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT)                    \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, size_t num_els,   \
-                                 size_t num_dims, const size_t *metadata) {                        \
+    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
+                                 const size_t *metadata) {                                         \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         uint8_t *out = (uint8_t *)output;                                                          \
                                                                                                    \
-        const size_t *dims = metadata;                                                             \
-        const size_t *lhs_strides = metadata ? metadata + num_dims : NULL;                         \
-        const size_t *rhs_strides = metadata ? metadata + 2 * num_dims : NULL;                     \
-        const size_t lhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims] : 0;         \
-        const size_t rhs_offset = (metadata && num_dims > 0) ? metadata[3 * num_dims + 1] : 0;     \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *lhs_shape = metadata + 2;                                                    \
+        const size_t *rhs_shape = metadata + 2 + num_dims;                                         \
+        const size_t *lhs_strides = metadata + 2 + 2 * num_dims;                                   \
+        const size_t *rhs_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
                                                                                                    \
-        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, lhs_strides);          \
-        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, dims, rhs_strides);          \
+        bool lhs_cont = (metadata == NULL) || is_contiguous(num_dims, lhs_shape, lhs_strides);     \
+        bool rhs_cont = (metadata == NULL) || is_contiguous(num_dims, rhs_shape, rhs_strides);     \
                                                                                                    \
         if (lhs_cont && rhs_cont) {                                                                \
             for (size_t i = 0; i < num_els; i++) {                                                 \
@@ -169,11 +245,13 @@
         } else {                                                                                   \
             for (size_t i = 0; i < num_els; i++) {                                                 \
                 size_t lhs_i =                                                                     \
-                    lhs_cont ? (lhs_offset + i)                                                    \
-                             : (lhs_offset + get_strided_index(i, num_dims, dims, lhs_strides));   \
+                    lhs_cont                                                                       \
+                        ? (lhs_offset + i)                                                         \
+                        : (lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides));   \
                 size_t rhs_i =                                                                     \
-                    rhs_cont ? (rhs_offset + i)                                                    \
-                             : (rhs_offset + get_strided_index(i, num_dims, dims, rhs_strides));   \
+                    rhs_cont                                                                       \
+                        ? (rhs_offset + i)                                                         \
+                        : (rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides));   \
                 float x = TO_FLOAT(l[lhs_i]);                                                      \
                 float y = TO_FLOAT(r[rhs_i]);                                                      \
                 out[i] = (FUNC) ? 1 : 0;                                                           \

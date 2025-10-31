@@ -10,16 +10,25 @@ fn run_binary(lhs: &[f32], rhs: &[f32], kernel: Kernel) -> Vec<f32> {
     let mut output = vec![0.0f32; lhs.len()];
     let shape = vec![lhs.len()];
     let strides = vec![1];
+
+    let num_els = lhs.len();
+    let num_dims = 1;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape); // lhs_shape
+    metadata.extend(&shape); // rhs_shape
+    metadata.extend(&strides); // lhs_strides
+    metadata.extend(&strides); // rhs_strides
+    metadata.push(0); // lhs_offset
+    metadata.push(0); // rhs_offset
+
     call_binary(
         kernel,
         lhs.as_ptr() as *const std::ffi::c_void,
         rhs.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        &shape,
-        &strides,
-        &strides,
-        0,
-        0,
+        &metadata,
     )
     .unwrap();
     output
@@ -30,16 +39,25 @@ fn run_binary_to_bool(lhs: &[f32], rhs: &[f32], kernel: Kernel) -> Vec<u8> {
     let mut output = vec![0u8; lhs.len()];
     let shape = vec![lhs.len()];
     let strides = vec![1];
+
+    let num_els = lhs.len();
+    let num_dims = 1;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape); // lhs_shape
+    metadata.extend(&shape); // rhs_shape
+    metadata.extend(&strides); // lhs_strides
+    metadata.extend(&strides); // rhs_strides
+    metadata.push(0); // lhs_offset
+    metadata.push(0); // rhs_offset
+
     call_binary(
         kernel,
         lhs.as_ptr() as *const std::ffi::c_void,
         rhs.as_ptr() as *const std::ffi::c_void,
         output.as_mut_ptr() as *mut std::ffi::c_void,
-        &shape,
-        &strides,
-        &strides,
-        0,
-        0,
+        &metadata,
     )
     .unwrap();
     output
