@@ -24,7 +24,6 @@ rayon = ["std", "dep:rayon"]
 f8e5m2 = []
 f64 = []
 u16 =[]
-u32 = []
 u64 = []
 i16 = []
 i64 = []
@@ -43,6 +42,7 @@ dashmap = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 float8 = { workspace = true }
 half = { workspace = true, default-features = false }
+hodu_cpu_kernels = { path = "../hodu_cpu_kernels", version = "0.1.9" }
 # hodu_cuda_kernels = { path = "../hodu_cuda_kernels", version = "0.1.9", optional = true }
 hodu_metal_kernels = { path = "../hodu_metal_kernels", version = "0.1.9", optional = true }
 hodu_xla = { workspace = true, optional = true }

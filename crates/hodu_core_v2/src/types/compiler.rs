@@ -1,22 +1,38 @@
-use crate::types::device::Device;
+use crate::{layer::compat::fmt, types::device::Device};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Backend {
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Compiler {
     HODU,
     #[cfg(feature = "xla")]
     XLA,
 }
 
-impl Default for Backend {
+impl Default for Compiler {
     fn default() -> Self {
         Self::HODU
     }
 }
 
-impl Backend {
+impl fmt::Display for Compiler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Compiler::HODU => write!(f, "hodu"),
+            #[cfg(feature = "xla")]
+            Compiler::XLA => write!(f, "xla"),
+        }
+    }
+}
+
+impl fmt::Debug for Compiler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Compiler[{}]", self)
+    }
+}
+
+impl Compiler {
     pub fn is_supported(&self, device: Device) -> bool {
         match self {
-            Backend::HODU => match device {
+            Compiler::HODU => match device {
                 Device::CPU => true,
                 #[cfg(feature = "cuda")]
                 Device::CUDA(_) => true,
@@ -24,7 +40,7 @@ impl Backend {
                 Device::Metal => true,
             },
             #[cfg(feature = "xla")]
-            Backend::XLA => match device {
+            Compiler::XLA => match device {
                 Device::CPU => true,
                 #[cfg(feature = "cuda")]
                 Device::CUDA(_) => true,

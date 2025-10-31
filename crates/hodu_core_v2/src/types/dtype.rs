@@ -1,48 +1,4 @@
-#![allow(non_upper_case_globals)]
-
 use crate::layer::compat::*;
-
-pub const bool: DType = DType::BOOL;
-pub const f8e4m3: DType = DType::F8E4M3;
-#[cfg(feature = "f8e5m2")]
-pub const f8e5m2: DType = DType::F8E5M2;
-pub const bfloat16: DType = DType::BF16;
-pub const bf16: DType = DType::BF16;
-pub const float16: DType = DType::F16;
-pub const f16: DType = DType::F16;
-pub const half: DType = DType::F16;
-pub const float32: DType = DType::F32;
-pub const f32: DType = DType::F32;
-#[cfg(feature = "f64")]
-pub const float64: DType = DType::F64;
-#[cfg(feature = "f64")]
-pub const f64: DType = DType::F64;
-pub const uint8: DType = DType::U8;
-pub const u8: DType = DType::U8;
-#[cfg(feature = "u16")]
-pub const uint16: DType = DType::U16;
-#[cfg(feature = "u16")]
-pub const u16: DType = DType::U16;
-#[cfg(feature = "u32")]
-pub const uint32: DType = DType::U32;
-#[cfg(feature = "u32")]
-pub const u32: DType = DType::U32;
-#[cfg(feature = "u64")]
-pub const uint64: DType = DType::U64;
-#[cfg(feature = "u64")]
-pub const u64: DType = DType::U64;
-pub const int8: DType = DType::I8;
-pub const i8: DType = DType::I8;
-#[cfg(feature = "i16")]
-pub const int16: DType = DType::I16;
-#[cfg(feature = "i16")]
-pub const i16: DType = DType::I16;
-pub const int32: DType = DType::I32;
-pub const i32: DType = DType::I32;
-#[cfg(feature = "i64")]
-pub const int64: DType = DType::I64;
-#[cfg(feature = "i64")]
-pub const i64: DType = DType::I64;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -60,7 +16,6 @@ pub enum DType {
     U8,
     #[cfg(feature = "u16")]
     U16,
-    #[cfg(feature = "u32")]
     U32,
     #[cfg(feature = "u64")]
     U64,
@@ -93,7 +48,6 @@ impl fmt::Display for DType {
             Self::U8 => "u8",
             #[cfg(feature = "u16")]
             Self::U16 => "u16",
-            #[cfg(feature = "u32")]
             Self::U32 => "u32",
             #[cfg(feature = "u64")]
             Self::U64 => "u64",
@@ -110,7 +64,7 @@ impl fmt::Display for DType {
 
 impl fmt::Debug for DType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+        write!(f, "DType[{}]", self)
     }
 }
 
@@ -129,7 +83,6 @@ impl DType {
             Self::U8 => 1,
             #[cfg(feature = "u16")]
             Self::U16 => 2,
-            #[cfg(feature = "u32")]
             Self::U32 => 4,
             #[cfg(feature = "u64")]
             Self::U64 => 8,
@@ -162,7 +115,6 @@ impl DType {
             Self::U8 => true,
             #[cfg(feature = "u16")]
             Self::U16 => true,
-            #[cfg(feature = "u32")]
             Self::U32 => true,
             #[cfg(feature = "u64")]
             Self::U64 => true,

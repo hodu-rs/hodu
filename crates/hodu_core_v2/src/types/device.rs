@@ -29,7 +29,7 @@ impl fmt::Display for Device {
 
 impl fmt::Debug for Device {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+        write!(f, "Device[{}]", self)
     }
 }
 
