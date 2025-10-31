@@ -1,6 +1,9 @@
 // U: unsigned int
 // I: signed int
 
+// all type
+bool, f8e4m3, f8e5m2, bf16, f16, f32, f64, u8, u16, u32, u64, i8, i16, i32, i64
+
 // device not supported dtype
 metal: f8e4m3, f8e5m2, f64
 // backend not supported dtype

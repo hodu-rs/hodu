@@ -16,6 +16,35 @@ echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}Formatting Rust files...${NC}"
 cargo fmt --all
 echo -e "${BRIGHT_GREEN}✓${NC} Rust formatting complete\n"
 
+# Format C/C++ header and source files
+echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}Formatting C/C++ files...${NC}"
+
+# Check if clang-format is installed
+if ! command -v clang-format &> /dev/null
+then
+    echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} clang-format is not installed"
+    echo -e "${DIM}   Install with: ${MAGENTA}brew install clang-format${NC}\n"
+else
+    # Counter for formatted files
+    c_count=0
+
+    # Find and format all .c, .h, .cpp, .hpp files recursively
+    while IFS= read -r -d '' file
+    do
+        echo -e "  ${CYAN}→${NC} ${DIM}$file${NC}"
+        clang-format -i "$file"
+        ((c_count++))
+    done < <(find . -type f \( -name "*.c" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" \) -not -path "*/target/*" -not -path "*/.*" -print0)
+
+    if [ $c_count -eq 0 ]; then
+        echo -e "${DIM}  No C/C++ files found${NC}"
+    else
+        echo -e "${BRIGHT_GREEN}✓${NC} Formatted ${BOLD}${c_count}${NC} C/C++ file(s)"
+    fi
+fi
+
+echo ""
+
 # Format Metal files
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}Formatting Metal files...${NC}"
 

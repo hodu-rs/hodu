@@ -3,6 +3,7 @@
 crates=(
     hodu_macro_utils
 
+    hodu_cpu_kernels
     hodu_metal_kernels
 
     hodu_core

@@ -1,0 +1,2 @@
+binary <- binary, binary logical, cmp
+unary <- cmp with scalar, unary, unary logical, unary with scalar

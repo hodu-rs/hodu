@@ -41,6 +41,47 @@ for feature in "${ADDITIONAL_FEATURES[@]}"; do
     fi
 done
 
+# Check C/C++ kernel syntax
+echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[C/C++] Checking kernel syntax...${NC}"
+if ! command -v clang &> /dev/null
+then
+    echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} clang is not available"
+    echo -e "${DIM}   Skipping C/C++ syntax check${NC}\n"
+else
+    # Counter for checked files
+    c_count=0
+    c_failed=0
+
+    # Find and check all C/C++ files recursively
+    while IFS= read -r -d '' file
+    do
+        filename=$(basename "$file")
+        kernel_dir=$(dirname "$file")
+
+        # Check syntax
+        if clang -I "$kernel_dir" -std=c11 -Wall -Wextra -fsyntax-only "$file" 2>&1 | grep -q "error:"; then
+            echo -e "  ${BRIGHT_RED}✗${NC} ${filename}"
+            ((c_failed++))
+        else
+            echo -e "  ${CYAN}→${NC} ${DIM}${filename}${NC}"
+        fi
+        ((c_count++))
+    done < <(find . -type f \( -name "*.c" -o -name "*.cpp" \) -not -path "*/target/*" -not -path "*/.*" -print0)
+
+    if [ $c_count -eq 0 ]; then
+        echo -e "${DIM}  No C/C++ files found${NC}"
+    else
+        if [ $c_failed -eq 0 ]; then
+            echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${c_count}${NC} C/C++ file(s)"
+        else
+            echo -e "${BRIGHT_RED}✗${NC} ${c_failed}/${c_count} C/C++ file(s) failed"
+            exit 1
+        fi
+    fi
+fi
+
+echo ""
+
 # Check Metal kernel syntax
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Metal] Checking kernel syntax...${NC}"
 if ! command -v xcrun &> /dev/null

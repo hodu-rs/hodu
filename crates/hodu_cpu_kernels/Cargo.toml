@@ -1,0 +1,19 @@
+[package]
+name = "hodu_cpu_kernels"
+version = "0.1.9"
+description = "hodu cpu kernels"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu"
+
+[features]
+
+[build-dependencies]
+cc = "1.0"
+
+[dependencies]
+float8 = { workspace = true }
+half = { workspace = true, default-features = false }
+paste = { workspace = true }
