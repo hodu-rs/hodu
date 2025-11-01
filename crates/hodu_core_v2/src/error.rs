@@ -195,5 +195,28 @@ impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
     }
 }
 
+// Conversion from hodu_metal_kernels error
+#[cfg(feature = "metal")]
+impl From<hodu_metal_kernels::error::MetalKernelError> for HoduError {
+    fn from(e: hodu_metal_kernels::error::MetalKernelError) -> Self {
+        HoduError::InternalError(format!("metal kernel error: {}", e))
+    }
+}
+
+// Conversion from PoisonError (for RwLock/Mutex)
+#[cfg(feature = "std")]
+impl<T> From<std::sync::PoisonError<T>> for HoduError {
+    fn from(e: std::sync::PoisonError<T>) -> Self {
+        HoduError::InternalError(format!("lock poisoned: {}", e))
+    }
+}
+
+// Conversion from ug::Error
+impl From<ug::Error> for HoduError {
+    fn from(e: ug::Error) -> Self {
+        HoduError::InternalError(format!("ug error: {:?}", e))
+    }
+}
+
 /// Result type alias for hodu_core_v2 operations.
 pub type HoduResult<T> = Result<T, HoduError>;

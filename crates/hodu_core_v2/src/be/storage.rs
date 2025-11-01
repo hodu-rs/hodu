@@ -5,7 +5,7 @@ use crate::{
     be_cpu::storage::CpuStorage,
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::{Op, ReduceOp},
+    ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout, Shape},
 };
@@ -69,7 +69,7 @@ pub trait BackendStorageT: Sized {
         _: Op,
     ) -> HoduResult<Self>;
 
-    fn call_reduce_window(&self, _: &Layout, _: &[u32], _: &[u32], _: &[u32], _: ReduceOp, _: Op) -> HoduResult<Self>;
+    fn call_reduce_window(&self, _: &Layout, _: &[u32], _: &[u32], _: &[u32], _: Op) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
@@ -79,36 +79,48 @@ pub trait BackendStorageT: Sized {
 #[derive(Debug, Clone)]
 pub enum BackendStorage {
     CPU(CpuStorage),
+    #[cfg(feature = "metal")]
+    Metal(crate::be_metal::storage::MetalStorage),
 }
 
 impl BackendStorage {
     pub fn dtype(&self) -> DType {
         match self {
             Self::CPU(storage) => storage.dtype(),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => storage.dtype(),
         }
     }
 
     pub fn device(&self) -> Device {
         match self {
             Self::CPU(storage) => storage.device(),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => storage.device(),
         }
     }
 
     pub fn backend_device(&self) -> BackendDevice {
         match self {
             Self::CPU(storage) => BackendDevice::CPU(storage.backend_device().clone()),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => BackendDevice::Metal(storage.backend_device().clone()),
         }
     }
 
     pub fn to_cpu_storage(&self) -> HoduResult<CpuStorage> {
         match self {
             Self::CPU(storage) => Ok(storage.clone()),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => storage.to_cpu_storage(),
         }
     }
 
     pub(crate) fn const_set(&mut self, scalar: Scalar, layout: &Layout) -> HoduResult<()> {
         match self {
             Self::CPU(storage) => storage.const_set(scalar, layout),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => storage.const_set(scalar, layout),
         }
     }
 
@@ -135,6 +147,18 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_binary(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: lhs_device,
+                got: rhs_device,
+            }),
         }
     }
 
@@ -161,6 +185,18 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_binary_logical(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: lhs_device,
+                got: rhs_device,
+            }),
         }
     }
 
@@ -187,30 +223,50 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_cmp(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: lhs_device,
+                got: rhs_device,
+            }),
         }
     }
 
     pub(crate) fn call_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_cmp_scalar(layout, scalar, op)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_cmp_scalar(layout, scalar, op)?)),
         }
     }
 
     pub(crate) fn call_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_unary(layout, op)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_unary(layout, op)?)),
         }
     }
 
     pub(crate) fn call_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_unary_logical(layout, op)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_unary_logical(layout, op)?)),
         }
     }
 
     pub(crate) fn call_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_unary_scalar(layout, scalar, op)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_unary_scalar(layout, scalar, op)?)),
         }
     }
 
@@ -237,6 +293,18 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_matmul(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: lhs_device,
+                got: rhs_device,
+            }),
         }
     }
 
@@ -263,12 +331,26 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_dot(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: lhs_device,
+                got: rhs_device,
+            }),
         }
     }
 
     pub(crate) fn call_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_reduce(layout, dims, keep_dim, op)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_reduce(layout, dims, keep_dim, op)?)),
         }
     }
 
@@ -291,9 +373,22 @@ impl BackendStorage {
                     .iter()
                     .map(|s| match s {
                         Self::CPU(cpu) => cpu,
+                        #[cfg(feature = "metal")]
+                        _ => unreachable!("Device mismatch already checked"),
                     })
                     .collect();
                 Ok(Self::CPU(storage.call_concat(&others_cpu, layouts, dim, op)?))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let others_metal: Vec<&crate::be_metal::storage::MetalStorage> = others
+                    .iter()
+                    .map(|s| match s {
+                        Self::Metal(metal) => metal,
+                        _ => unreachable!("Device mismatch already checked"),
+                    })
+                    .collect();
+                Ok(Self::Metal(storage.call_concat(&others_metal, layouts, dim, op)?))
             },
         }
     }
@@ -301,6 +396,8 @@ impl BackendStorage {
     pub(crate) fn call_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_split(layout, dim, start, size, op)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_split(layout, dim, start, size, op)?)),
         }
     }
 
@@ -330,6 +427,19 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_index_select(
+                layout,
+                indices,
+                indices_layout,
+                dim,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: device,
+                got: indices_device,
+            }),
         }
     }
 
@@ -371,6 +481,30 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(values)) => Ok(Self::Metal(storage.call_put(
+                layout,
+                indices,
+                indices_layout,
+                values,
+                values_layout,
+                dim,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => {
+                if device != indices_device {
+                    Err(HoduError::DeviceMismatch {
+                        expected: device,
+                        got: indices_device,
+                    })
+                } else {
+                    Err(HoduError::DeviceMismatch {
+                        expected: device,
+                        got: values_device,
+                    })
+                }
+            },
         }
     }
 
@@ -400,6 +534,19 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_gather(
+                layout,
+                indices,
+                indices_layout,
+                dim,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: device,
+                got: indices_device,
+            }),
         }
     }
 
@@ -441,6 +588,30 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => Ok(Self::Metal(storage.call_scatter(
+                layout,
+                indices,
+                indices_layout,
+                src,
+                src_layout,
+                dim,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => {
+                if device != indices_device {
+                    Err(HoduError::DeviceMismatch {
+                        expected: device,
+                        got: indices_device,
+                    })
+                } else {
+                    Err(HoduError::DeviceMismatch {
+                        expected: device,
+                        got: src_device,
+                    })
+                }
+            },
         }
     }
 
@@ -474,6 +645,21 @@ impl BackendStorage {
                 dilation,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(storage), Self::Metal(weight)) => Ok(Self::Metal(storage.call_conv(
+                layout,
+                weight,
+                weight_layout,
+                stride,
+                padding,
+                dilation,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: device,
+                got: weight_device,
+            }),
         }
     }
 
@@ -509,6 +695,22 @@ impl BackendStorage {
                 dilation,
                 op,
             )?)),
+            #[cfg(feature = "metal")]
+            (Self::Metal(storage), Self::Metal(grad_output)) => Ok(Self::Metal(storage.call_conv_grad_weight(
+                layout,
+                grad_output,
+                grad_output_layout,
+                weight_shape,
+                stride,
+                padding,
+                dilation,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            _ => Err(HoduError::DeviceMismatch {
+                expected: device,
+                got: grad_output_device,
+            }),
         }
     }
 
@@ -518,7 +720,6 @@ impl BackendStorage {
         window_shape: &[u32],
         strides: &[u32],
         padding: &[u32],
-        reduce_op: ReduceOp,
         op: Op,
     ) -> HoduResult<Self> {
         match self {
@@ -527,7 +728,14 @@ impl BackendStorage {
                 window_shape,
                 strides,
                 padding,
-                reduce_op,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_reduce_window(
+                layout,
+                window_shape,
+                strides,
+                padding,
                 op,
             )?)),
         }
@@ -539,6 +747,11 @@ impl BackendStorage {
                 let converted_storage = storage.to_dtype(layout, target_dtype)?;
                 Ok(Self::CPU(converted_storage))
             },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let converted_storage = storage.to_dtype(layout, target_dtype)?;
+                Ok(Self::Metal(converted_storage))
+            },
         }
     }
 
@@ -547,6 +760,11 @@ impl BackendStorage {
             Self::CPU(storage) => {
                 let contiguous_storage = storage.contiguous(layout)?;
                 Ok(Self::CPU(contiguous_storage))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let contiguous_storage = storage.contiguous(layout)?;
+                Ok(Self::Metal(contiguous_storage))
             },
         }
     }

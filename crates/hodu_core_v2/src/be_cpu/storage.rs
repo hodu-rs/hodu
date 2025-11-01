@@ -456,18 +456,21 @@ impl BackendStorageT for CpuStorage {
         window_shape: &[u32],
         strides: &[u32],
         padding: &[u32],
-        reduce_op: crate::ops::ReduceOp,
         op: Op,
     ) -> HoduResult<Self> {
-        ops_windowing::call_reduce_window(self, layout, window_shape, strides, padding, reduce_op, op)
+        ops_windowing::call_reduce_window(self, layout, window_shape, strides, padding, op)
     }
 
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {
         if self.dtype() == target_dtype {
-            return Ok(self.clone());
+            // Still need to make it contiguous according to layout
+            return self.contiguous(layout);
         }
 
-        let result = match (self, target_dtype) {
+        // First make it contiguous according to layout
+        let contiguous = self.contiguous(layout)?;
+
+        let result = match (&contiguous, target_dtype) {
             // BOOL conversions
             (Self::BOOL(storage), DType::BOOL) => Self::BOOL(storage.clone()),
             (Self::BOOL(storage), DType::F8E4M3) => Self::F8E4M3(

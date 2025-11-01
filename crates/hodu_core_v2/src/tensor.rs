@@ -32,8 +32,6 @@ impl TensorId {
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-/// # Tensor
-///
 pub struct Tensor(TensorId);
 
 impl AsRef<Tensor> for Tensor {

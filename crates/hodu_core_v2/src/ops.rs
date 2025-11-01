@@ -443,13 +443,19 @@ impl fmt::Debug for ConvOp {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum WindowingOp {
-    ReduceWindow,
+    ReduceWindowMax,
+    ReduceWindowMean,
+    ReduceWindowSum,
+    ReduceWindowMin,
 }
 
 impl fmt::Display for WindowingOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::ReduceWindow => write!(f, "reduce_window"),
+            Self::ReduceWindowMax => write!(f, "reduce_window_max"),
+            Self::ReduceWindowMean => write!(f, "reduce_window_mean"),
+            Self::ReduceWindowSum => write!(f, "reduce_window_sum"),
+            Self::ReduceWindowMin => write!(f, "reduce_window_min"),
         }
     }
 }

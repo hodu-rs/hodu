@@ -3,7 +3,7 @@ use crate::{
     be_cpu::{device::CpuDevice, storage::CpuStorage},
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::{Op, ReduceOp, WindowingOp},
+    ops::Op,
     types::{Layout, Shape},
 };
 use core::ffi::c_void;
@@ -29,32 +29,20 @@ pub fn call_reduce_window(
     window_shape: &[u32],
     strides: &[u32],
     padding: &[u32],
-    reduce_op: ReduceOp,
     op: Op,
 ) -> HoduResult<CpuStorage> {
-    // Validate op
-    match op {
-        Op::Windowing(WindowingOp::ReduceWindow) => (),
+    // Extract windowing op
+    let windowing_op = match op {
+        Op::Windowing(windowing_op) => windowing_op,
         _ => {
             return Err(HoduError::InternalError(
-                "call_reduce_window expects ReduceWindow op".to_string(),
+                "call_reduce_window expects Windowing op".to_string(),
             ))
         },
     };
 
-    // Validate reduce_op is supported
-    let kernel_prefix = match reduce_op {
-        ReduceOp::Max => "reduce_window_max",
-        ReduceOp::Min => "reduce_window_min",
-        ReduceOp::Sum => "reduce_window_sum",
-        ReduceOp::Mean => "reduce_window_mean",
-        _ => {
-            return Err(HoduError::InternalError(format!(
-                "reduce_window does not support {:?} operation",
-                reduce_op
-            )))
-        },
-    };
+    // Get kernel prefix from windowing op display
+    let kernel_prefix = format!("{}", windowing_op);
 
     let input_shape = layout.shape();
     let ndim = input_shape.ndim() as usize;
