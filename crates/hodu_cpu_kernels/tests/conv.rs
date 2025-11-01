@@ -436,6 +436,7 @@ fn test_conv_transpose3d_f32() {
 
 #[test]
 fn test_conv1d_grad_weight_f32() {
+    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_width = 5;
@@ -451,6 +452,7 @@ fn test_conv1d_grad_weight_f32() {
 
     let metadata = vec![
         out_channels * in_channels * kernel_width,
+        batch,
         in_channels,
         out_channels,
         in_width,
@@ -477,6 +479,7 @@ fn test_conv1d_grad_weight_f32() {
 
 #[test]
 fn test_conv2d_grad_weight_f32() {
+    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_height = 3;
@@ -498,6 +501,7 @@ fn test_conv2d_grad_weight_f32() {
 
     let metadata = vec![
         out_channels * in_channels * kernel_height * kernel_width,
+        batch,
         in_channels,
         out_channels,
         in_height,
@@ -530,6 +534,7 @@ fn test_conv2d_grad_weight_f32() {
 
 #[test]
 fn test_conv3d_grad_weight_f32() {
+    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_depth = 2;
@@ -557,6 +562,7 @@ fn test_conv3d_grad_weight_f32() {
 
     let metadata = vec![
         out_channels * in_channels * kernel_depth * kernel_height * kernel_width,
+        batch,
         in_channels,
         out_channels,
         in_depth,
@@ -595,6 +601,7 @@ fn test_conv3d_grad_weight_f32() {
 
 #[test]
 fn test_conv_transpose1d_grad_weight_f32() {
+    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_width = 3;
@@ -610,6 +617,7 @@ fn test_conv_transpose1d_grad_weight_f32() {
 
     let metadata = vec![
         in_channels * out_channels * kernel_width,
+        batch,
         in_channels,
         out_channels,
         in_width,
@@ -636,6 +644,7 @@ fn test_conv_transpose1d_grad_weight_f32() {
 
 #[test]
 fn test_conv_transpose2d_grad_weight_f32() {
+    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_height = 2;
@@ -657,6 +666,7 @@ fn test_conv_transpose2d_grad_weight_f32() {
 
     let metadata = vec![
         in_channels * out_channels * kernel_height * kernel_width,
+        batch,
         in_channels,
         out_channels,
         in_height,
@@ -689,6 +699,7 @@ fn test_conv_transpose2d_grad_weight_f32() {
 
 #[test]
 fn test_conv_transpose3d_grad_weight_f32() {
+    let batch = 1;
     let in_channels = 1;
     let out_channels = 1;
     let in_depth = 2;
@@ -716,6 +727,7 @@ fn test_conv_transpose3d_grad_weight_f32() {
 
     let metadata = vec![
         in_channels * out_channels * kernel_depth * kernel_height * kernel_width,
+        batch,
         in_channels,
         out_channels,
         in_depth,

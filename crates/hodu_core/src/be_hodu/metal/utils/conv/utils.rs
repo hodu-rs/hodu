@@ -60,18 +60,20 @@ pub fn conv1d_grad_weight_map(
         offset_in_bytes: grad_output_layout.get_offset() * dtype.get_size_in_bytes(),
     };
 
-    // Metadata: [num_els, batch, in_channels, out_channels, input_length, output_length, kernel_size, stride, padding, dilation]
+    // Metadata: [num_els, batch, in_channels, out_channels, input_length, kernel_size, output_length, stride, padding, dilation, input_offset, grad_output_offset]
     let metadata = vec![
         num_els,
         batch,
         in_channels,
         out_channels,
         input_length,
-        output_length,
         kernel_size,
+        output_length,
         params.stride,
         params.padding,
         params.dilation,
+        input_layout.get_offset(),
+        grad_output_layout.get_offset(),
     ];
 
     macro_rules! dispatch_conv1d_grad_weight {
@@ -296,7 +298,7 @@ pub fn conv2d_grad_weight_map(
     };
 
     // Metadata: [num_els, batch, in_channels, out_channels, input_height, input_width,
-    //            output_height, output_width, kernel_height, kernel_width, stride, padding, dilation]
+    //            kernel_height, kernel_width, output_height, output_width, stride_h, stride_w, padding_h, padding_w, dilation_h, dilation_w, input_offset, grad_output_offset]
     let metadata = vec![
         num_els,
         batch,
@@ -304,13 +306,18 @@ pub fn conv2d_grad_weight_map(
         out_channels,
         input_height,
         input_width,
-        output_height,
-        output_width,
         kernel_height,
         kernel_width,
+        output_height,
+        output_width,
+        params.stride,
         params.stride,
         params.padding,
+        params.padding,
         params.dilation,
+        params.dilation,
+        input_layout.get_offset(),
+        grad_output_layout.get_offset(),
     ];
 
     macro_rules! dispatch_conv2d_grad_weight {
@@ -538,8 +545,8 @@ pub fn conv3d_grad_weight_map(
     };
 
     // Metadata: [num_els, batch, in_channels, out_channels, input_depth, input_height, input_width,
-    //            output_depth, output_height, output_width, kernel_depth, kernel_height, kernel_width,
-    //            stride, padding, dilation]
+    //            kernel_depth, kernel_height, kernel_width, output_depth, output_height, output_width,
+    //            stride_d, stride_h, stride_w, padding_d, padding_h, padding_w, dilation_d, dilation_h, dilation_w, input_offset, grad_output_offset]
     let metadata = vec![
         num_els,
         batch,
@@ -548,15 +555,23 @@ pub fn conv3d_grad_weight_map(
         input_depth,
         input_height,
         input_width,
-        output_depth,
-        output_height,
-        output_width,
         kernel_depth,
         kernel_height,
         kernel_width,
+        output_depth,
+        output_height,
+        output_width,
+        params.stride,
+        params.stride,
         params.stride,
         params.padding,
+        params.padding,
+        params.padding,
         params.dilation,
+        params.dilation,
+        params.dilation,
+        input_layout.get_offset(),
+        grad_output_layout.get_offset(),
     ];
 
     macro_rules! dispatch_conv3d_grad_weight {
@@ -777,20 +792,21 @@ pub fn conv_transpose1d_grad_weight_map(
         offset_in_bytes: grad_output_layout.get_offset() * dtype.get_size_in_bytes(),
     };
 
-    // Metadata: [num_els, batch, in_channels, out_channels, input_length, output_length,
-    //            kernel_size, padding, output_padding, stride, dilation]
+    // Metadata: [num_els, batch, in_channels, out_channels, input_length, kernel_size, output_length,
+    //            stride, padding, dilation, input_offset, grad_output_offset]
     let metadata = vec![
         num_els,
         batch,
         in_channels,
         out_channels,
         input_length,
-        output_length,
         kernel_size,
-        params.padding,
-        params.output_padding,
+        output_length,
         params.stride,
+        params.padding,
         params.dilation,
+        input_layout.get_offset(),
+        grad_output_layout.get_offset(),
     ];
 
     macro_rules! dispatch_conv_transpose1d_grad_weight {
@@ -1015,8 +1031,8 @@ pub fn conv_transpose2d_grad_weight_map(
     };
 
     // Metadata: [num_els, batch, in_channels, out_channels, input_height, input_width,
-    //            output_height, output_width, kernel_height, kernel_width,
-    //            padding, output_padding, stride, dilation]
+    //            kernel_height, kernel_width, output_height, output_width,
+    //            stride_h, stride_w, padding_h, padding_w, dilation_h, dilation_w, input_offset, grad_output_offset]
     let metadata = vec![
         num_els,
         batch,
@@ -1024,14 +1040,18 @@ pub fn conv_transpose2d_grad_weight_map(
         out_channels,
         input_height,
         input_width,
-        output_height,
-        output_width,
         kernel_height,
         kernel_width,
-        params.padding,
-        params.output_padding,
+        output_height,
+        output_width,
         params.stride,
+        params.stride,
+        params.padding,
+        params.padding,
         params.dilation,
+        params.dilation,
+        input_layout.get_offset(),
+        grad_output_layout.get_offset(),
     ];
 
     macro_rules! dispatch_conv_transpose2d_grad_weight {
@@ -1259,8 +1279,8 @@ pub fn conv_transpose3d_grad_weight_map(
     };
 
     // Metadata: [num_els, batch, in_channels, out_channels, input_depth, input_height, input_width,
-    //            output_depth, output_height, output_width, kernel_depth, kernel_height, kernel_width,
-    //            padding, output_padding, stride, dilation]
+    //            kernel_depth, kernel_height, kernel_width, output_depth, output_height, output_width,
+    //            stride_d, stride_h, stride_w, padding_d, padding_h, padding_w, dilation_d, dilation_h, dilation_w, input_offset, grad_output_offset]
     let metadata = vec![
         num_els,
         batch,
@@ -1269,16 +1289,23 @@ pub fn conv_transpose3d_grad_weight_map(
         input_depth,
         input_height,
         input_width,
-        output_depth,
-        output_height,
-        output_width,
         kernel_depth,
         kernel_height,
         kernel_width,
-        params.padding,
-        params.output_padding,
+        output_depth,
+        output_height,
+        output_width,
         params.stride,
+        params.stride,
+        params.stride,
+        params.padding,
+        params.padding,
+        params.padding,
         params.dilation,
+        params.dilation,
+        params.dilation,
+        input_layout.get_offset(),
+        grad_output_layout.get_offset(),
     ];
 
     macro_rules! dispatch_conv_transpose3d_grad_weight {

@@ -455,8 +455,68 @@ pub fn call_conv(
 /// * `metadata` - Tensor metadata array (same layout as forward pass)
 ///
 /// # Metadata layout
-/// Same as `call_conv` - see that function for complete metadata layouts for 1D, 2D, and 3D variants.
-/// Note: metadata[1] is used as batch_size in gradient computation.
+///
+/// ## Conv1D Grad Weight
+/// - metadata[0]: num_els (total grad_weight elements)
+/// - metadata[1]: batch
+/// - metadata[2]: in_channels
+/// - metadata[3]: out_channels
+/// - metadata[4]: in_width
+/// - metadata[5]: kernel_width
+/// - metadata[6]: out_width
+/// - metadata[7]: stride
+/// - metadata[8]: padding
+/// - metadata[9]: dilation
+/// - metadata[10]: input_offset
+/// - metadata[11]: grad_output_offset
+///
+/// ## Conv2D Grad Weight
+/// - metadata[0]: num_els
+/// - metadata[1]: batch
+/// - metadata[2]: in_channels
+/// - metadata[3]: out_channels
+/// - metadata[4]: in_height
+/// - metadata[5]: in_width
+/// - metadata[6]: kernel_height
+/// - metadata[7]: kernel_width
+/// - metadata[8]: out_height
+/// - metadata[9]: out_width
+/// - metadata[10]: stride_h
+/// - metadata[11]: stride_w
+/// - metadata[12]: padding_h
+/// - metadata[13]: padding_w
+/// - metadata[14]: dilation_h
+/// - metadata[15]: dilation_w
+/// - metadata[16]: input_offset
+/// - metadata[17]: grad_output_offset
+///
+/// ## Conv3D Grad Weight
+/// - metadata[0]: num_els
+/// - metadata[1]: batch
+/// - metadata[2]: in_channels
+/// - metadata[3]: out_channels
+/// - metadata[4]: in_depth
+/// - metadata[5]: in_height
+/// - metadata[6]: in_width
+/// - metadata[7]: kernel_depth
+/// - metadata[8]: kernel_height
+/// - metadata[9]: kernel_width
+/// - metadata[10]: out_depth
+/// - metadata[11]: out_height
+/// - metadata[12]: out_width
+/// - metadata[13]: stride_d
+/// - metadata[14]: stride_h
+/// - metadata[15]: stride_w
+/// - metadata[16]: padding_d
+/// - metadata[17]: padding_h
+/// - metadata[18]: padding_w
+/// - metadata[19]: dilation_d
+/// - metadata[20]: dilation_h
+/// - metadata[21]: dilation_w
+/// - metadata[22]: input_offset
+/// - metadata[23]: grad_output_offset
+///
+/// Transpose convolutions have similar layouts.
 ///
 /// # Safety
 /// This function uses unsafe FFI calls to C kernels. Caller must ensure:
