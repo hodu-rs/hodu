@@ -327,60 +327,63 @@ extern "C" {
 ///
 /// # Metadata layout for conv1d / conv_transpose1d
 /// - metadata[0]: num_els (total number of output elements)
-/// - metadata[1]: in_channels
-/// - metadata[2]: out_channels
-/// - metadata[3]: in_width
-/// - metadata[4]: kernel_width
-/// - metadata[5]: out_width
-/// - metadata[6]: stride
-/// - metadata[7]: padding
-/// - metadata[8]: dilation
-/// - metadata[9]: input_offset
-/// - metadata[10]: weight_offset
+/// - metadata[1]: batch
+/// - metadata[2]: in_channels
+/// - metadata[3]: out_channels
+/// - metadata[4]: in_width
+/// - metadata[5]: kernel_width
+/// - metadata[6]: out_width
+/// - metadata[7]: stride
+/// - metadata[8]: padding
+/// - metadata[9]: dilation
+/// - metadata[10]: input_offset
+/// - metadata[11]: weight_offset
 ///
 /// # Metadata layout for conv2d / conv_transpose2d
 /// - metadata[0]: num_els (total number of output elements)
-/// - metadata[1]: in_channels
-/// - metadata[2]: out_channels
-/// - metadata[3]: in_height
-/// - metadata[4]: in_width
-/// - metadata[5]: kernel_height
-/// - metadata[6]: kernel_width
-/// - metadata[7]: out_height
-/// - metadata[8]: out_width
-/// - metadata[9]: stride_h
-/// - metadata[10]: stride_w
-/// - metadata[11]: padding_h
-/// - metadata[12]: padding_w
-/// - metadata[13]: dilation_h
-/// - metadata[14]: dilation_w
-/// - metadata[15]: input_offset
-/// - metadata[16]: weight_offset
+/// - metadata[1]: batch
+/// - metadata[2]: in_channels
+/// - metadata[3]: out_channels
+/// - metadata[4]: in_height
+/// - metadata[5]: in_width
+/// - metadata[6]: kernel_height
+/// - metadata[7]: kernel_width
+/// - metadata[8]: out_height
+/// - metadata[9]: out_width
+/// - metadata[10]: stride_h
+/// - metadata[11]: stride_w
+/// - metadata[12]: padding_h
+/// - metadata[13]: padding_w
+/// - metadata[14]: dilation_h
+/// - metadata[15]: dilation_w
+/// - metadata[16]: input_offset
+/// - metadata[17]: weight_offset
 ///
 /// # Metadata layout for conv3d / conv_transpose3d
 /// - metadata[0]: num_els (total number of output elements)
-/// - metadata[1]: in_channels
-/// - metadata[2]: out_channels
-/// - metadata[3]: in_depth
-/// - metadata[4]: in_height
-/// - metadata[5]: in_width
-/// - metadata[6]: kernel_depth
-/// - metadata[7]: kernel_height
-/// - metadata[8]: kernel_width
-/// - metadata[9]: out_depth
-/// - metadata[10]: out_height
-/// - metadata[11]: out_width
-/// - metadata[12]: stride_d
-/// - metadata[13]: stride_h
-/// - metadata[14]: stride_w
-/// - metadata[15]: padding_d
-/// - metadata[16]: padding_h
-/// - metadata[17]: padding_w
-/// - metadata[18]: dilation_d
-/// - metadata[19]: dilation_h
-/// - metadata[20]: dilation_w
-/// - metadata[21]: input_offset
-/// - metadata[22]: weight_offset
+/// - metadata[1]: batch
+/// - metadata[2]: in_channels
+/// - metadata[3]: out_channels
+/// - metadata[4]: in_depth
+/// - metadata[5]: in_height
+/// - metadata[6]: in_width
+/// - metadata[7]: kernel_depth
+/// - metadata[8]: kernel_height
+/// - metadata[9]: kernel_width
+/// - metadata[10]: out_depth
+/// - metadata[11]: out_height
+/// - metadata[12]: out_width
+/// - metadata[13]: stride_d
+/// - metadata[14]: stride_h
+/// - metadata[15]: stride_w
+/// - metadata[16]: padding_d
+/// - metadata[17]: padding_h
+/// - metadata[18]: padding_w
+/// - metadata[19]: dilation_d
+/// - metadata[20]: dilation_h
+/// - metadata[21]: dilation_w
+/// - metadata[22]: input_offset
+/// - metadata[23]: weight_offset
 ///
 /// # Safety
 /// This function uses unsafe FFI calls to C kernels. Caller must ensure:

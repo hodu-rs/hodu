@@ -140,13 +140,16 @@ MATMUL_OP(uint64_t, matmul_u64)
 // RHS: (K, N)
 // Output: (M, N)
 //
-// Metadata layout:
-// - lhs_shape: [M, K]
-// - rhs_shape: [K, N]
-// - lhs_strides: [stride_m, stride_k]
-// - rhs_strides: [stride_k, stride_n]
-// - lhs_offset: scalar offset for LHS
-// - rhs_offset: scalar offset for RHS
+// Metadata layout (9 elements):
+// - metadata[0]: M (rows of A)
+// - metadata[1]: K (cols of A / rows of B)
+// - metadata[2]: N (cols of B)
+// - metadata[3]: lhs_stride_m (stride for row dimension of A)
+// - metadata[4]: lhs_stride_k (stride for col dimension of A)
+// - metadata[5]: rhs_stride_k (stride for row dimension of B)
+// - metadata[6]: rhs_stride_n (stride for col dimension of B)
+// - metadata[7]: lhs_offset (starting offset in lhs buffer)
+// - metadata[8]: rhs_offset (starting offset in rhs buffer)
 
 #define TILE_SIZE 16
 
@@ -161,13 +164,13 @@ MATMUL_OP(uint64_t, matmul_u64)
                                                                                                    \
         const size_t M = metadata[0];                                                              \
         const size_t K = metadata[1];                                                              \
-        const size_t N = metadata[3];                                                              \
-        const size_t lhs_stride_m = metadata[4];                                                   \
-        const size_t lhs_stride_k = metadata[5];                                                   \
-        const size_t rhs_stride_k = metadata[6];                                                   \
-        const size_t rhs_stride_n = metadata[7];                                                   \
-        const size_t lhs_offset = metadata[8];                                                     \
-        const size_t rhs_offset = metadata[9];                                                     \
+        const size_t N = metadata[2];                                                              \
+        const size_t lhs_stride_m = metadata[3];                                                   \
+        const size_t lhs_stride_k = metadata[4];                                                   \
+        const size_t rhs_stride_k = metadata[5];                                                   \
+        const size_t rhs_stride_n = metadata[6];                                                   \
+        const size_t lhs_offset = metadata[7];                                                     \
+        const size_t rhs_offset = metadata[8];                                                     \
                                                                                                    \
         /* Shared memory for tiles */                                                              \
         threadgroup TYPENAME lhs_tile[TILE_SIZE][TILE_SIZE];                                       \

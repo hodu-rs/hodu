@@ -322,13 +322,11 @@ pub fn dot_map(
     };
 
     // Prepare metadata for Metal kernel
-    // Layout: [M, K, unused, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset]
-    // Note: metadata[2] is unused by the kernel, but metadata[3] is N
+    // Layout: [M, K, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset]
     let metadata = vec![
         m,
         k1,
-        0, // unused (metadata[2])
-        n, // metadata[3]
+        n,
         lhs_strides[0],
         lhs_strides[1],
         rhs_strides[0],

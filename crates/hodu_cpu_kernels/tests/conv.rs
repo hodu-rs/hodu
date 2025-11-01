@@ -23,6 +23,7 @@ fn test_conv1d_f32() {
 
     let metadata = vec![
         batch * out_channels * out_width,
+        batch,
         in_channels,
         out_channels,
         in_width,
@@ -65,6 +66,7 @@ fn test_conv1d_f32_stride() {
 
     let metadata = vec![
         batch * out_channels * out_width,
+        batch,
         in_channels,
         out_channels,
         in_width,
@@ -113,6 +115,7 @@ fn test_conv2d_f32() {
 
     let metadata = vec![
         batch * out_channels * out_height * out_width,
+        batch,
         in_channels,
         out_channels,
         in_height,
@@ -167,6 +170,7 @@ fn test_conv2d_f32_with_padding() {
 
     let metadata = vec![
         batch * out_channels * out_height * out_width,
+        batch,
         in_channels,
         out_channels,
         in_height,
@@ -230,6 +234,7 @@ fn test_conv3d_f32() {
 
     let metadata = vec![
         batch * out_channels * out_depth * out_height * out_width,
+        batch,
         in_channels,
         out_channels,
         in_depth,
@@ -287,6 +292,7 @@ fn test_conv_transpose1d_f32() {
 
     let metadata = vec![
         batch * out_channels * out_width,
+        batch,
         in_channels,
         out_channels,
         in_width,
@@ -335,6 +341,7 @@ fn test_conv_transpose2d_f32() {
 
     let metadata = vec![
         batch * out_channels * out_height * out_width,
+        batch,
         in_channels,
         out_channels,
         in_height,
@@ -398,6 +405,7 @@ fn test_conv_transpose3d_f32() {
 
     let metadata = vec![
         batch * out_channels * out_depth * out_height * out_width,
+        batch,
         in_channels,
         out_channels,
         in_depth,

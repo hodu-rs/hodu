@@ -53,10 +53,9 @@ fn dot_f32_simple() {
         .new_buffer(m * n * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
         .unwrap();
 
-    // Metadata based on ops_matrix.metal line 157-165:
-    // [M, K, metadata[2]=?, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset]
-    // Note: metadata[2] seems unused but N is at metadata[3]
-    let metadata = vec![m, k, 0, n, 3, 1, 2, 1, 0, 0];
+    // Metadata layout (9 elements):
+    // [M, K, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset]
+    let metadata = vec![m, k, n, 3, 1, 2, 1, 0, 0];
 
     call_dot(
         &device,
@@ -140,6 +139,180 @@ fn matmul_f32_2d() {
 }
 
 #[test]
+fn matmul_f32_batched() {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    // Batched matmul: [2, 2, 3] @ [2, 3, 2] = [2, 2, 2]
+    // Batch 0: [[1, 2, 3], [4, 5, 6]] @ [[7, 8], [9, 10], [11, 12]]
+    // Batch 1: [[13, 14, 15], [16, 17, 18]] @ [[19, 20], [21, 22], [23, 24]]
+    let lhs = vec![
+        1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, // Batch 0
+        13.0, 14.0, 15.0, 16.0, 17.0, 18.0, // Batch 1
+    ];
+    let rhs = vec![
+        7.0f32, 8.0, 9.0, 10.0, 11.0, 12.0, // Batch 0
+        19.0, 20.0, 21.0, 22.0, 23.0, 24.0, // Batch 1
+    ];
+
+    let lhs_buffer = new_buffer(&device, &lhs);
+    let rhs_buffer = new_buffer(&device, &rhs);
+
+    let batch = 2;
+    let m = 2;
+    let k = 3;
+    let n = 2;
+    let num_els = batch * m * n;
+
+    let output = device
+        .new_buffer(num_els * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
+        .unwrap();
+
+    // Metadata for batched matmul:
+    // [num_els, lhs_ndim, rhs_ndim, batch_ndim, lhs_shape, rhs_shape, batch_shape,
+    //  lhs_strides, rhs_strides, lhs_offset, rhs_offset, M, K, N]
+    let lhs_ndim = 3;
+    let rhs_ndim = 3;
+    let batch_ndim = 1;
+    let metadata = vec![
+        num_els,
+        lhs_ndim,
+        rhs_ndim,
+        batch_ndim,
+        batch,
+        m,
+        k, // lhs shape: [2, 2, 3]
+        batch,
+        k,
+        n,     // rhs shape: [2, 3, 2]
+        batch, // batch_shape: [2]
+        m * k,
+        k,
+        1, // lhs strides: [6, 3, 1]
+        k * n,
+        n,
+        1, // rhs strides: [6, 2, 1]
+        0,
+        0, // offsets
+        m,
+        k,
+        n, // M, K, N
+    ];
+
+    call_matmul(
+        &device,
+        &command_buffer,
+        &kernels,
+        matmul::F32,
+        BufferOffset::zero_offset(&lhs_buffer),
+        BufferOffset::zero_offset(&rhs_buffer),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let results: Vec<f32> = read_to_vec(&output, num_els);
+    // Batch 0: [[1*7+2*9+3*11, 1*8+2*10+3*12], [4*7+5*9+6*11, 4*8+5*10+6*12]]
+    //        = [[58, 64], [139, 154]]
+    // Batch 1: [[13*19+14*21+15*23, 13*20+14*22+15*24], [16*19+17*21+18*23, 16*20+17*22+18*24]]
+    //        = [[886, 928], [1075, 1126]]
+    assert_eq!(
+        approx(results, 4),
+        vec![58.0, 64.0, 139.0, 154.0, 886.0, 928.0, 1075.0, 1126.0]
+    );
+}
+
+#[test]
+fn matmul_f32_broadcast() {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    // Broadcasting matmul: [2, 2, 3] @ [3, 2] = [2, 2, 2]
+    // The rhs is broadcasted across the batch dimension
+    let lhs = vec![
+        1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, // Batch 0
+        7.0, 8.0, 9.0, 10.0, 11.0, 12.0, // Batch 1
+    ];
+    let rhs = vec![
+        1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, // No batch dimension
+    ];
+
+    let lhs_buffer = new_buffer(&device, &lhs);
+    let rhs_buffer = new_buffer(&device, &rhs);
+
+    let batch = 2;
+    let m = 2;
+    let k = 3;
+    let n = 2;
+    let num_els = batch * m * n;
+
+    let output = device
+        .new_buffer(num_els * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
+        .unwrap();
+
+    // lhs: [2, 2, 3], rhs: [3, 2], output: [2, 2, 2]
+    let lhs_ndim = 3;
+    let rhs_ndim = 2;
+    let batch_ndim = 1;
+    let metadata = vec![
+        num_els,
+        lhs_ndim,
+        rhs_ndim,
+        batch_ndim,
+        batch,
+        m,
+        k, // lhs shape: [2, 2, 3]
+        k,
+        n,     // rhs shape: [3, 2]
+        batch, // batch_shape: [2]
+        m * k,
+        k,
+        1, // lhs strides: [6, 3, 1]
+        n,
+        1, // rhs strides: [2, 1]
+        0,
+        0, // offsets
+        m,
+        k,
+        n, // M, K, N
+    ];
+
+    call_matmul(
+        &device,
+        &command_buffer,
+        &kernels,
+        matmul::F32,
+        BufferOffset::zero_offset(&lhs_buffer),
+        BufferOffset::zero_offset(&rhs_buffer),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let results: Vec<f32> = read_to_vec(&output, num_els);
+    // Batch 0: [[1, 2, 3], [4, 5, 6]] @ [[1, 2], [3, 4], [5, 6]]
+    //        = [[1*1+2*3+3*5, 1*2+2*4+3*6], [4*1+5*3+6*5, 4*2+5*4+6*6]]
+    //        = [[22, 28], [49, 64]]
+    // Batch 1: [[7, 8, 9], [10, 11, 12]] @ [[1, 2], [3, 4], [5, 6]] (same rhs broadcasted)
+    //        = [[7*1+8*3+9*5, 7*2+8*4+9*6], [10*1+11*3+12*5, 10*2+11*4+12*6]]
+    //        = [[76, 100], [103, 136]]
+    assert_eq!(
+        approx(results, 4),
+        vec![22.0, 28.0, 49.0, 64.0, 76.0, 100.0, 103.0, 136.0]
+    );
+}
+
+#[test]
 fn dot_f32_identity() {
     let device = device();
     let kernels = Kernels::new();
@@ -162,7 +335,7 @@ fn dot_f32_identity() {
         .new_buffer(m * n * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
         .unwrap();
 
-    let metadata = vec![m, k, 0, n, 2, 1, 2, 1, 0, 0];
+    let metadata = vec![m, k, n, 2, 1, 2, 1, 0, 0];
 
     call_dot(
         &device,

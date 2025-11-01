@@ -36,13 +36,14 @@ ops!(matmul, dot);
 /// - `metadata[3]`: batch_ndim (number of batch dimensions)
 /// - `metadata[4..4+lhs_ndim]`: lhs_shape
 /// - `metadata[4+lhs_ndim..4+lhs_ndim+rhs_ndim]`: rhs_shape
-/// - `metadata[4+lhs_ndim+rhs_ndim..4+2*lhs_ndim+rhs_ndim]`: lhs_strides
-/// - `metadata[4+2*lhs_ndim+rhs_ndim..4+2*lhs_ndim+2*rhs_ndim]`: rhs_strides
-/// - `metadata[4+2*lhs_ndim+2*rhs_ndim]`: lhs_offset
-/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+1]`: rhs_offset
-/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+2]`: M (rows of A)
-/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+3]`: K (cols of A / rows of B)
-/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+4]`: N (cols of B)
+/// - `metadata[4+lhs_ndim+rhs_ndim..4+lhs_ndim+rhs_ndim+batch_ndim]`: batch_shape (broadcasted batch dimensions)
+/// - `metadata[4+lhs_ndim+rhs_ndim+batch_ndim..4+2*lhs_ndim+rhs_ndim+batch_ndim]`: lhs_strides
+/// - `metadata[4+2*lhs_ndim+rhs_ndim+batch_ndim..4+2*lhs_ndim+2*rhs_ndim+batch_ndim]`: rhs_strides
+/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+batch_ndim]`: lhs_offset
+/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+batch_ndim+1]`: rhs_offset
+/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+batch_ndim+2]`: M (rows of A)
+/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+batch_ndim+3]`: K (cols of A / rows of B)
+/// - `metadata[4+2*lhs_ndim+2*rhs_ndim+batch_ndim+4]`: N (cols of B)
 ///
 /// # Example
 /// ```ignore
@@ -111,18 +112,17 @@ pub fn call_matmul(
 /// * `metadata` - Metadata describing matrix layout
 ///
 /// # Metadata Layout
-/// Fixed length: 10 elements
+/// Fixed length: 9 elements
 ///
 /// - `metadata[0]`: M (rows of A)
 /// - `metadata[1]`: K (cols of A / rows of B)
-/// - `metadata[2]`: (unused, reserved)
-/// - `metadata[3]`: N (cols of B)
-/// - `metadata[4]`: lhs_stride_m (stride for row dimension of A)
-/// - `metadata[5]`: lhs_stride_k (stride for col dimension of A)
-/// - `metadata[6]`: rhs_stride_k (stride for row dimension of B)
-/// - `metadata[7]`: rhs_stride_n (stride for col dimension of B)
-/// - `metadata[8]`: lhs_offset (starting offset in lhs buffer)
-/// - `metadata[9]`: rhs_offset (starting offset in rhs buffer)
+/// - `metadata[2]`: N (cols of B)
+/// - `metadata[3]`: lhs_stride_m (stride for row dimension of A)
+/// - `metadata[4]`: lhs_stride_k (stride for col dimension of A)
+/// - `metadata[5]`: rhs_stride_k (stride for row dimension of B)
+/// - `metadata[6]`: rhs_stride_n (stride for col dimension of B)
+/// - `metadata[7]`: lhs_offset (starting offset in lhs buffer)
+/// - `metadata[8]`: rhs_offset (starting offset in rhs buffer)
 ///
 /// # Performance
 /// Uses 16×16 tiles with threadgroup memory for better cache locality.
@@ -135,7 +135,6 @@ pub fn call_matmul(
 /// let metadata = vec![
 ///     2,  // M
 ///     3,  // K
-///     0,  // unused
 ///     2,  // N
 ///     3,  // lhs_stride_m
 ///     1,  // lhs_stride_k
