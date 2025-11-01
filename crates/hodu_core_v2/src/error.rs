@@ -1,6 +1,7 @@
 use crate::{
     layer::compat::*,
     ops::Op,
+    tensor::TensorId,
     types::{Compiler, DType, Device, Shape},
 };
 
@@ -46,11 +47,13 @@ pub enum HoduError {
 
     // ===== Tensor Errors =====
     /// Tensor not found in the global registry.
-    TensorNotFound(u32),
+    TensorNotFound(TensorId),
     /// Storage not found for a tensor.
-    StorageNotFound(u32),
+    StorageNotFound(TensorId),
     /// Storage data is corrupted or inaccessible.
-    StorageCorrupted(u32),
+    StorageCorrupted(TensorId),
+    /// Requires grad is not set for tensor (only float tensors can have gradients).
+    RequiresGradNotSet(TensorId),
 
     // ===== IO Errors =====
     /// I/O operation failed.
@@ -130,13 +133,16 @@ impl fmt::Display for HoduError {
 
             // Tensor Errors
             Self::TensorNotFound(id) => {
-                write!(f, "tensor not found: id={}", id)
+                write!(f, "tensor not found: id={:?}", id)
             },
             Self::StorageNotFound(id) => {
-                write!(f, "storage not found for tensor: id={}", id)
+                write!(f, "storage not found for tensor: id={:?}", id)
             },
             Self::StorageCorrupted(id) => {
-                write!(f, "storage corrupted for tensor: id={}", id)
+                write!(f, "storage corrupted for tensor: id={:?}", id)
+            },
+            Self::RequiresGradNotSet(id) => {
+                write!(f, "requires_grad not set or not allowed for tensor: id={:?}", id)
             },
 
             // IO Errors
