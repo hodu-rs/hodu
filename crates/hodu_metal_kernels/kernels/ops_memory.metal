@@ -4,20 +4,26 @@
 using namespace metal;
 
 // Contiguous copy operation - converts strided layout to contiguous layout
-// This macro creates kernels that copy data from a strided input layout to a contiguous output
+// Metadata layout:
+// - metadata[0]: num_els
+// - metadata[1]: num_dims
+// - metadata[2..2+num_dims]: dims (shape)
+// - metadata[2+num_dims..2+2*num_dims]: strides
+// - metadata[2+2*num_dims]: offset
 #define CONTIGUOUS_OP(TYPENAME, FN_NAME)                                                           \
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint id [[thread_position_in_grid]]) {            \
+        constant size_t *metadata [[buffer(2)]], uint id [[thread_position_in_grid]]) {            \
+        const size_t num_els = metadata[0];                                                        \
         if (id >= num_els)                                                                         \
             return;                                                                                \
                                                                                                    \
-        const constant size_t *dims = metadata;                                                    \
-        const constant size_t *strides = metadata + num_dims;                                      \
-        const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                           \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *dims = metadata + 2;                                                \
+        const constant size_t *strides = metadata + 2 + num_dims;                                  \
+        const size_t offset = metadata[2 + 2 * num_dims];                                          \
                                                                                                    \
-        if (metadata == nullptr || is_contiguous(num_dims, dims, strides)) {                       \
+        if (is_contiguous(num_dims, dims, strides)) {                                              \
             output[id] = input[offset + id];                                                       \
         } else {                                                                                   \
             unsigned strided_i = offset + get_strided_index(id, num_dims, dims, strides);          \

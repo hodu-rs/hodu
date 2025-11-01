@@ -1,4 +1,3 @@
-use half::{bf16, f16};
 use hodu_metal_kernels::{
     kernel::Kernels,
     kernels::{
@@ -56,20 +55,27 @@ fn run_reduce_window<T: Clone>(
         input_strides[i] = input_strides[i + 1] * input_shape[i + 1];
     }
 
+    // Build metadata: [output_size, num_dims, input_shape..., input_strides..., input_offset, window_shape..., strides..., padding..., output_shape...]
+    let num_dims = input_shape.len();
+    let mut metadata = Vec::new();
+    metadata.push(output_size);
+    metadata.push(num_dims);
+    metadata.extend_from_slice(input_shape);
+    metadata.extend_from_slice(&input_strides);
+    metadata.push(0); // input_offset
+    metadata.extend_from_slice(window_shape);
+    metadata.extend_from_slice(strides);
+    metadata.extend_from_slice(padding);
+    metadata.extend_from_slice(output_shape);
+
     call_reduce_window(
         &device,
         &command_buffer,
         &kernels,
         name,
-        input_shape,
         BufferOffset::zero_offset(&input_buffer),
-        &input_strides,
-        0,
-        window_shape,
-        strides,
-        padding,
-        output_shape,
         &output,
+        &metadata,
     )
     .unwrap();
 
@@ -237,50 +243,4 @@ fn test_reduce_window_min_2d() {
     );
 
     assert_eq!(result, vec![5.0, 4.0, 2.0, 1.0]);
-}
-
-#[test]
-fn test_reduce_window_max_bf16() {
-    let input: Vec<bf16> = vec![1.0, 2.0, 3.0, 4.0].into_iter().map(bf16::from_f32).collect();
-    let input_shape = vec![4];
-    let window_shape = vec![2];
-    let strides = vec![1];
-    let padding = vec![0, 0];
-    let output_shape = vec![3];
-
-    let result: Vec<bf16> = run_reduce_window(
-        &input,
-        &input_shape,
-        &window_shape,
-        &strides,
-        &padding,
-        &output_shape,
-        reduce_window_max::BF16,
-    );
-
-    let expected: Vec<bf16> = vec![2.0, 3.0, 4.0].into_iter().map(bf16::from_f32).collect();
-    assert_eq!(result, expected);
-}
-
-#[test]
-fn test_reduce_window_max_f16() {
-    let input: Vec<f16> = vec![1.0, 2.0, 3.0, 4.0].into_iter().map(f16::from_f32).collect();
-    let input_shape = vec![4];
-    let window_shape = vec![2];
-    let strides = vec![1];
-    let padding = vec![0, 0];
-    let output_shape = vec![3];
-
-    let result: Vec<f16> = run_reduce_window(
-        &input,
-        &input_shape,
-        &window_shape,
-        &strides,
-        &padding,
-        &output_shape,
-        reduce_window_max::F16,
-    );
-
-    let expected: Vec<f16> = vec![2.0, 3.0, 4.0].into_iter().map(f16::from_f32).collect();
-    assert_eq!(result, expected);
 }

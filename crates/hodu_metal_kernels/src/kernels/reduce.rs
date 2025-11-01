@@ -22,6 +22,68 @@ ops!(
     reduce_all
 );
 
+/// Executes a reduction operation along specified dimensions using Metal compute pipeline.
+///
+/// Reduces a tensor along one or more dimensions using operations like sum, max, min, mean, etc.
+/// The reduction can either keep the reduced dimensions (with size 1) or remove them entirely.
+///
+/// # Arguments
+/// * `device` - Metal device to execute on
+/// * `ep` - Encoder provider (command buffer)
+/// * `kernels` - Kernel cache
+/// * `kernel_name` - Reduce kernel (reduce_sum::F32, reduce_max::F32, reduce_min::F32, reduce_mean::F32,
+///                   reduce_argmax::F32, reduce_argmin::F32, reduce_prod::F32, reduce_norm::F32, etc.)
+/// * `shape` - Shape of input tensor
+/// * `input` - Input tensor buffer
+/// * `input_strides` - Strides of input tensor
+/// * `input_offset` - Starting offset in input buffer
+/// * `reduce_dims` - Dimensions to reduce along (e.g., [1] to reduce along dimension 1)
+/// * `reduce_size` - Total number of elements being reduced (product of sizes of reduce_dims)
+/// * `keep_dim` - If true, reduced dimensions have size 1; if false, they are removed
+/// * `output` - Output buffer
+///
+/// # Metadata Layout
+/// Variable length based on tensor dimensionality and number of reduce dimensions:
+///
+/// - `metadata[0]`: num_dims (number of input dimensions)
+/// - `metadata[1..1+num_dims]`: shape (input tensor shape)
+/// - `metadata[1+num_dims..1+2*num_dims]`: strides (input tensor strides)
+/// - `metadata[1+2*num_dims]`: offset (starting offset in input)
+/// - `metadata[2+2*num_dims]`: output_shape_len (number of output dimensions)
+/// - `metadata[3+2*num_dims..3+2*num_dims+output_shape_len]`: output_shape
+/// - `metadata[3+2*num_dims+output_shape_len]`: num_reduce_dims (number of dimensions to reduce)
+/// - `metadata[4+2*num_dims+output_shape_len..4+2*num_dims+output_shape_len+num_reduce_dims]`: reduce_dims
+/// - `metadata[4+2*num_dims+output_shape_len+num_reduce_dims]`: keep_dim (1 if true, 0 if false)
+/// - `metadata[4+2*num_dims+output_shape_len+num_reduce_dims+1]`: reduce_size
+///
+/// Total metadata length: `1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2`
+///
+/// # Example
+/// ```ignore
+/// // Reduce 2x3 matrix along dimension 1 (sum columns)
+/// // Input: [[1, 2, 3], [4, 5, 6]] -> Output: [6, 15]
+/// let shape = vec![2, 3];
+/// let strides = vec![3, 1];
+/// let reduce_dims = vec![1];
+/// let reduce_size = 3; // reducing 3 elements per output
+///
+/// call_reduce(
+///     &device, &command_buffer, &kernels, reduce_sum::F32,
+///     &shape, input_buffer, &strides, 0, &reduce_dims, reduce_size, false, &output
+/// )?;
+/// ```
+///
+/// # Supported Operations
+/// - `reduce_sum`: Sum of elements
+/// - `reduce_max`: Maximum element
+/// - `reduce_min`: Minimum element
+/// - `reduce_mean`: Mean (average) of elements
+/// - `reduce_prod`: Product of elements
+/// - `reduce_norm`: L2 norm
+/// - `reduce_argmax`: Index of maximum element (returns i32)
+/// - `reduce_argmin`: Index of minimum element (returns i32)
+/// - `reduce_any`: Logical OR (for boolean tensors)
+/// - `reduce_all`: Logical AND (for boolean tensors)
 #[allow(clippy::too_many_arguments)]
 pub fn call_reduce(
     device: &Device,
@@ -59,10 +121,9 @@ pub fn call_reduce(
     }
 
     let num_els: usize = output_shape.iter().product();
-
-    // Prepare metadata: dims, strides, offset, output_shape_len, output_shape, num_reduce_dims, reduce_dims, keep_dim
     let output_shape_len = output_shape.len();
-    let mut metadata = Vec::with_capacity(num_dims * 2 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
+    let mut metadata = Vec::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
+    metadata.push(num_dims);
     metadata.extend_from_slice(shape);
     metadata.extend_from_slice(input_strides);
     metadata.push(input_offset);
@@ -71,6 +132,7 @@ pub fn call_reduce(
     metadata.push(num_reduce_dims);
     metadata.extend_from_slice(reduce_dims);
     metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
 
     let encoder = ep.encoder();
     let encoder: &ComputeCommandEncoder = encoder.as_ref();
@@ -79,14 +141,8 @@ pub fn call_reduce(
     // Metal kernel signature:
     // buffer(0): input
     // buffer(1): output
-    // buffer(2): num_els (output elements)
-    // buffer(3): num_dims
-    // buffer(4): metadata (dims, strides, offset, output_shape, reduce_dims, num_reduce_dims)
-    // buffer(5): reduce_size
-    set_params!(
-        encoder,
-        (&input, output, num_els, num_dims, metadata.as_slice(), reduce_size)
-    );
+    // buffer(2): metadata
+    set_params!(encoder, (&input, output, metadata.as_slice()));
 
     encoder.use_resource(input.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);

@@ -4,41 +4,56 @@
 
 using namespace metal;
 
-// Indexing operations for tensors
-// Supports index_select, index_put, gather, scatter, scatter_add, scatter_max, scatter_min
+// Indexing Operations
+// ===================
+// Operations for selecting, gathering, and scattering tensor elements using index tensors.
+// Supports: index_select, index_put, gather, scatter, scatter_add, scatter_max, scatter_min
 
 // ============================================================================
 // INDEX SELECT OPERATION
 // ============================================================================
 
-// Select elements along a specified dimension using a 1D indices array
-// Input: [..., input_shape[dim], ...]
-// Indices: [num_indices] (1D array of indices along dim)
-// Output: [..., num_indices, ...]
+// Extracts elements along a specified dimension using a 1D indices array.
+// The output tensor has the same shape as input except on the select dimension,
+// which is replaced by the number of indices.
 //
-// Metadata layout:
-// - input_shape: input_shape[0..num_dims]
-// - input_strides: input_strides[0..num_dims]
-// - input_offset: scalar offset for input
-// - dim: dimension along which to select
-// - num_indices: number of indices
+// Input shape:  [..., input_shape[dim], ...]
+// Indices:      [num_indices] (1D array of indices along dim)
+// Output shape: [..., num_indices, ...]
+//
+// Metadata Layout (Total: 2 + num_dims * 2 + 3):
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset
+// - metadata[2+2*num_dims+1]: dim (dimension along which to select)
+// - metadata[2+2*num_dims+2]: num_indices (number of indices)
+//
+// Buffer Layout:
+// - buffer(0): input tensor (const device T*)
+// - buffer(1): indices (const device int32_t*)
+// - buffer(2): output tensor (device T*)
+// - buffer(3): metadata (constant size_t*)
 
 #define INDEX_SELECT_OP(TYPENAME, FN_NAME)                                                         \
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
-        device TYPENAME *output [[buffer(2)]], constant size_t &num_els [[buffer(3)]],             \
-        constant size_t &num_dims [[buffer(4)]], constant size_t *metadata [[buffer(5)]],          \
+        device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
                                                                                                    \
         /* Grid-stride loop for better GPU utilization */                                          \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
                                                                                                    \
-            const constant size_t *input_shape = metadata;                                         \
-            const constant size_t *input_strides = metadata + num_dims;                            \
-            const size_t input_offset = metadata[2 * num_dims];                                    \
-            const size_t dim = metadata[2 * num_dims + 1];                                         \
-            const size_t num_indices = metadata[2 * num_dims + 2];                                 \
+            const constant size_t *input_shape = metadata + 2;                                     \
+            const constant size_t *input_strides = metadata + 2 + num_dims;                        \
+            const size_t input_offset = metadata[2 + 2 * num_dims];                                \
+            const size_t dim = metadata[2 + 2 * num_dims + 1];                                     \
+            const size_t num_indices = metadata[2 + 2 * num_dims + 2];                             \
                                                                                                    \
             /* Calculate output shape (same as input but with dim replaced by num_indices) */      \
             size_t output_shape[16];                                                               \
@@ -98,30 +113,32 @@ INDEX_SELECT_OP(uint64_t, index_select_u64)
 // Output: same shape as input
 //
 // Metadata layout:
-// - input_shape: input_shape[0..num_dims]
-// - input_strides: input_strides[0..num_dims]
-// - values_strides: values_strides[0..num_dims]
-// - input_offset: scalar offset for input
-// - values_offset: scalar offset for values
-// - dim: dimension along which to put
-// - num_indices: number of indices
-// - num_values_els: number of elements in values tensor
+// - metadata[0]: num_els (total number of output elements, same as input)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims..2+3*num_dims]: values_strides
+// - metadata[2+3*num_dims]: input_offset
+// - metadata[2+3*num_dims+1]: values_offset
+// - metadata[2+3*num_dims+2]: dim (dimension along which to write)
+// - metadata[2+3*num_dims+3]: num_indices
 
 #define INDEX_PUT_OP(TYPENAME, FN_NAME)                                                            \
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *values [[buffer(2)]], device TYPENAME *output [[buffer(3)]],        \
-        constant size_t &num_els [[buffer(4)]], constant size_t &num_dims [[buffer(5)]],           \
-        constant size_t *metadata [[buffer(6)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
                                                                                                    \
-        const constant size_t *input_shape = metadata;                                             \
-        const constant size_t *input_strides = metadata + num_dims;                                \
-        const constant size_t *values_strides = metadata + 2 * num_dims;                           \
-        const size_t input_offset = metadata[3 * num_dims];                                        \
-        const size_t values_offset = metadata[3 * num_dims + 1];                                   \
-        const size_t dim = metadata[3 * num_dims + 2];                                             \
-        const size_t num_indices = metadata[3 * num_dims + 3];                                     \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const constant size_t *values_strides = metadata + 2 + 2 * num_dims;                       \
+        const size_t input_offset = metadata[2 + 3 * num_dims];                                    \
+        const size_t values_offset = metadata[2 + 3 * num_dims + 1];                               \
+        const size_t dim = metadata[2 + 3 * num_dims + 2];                                         \
+        const size_t num_indices = metadata[2 + 3 * num_dims + 3];                                 \
                                                                                                    \
         /* Single-pass: Each thread computes one output element */                                 \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
@@ -192,64 +209,76 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
 // Output: same shape as indices
 //
 // Metadata layout:
-// - input_shape: input_shape[0..num_dims]
-// - input_strides: input_strides[0..num_dims]
-// - indices_strides: indices_strides[0..num_dims]
-// - input_offset: scalar offset for input
-// - indices_offset: scalar offset for indices
-// - dim: dimension along which to gather
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims..2+3*num_dims]: indices_strides
+// - metadata[2+3*num_dims]: input_offset
+// - metadata[2+3*num_dims+1]: indices_offset
+// - metadata[2+3*num_dims+2]: dim (dimension along which to gather)
+// - metadata[2+3*num_dims+3]: num_indices (total number of indices)
 
 #define GATHER_OP(TYPENAME, FN_NAME)                                                               \
     kernel void FN_NAME(                                                                           \
-        const device TYPENAME *input [[buffer(0)]], const device int64_t *indices [[buffer(1)]],   \
-        device TYPENAME *output [[buffer(2)]], constant size_t &num_els [[buffer(3)]],             \
-        constant size_t &num_dims [[buffer(4)]], constant size_t *metadata [[buffer(5)]],          \
+        const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
+        device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
                                                                                                    \
         /* Grid-stride loop for better GPU utilization */                                          \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
                                                                                                    \
-            const constant size_t *input_shape = metadata;                                         \
-            const constant size_t *input_strides = metadata + num_dims;                            \
-            const constant size_t *indices_strides = metadata + 2 * num_dims;                      \
-            const size_t input_offset = metadata[3 * num_dims];                                    \
-            const size_t indices_offset = metadata[3 * num_dims + 1];                              \
-            const size_t dim = metadata[3 * num_dims + 2];                                         \
+            const constant size_t *input_shape = metadata + 2;                                     \
+            const constant size_t *input_strides = metadata + 2 + num_dims;                        \
+            const constant size_t *indices_strides = metadata + 2 + 2 * num_dims;                  \
+            const size_t input_offset = metadata[2 + 3 * num_dims];                                \
+            const size_t indices_offset = metadata[2 + 3 * num_dims + 1];                          \
+            const size_t dim = metadata[2 + 3 * num_dims + 2];                                     \
                                                                                                    \
-            /* Calculate indices flat index (output has same shape as indices) */                  \
-            size_t indices_flat_idx = indices_offset;                                              \
-            for (size_t i = 0; i < num_dims; i++) {                                                \
-                size_t stride_product = 1;                                                         \
-                for (size_t j = i + 1; j < num_dims; j++) {                                        \
-                    stride_product *= input_shape[j];                                              \
+            /* Calculate which index in the gather dimension we're accessing */                    \
+            size_t temp = id;                                                                      \
+            size_t idx_in_gather_dim = 0;                                                          \
+            size_t num_indices = metadata[2 + 3 * num_dims + 3];                                   \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t output_shape_d = (d == (int)dim) ? num_indices : input_shape[d];            \
+                size_t idx_in_dim = temp % output_shape_d;                                         \
+                temp /= output_shape_d;                                                            \
+                if (d == (int)dim) {                                                               \
+                    idx_in_gather_dim = idx_in_dim;                                                \
                 }                                                                                  \
-                size_t idx_in_dim = (id / stride_product) % input_shape[i];                        \
-                indices_flat_idx += idx_in_dim * indices_strides[i];                               \
             }                                                                                      \
                                                                                                    \
-            /* Get the index to gather from */                                                     \
-            int64_t selected_idx = indices[indices_flat_idx];                                      \
+            /* Get the index from indices tensor */                                                \
+            size_t indices_flat_idx = indices_offset + idx_in_gather_dim * indices_strides[0];     \
+            int32_t selected_idx = indices[indices_flat_idx];                                      \
                                                                                                    \
             /* Handle negative indices */                                                          \
             if (selected_idx < 0) {                                                                \
-                selected_idx += (int64_t)input_shape[dim];                                         \
+                selected_idx += (int32_t)input_shape[dim];                                         \
+            }                                                                                      \
+                                                                                                   \
+            /* Bounds check */                                                                     \
+            if (selected_idx < 0 || (size_t)selected_idx >= input_shape[dim]) {                    \
+                output[id] = (TYPENAME)0;                                                          \
+                continue;                                                                          \
             }                                                                                      \
                                                                                                    \
             /* Calculate input flat index */                                                       \
             size_t input_flat_idx = input_offset;                                                  \
-            for (size_t i = 0; i < num_dims; i++) {                                                \
-                size_t stride_product = 1;                                                         \
-                for (size_t j = i + 1; j < num_dims; j++) {                                        \
-                    stride_product *= input_shape[j];                                              \
-                }                                                                                  \
-                size_t idx_in_dim;                                                                 \
-                if (i == dim) {                                                                    \
-                    idx_in_dim = (size_t)selected_idx;                                             \
+            temp = id;                                                                             \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t output_shape_d = (d == (int)dim) ? num_indices : input_shape[d];            \
+                size_t idx_in_dim = temp % output_shape_d;                                         \
+                temp /= output_shape_d;                                                            \
+                if (d == (int)dim) {                                                               \
+                    input_flat_idx += ((size_t)selected_idx) * input_strides[d];                   \
                 } else {                                                                           \
-                    idx_in_dim = (id / stride_product) % input_shape[i];                           \
+                    input_flat_idx += idx_in_dim * input_strides[d];                               \
                 }                                                                                  \
-                input_flat_idx += idx_in_dim * input_strides[i];                                   \
             }                                                                                      \
                                                                                                    \
             output[id] = input[input_flat_idx];                                                    \
@@ -281,33 +310,36 @@ GATHER_OP(uint64_t, gather_u64)
 // Output: same shape as input
 //
 // Metadata layout:
-// - input_shape: input_shape[0..num_dims]
-// - input_strides: input_strides[0..num_dims]
-// - src_strides: src_strides[0..num_dims]
-// - indices_strides: indices_strides[0..num_dims]
-// - input_offset: scalar offset for input
-// - src_offset: scalar offset for src
-// - indices_offset: scalar offset for indices
-// - dim: dimension along which to scatter
-// - num_src_els: number of elements in src
+// - metadata[0]: num_els (number of elements in src tensor to scatter)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims..2+3*num_dims]: src_shape
+// - metadata[2+3*num_dims..2+4*num_dims]: src_strides
+// - metadata[2+4*num_dims..2+5*num_dims]: indices_strides
+// - metadata[2+5*num_dims]: input_offset
+// - metadata[2+5*num_dims+1]: src_offset
+// - metadata[2+5*num_dims+2]: indices_offset
+// - metadata[2+5*num_dims+3]: dim (dimension along which to scatter)
 
 #define SCATTER_OP(TYPENAME, FN_NAME)                                                              \
     kernel void FN_NAME(                                                                           \
-        const device TYPENAME *input [[buffer(0)]], const device int64_t *indices [[buffer(1)]],   \
+        const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
-        constant size_t &num_els [[buffer(4)]], constant size_t &num_dims [[buffer(5)]],           \
-        constant size_t *metadata [[buffer(6)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
                                                                                                    \
-        const constant size_t *input_shape = metadata;                                             \
-        const constant size_t *input_strides = metadata + num_dims;                                \
-        const constant size_t *src_shape = metadata + 2 * num_dims;                                \
-        const constant size_t *src_strides = metadata + 3 * num_dims;                              \
-        const constant size_t *indices_strides = metadata + 4 * num_dims;                          \
-        const size_t input_offset = metadata[5 * num_dims];                                        \
-        const size_t src_offset = metadata[5 * num_dims + 1];                                      \
-        const size_t indices_offset = metadata[5 * num_dims + 2];                                  \
-        const size_t dim = metadata[5 * num_dims + 3];                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const constant size_t *src_shape = metadata + 2 + 2 * num_dims;                            \
+        const constant size_t *src_strides = metadata + 2 + 3 * num_dims;                          \
+        const constant size_t *indices_strides = metadata + 2 + 4 * num_dims;                      \
+        const size_t input_offset = metadata[2 + 5 * num_dims];                                    \
+        const size_t src_offset = metadata[2 + 5 * num_dims + 1];                                  \
+        const size_t indices_offset = metadata[2 + 5 * num_dims + 2];                              \
+        const size_t dim = metadata[2 + 5 * num_dims + 3];                                         \
                                                                                                    \
         /* Single-pass: Scatter src values directly */                                             \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
@@ -327,11 +359,16 @@ GATHER_OP(uint64_t, gather_u64)
             }                                                                                      \
                                                                                                    \
             /* Get the index to scatter to */                                                      \
-            int64_t target_idx = indices[indices_flat_idx];                                        \
+            int32_t target_idx = indices[indices_flat_idx];                                        \
                                                                                                    \
             /* Handle negative indices */                                                          \
             if (target_idx < 0) {                                                                  \
-                target_idx += (int64_t)input_shape[dim];                                           \
+                target_idx += (int32_t)input_shape[dim];                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Bounds check */                                                                     \
+            if (target_idx < 0 || (size_t)target_idx >= input_shape[dim]) {                        \
+                continue;                                                                          \
             }                                                                                      \
                                                                                                    \
             /* Calculate output flat index */                                                      \
@@ -374,21 +411,22 @@ SCATTER_OP(uint64_t, scatter_u64)
 
 #define SCATTER_ADD_OP(TYPENAME, FN_NAME)                                                          \
     kernel void FN_NAME(                                                                           \
-        const device TYPENAME *input [[buffer(0)]], const device int64_t *indices [[buffer(1)]],   \
+        const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
-        constant size_t &num_els [[buffer(4)]], constant size_t &num_dims [[buffer(5)]],           \
-        constant size_t *metadata [[buffer(6)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
                                                                                                    \
-        const constant size_t *input_shape = metadata;                                             \
-        const constant size_t *input_strides = metadata + num_dims;                                \
-        const constant size_t *src_shape = metadata + 2 * num_dims;                                \
-        const constant size_t *src_strides = metadata + 3 * num_dims;                              \
-        const constant size_t *indices_strides = metadata + 4 * num_dims;                          \
-        const size_t input_offset = metadata[5 * num_dims];                                        \
-        const size_t src_offset = metadata[5 * num_dims + 1];                                      \
-        const size_t indices_offset = metadata[5 * num_dims + 2];                                  \
-        const size_t dim = metadata[5 * num_dims + 3];                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const constant size_t *src_shape = metadata + 2 + 2 * num_dims;                            \
+        const constant size_t *src_strides = metadata + 2 + 3 * num_dims;                          \
+        const constant size_t *indices_strides = metadata + 2 + 4 * num_dims;                      \
+        const size_t input_offset = metadata[2 + 5 * num_dims];                                    \
+        const size_t src_offset = metadata[2 + 5 * num_dims + 1];                                  \
+        const size_t indices_offset = metadata[2 + 5 * num_dims + 2];                              \
+        const size_t dim = metadata[2 + 5 * num_dims + 3];                                         \
                                                                                                    \
         /* Scatter add src values using atomic operations */                                       \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
@@ -408,11 +446,16 @@ SCATTER_OP(uint64_t, scatter_u64)
             }                                                                                      \
                                                                                                    \
             /* Get the index to scatter to */                                                      \
-            int64_t target_idx = indices[indices_flat_idx];                                        \
+            int32_t target_idx = indices[indices_flat_idx];                                        \
                                                                                                    \
             /* Handle negative indices */                                                          \
             if (target_idx < 0) {                                                                  \
-                target_idx += (int64_t)input_shape[dim];                                           \
+                target_idx += (int32_t)input_shape[dim];                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Bounds check */                                                                     \
+            if (target_idx < 0 || (size_t)target_idx >= input_shape[dim]) {                        \
+                continue;                                                                          \
             }                                                                                      \
                                                                                                    \
             /* Calculate output flat index */                                                      \
@@ -455,21 +498,22 @@ SCATTER_ADD_OP(uint64_t, scatter_add_u64)
 
 #define SCATTER_MAX_OP(TYPENAME, FN_NAME)                                                          \
     kernel void FN_NAME(                                                                           \
-        const device TYPENAME *input [[buffer(0)]], const device int64_t *indices [[buffer(1)]],   \
+        const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
-        constant size_t &num_els [[buffer(4)]], constant size_t &num_dims [[buffer(5)]],           \
-        constant size_t *metadata [[buffer(6)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
                                                                                                    \
-        const constant size_t *input_shape = metadata;                                             \
-        const constant size_t *input_strides = metadata + num_dims;                                \
-        const constant size_t *src_shape = metadata + 2 * num_dims;                                \
-        const constant size_t *src_strides = metadata + 3 * num_dims;                              \
-        const constant size_t *indices_strides = metadata + 4 * num_dims;                          \
-        const size_t input_offset = metadata[5 * num_dims];                                        \
-        const size_t src_offset = metadata[5 * num_dims + 1];                                      \
-        const size_t indices_offset = metadata[5 * num_dims + 2];                                  \
-        const size_t dim = metadata[5 * num_dims + 3];                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const constant size_t *src_shape = metadata + 2 + 2 * num_dims;                            \
+        const constant size_t *src_strides = metadata + 2 + 3 * num_dims;                          \
+        const constant size_t *indices_strides = metadata + 2 + 4 * num_dims;                      \
+        const size_t input_offset = metadata[2 + 5 * num_dims];                                    \
+        const size_t src_offset = metadata[2 + 5 * num_dims + 1];                                  \
+        const size_t indices_offset = metadata[2 + 5 * num_dims + 2];                              \
+        const size_t dim = metadata[2 + 5 * num_dims + 3];                                         \
                                                                                                    \
         /* Scatter max values using atomic operations */                                           \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
@@ -489,11 +533,16 @@ SCATTER_ADD_OP(uint64_t, scatter_add_u64)
             }                                                                                      \
                                                                                                    \
             /* Get the index to scatter to */                                                      \
-            int64_t target_idx = indices[indices_flat_idx];                                        \
+            int32_t target_idx = indices[indices_flat_idx];                                        \
                                                                                                    \
             /* Handle negative indices */                                                          \
             if (target_idx < 0) {                                                                  \
-                target_idx += (int64_t)input_shape[dim];                                           \
+                target_idx += (int32_t)input_shape[dim];                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Bounds check */                                                                     \
+            if (target_idx < 0 || (size_t)target_idx >= input_shape[dim]) {                        \
+                continue;                                                                          \
             }                                                                                      \
                                                                                                    \
             /* Calculate output flat index */                                                      \
@@ -536,21 +585,22 @@ SCATTER_MAX_OP(uint64_t, scatter_max_u64)
 
 #define SCATTER_MIN_OP(TYPENAME, FN_NAME)                                                          \
     kernel void FN_NAME(                                                                           \
-        const device TYPENAME *input [[buffer(0)]], const device int64_t *indices [[buffer(1)]],   \
+        const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
-        constant size_t &num_els [[buffer(4)]], constant size_t &num_dims [[buffer(5)]],           \
-        constant size_t *metadata [[buffer(6)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
                                                                                                    \
-        const constant size_t *input_shape = metadata;                                             \
-        const constant size_t *input_strides = metadata + num_dims;                                \
-        const constant size_t *src_shape = metadata + 2 * num_dims;                                \
-        const constant size_t *src_strides = metadata + 3 * num_dims;                              \
-        const constant size_t *indices_strides = metadata + 4 * num_dims;                          \
-        const size_t input_offset = metadata[5 * num_dims];                                        \
-        const size_t src_offset = metadata[5 * num_dims + 1];                                      \
-        const size_t indices_offset = metadata[5 * num_dims + 2];                                  \
-        const size_t dim = metadata[5 * num_dims + 3];                                             \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const constant size_t *src_shape = metadata + 2 + 2 * num_dims;                            \
+        const constant size_t *src_strides = metadata + 2 + 3 * num_dims;                          \
+        const constant size_t *indices_strides = metadata + 2 + 4 * num_dims;                      \
+        const size_t input_offset = metadata[2 + 5 * num_dims];                                    \
+        const size_t src_offset = metadata[2 + 5 * num_dims + 1];                                  \
+        const size_t indices_offset = metadata[2 + 5 * num_dims + 2];                              \
+        const size_t dim = metadata[2 + 5 * num_dims + 3];                                         \
                                                                                                    \
         /* Scatter min values using atomic operations */                                           \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
@@ -570,11 +620,16 @@ SCATTER_MAX_OP(uint64_t, scatter_max_u64)
             }                                                                                      \
                                                                                                    \
             /* Get the index to scatter to */                                                      \
-            int64_t target_idx = indices[indices_flat_idx];                                        \
+            int32_t target_idx = indices[indices_flat_idx];                                        \
                                                                                                    \
             /* Handle negative indices */                                                          \
             if (target_idx < 0) {                                                                  \
-                target_idx += (int64_t)input_shape[dim];                                           \
+                target_idx += (int32_t)input_shape[dim];                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Bounds check */                                                                     \
+            if (target_idx < 0 || (size_t)target_idx >= input_shape[dim]) {                        \
+                continue;                                                                          \
             }                                                                                      \
                                                                                                    \
             /* Calculate output flat index */                                                      \

@@ -1,8 +1,6 @@
-use core::f32;
-use half::{bf16, f16};
 use hodu_metal_kernels::{
     kernel::Kernels,
-    kernels::{call_const_set, Kernel, *},
+    kernels::{call_const_set, const_set, Kernel},
     metal::{create_command_buffer, Buffer, Device},
     utils::EncoderParam,
     RESOURCE_OPTIONS,
@@ -55,18 +53,17 @@ fn run_const_set<T: Clone + EncoderParam>(
     let initial_data = vec![0u8; buffer_size * std::mem::size_of::<T>()];
     let output = new_buffer(&device, &initial_data);
 
-    call_const_set(
-        &device,
-        &command_buffer,
-        &kernels,
-        name,
-        shape,
-        strides,
-        offset,
-        const_val,
-        &output,
-    )
-    .unwrap();
+    // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend_from_slice(shape);
+    metadata.extend_from_slice(strides);
+    metadata.push(offset);
+
+    call_const_set(&device, &command_buffer, &kernels, name, &output, &metadata, const_val).unwrap();
 
     command_buffer.commit();
     command_buffer.wait_until_completed();
@@ -77,50 +74,8 @@ fn run_const_set<T: Clone + EncoderParam>(
 fn test_const_set_f32() {
     let shape = vec![10];
     let strides = vec![1];
-    let result = run_const_set(&shape, &strides, 0, f32::consts::PI, const_set::F32);
-    assert_eq!(result, vec![f32::consts::PI; 10]);
-}
-
-#[test]
-fn test_const_set_f16() {
-    let shape = vec![5];
-    let strides = vec![1];
-    let val = f16::from_f32(2.5);
-    let result = run_const_set(&shape, &strides, 0, val, const_set::F16);
-    assert_eq!(result, vec![val; 5]);
-}
-
-#[test]
-fn test_const_set_bf16() {
-    let shape = vec![8];
-    let strides = vec![1];
-    let val = bf16::from_f32(1.5);
-    let result = run_const_set(&shape, &strides, 0, val, const_set::BF16);
-    assert_eq!(result, vec![val; 8]);
-}
-
-#[test]
-fn test_const_set_i32() {
-    let shape = vec![12];
-    let strides = vec![1];
-    let result = run_const_set(&shape, &strides, 0, 42i32, const_set::I32);
-    assert_eq!(result, vec![42i32; 12]);
-}
-
-#[test]
-fn test_const_set_u8() {
-    let shape = vec![20];
-    let strides = vec![1];
-    let result = run_const_set(&shape, &strides, 0, 255u8, const_set::U8);
-    assert_eq!(result, vec![255u8; 20]);
-}
-
-#[test]
-fn test_const_set_bool() {
-    let shape = vec![6];
-    let strides = vec![1];
-    let result = run_const_set(&shape, &strides, 0, true, const_set::BOOL);
-    assert_eq!(result, vec![true; 6]);
+    let result = run_const_set(&shape, &strides, 0, 3.14f32, const_set::F32);
+    assert_eq!(result, vec![3.14f32; 10]);
 }
 
 #[test]

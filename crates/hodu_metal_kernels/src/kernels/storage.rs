@@ -11,28 +11,73 @@ use objc2_metal::MTLResourceUsage;
 
 ops!(const_set);
 
-#[allow(clippy::too_many_arguments)]
+/// Executes a constant fill operation to set all elements of a tensor to a constant value.
+///
+/// This operation fills a tensor (possibly with strided layout) with a single constant value.
+/// It supports non-contiguous layouts, so only the logical tensor elements are modified,
+/// leaving gaps in strided buffers untouched.
+///
+/// # Arguments
+/// * `device` - Metal device to execute on
+/// * `ep` - Encoder provider (command buffer)
+/// * `kernels` - Kernel cache
+/// * `kernel_name` - Const set kernel (e.g., const_set::F32)
+/// * `output` - Output buffer (will be filled with const_val)
+/// * `metadata` - Metadata describing tensor shape, strides, and offset
+/// * `const_val` - Constant value to fill the tensor with
+///
+/// # Metadata Layout
+/// Total metadata length: `2 + num_dims * 2 + 1`
+///
+/// - `metadata[0]`: num_els (total number of elements to set)
+/// - `metadata[1]`: num_dims (number of dimensions)
+/// - `metadata[2..2+num_dims]`: shape (dimensions of the tensor)
+/// - `metadata[2+num_dims..2+2*num_dims]`: strides (stride for each dimension)
+/// - `metadata[2+2*num_dims]`: offset (starting offset in output buffer)
+///
+/// # Type Parameter
+/// * `T: EncoderParam` - The type of the constant value (f32, i32, bool, etc.)
+///
+/// # Example
+/// ```ignore
+/// // Fill a 3x4 matrix with value 7.0
+/// let metadata = vec![
+///     12,     // num_els (3 * 4)
+///     2,      // num_dims
+///     3, 4,   // shape
+///     4, 1,   // strides (row-major)
+///     0,      // offset
+/// ];
+/// call_const_set(&device, &command_buffer, &kernels, const_set::F32,
+///                &output, &metadata, 7.0f32)?;
+/// ```
+///
+/// # Example with Strided Layout
+/// ```ignore
+/// // Fill a 2x3 tensor with non-contiguous strides
+/// // Only positions [0, 2, 4, 6, 8, 10] will be set to 9.0
+/// let metadata = vec![
+///     6,      // num_els (2 * 3)
+///     2,      // num_dims
+///     2, 3,   // shape
+///     6, 2,   // strides (non-contiguous)
+///     0,      // offset
+/// ];
+/// call_const_set(&device, &command_buffer, &kernels, const_set::F32,
+///                &output, &metadata, 9.0f32)?;
+/// ```
 pub fn call_const_set<T: EncoderParam>(
     device: &Device,
     ep: impl EncoderProvider,
     kernels: &Kernels,
     kernel_name: Kernel,
-    shape: &[usize],
-    strides: &[usize],
-    offset: usize,
-    const_val: T,
     output: &Buffer,
+    metadata: &[usize],
+    const_val: T,
 ) -> Result<(), MetalKernelError> {
     let pipeline = kernels.load_pipeline(device, Source::Storage, kernel_name.0)?;
 
-    let num_dims = shape.len();
-    let num_els: usize = shape.iter().product();
-
-    // Prepare metadata: dims, strides, offset
-    let mut metadata = Vec::with_capacity(num_dims * 2 + 1);
-    metadata.extend_from_slice(shape);
-    metadata.extend_from_slice(strides);
-    metadata.push(offset);
+    let num_els = metadata[0];
 
     let encoder = ep.encoder();
     let encoder: &ComputeCommandEncoder = encoder.as_ref();
@@ -40,11 +85,9 @@ pub fn call_const_set<T: EncoderParam>(
 
     // Metal kernel signature:
     // buffer(0): output
-    // buffer(1): num_els
-    // buffer(2): num_dims
-    // buffer(3): metadata (dims, strides, offset)
-    // buffer(4): const_val
-    set_params!(encoder, (output, num_els, num_dims, metadata.as_slice(), const_val));
+    // buffer(1): metadata
+    // buffer(2): const_val
+    set_params!(encoder, (output, metadata, const_val));
 
     encoder.use_resource(output, MTLResourceUsage::Write);
 

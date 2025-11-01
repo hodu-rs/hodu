@@ -1,7 +1,10 @@
-use half::{bf16, f16};
 use hodu_metal_kernels::{
     kernel::Kernels,
-    kernels::{call_conv, conv1d, conv2d, Kernel},
+    kernels::{
+        call_conv, call_conv_grad_weight, conv1d, conv1d_grad_weight, conv2d, conv2d_grad_weight, conv3d,
+        conv3d_grad_weight, conv_transpose1d, conv_transpose1d_grad_weight, conv_transpose2d,
+        conv_transpose2d_grad_weight, conv_transpose3d, conv_transpose3d_grad_weight, Kernel,
+    },
     metal::{create_command_buffer, Buffer, Device},
     utils::BufferOffset,
     RESOURCE_OPTIONS,
@@ -22,10 +25,23 @@ fn new_buffer<T>(device: &Device, data: &[T]) -> Buffer {
     device.new_buffer_with_data(ptr, size, options).unwrap()
 }
 
+fn new_buffer_zeroed<T>(device: &Device, count: usize) -> Buffer {
+    let options = RESOURCE_OPTIONS;
+    let size = count * std::mem::size_of::<T>();
+    let buffer = device.new_buffer(size, options).unwrap();
+    // Zero initialize
+    unsafe {
+        let ptr = buffer.contents() as *mut u8;
+        std::ptr::write_bytes(ptr, 0, size);
+    }
+    buffer
+}
+
 fn device() -> Device {
     Device::system_default().unwrap()
 }
 
+// CONV1D
 #[allow(clippy::too_many_arguments)]
 fn run_conv1d<T: Clone>(
     input: &[T],
@@ -48,7 +64,6 @@ fn run_conv1d<T: Clone>(
     let input_buffer = new_buffer(&device, input);
     let weight_buffer = new_buffer(&device, weight);
 
-    // Calculate output length
     let output_length = (input_length + 2 * padding - kernel_size) / stride + 1;
     let output_size = batch * out_channels * output_length;
 
@@ -56,7 +71,6 @@ fn run_conv1d<T: Clone>(
         .new_buffer(output_size * std::mem::size_of::<T>(), options)
         .unwrap();
 
-    // Metadata for conv1d: [num_els, batch, in_channels, out_channels, in_width, kernel_width, out_width, stride, padding, dilation, input_offset, weight_offset]
     let metadata = vec![
         output_size,
         batch,
@@ -67,9 +81,9 @@ fn run_conv1d<T: Clone>(
         output_length,
         stride,
         padding,
-        1, // dilation
-        0, // input_offset
-        0, // weight_offset
+        1,
+        0,
+        0,
     ];
 
     call_conv(
@@ -89,6 +103,7 @@ fn run_conv1d<T: Clone>(
     read_to_vec(&output, output_size)
 }
 
+// CONV2D
 #[allow(clippy::too_many_arguments)]
 fn run_conv2d<T: Clone>(
     input: &[T],
@@ -115,7 +130,6 @@ fn run_conv2d<T: Clone>(
     let input_buffer = new_buffer(&device, input);
     let weight_buffer = new_buffer(&device, weight);
 
-    // Calculate output dimensions
     let output_height = (input_height + 2 * padding_h - kernel_h) / stride_h + 1;
     let output_width = (input_width + 2 * padding_w - kernel_w) / stride_w + 1;
     let output_size = batch * out_channels * output_height * output_width;
@@ -124,11 +138,6 @@ fn run_conv2d<T: Clone>(
         .new_buffer(output_size * std::mem::size_of::<T>(), options)
         .unwrap();
 
-    // Metadata for conv2d: [num_els, batch, in_channels, out_channels,
-    //                       in_height, in_width, kernel_height, kernel_width,
-    //                       out_height, out_width,
-    //                       stride_h, stride_w, padding_h, padding_w,
-    //                       dilation_h, dilation_w, input_offset, weight_offset]
     let metadata = vec![
         output_size,
         batch,
@@ -144,10 +153,10 @@ fn run_conv2d<T: Clone>(
         stride_w,
         padding_h,
         padding_w,
-        1, // dilation_h
-        1, // dilation_w
-        0, // input_offset
-        0, // weight_offset
+        1,
+        1,
+        0,
+        0,
     ];
 
     call_conv(
@@ -167,246 +176,1319 @@ fn run_conv2d<T: Clone>(
     read_to_vec(&output, output_size)
 }
 
-#[test]
-fn test_conv1d_simple_f32() {
-    // Simple 1D convolution test
-    // Input: [1, 2, 3, 4, 5] (batch=1, in_channels=1, length=5)
-    // Weight: [1, 0, -1] (out_channels=1, in_channels=1, kernel_size=3)
-    // Expected output: approximate edge detection
-    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0];
-    let weight: Vec<f32> = vec![1.0, 0.0, -1.0];
+// CONV3D
+#[allow(clippy::too_many_arguments)]
+fn run_conv3d<T: Clone>(
+    input: &[T],
+    weight: &[T],
+    batch: usize,
+    in_channels: usize,
+    out_channels: usize,
+    input_depth: usize,
+    input_height: usize,
+    input_width: usize,
+    kernel_d: usize,
+    kernel_h: usize,
+    kernel_w: usize,
+    stride_d: usize,
+    stride_h: usize,
+    stride_w: usize,
+    padding_d: usize,
+    padding_h: usize,
+    padding_w: usize,
+    name: Kernel,
+) -> Vec<T> {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    let options = RESOURCE_OPTIONS;
 
-    let batch = 1;
-    let in_channels = 1;
-    let out_channels = 1;
-    let input_length = 5;
-    let kernel_size = 3;
-    let stride = 1;
-    let padding = 0;
+    let input_buffer = new_buffer(&device, input);
+    let weight_buffer = new_buffer(&device, weight);
 
-    let result: Vec<f32> = run_conv1d(
-        &input,
-        &weight,
+    let output_depth = (input_depth + 2 * padding_d - kernel_d) / stride_d + 1;
+    let output_height = (input_height + 2 * padding_h - kernel_h) / stride_h + 1;
+    let output_width = (input_width + 2 * padding_w - kernel_w) / stride_w + 1;
+    let output_size = batch * out_channels * output_depth * output_height * output_width;
+
+    let output = device
+        .new_buffer(output_size * std::mem::size_of::<T>(), options)
+        .unwrap();
+
+    let metadata = vec![
+        output_size,
+        batch,
+        in_channels,
+        out_channels,
+        input_depth,
+        input_height,
+        input_width,
+        kernel_d,
+        kernel_h,
+        kernel_w,
+        output_depth,
+        output_height,
+        output_width,
+        stride_d,
+        stride_h,
+        stride_w,
+        padding_d,
+        padding_h,
+        padding_w,
+        1,
+        1,
+        1,
+        0,
+        0,
+    ];
+
+    call_conv(
+        &device,
+        &command_buffer,
+        &kernels,
+        name,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&weight_buffer),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+    read_to_vec(&output, output_size)
+}
+
+// CONV_TRANSPOSE1D
+#[allow(clippy::too_many_arguments)]
+fn run_conv_transpose1d<T: Clone>(
+    input: &[T],
+    weight: &[T],
+    batch: usize,
+    in_channels: usize,
+    out_channels: usize,
+    input_length: usize,
+    kernel_size: usize,
+    stride: usize,
+    padding: usize,
+    output_padding: usize,
+    name: Kernel,
+) -> Vec<T> {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    let options = RESOURCE_OPTIONS;
+
+    let input_buffer = new_buffer(&device, input);
+    let weight_buffer = new_buffer(&device, weight);
+
+    let output_length = (input_length - 1) * stride - 2 * padding + kernel_size + output_padding;
+    let output_size = batch * out_channels * output_length;
+
+    let output = device
+        .new_buffer(output_size * std::mem::size_of::<T>(), options)
+        .unwrap();
+
+    let metadata = vec![
+        output_size,
         batch,
         in_channels,
         out_channels,
         input_length,
         kernel_size,
+        output_length,
         stride,
         padding,
-        conv1d::F32,
-    );
+        1,
+        output_padding,
+        0,
+        0,
+    ];
 
-    // Output length: (5 + 0 - 3) / 1 + 1 = 3
-    // [1,2,3] * [1,0,-1] = 1*1 + 2*0 + 3*(-1) = -2
-    // [2,3,4] * [1,0,-1] = 2*1 + 3*0 + 4*(-1) = -2
-    // [3,4,5] * [1,0,-1] = 3*1 + 4*0 + 5*(-1) = -2
+    call_conv(
+        &device,
+        &command_buffer,
+        &kernels,
+        name,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&weight_buffer),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+    read_to_vec(&output, output_size)
+}
+
+// CONV_TRANSPOSE2D
+#[allow(clippy::too_many_arguments)]
+fn run_conv_transpose2d<T: Clone>(
+    input: &[T],
+    weight: &[T],
+    batch: usize,
+    in_channels: usize,
+    out_channels: usize,
+    input_height: usize,
+    input_width: usize,
+    kernel_h: usize,
+    kernel_w: usize,
+    stride_h: usize,
+    stride_w: usize,
+    padding_h: usize,
+    padding_w: usize,
+    output_padding_h: usize,
+    output_padding_w: usize,
+    name: Kernel,
+) -> Vec<T> {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    let options = RESOURCE_OPTIONS;
+
+    let input_buffer = new_buffer(&device, input);
+    let weight_buffer = new_buffer(&device, weight);
+
+    let output_height = (input_height - 1) * stride_h - 2 * padding_h + kernel_h + output_padding_h;
+    let output_width = (input_width - 1) * stride_w - 2 * padding_w + kernel_w + output_padding_w;
+    let output_size = batch * out_channels * output_height * output_width;
+
+    let output = device
+        .new_buffer(output_size * std::mem::size_of::<T>(), options)
+        .unwrap();
+
+    let metadata = vec![
+        output_size,
+        batch,
+        in_channels,
+        out_channels,
+        input_height,
+        input_width,
+        kernel_h,
+        kernel_w,
+        output_height,
+        output_width,
+        stride_h,
+        stride_w,
+        padding_h,
+        padding_w,
+        1,
+        1,
+        output_padding_h,
+        output_padding_w,
+        0,
+        0,
+    ];
+
+    call_conv(
+        &device,
+        &command_buffer,
+        &kernels,
+        name,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&weight_buffer),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+    read_to_vec(&output, output_size)
+}
+
+// CONV_TRANSPOSE3D
+#[allow(clippy::too_many_arguments)]
+fn run_conv_transpose3d<T: Clone>(
+    input: &[T],
+    weight: &[T],
+    batch: usize,
+    in_channels: usize,
+    out_channels: usize,
+    input_depth: usize,
+    input_height: usize,
+    input_width: usize,
+    kernel_d: usize,
+    kernel_h: usize,
+    kernel_w: usize,
+    stride_d: usize,
+    stride_h: usize,
+    stride_w: usize,
+    padding_d: usize,
+    padding_h: usize,
+    padding_w: usize,
+    output_padding_d: usize,
+    output_padding_h: usize,
+    output_padding_w: usize,
+    name: Kernel,
+) -> Vec<T> {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    let options = RESOURCE_OPTIONS;
+
+    let input_buffer = new_buffer(&device, input);
+    let weight_buffer = new_buffer(&device, weight);
+
+    let output_depth = (input_depth - 1) * stride_d + kernel_d - 2 * padding_d + output_padding_d;
+    let output_height = (input_height - 1) * stride_h + kernel_h - 2 * padding_h + output_padding_h;
+    let output_width = (input_width - 1) * stride_w + kernel_w - 2 * padding_w + output_padding_w;
+    let output_size = batch * out_channels * output_depth * output_height * output_width;
+
+    let output = device
+        .new_buffer(output_size * std::mem::size_of::<T>(), options)
+        .unwrap();
+
+    let metadata = vec![
+        output_size,
+        batch,
+        in_channels,
+        out_channels,
+        input_depth,
+        input_height,
+        input_width,
+        kernel_d,
+        kernel_h,
+        kernel_w,
+        output_depth,
+        output_height,
+        output_width,
+        stride_d,
+        stride_h,
+        stride_w,
+        padding_d,
+        padding_h,
+        padding_w,
+        1,
+        1,
+        1,
+        output_padding_d,
+        output_padding_h,
+        output_padding_w,
+        0,
+        0,
+    ];
+
+    call_conv(
+        &device,
+        &command_buffer,
+        &kernels,
+        name,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&weight_buffer),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+    read_to_vec(&output, output_size)
+}
+
+// ============================================================================
+// TESTS
+// ============================================================================
+
+#[test]
+fn test_conv1d_simple_f32() {
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0];
+    let weight: Vec<f32> = vec![1.0, 0.0, -1.0];
+
+    let result: Vec<f32> = run_conv1d(&input, &weight, 1, 1, 1, 5, 3, 1, 0, conv1d::F32);
+
     assert_eq!(result.len(), 3);
     assert_eq!(result, vec![-2.0, -2.0, -2.0]);
 }
 
 #[test]
 fn test_conv1d_multi_channel_f32() {
-    // Multi-channel 1D convolution
-    // Input: batch=1, in_channels=2, length=4
-    // Weight: out_channels=1, in_channels=2, kernel_size=2
-    let input: Vec<f32> = vec![
-        // Channel 0
-        1.0, 2.0, 3.0, 4.0, // Channel 1
-        5.0, 6.0, 7.0, 8.0,
-    ];
-    let weight: Vec<f32> = vec![
-        // Output channel 0, Input channel 0
-        0.5, 0.5, // Output channel 0, Input channel 1
-        0.5, 0.5,
-    ];
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let weight: Vec<f32> = vec![0.5, 0.5, 0.5, 0.5];
 
-    let batch = 1;
-    let in_channels = 2;
-    let out_channels = 1;
-    let input_length = 4;
-    let kernel_size = 2;
-    let stride = 1;
-    let padding = 0;
+    let result: Vec<f32> = run_conv1d(&input, &weight, 1, 2, 1, 4, 2, 1, 0, conv1d::F32);
 
-    let result: Vec<f32> = run_conv1d(
-        &input,
-        &weight,
-        batch,
-        in_channels,
-        out_channels,
-        input_length,
-        kernel_size,
-        stride,
-        padding,
-        conv1d::F32,
-    );
-
-    // Output length: (4 + 0 - 2) / 1 + 1 = 3
     assert_eq!(result.len(), 3);
-
-    // Expected results (approximate due to multi-channel summation):
-    // Position 0: (1+2)*0.5 + (5+6)*0.5 = 1.5 + 5.5 = 7.0
-    // Position 1: (2+3)*0.5 + (6+7)*0.5 = 2.5 + 6.5 = 9.0
-    // Position 2: (3+4)*0.5 + (7+8)*0.5 = 3.5 + 7.5 = 11.0
     assert_eq!(result, vec![7.0, 9.0, 11.0]);
 }
 
 #[test]
 fn test_conv2d_simple_f32() {
-    // Simple 2D convolution test (identity kernel)
-    // Input: 3x3 image, single channel
-    // Weight: 2x2 kernel averaging
     let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0];
     let weight: Vec<f32> = vec![0.25, 0.25, 0.25, 0.25];
 
-    let batch = 1;
-    let in_channels = 1;
-    let out_channels = 1;
-    let input_height = 3;
-    let input_width = 3;
-    let kernel_h = 2;
-    let kernel_w = 2;
-    let stride_h = 1;
-    let stride_w = 1;
-    let padding_h = 0;
-    let padding_w = 0;
+    let result: Vec<f32> = run_conv2d(&input, &weight, 1, 1, 1, 3, 3, 2, 2, 1, 1, 0, 0, conv2d::F32);
 
-    let result: Vec<f32> = run_conv2d(
-        &input,
-        &weight,
-        batch,
-        in_channels,
-        out_channels,
-        input_height,
-        input_width,
-        kernel_h,
-        kernel_w,
-        stride_h,
-        stride_w,
-        padding_h,
-        padding_w,
-        conv2d::F32,
-    );
-
-    // Output size: 2x2
     assert_eq!(result.len(), 4);
-
-    // Expected (averaging 2x2 windows):
-    // Top-left: (1+2+4+5)/4 = 3.0
-    // Top-right: (2+3+5+6)/4 = 4.0
-    // Bottom-left: (4+5+7+8)/4 = 6.0
-    // Bottom-right: (5+6+8+9)/4 = 7.0
     assert_eq!(result, vec![3.0, 4.0, 6.0, 7.0]);
 }
 
 #[test]
-fn test_conv1d_bf16() {
-    let input: Vec<bf16> = vec![1.0, 2.0, 3.0, 4.0].into_iter().map(bf16::from_f32).collect();
-    let weight: Vec<bf16> = vec![1.0, 1.0].into_iter().map(bf16::from_f32).collect();
-
-    let batch = 1;
-    let in_channels = 1;
-    let out_channels = 1;
-    let input_length = 4;
-    let kernel_size = 2;
-    let stride = 1;
-    let padding = 0;
-
-    let result: Vec<bf16> = run_conv1d(
-        &input,
-        &weight,
-        batch,
-        in_channels,
-        out_channels,
-        input_length,
-        kernel_size,
-        stride,
-        padding,
-        conv1d::BF16,
-    );
-
-    let expected: Vec<bf16> = vec![3.0, 5.0, 7.0].into_iter().map(bf16::from_f32).collect();
-
-    assert_eq!(result.len(), 3);
-    assert_eq!(result, expected);
-}
-
-#[test]
-fn test_conv1d_f16() {
-    let input: Vec<f16> = vec![1.0, 2.0, 3.0, 4.0].into_iter().map(f16::from_f32).collect();
-    let weight: Vec<f16> = vec![1.0, 1.0].into_iter().map(f16::from_f32).collect();
-
-    let batch = 1;
-    let in_channels = 1;
-    let out_channels = 1;
-    let input_length = 4;
-    let kernel_size = 2;
-    let stride = 1;
-    let padding = 0;
-
-    let result: Vec<f16> = run_conv1d(
-        &input,
-        &weight,
-        batch,
-        in_channels,
-        out_channels,
-        input_length,
-        kernel_size,
-        stride,
-        padding,
-        conv1d::F16,
-    );
-
-    let expected: Vec<f16> = vec![3.0, 5.0, 7.0].into_iter().map(f16::from_f32).collect();
-
-    assert_eq!(result.len(), 3);
-    assert_eq!(result, expected);
-}
-
-#[test]
 fn test_conv2d_stride_f32() {
-    // Test 2D convolution with stride > 1
-    // Input: 4x4 image
     let input: Vec<f32> = (1..=16).map(|x| x as f32).collect();
-    let weight: Vec<f32> = vec![1.0, 0.0, 0.0, 1.0]; // 2x2 kernel summing corners
+    let weight: Vec<f32> = vec![1.0, 0.0, 0.0, 1.0];
 
-    let batch = 1;
-    let in_channels = 1;
-    let out_channels = 1;
-    let input_height = 4;
-    let input_width = 4;
-    let kernel_h = 2;
-    let kernel_w = 2;
-    let stride_h = 2;
-    let stride_w = 2;
-    let padding_h = 0;
-    let padding_w = 0;
+    let result: Vec<f32> = run_conv2d(&input, &weight, 1, 1, 1, 4, 4, 2, 2, 2, 2, 0, 0, conv2d::F32);
 
-    let result: Vec<f32> = run_conv2d(
+    assert_eq!(result.len(), 4);
+    assert_eq!(result, vec![7.0, 11.0, 23.0, 27.0]);
+}
+
+#[test]
+fn test_conv3d_simple_f32() {
+    // 2x2x2 cube
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    // 2x2x2 kernel averaging all elements
+    let weight: Vec<f32> = vec![0.125; 8];
+
+    let result: Vec<f32> = run_conv3d(
         &input,
         &weight,
-        batch,
-        in_channels,
-        out_channels,
-        input_height,
-        input_width,
-        kernel_h,
-        kernel_w,
-        stride_h,
-        stride_w,
-        padding_h,
-        padding_w,
-        conv2d::F32,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        conv3d::F32,
     );
 
-    // Output size: 2x2 (with stride 2)
-    assert_eq!(result.len(), 4);
+    assert_eq!(result.len(), 1);
+    // Average of 1..8 = 36/8 = 4.5
+    assert_eq!(result, vec![4.5]);
+}
 
-    // Expected (summing top-left and bottom-right of 2x2 windows):
-    // Top-left window: 1 + 6 = 7
-    // Top-right window: 3 + 8 = 11
-    // Bottom-left window: 9 + 14 = 23
-    // Bottom-right window: 11 + 16 = 27
-    assert_eq!(result, vec![7.0, 11.0, 23.0, 27.0]);
+#[test]
+fn test_conv3d_stride_f32() {
+    // 4x4x4 cube (64 elements)
+    let input: Vec<f32> = (1..=64).map(|x| x as f32).collect();
+    // 2x2x2 kernel (identity-like)
+    let weight: Vec<f32> = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+
+    let result: Vec<f32> = run_conv3d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        4,
+        4,
+        4,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        conv3d::F32,
+    );
+
+    // Output shape: ((4-2)/2+1, (4-2)/2+1, (4-2)/2+1) = (2, 2, 2) = 8 elements
+    assert_eq!(result.len(), 8);
+    // With stride 2, picking first element from each 2x2x2 window
+    assert_eq!(result, vec![1.0, 3.0, 9.0, 11.0, 33.0, 35.0, 41.0, 43.0]);
+}
+
+#[test]
+fn test_conv3d_padding_f32() {
+    // 2x2x2 cube
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    // 3x3x3 kernel (all 1s)
+    let weight: Vec<f32> = vec![1.0; 27];
+
+    let result: Vec<f32> = run_conv3d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        conv3d::F32,
+    );
+
+    // Output shape with padding=1: ((2+2*1-3)/1+1)^3 = 2^3 = 8
+    assert_eq!(result.len(), 8);
+}
+
+#[test]
+fn test_conv3d_multi_channel_f32() {
+    // 2 input channels, 2x2x2 each
+    let input: Vec<f32> = vec![
+        // Channel 0
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, // Channel 1
+        8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0,
+    ];
+    // 2 output channels, each has 2 input channels * 2x2x2 kernel = 16 weights
+    let weight: Vec<f32> = vec![
+        // Out channel 0, in channel 0
+        0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, // Out channel 0, in channel 1
+        0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, // Out channel 1, in channel 0
+        1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, // Out channel 1, in channel 1
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ];
+
+    let result: Vec<f32> = run_conv3d(
+        &input,
+        &weight,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        conv3d::F32,
+    );
+
+    // Output: 2 channels, 1x1x1 each = 2 elements
+    assert_eq!(result.len(), 2);
+    // Channel 0: average of all inputs = (36 + 36)/2 = 36
+    // Channel 1: first + last = 1 + 1 = 2
+    assert_eq!(result, vec![36.0, 2.0]);
+}
+
+#[test]
+fn test_conv3d_batch_f32() {
+    // Batch of 2, 1x1x1 input each
+    let input: Vec<f32> = vec![2.0, 3.0];
+    // 1x1x1 kernel
+    let weight: Vec<f32> = vec![4.0];
+
+    let result: Vec<f32> = run_conv3d(
+        &input,
+        &weight,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        conv3d::F32,
+    );
+
+    assert_eq!(result.len(), 2);
+    assert_eq!(result, vec![8.0, 12.0]);
+}
+
+#[test]
+fn test_conv_transpose1d_simple_f32() {
+    // Input: [1, 2]
+    // Weight: [1, 2]
+    // stride=2, padding=0, output_padding=0
+    let input: Vec<f32> = vec![1.0, 2.0];
+    let weight: Vec<f32> = vec![1.0, 2.0];
+
+    let result: Vec<f32> = run_conv_transpose1d(&input, &weight, 1, 1, 1, 2, 2, 2, 0, 0, conv_transpose1d::F32);
+
+    // Output length: (2-1)*2 - 2*0 + 2 + 0 = 4
+    assert_eq!(result.len(), 4);
+}
+
+#[test]
+fn test_conv_transpose2d_simple_f32() {
+    // 2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+    // 2x2 kernel
+    let weight: Vec<f32> = vec![1.0, 0.0, 0.0, 1.0];
+
+    let result: Vec<f32> = run_conv_transpose2d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        conv_transpose2d::F32,
+    );
+
+    // Output: (2-1)*2 - 0 + 2 + 0 = 4x4
+    assert_eq!(result.len(), 16);
+}
+
+#[test]
+fn test_conv_transpose3d_simple_f32() {
+    // 1x1x1 input
+    let input: Vec<f32> = vec![2.0];
+    // 2x2x2 kernel (all 1s)
+    let weight: Vec<f32> = vec![1.0; 8];
+
+    let result: Vec<f32> = run_conv_transpose3d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        conv_transpose3d::F32,
+    );
+
+    // Output: (1-1)*1 + 2 = 2x2x2
+    assert_eq!(result.len(), 8);
+    // All elements should be 2.0 (input value * 1.0 weight)
+    assert_eq!(result, vec![2.0; 8]);
+}
+
+#[test]
+fn test_conv_transpose3d_stride_f32() {
+    // 2x2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    // 2x2x2 kernel (identity-like)
+    let weight: Vec<f32> = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+
+    let result: Vec<f32> = run_conv_transpose3d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        conv_transpose3d::F32,
+    );
+
+    // Output: (2-1)*2 + 2 = 4x4x4
+    assert_eq!(result.len(), 64);
+}
+
+#[test]
+fn test_conv_transpose3d_padding_f32() {
+    // 2x2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    // 3x3x3 kernel (center element is 1)
+    let mut weight = vec![0.0; 27];
+    weight[13] = 1.0; // Center of 3x3x3
+
+    let result: Vec<f32> = run_conv_transpose3d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        3,
+        3,
+        3,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        conv_transpose3d::F32,
+    );
+
+    // Output: (2-1)*1 - 2*1 + 3 = 2x2x2
+    assert_eq!(result.len(), 8);
+}
+
+#[test]
+fn test_conv_transpose3d_output_padding_f32() {
+    // 1x1x1 input
+    let input: Vec<f32> = vec![3.0];
+    // 2x2x2 kernel (all 1s)
+    let weight: Vec<f32> = vec![1.0; 8];
+
+    let result: Vec<f32> = run_conv_transpose3d(
+        &input,
+        &weight,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        conv_transpose3d::F32,
+    );
+
+    // Output: (1-1)*2 + 2 + 1 = 3x3x3
+    assert_eq!(result.len(), 27);
+}
+
+#[test]
+fn test_conv_transpose3d_multi_channel_f32() {
+    // 2 input channels, 1x1x1 each
+    let input: Vec<f32> = vec![2.0, 3.0];
+    // Weight layout: (in_channels, out_channels, kernel_depth, kernel_height, kernel_width)
+    // in_channels=2, out_channels=2, kernel=2x2x2
+    let weight: Vec<f32> = vec![
+        // In channel 0, out channel 0
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // In channel 0, out channel 1
+        0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, // In channel 1, out channel 0
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // In channel 1, out channel 1
+        0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+    ];
+
+    let result: Vec<f32> = run_conv_transpose3d(
+        &input,
+        &weight,
+        1,
+        2,
+        2,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        conv_transpose3d::F32,
+    );
+
+    // Output: 2 channels, 2x2x2 each = 16 elements
+    assert_eq!(result.len(), 16);
+    // Out channel 0: in_ch0(2.0)*1.0 + in_ch1(3.0)*1.0 = 5.0
+    // Out channel 1: in_ch0(2.0)*0.5 + in_ch1(3.0)*0.5 = 2.5
+    assert_eq!(result[..8], vec![5.0; 8]);
+    assert_eq!(result[8..], vec![2.5; 8]);
+}
+
+#[test]
+fn test_conv_transpose3d_batch_f32() {
+    // Batch of 2, 1x1x1 input each
+    let input: Vec<f32> = vec![1.0, 4.0];
+    // 2x2x2 kernel (all 2s)
+    let weight: Vec<f32> = vec![2.0; 8];
+
+    let result: Vec<f32> = run_conv_transpose3d(
+        &input,
+        &weight,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        conv_transpose3d::F32,
+    );
+
+    // Output: batch=2, 2x2x2 each = 16 elements
+    assert_eq!(result.len(), 16);
+    // Batch 0: all 2.0 (1*2), Batch 1: all 8.0 (4*2)
+    assert_eq!(result[..8], vec![2.0; 8]);
+    assert_eq!(result[8..], vec![8.0; 8]);
+}
+
+#[test]
+fn test_conv1d_grad_weight_f32() {
+    // Input: [1, 2, 3]
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0];
+    // Grad output: [1, 1]
+    let grad_output: Vec<f32> = vec![1.0, 1.0];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [out_channels=1, in_channels=1, kernel_size=2]
+    let grad_weight_size = 1 * 1 * 2;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata: [num_els, batch, in_channels, out_channels, in_width, kernel_width, out_width, stride, padding, dilation, input_offset, grad_output_offset]
+    let metadata = vec![grad_weight_size, 1, 1, 1, 3, 2, 2, 1, 0, 1, 0, 0];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv1d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 2);
+    // Grad weight should be computed from input and grad_output
+    // Position 0: 1*1 + 2*1 = 3
+    // Position 1: 2*1 + 3*1 = 5
+    assert_eq!(result, vec![3.0, 5.0]);
+}
+
+#[test]
+fn test_conv2d_grad_weight_f32() {
+    // 2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+    // 1x1 grad output (from 2x2 kernel, stride 1)
+    let grad_output: Vec<f32> = vec![1.0];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2]
+    let grad_weight_size = 4;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata: [num_els, batch, in_channels, out_channels, in_height, in_width, kernel_height, kernel_width, out_height, out_width, stride_h, stride_w, padding_h, padding_w, dilation_h, dilation_w, input_offset, grad_output_offset]
+    let metadata = vec![grad_weight_size, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv2d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 4);
+    // Grad weight should be the input itself since grad_output is [1.0]
+    assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0]);
+}
+
+#[test]
+fn test_conv3d_grad_weight_f32() {
+    // 2x2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    // 1x1x1 grad output (from 2x2x2 kernel, stride 1)
+    let grad_output: Vec<f32> = vec![1.0];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2, 2]
+    let grad_weight_size = 8;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata: [num_els, batch, in_channels, out_channels, in_depth, in_height, in_width,
+    //            kernel_depth, kernel_height, kernel_width,
+    //            out_depth, out_height, out_width,
+    //            stride_d, stride_h, stride_w, padding_d, padding_h, padding_w,
+    //            dilation_d, dilation_h, dilation_w, input_offset, grad_output_offset]
+    let metadata = vec![
+        grad_weight_size,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+    ];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv3d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 8);
+    // Grad weight should be the input itself since grad_output is [1.0]
+    assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+}
+
+#[test]
+fn test_conv3d_grad_weight_multi_batch_f32() {
+    // Batch=2, 2x2x2 input each
+    let input: Vec<f32> = vec![
+        // Batch 0
+        1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, // Batch 1
+        8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0,
+    ];
+    // 1x1x1 grad output per batch
+    let grad_output: Vec<f32> = vec![1.0, 2.0];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2, 2]
+    let grad_weight_size = 8;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata with batch=2, in_channels=1
+    let metadata = vec![
+        grad_weight_size,
+        2,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+    ];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv3d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 8);
+    // Grad weight accumulates: batch0 * 1.0 + batch1 * 2.0
+    // [1*1 + 8*2, 2*1 + 7*2, 3*1 + 6*2, 4*1 + 5*2, 5*1 + 4*2, 6*1 + 3*2, 7*1 + 2*2, 8*1 + 1*2]
+    assert_eq!(result, vec![17.0, 16.0, 15.0, 14.0, 13.0, 12.0, 11.0, 10.0]);
+}
+
+#[test]
+fn test_conv_transpose1d_grad_weight_f32() {
+    // Input: [1, 2, 3]
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0];
+    // Grad output: [1, 1, 1, 1] (4 elements from transpose conv)
+    let grad_output: Vec<f32> = vec![1.0, 1.0, 1.0, 1.0];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [out_channels=1, in_channels=1, kernel_size=2]
+    let grad_weight_size = 2;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata for conv_transpose1d_grad_weight: same structure as conv1d_grad_weight
+    // [num_els, batch/in_channels, out_channels, in_width, kernel_width, out_width, stride, padding, dilation, input_offset, grad_output_offset]
+    let metadata = vec![grad_weight_size, 1, 1, 3, 2, 4, 1, 0, 1, 0, 0];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv_transpose1d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 2);
+}
+
+#[test]
+fn test_conv_transpose2d_grad_weight_f32() {
+    // 2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+    // 4x4 grad output (from transpose conv with stride 2)
+    let grad_output: Vec<f32> = vec![1.0; 16];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2]
+    let grad_weight_size = 4;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata: [num_els, batch/in_channels, out_channels, in_height, in_width, kernel_height, kernel_width, out_height, out_width, stride_h, stride_w, padding_h, padding_w, dilation_h, dilation_w, input_offset, grad_output_offset]
+    let metadata = vec![grad_weight_size, 1, 1, 2, 2, 2, 2, 4, 4, 2, 2, 0, 0, 1, 1, 0, 0];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv_transpose2d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 4);
+}
+
+#[test]
+fn test_conv_transpose2d_grad_weight_multi_batch_f32() {
+    // Batch=2, 2x2 input each
+    let input: Vec<f32> = vec![
+        // Batch 0
+        1.0, 2.0, 3.0, 4.0, // Batch 1
+        4.0, 3.0, 2.0, 1.0,
+    ];
+    // 4x4 grad output per batch
+    let grad_output: Vec<f32> = vec![
+        // Batch 0: all 1.0
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // Batch 1: all 2.0
+        2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+    ];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2]
+    let grad_weight_size = 4;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata with batch=2
+    let metadata = vec![grad_weight_size, 2, 1, 2, 2, 2, 2, 4, 4, 2, 2, 0, 0, 1, 1, 0, 0];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv_transpose2d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 4);
+}
+
+#[test]
+fn test_conv_transpose3d_grad_weight_f32() {
+    // 2x2x2 input
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    // 2x2x2 grad output (from transpose conv with stride 1)
+    let grad_output: Vec<f32> = vec![1.0; 8];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2, 2]
+    let grad_weight_size = 8;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata: [num_els, batch/in_channels, out_channels, in_depth, in_height, in_width,
+    //            kernel_depth, kernel_height, kernel_width,
+    //            out_depth, out_height, out_width,
+    //            stride_d, stride_h, stride_w, padding_d, padding_h, padding_w,
+    //            dilation_d, dilation_h, dilation_w, input_offset, grad_output_offset]
+    let metadata = vec![
+        grad_weight_size,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+    ];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv_transpose3d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 8);
+}
+
+#[test]
+fn test_conv_transpose3d_grad_weight_multi_batch_f32() {
+    // Batch=2, 1x1x1 input each
+    let input: Vec<f32> = vec![2.0, 3.0];
+    // 2x2x2 grad output per batch
+    let grad_output: Vec<f32> = vec![
+        // Batch 0: all 1.0
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // Batch 1: all 2.0
+        2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0,
+    ];
+
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    let input_buffer = new_buffer(&device, &input);
+    let grad_output_buffer = new_buffer(&device, &grad_output);
+
+    // Weight gradient shape: [1, 1, 2, 2, 2]
+    let grad_weight_size = 8;
+    let grad_weight = new_buffer_zeroed::<f32>(&device, grad_weight_size);
+
+    // Metadata with batch=2, in_channels=1
+    let metadata = vec![
+        grad_weight_size,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+    ];
+
+    call_conv_grad_weight(
+        &device,
+        &command_buffer,
+        &kernels,
+        conv_transpose3d_grad_weight::F32,
+        BufferOffset::zero_offset(&input_buffer),
+        BufferOffset::zero_offset(&grad_output_buffer),
+        &grad_weight,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let result: Vec<f32> = read_to_vec(&grad_weight, grad_weight_size);
+    assert_eq!(result.len(), 8);
+    // Grad weight accumulates: batch0*1.0 + batch1*2.0
+    // All elements: 2*1 + 3*2 = 8
+    assert_eq!(result, vec![8.0; 8]);
 }

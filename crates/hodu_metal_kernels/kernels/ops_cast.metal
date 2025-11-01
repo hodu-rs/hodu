@@ -3,20 +3,39 @@
 
 using namespace metal;
 
-// Cast operation macro - converts from one type to another
+// Cast Operations
+// ===============
+// Performs type conversion on tensor elements.
+// Supports both contiguous and strided tensors with automatic layout detection.
+//
+// Metadata Layout (Total: 2 + num_dims * 2 + 1):
+// - metadata[0]: num_els (total number of elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: shape (dimensions of the tensor)
+// - metadata[2+num_dims..2+2*num_dims]: strides (stride for each dimension)
+// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
+//
+// Buffer Layout:
+// - buffer(0): input tensor (const device IN_TYPENAME*)
+// - buffer(1): output tensor (device OUT_TYPENAME*)
+// - buffer(2): metadata (constant size_t*)
+//
+// The kernel automatically detects contiguous layouts and uses optimized access patterns.
+
 #define CAST_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, CAST_EXPR)                                     \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint id [[thread_position_in_grid]]) {            \
+        constant size_t *metadata [[buffer(2)]], uint id [[thread_position_in_grid]]) {            \
+        const size_t num_els = metadata[0];                                                        \
         if (id >= num_els)                                                                         \
             return;                                                                                \
                                                                                                    \
-        const constant size_t *dims = metadata;                                                    \
-        const constant size_t *strides = metadata + num_dims;                                      \
-        const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                           \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *dims = metadata + 2;                                                \
+        const constant size_t *strides = metadata + 2 + num_dims;                                  \
+        const size_t offset = metadata[2 + 2 * num_dims];                                          \
                                                                                                    \
-        if (metadata == nullptr || is_contiguous(num_dims, dims, strides)) {                       \
+        if (is_contiguous(num_dims, dims, strides)) {                                              \
             IN_TYPENAME x = input[offset + id];                                                    \
             output[id] = CAST_EXPR;                                                                \
         } else {                                                                                   \

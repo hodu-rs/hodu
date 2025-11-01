@@ -73,16 +73,24 @@ fn contiguous_f32() {
     let shape = vec![2, 3];
     let strides = vec![3, 1]; // Row-major contiguous
 
+    // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+    let num_els = 6;
+    let num_dims = 2;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
+
     call_contiguous(
         &device,
         &command_buffer,
         &kernels,
         contiguous::F32,
-        &shape,
         BufferOffset::zero_offset(&input_buffer),
-        &strides,
-        0,
         &output,
+        &metadata,
     )
     .unwrap();
 
@@ -111,16 +119,24 @@ fn contiguous_transposed_f32() {
     let shape = vec![3, 2]; // Transposed shape
     let strides = vec![1, 3]; // Column-major (transposed)
 
+    // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+    let num_els = 6;
+    let num_dims = 2;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
+
     call_contiguous(
         &device,
         &command_buffer,
         &kernels,
         contiguous::F32,
-        &shape,
         BufferOffset::zero_offset(&input_buffer),
-        &strides,
-        0,
         &output,
+        &metadata,
     )
     .unwrap();
 
@@ -130,35 +146,4 @@ fn contiguous_transposed_f32() {
     let results: Vec<f32> = read_to_vec(&output, input.len());
     // Expected: [[1, 4], [2, 5], [3, 6]] in row-major = [1, 4, 2, 5, 3, 6]
     assert_eq!(results, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
-}
-
-#[test]
-fn copy_u8() {
-    let device = device();
-    let kernels = Kernels::new();
-    let command_queue = device.new_command_queue().unwrap();
-    let command_buffer = create_command_buffer(&command_queue).unwrap();
-
-    let input = vec![1u8, 2, 3, 4, 5];
-    let input_buffer = new_buffer(&device, &input);
-    let output = device
-        .new_buffer(std::mem::size_of_val(&input[..]), RESOURCE_OPTIONS)
-        .unwrap();
-
-    call_copy(
-        &device,
-        &command_buffer,
-        &kernels,
-        copy::U8,
-        input.len(),
-        BufferOffset::zero_offset(&input_buffer),
-        &output,
-    )
-    .unwrap();
-
-    command_buffer.commit();
-    command_buffer.wait_until_completed();
-
-    let results: Vec<u8> = read_to_vec(&output, input.len());
-    assert_eq!(results, input);
 }

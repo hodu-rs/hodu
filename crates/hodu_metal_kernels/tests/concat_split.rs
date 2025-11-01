@@ -56,19 +56,29 @@ fn concat_f32_dim0() {
         .new_buffer(8 * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
         .unwrap();
 
+    // Build metadata: [num_els, num_dims, output_shape..., concat_dim, num_inputs, input_shapes..., input_strides..., input_offsets..., input_buffer_offsets...]
+    let num_els = 8;
+    let num_dims = 2;
+    let num_inputs = 2;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&output_shape);
+    metadata.push(concat_dim);
+    metadata.push(num_inputs);
+    metadata.extend(&input_shapes);
+    metadata.extend(&input_strides);
+    metadata.extend(&input_offsets);
+    metadata.extend(&input_buffer_offsets);
+
     call_concat(
         &device,
         &command_buffer,
         &kernels,
         concat::F32,
-        &output_shape,
-        concat_dim,
-        &input_shapes,
-        &input_strides,
-        &input_offsets,
-        &input_buffer_offsets,
         BufferOffset::zero_offset(&input_buffer),
         &output,
+        &metadata,
     )
     .unwrap();
 
@@ -101,19 +111,27 @@ fn split_f32_dim0() {
         .new_buffer(4 * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
         .unwrap();
 
+    // Build metadata: [num_els, num_dims, input_shape..., strides..., offset, split_dim, output_size_on_dim, split_offset]
+    let num_els = 4; // output size
+    let num_dims = 2;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0); // input offset
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
+
     call_split(
         &device,
         &command_buffer,
         &kernels,
         split::F32,
-        &input_shape,
         BufferOffset::zero_offset(&input_buffer),
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         &output,
+        &metadata,
     )
     .unwrap();
 
@@ -146,19 +164,27 @@ fn split_f32_dim0_offset() {
         .new_buffer(4 * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
         .unwrap();
 
+    // Build metadata: [num_els, num_dims, input_shape..., strides..., offset, split_dim, output_size_on_dim, split_offset]
+    let num_els = 4; // output size
+    let num_dims = 2;
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0); // input offset
+    metadata.push(split_dim);
+    metadata.push(output_size_on_dim);
+    metadata.push(split_offset);
+
     call_split(
         &device,
         &command_buffer,
         &kernels,
         split::F32,
-        &input_shape,
         BufferOffset::zero_offset(&input_buffer),
-        &strides,
-        0,
-        split_dim,
-        output_size_on_dim,
-        split_offset,
         &output,
+        &metadata,
     )
     .unwrap();
 

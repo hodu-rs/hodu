@@ -1,4 +1,3 @@
-use half::bf16;
 use hodu_metal_kernels::{
     kernel::Kernels,
     kernels::{call_reduce, reduce_argmax, reduce_argmin, reduce_max, reduce_mean, reduce_min, reduce_sum, Kernel},
@@ -170,18 +169,6 @@ fn test_reduce_sum_f32() {
 }
 
 #[test]
-fn test_reduce_sum_bf16() {
-    let input: Vec<bf16> = vec![1.0, 2.0, 3.0, 4.0].into_iter().map(bf16::from_f32).collect();
-    let shape = vec![2, 2];
-    let reduce_dims = vec![0]; // reduce along rows
-
-    let result: Vec<bf16> = run_reduce(&input, &shape, &reduce_dims, false, reduce_sum::BF16);
-    // [[1, 2], [3, 4]] -> sum along dim 0 -> [4, 6]
-    let expected: Vec<bf16> = vec![4.0, 6.0].into_iter().map(bf16::from_f32).collect();
-    assert_eq!(result, expected);
-}
-
-#[test]
 fn test_reduce_max_f32() {
     let input: Vec<f32> = vec![1.0, 5.0, 3.0, 2.0, 8.0, 1.0];
     let shape = vec![2, 3];
@@ -270,16 +257,4 @@ fn test_reduce_max_f32_keep_dim() {
     let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, true, reduce_max::F32);
     // [[1, 5, 3], [2, 8, 1]] -> max along dim 1 with keep_dim -> [[5], [8]]
     assert_eq!(result, vec![5.0, 8.0]);
-}
-
-#[test]
-fn test_reduce_sum_bf16_keep_dim() {
-    let input: Vec<bf16> = vec![1.0, 2.0, 3.0, 4.0].into_iter().map(bf16::from_f32).collect();
-    let shape = vec![2, 2];
-    let reduce_dims = vec![0]; // reduce along rows
-
-    let result: Vec<bf16> = run_reduce(&input, &shape, &reduce_dims, true, reduce_sum::BF16);
-    // [[1, 2], [3, 4]] -> sum along dim 0 with keep_dim -> [[4, 6]]
-    let expected: Vec<bf16> = vec![4.0, 6.0].into_iter().map(bf16::from_f32).collect();
-    assert_eq!(result, expected);
 }

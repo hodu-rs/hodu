@@ -3,41 +3,53 @@
 
 using namespace metal;
 
-// Concatenation and split operations for tensors
-// These operations combine or split tensors along a specified dimension
+// Concatenation and Split Operations
+// ====================================
+// These operations combine or split tensors along a specified dimension.
 
 // ============================================================================
 // CONCATENATION OPERATIONS
 // ============================================================================
 
-// Generic concatenation kernel that works with multiple input tensors
-// All inputs are concatenated into a single input buffer
-// Metadata layout:
-// - output_shape: output_shape[0..num_dims]
-// - concat_dim: the dimension along which to concatenate
-// - num_inputs: number of input tensors
-// - input_shapes: flattened array of input shapes (num_inputs * num_dims)
-// - input_strides: flattened array of input strides (num_inputs * num_dims)
-// - input_offsets: array of input offsets (num_inputs)
-// - input_buffer_offsets: offset of each input in the input buffer (num_inputs)
+// Concatenates multiple input tensors along a specified dimension.
+// All input tensors must have the same shape except on the concatenation dimension.
+//
+// Metadata Layout (Total: 2 + num_dims + 2 + num_inputs * (2 * num_dims + 2)):
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: output_shape (shape of concatenated output)
+// - metadata[2+num_dims]: concat_dim (dimension along which to concatenate)
+// - metadata[2+num_dims+1]: num_inputs (number of input tensors)
+// - metadata[2+num_dims+2..2+num_dims+2+num_inputs*num_dims]: input_shapes (flattened)
+// - metadata[2+num_dims+2+num_inputs*num_dims..2+num_dims+2+2*num_inputs*num_dims]: input_strides
+// (flattened)
+// - metadata[2+num_dims+2+2*num_inputs*num_dims..2+num_dims+2+2*num_inputs*num_dims+num_inputs]:
+// input_offsets
+// - metadata[2+num_dims+2+2*num_inputs*num_dims+num_inputs..]: input_buffer_offsets
+//
+// Buffer Layout:
+// - buffer(0): input tensor (const device T*) - combined buffer with all inputs
+// - buffer(1): output tensor (device T*)
+// - buffer(2): metadata (constant size_t*)
 
 #define CONCAT_OP(TYPENAME, FN_NAME)                                                               \
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *output_shape = metadata + 2;                                        \
+        const size_t concat_dim = metadata[2 + num_dims];                                          \
+        const size_t num_inputs = metadata[2 + num_dims + 1];                                      \
+        const constant size_t *input_shapes = metadata + 2 + num_dims + 2;                         \
+        const constant size_t *input_strides = input_shapes + num_inputs * num_dims;               \
+        const constant size_t *input_offsets = input_strides + num_inputs * num_dims;              \
+        const constant size_t *input_buffer_offsets = input_offsets + num_inputs;                  \
                                                                                                    \
         /* Grid-stride loop for better GPU utilization */                                          \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
-                                                                                                   \
-            const constant size_t *output_shape = metadata;                                        \
-            const size_t concat_dim = metadata[num_dims];                                          \
-            const size_t num_inputs = metadata[num_dims + 1];                                      \
-            const constant size_t *input_shapes = metadata + num_dims + 2;                         \
-            const constant size_t *input_strides = input_shapes + num_inputs * num_dims;           \
-            const constant size_t *input_offsets = input_strides + num_inputs * num_dims;          \
-            const constant size_t *input_buffer_offsets = input_offsets + num_inputs;              \
                                                                                                    \
             /* Calculate output indices from flat id */                                            \
             size_t output_indices[16];                                                             \
@@ -95,33 +107,41 @@ CONCAT_OP(uint64_t, concat_u64)
 // SPLIT OPERATIONS
 // ============================================================================
 
-// Generic split kernel that splits one tensor into multiple outputs
-// Metadata layout:
-// - input_shape: input_shape[0..num_dims]
-// - input_strides: input_strides[0..num_dims]
-// - input_offset: scalar offset
-// - split_dim: the dimension along which to split
-// - num_outputs: number of output tensors
-// - output_sizes: sizes of each output along split dimension (num_outputs)
-// - split_index: which split this kernel is computing
-// - cumulative_offset: cumulative offset along split dimension for this output
+// Extracts a portion of a tensor along a specified dimension.
+// The output is a slice of the input tensor starting at split_offset with size output_size_on_dim.
+//
+// Metadata Layout (Total: 2 + num_dims * 2 + 4):
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape (shape of input tensor)
+// - metadata[2+num_dims..2+2*num_dims]: strides (stride for each dimension)
+// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
+// - metadata[2+2*num_dims+1]: split_dim (dimension along which to split)
+// - metadata[2+2*num_dims+2]: output_size_on_dim (size of output on split dimension)
+// - metadata[2+2*num_dims+3]: split_offset (offset on split dimension where extraction starts)
+//
+// Buffer Layout:
+// - buffer(0): input tensor (const device T*)
+// - buffer(1): output tensor (device T*)
+// - buffer(2): metadata (constant size_t*)
 
 #define SPLIT_OP(TYPENAME, FN_NAME)                                                                \
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+        const size_t split_dim = metadata[2 + 2 * num_dims + 1];                                   \
+        const size_t output_size_on_dim = metadata[2 + 2 * num_dims + 2];                          \
+        const size_t split_offset = metadata[2 + 2 * num_dims + 3];                                \
                                                                                                    \
         /* Grid-stride loop for better GPU utilization */                                          \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
-                                                                                                   \
-            const constant size_t *input_shape = metadata;                                         \
-            const constant size_t *input_strides = metadata + num_dims;                            \
-            const size_t input_offset = metadata[2 * num_dims];                                    \
-            const size_t split_dim = metadata[2 * num_dims + 1];                                   \
-            const size_t output_size_on_dim = metadata[2 * num_dims + 2];                          \
-            const size_t split_offset = metadata[2 * num_dims + 3];                                \
                                                                                                    \
             /* Calculate output shape */                                                           \
             size_t output_shape[16];                                                               \

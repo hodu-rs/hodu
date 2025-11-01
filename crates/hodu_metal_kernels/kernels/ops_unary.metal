@@ -71,18 +71,26 @@ float m_exp10(float x) {
     return exp(x * 2.3025850929940456f); // ln(10) ≈ 2.302585...
 }
 
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: dims (shape)
+// - metadata[2+num_dims..2+2*num_dims]: strides
+// - metadata[2+2*num_dims]: offset (starting offset in input)
+
 #define UNARY_OP_OUTPUT(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                  \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
-            const constant size_t *dims = metadata;                                                \
-            const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
+            const constant size_t *dims = metadata + 2;                                            \
+            const constant size_t *strides = metadata + 2 + num_dims;                              \
+            const size_t offset = metadata[2 + 2 * num_dims];                                      \
                                                                                                    \
-            if (metadata == nullptr || is_contiguous(num_dims, dims, strides)) {                   \
+            if (is_contiguous(num_dims, dims, strides)) {                                          \
                 IN_TYPENAME x = input ? input[offset + id] : (IN_TYPENAME)output[id];              \
                 output[id] = FUNC;                                                                 \
             } else {                                                                               \
@@ -98,16 +106,17 @@ float m_exp10(float x) {
 #define UNARY_OP_WITH_CONSTANT(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                           \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], constant IN_TYPENAME &const_val [[buffer(5)]],    \
+        constant size_t *metadata [[buffer(2)]], constant IN_TYPENAME &const_val [[buffer(3)]],    \
         uint thread_index [[thread_position_in_grid]],                                             \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
-            const constant size_t *dims = metadata;                                                \
-            const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
+            const constant size_t *dims = metadata + 2;                                            \
+            const constant size_t *strides = metadata + 2 + num_dims;                              \
+            const size_t offset = metadata[2 + 2 * num_dims];                                      \
                                                                                                    \
-            if (metadata == nullptr || is_contiguous(num_dims, dims, strides)) {                   \
+            if (is_contiguous(num_dims, dims, strides)) {                                          \
                 IN_TYPENAME x;                                                                     \
                 if (input) {                                                                       \
                     x = input[offset + id];                                                        \

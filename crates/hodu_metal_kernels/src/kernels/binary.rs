@@ -28,33 +28,61 @@ ops!(
     logical_xor
 );
 
-#[allow(clippy::too_many_arguments)]
+/// Executes a binary operation on two input tensors using Metal compute pipeline.
+///
+/// # Arguments
+/// * `device` - Metal device to execute on
+/// * `ep` - Encoder provider (command buffer)
+/// * `kernels` - Kernel cache
+/// * `kernel_name` - Binary operation kernel to execute (add, sub, mul, div, etc.)
+/// * `left_input` - Left input tensor buffer with offset
+/// * `right_input` - Right input tensor buffer with offset
+/// * `output` - Output buffer
+/// * `metadata` - Metadata describing tensor shapes and strides
+///
+/// # Metadata Layout
+/// The metadata buffer must contain the following elements in order:
+/// - `metadata[0]`: num_els (total number of output elements)
+/// - `metadata[1]`: num_dims (number of dimensions)
+/// - `metadata[2..2+num_dims]`: lhs_shape (shape of left input)
+/// - `metadata[2+num_dims..2+2*num_dims]`: rhs_shape (shape of right input)
+/// - `metadata[2+2*num_dims..2+3*num_dims]`: lhs_strides (strides of left input)
+/// - `metadata[2+3*num_dims..2+4*num_dims]`: rhs_strides (strides of right input)
+/// - `metadata[2+4*num_dims]`: lhs_offset (starting offset in left input buffer)
+/// - `metadata[2+4*num_dims+1]`: rhs_offset (starting offset in right input buffer)
+///
+/// Total metadata length: `2 + num_dims * 4 + 2`
+///
+/// # Example
+/// ```ignore
+/// let shape = vec![3];
+/// let strides = vec![1];
+/// let metadata = vec![
+///     3,      // num_els
+///     1,      // num_dims
+///     3,      // lhs_shape[0]
+///     3,      // rhs_shape[0]
+///     1,      // lhs_strides[0]
+///     1,      // rhs_strides[0]
+///     0,      // lhs_offset
+///     0,      // rhs_offset
+/// ];
+/// call_binary(&device, &command_buffer, &kernels, add::F32,
+///             lhs_buffer, rhs_buffer, &output, &metadata)?;
+/// ```
 pub fn call_binary(
     device: &Device,
     ep: impl EncoderProvider,
     kernels: &Kernels,
     kernel_name: Kernel,
-    shape: &[usize],
     left_input: BufferOffset,
-    left_strides: &[usize],
-    left_offset: usize,
     right_input: BufferOffset,
-    right_strides: &[usize],
-    right_offset: usize,
     output: &Buffer,
+    metadata: &[usize],
 ) -> Result<(), MetalKernelError> {
     let pipeline = kernels.load_pipeline(device, Source::Binary, kernel_name.0)?;
 
-    let num_dims = shape.len();
-    let num_els: usize = shape.iter().product();
-
-    // Prepare metadata: dims, lhs_strides, rhs_strides, lhs_offset, rhs_offset
-    let mut metadata = Vec::with_capacity(num_dims * 3 + 2);
-    metadata.extend_from_slice(shape);
-    metadata.extend_from_slice(left_strides);
-    metadata.extend_from_slice(right_strides);
-    metadata.push(left_offset);
-    metadata.push(right_offset);
+    let num_els = metadata[0];
 
     let encoder = ep.encoder();
     let encoder: &ComputeCommandEncoder = encoder.as_ref();
@@ -64,20 +92,8 @@ pub fn call_binary(
     // buffer(0): lhs input
     // buffer(1): rhs input
     // buffer(2): output
-    // buffer(3): num_els
-    // buffer(4): num_dims
-    // buffer(5): metadata (dims, lhs_strides, rhs_strides, lhs_offset, rhs_offset)
-    set_params!(
-        encoder,
-        (
-            &left_input,
-            &right_input,
-            output,
-            num_els,
-            num_dims,
-            metadata.as_slice()
-        )
-    );
+    // buffer(3): metadata
+    set_params!(encoder, (&left_input, &right_input, output, metadata));
 
     encoder.use_resource(left_input.buffer, MTLResourceUsage::Read);
     encoder.use_resource(right_input.buffer, MTLResourceUsage::Read);

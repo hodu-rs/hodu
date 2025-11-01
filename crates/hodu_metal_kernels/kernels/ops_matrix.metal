@@ -16,41 +16,46 @@ using namespace metal;
 // Output: [...batch_dims..., M, N]
 //
 // Metadata layout:
-// - lhs_ndim: number of dimensions in LHS
-// - rhs_ndim: number of dimensions in RHS
-// - batch_ndim: number of batch dimensions in output
-// - lhs_shape: lhs_shape[0..lhs_ndim]
-// - rhs_shape: rhs_shape[0..rhs_ndim]
-// - batch_shape: batch_shape[0..batch_ndim]
-// - lhs_strides: lhs_strides[0..lhs_ndim]
-// - rhs_strides: rhs_strides[0..rhs_ndim]
-// - lhs_offset: scalar offset for LHS
-// - rhs_offset: scalar offset for RHS
-// - M, K, N: matrix dimensions
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: lhs_ndim (number of dimensions in lhs)
+// - metadata[2]: rhs_ndim (number of dimensions in rhs)
+// - metadata[3]: batch_ndim (number of batch dimensions in output)
+// - metadata[4..4+lhs_ndim]: lhs_shape
+// - metadata[4+lhs_ndim..4+lhs_ndim+rhs_ndim]: rhs_shape
+// - metadata[4+lhs_ndim+rhs_ndim..4+lhs_ndim+rhs_ndim+batch_ndim]: batch_shape
+// - metadata[...+lhs_ndim]: lhs_strides
+// - metadata[...+rhs_ndim]: rhs_strides
+// - metadata[...]: lhs_offset
+// - metadata[...+1]: rhs_offset
+// - metadata[...+2]: M (rows of lhs matrix)
+// - metadata[...+3]: K (cols of lhs / rows of rhs)
+// - metadata[...+4]: N (cols of rhs matrix)
 
 #define MATMUL_OP(TYPENAME, FN_NAME)                                                               \
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *lhs [[buffer(0)]], const device TYPENAME *rhs [[buffer(1)]],        \
-        device TYPENAME *output [[buffer(2)]], constant size_t &num_els [[buffer(3)]],             \
-        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
+        device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
+        uint thread_index [[thread_position_in_grid]],                                             \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t lhs_ndim = metadata[1];                                                       \
+        const size_t rhs_ndim = metadata[2];                                                       \
+        const size_t batch_ndim = metadata[3];                                                     \
+                                                                                                   \
+        const constant size_t *lhs_shape = metadata + 4;                                           \
+        const constant size_t *rhs_shape = lhs_shape + lhs_ndim;                                   \
+        const constant size_t *batch_shape = rhs_shape + rhs_ndim;                                 \
+        const constant size_t *lhs_strides = batch_shape + batch_ndim;                             \
+        const constant size_t *rhs_strides = lhs_strides + lhs_ndim;                               \
+        const size_t lhs_offset = *(rhs_strides + rhs_ndim);                                       \
+        const size_t rhs_offset = *(rhs_strides + rhs_ndim + 1);                                   \
+        const size_t M = *(rhs_strides + rhs_ndim + 2);                                            \
+        const size_t K = *(rhs_strides + rhs_ndim + 3);                                            \
+        const size_t N = *(rhs_strides + rhs_ndim + 4);                                            \
                                                                                                    \
         /* Grid-stride loop for better GPU utilization */                                          \
         for (uint idx = thread_index; idx < num_els; idx += threads_per_grid) {                    \
-            const size_t lhs_ndim = metadata[0];                                                   \
-            const size_t rhs_ndim = metadata[1];                                                   \
-            const size_t batch_ndim = metadata[2];                                                 \
-                                                                                                   \
-            const constant size_t *lhs_shape = metadata + 3;                                       \
-            const constant size_t *rhs_shape = lhs_shape + lhs_ndim;                               \
-            const constant size_t *batch_shape = rhs_shape + rhs_ndim;                             \
-            const constant size_t *lhs_strides = batch_shape + batch_ndim;                         \
-            const constant size_t *rhs_strides = lhs_strides + lhs_ndim;                           \
-            const size_t lhs_offset = *(rhs_strides + rhs_ndim);                                   \
-            const size_t rhs_offset = *(rhs_strides + rhs_ndim + 1);                               \
-            const size_t M = *(rhs_strides + rhs_ndim + 2);                                        \
-            const size_t K = *(rhs_strides + rhs_ndim + 3);                                        \
-            const size_t N = *(rhs_strides + rhs_ndim + 4);                                        \
                                                                                                    \
             /* Calculate output position: batch_idx, i, j */                                       \
             size_t mn = idx % (M * N);                                                             \

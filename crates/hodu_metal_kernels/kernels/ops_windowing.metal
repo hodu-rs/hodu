@@ -10,31 +10,34 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 // Reduce window operations: Max, Min, Sum
 // These kernels perform reductions over sliding windows with configurable strides and padding
 //
-// Metadata layout (in buffer(4)):
-// - input_shape: [num_dims] dimensions of input tensor
-// - input_strides: [num_dims] strides of input tensor
-// - offset: single value, offset into input buffer
-// - window_shape: [num_dims] size of reduction window
-// - strides: [num_dims] stride of window movement
-// - padding: [num_dims * 2] padding (before, after) for each dimension
-// - output_shape: [num_dims] dimensions of output tensor
+// Metadata layout:
+// - metadata[0]: output_size (total number of elements in output)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset (starting offset in input)
+// - metadata[3+2*num_dims..3+3*num_dims]: window_shape (size of window in each dimension)
+// - metadata[3+3*num_dims..3+4*num_dims]: strides (step size in each dimension)
+// - metadata[3+4*num_dims..3+4*num_dims+2*num_dims]: padding (before and after for each dimension)
+// - metadata[3+6*num_dims..]: output_shape
 
 // Helper macro for reduce_window operations
 #define REDUCE_WINDOW_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, INIT_VAL, ACCUMULATE)                 \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+        const constant size_t *window_shape = metadata + 2 + 2 * num_dims + 1;                     \
+        const constant size_t *strides = metadata + 2 + 3 * num_dims + 1;                          \
+        const constant size_t *padding = metadata + 2 + 4 * num_dims + 1;                          \
+        const constant size_t *output_shape = metadata + 2 + 6 * num_dims + 1;                     \
+                                                                                                   \
         for (uint out_idx = thread_index; out_idx < num_els; out_idx += threads_per_grid) {        \
-            /* Extract metadata */                                                                 \
-            const constant size_t *input_shape = metadata;                                         \
-            const constant size_t *input_strides = metadata + num_dims;                            \
-            const size_t input_offset = metadata[2 * num_dims];                                    \
-            const constant size_t *window_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *strides = metadata + 3 * num_dims + 1;                          \
-            const constant size_t *padding = metadata + 4 * num_dims + 1;                          \
-            const constant size_t *output_shape = metadata + 6 * num_dims + 1;                     \
                                                                                                    \
             /* Calculate output coordinates from flat index */                                     \
             size_t out_coords[16];                                                                 \
@@ -108,17 +111,19 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 #define REDUCE_WINDOW_MEAN_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                  \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
-        constant size_t &num_els [[buffer(2)]], constant size_t &num_dims [[buffer(3)]],           \
-        constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *input_shape = metadata + 2;                                         \
+        const constant size_t *input_strides = metadata + 2 + num_dims;                            \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+        const constant size_t *window_shape = metadata + 2 + 2 * num_dims + 1;                     \
+        const constant size_t *strides = metadata + 2 + 3 * num_dims + 1;                          \
+        const constant size_t *padding = metadata + 2 + 4 * num_dims + 1;                          \
+        const constant size_t *output_shape = metadata + 2 + 6 * num_dims + 1;                     \
+                                                                                                   \
         for (uint out_idx = thread_index; out_idx < num_els; out_idx += threads_per_grid) {        \
-            const constant size_t *input_shape = metadata;                                         \
-            const constant size_t *input_strides = metadata + num_dims;                            \
-            const size_t input_offset = metadata[2 * num_dims];                                    \
-            const constant size_t *window_shape = metadata + 2 * num_dims + 1;                     \
-            const constant size_t *strides = metadata + 3 * num_dims + 1;                          \
-            const constant size_t *padding = metadata + 4 * num_dims + 1;                          \
-            const constant size_t *output_shape = metadata + 6 * num_dims + 1;                     \
                                                                                                    \
             size_t out_coords[16];                                                                 \
             size_t tmp = out_idx;                                                                  \

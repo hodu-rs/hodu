@@ -4,18 +4,25 @@
 using namespace metal;
 
 // Macro to define const_set kernel that fills a buffer with a constant value
+// Metadata layout:
+// - metadata[0]: num_els
+// - metadata[1]: num_dims
+// - metadata[2..2+num_dims]: dims (shape)
+// - metadata[2+num_dims..2+2*num_dims]: strides
+// - metadata[2+2*num_dims]: offset
 #define CONST_SET_OP(TYPENAME, FN_NAME)                                                            \
     kernel void FN_NAME(                                                                           \
-        device TYPENAME *output [[buffer(0)]], constant size_t &num_els [[buffer(1)]],             \
-        constant size_t &num_dims [[buffer(2)]], constant size_t *metadata [[buffer(3)]],          \
-        constant TYPENAME &const_val [[buffer(4)]], uint thread_index [[thread_position_in_grid]], \
+        device TYPENAME *output [[buffer(0)]], constant size_t *metadata [[buffer(1)]],            \
+        constant TYPENAME &const_val [[buffer(2)]], uint thread_index [[thread_position_in_grid]], \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
-        for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
-            const constant size_t *dims = metadata;                                                \
-            const constant size_t *strides = metadata + num_dims;                                  \
-            const size_t offset = metadata ? *(metadata + 2 * num_dims) : 0;                       \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *dims = metadata + 2;                                                \
+        const constant size_t *strides = metadata + 2 + num_dims;                                  \
+        const size_t offset = metadata[2 + 2 * num_dims];                                          \
                                                                                                    \
-            if (metadata == nullptr || is_contiguous(num_dims, dims, strides)) {                   \
+        for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
+            if (is_contiguous(num_dims, dims, strides)) {                                          \
                 output[offset + id] = const_val;                                                   \
             } else {                                                                               \
                 unsigned strided_i = offset + get_strided_index(id, num_dims, dims, strides);      \

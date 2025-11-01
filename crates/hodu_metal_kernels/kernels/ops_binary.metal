@@ -19,22 +19,49 @@ template <typename T> T ipow(T base, T exp) {
     return result;
 }
 
+// Binary Operations
+// =================
+// Performs element-wise binary operations on two tensors with broadcasting support.
+// Supports both contiguous and strided tensors with automatic layout optimization.
+//
+// Metadata Layout (Total: 2 + num_dims * 4 + 2):
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: lhs_shape (shape of left input tensor)
+// - metadata[2+num_dims..2+2*num_dims]: rhs_shape (shape of right input tensor)
+// - metadata[2+2*num_dims..2+3*num_dims]: lhs_strides (strides of left input)
+// - metadata[2+3*num_dims..2+4*num_dims]: rhs_strides (strides of right input)
+// - metadata[2+4*num_dims]: lhs_offset (starting offset in left buffer)
+// - metadata[2+4*num_dims+1]: rhs_offset (starting offset in right buffer)
+//
+// Buffer Layout:
+// - buffer(0): lhs input tensor (const device T*)
+// - buffer(1): rhs input tensor (const device T*)
+// - buffer(2): output tensor (device T*)
+// - buffer(3): metadata (constant size_t*)
+//
+// The kernel automatically detects contiguous layouts and uses optimized access patterns.
+
 #define BINARY_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                        \
     kernel void FN_NAME(                                                                           \
         const device IN_TYPENAME *lhs [[buffer(0)]], const device IN_TYPENAME *rhs [[buffer(1)]],  \
-        device OUT_TYPENAME *out [[buffer(2)]], constant size_t &num_els [[buffer(3)]],            \
-        constant size_t &num_dims [[buffer(4)]], constant size_t *metadata [[buffer(5)]],          \
+        device OUT_TYPENAME *out [[buffer(2)]], constant size_t *metadata [[buffer(3)]],           \
         uint id [[thread_position_in_grid]]) {                                                     \
+        const size_t num_els = metadata[0];                                                        \
         if (id >= num_els)                                                                         \
             return;                                                                                \
                                                                                                    \
-        const constant size_t *dims = metadata;                                                    \
-        const constant size_t *lhs_strides = metadata + 1 * num_dims;                              \
-        const constant size_t *rhs_strides = metadata + 2 * num_dims;                              \
-        const size_t lhs_offset = metadata ? metadata[3 * num_dims] : 0;                           \
-        const size_t rhs_offset = metadata ? metadata[3 * num_dims + 1] : 0;                       \
-        bool lhs_cont = metadata == nullptr || is_contiguous(num_dims, dims, lhs_strides);         \
-        bool rhs_cont = metadata == nullptr || is_contiguous(num_dims, dims, rhs_strides);         \
+        const size_t num_dims = metadata[1];                                                       \
+        const constant size_t *lhs_shape = metadata + 2;                                           \
+        const constant size_t *rhs_shape = metadata + 2 + num_dims;                                \
+        const constant size_t *lhs_strides = metadata + 2 + 2 * num_dims;                          \
+        const constant size_t *rhs_strides = metadata + 2 + 3 * num_dims;                          \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
+                                                                                                   \
+        bool lhs_cont = is_contiguous(num_dims, lhs_shape, lhs_strides);                           \
+        bool rhs_cont = is_contiguous(num_dims, rhs_shape, rhs_strides);                           \
+                                                                                                   \
         if (lhs_cont && rhs_cont) {                                                                \
             IN_TYPENAME x = lhs[lhs_offset + id];                                                  \
             IN_TYPENAME y = rhs[rhs_offset + id];                                                  \
@@ -43,9 +70,9 @@ template <typename T> T ipow(T base, T exp) {
             unsigned int tmp_i = id;                                                               \
             unsigned int rhs_i = 0;                                                                \
             for (int d = num_dims - 1; d >= 0; d--) {                                              \
-                unsigned int i_dim = tmp_i % dims[d];                                              \
+                unsigned int i_dim = tmp_i % rhs_shape[d];                                         \
                 rhs_i += i_dim * rhs_strides[d];                                                   \
-                tmp_i /= dims[d];                                                                  \
+                tmp_i /= rhs_shape[d];                                                             \
             }                                                                                      \
             IN_TYPENAME x = lhs[lhs_offset + id];                                                  \
             IN_TYPENAME y = rhs[rhs_offset + rhs_i];                                               \
@@ -54,9 +81,9 @@ template <typename T> T ipow(T base, T exp) {
             unsigned int tmp_i = id;                                                               \
             unsigned int lhs_i = 0;                                                                \
             for (int d = num_dims - 1; d >= 0; d--) {                                              \
-                unsigned int i_dim = tmp_i % dims[d];                                              \
+                unsigned int i_dim = tmp_i % lhs_shape[d];                                         \
                 lhs_i += i_dim * lhs_strides[d];                                                   \
-                tmp_i /= dims[d];                                                                  \
+                tmp_i /= lhs_shape[d];                                                             \
             }                                                                                      \
             IN_TYPENAME x = lhs[lhs_offset + lhs_i];                                               \
             IN_TYPENAME y = rhs[rhs_offset + id];                                                  \
@@ -66,10 +93,10 @@ template <typename T> T ipow(T base, T exp) {
             unsigned int lhs_i = 0;                                                                \
             unsigned int rhs_i = 0;                                                                \
             for (int d = num_dims - 1; d >= 0; d--) {                                              \
-                unsigned int i_dim = tmp_i % dims[d];                                              \
+                unsigned int i_dim = tmp_i % lhs_shape[d];                                         \
                 lhs_i += i_dim * lhs_strides[d];                                                   \
                 rhs_i += i_dim * rhs_strides[d];                                                   \
-                tmp_i /= dims[d];                                                                  \
+                tmp_i /= lhs_shape[d];                                                             \
             }                                                                                      \
             IN_TYPENAME x = lhs[lhs_offset + lhs_i];                                               \
             IN_TYPENAME y = rhs[rhs_offset + rhs_i];                                               \

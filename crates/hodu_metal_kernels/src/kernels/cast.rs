@@ -8,28 +8,51 @@ use crate::{
 };
 use objc2_metal::MTLResourceUsage;
 
-#[allow(clippy::too_many_arguments)]
+/// Executes a type cast operation on an input tensor using Metal compute pipeline.
+///
+/// # Arguments
+/// * `device` - Metal device to execute on
+/// * `ep` - Encoder provider (command buffer)
+/// * `kernels` - Kernel cache
+/// * `kernel_name` - Cast operation kernel name (e.g., "cast_f32_to_i32", "cast_i32_to_f32")
+/// * `input` - Input tensor buffer with offset
+/// * `output` - Output buffer (must be sized appropriately for output type)
+/// * `metadata` - Metadata describing tensor shape and layout
+///
+/// # Metadata Layout
+/// The metadata buffer must contain the following elements in order:
+/// - `metadata[0]`: num_els (total number of elements)
+/// - `metadata[1]`: num_dims (number of dimensions)
+/// - `metadata[2..2+num_dims]`: shape (dimensions of the tensor)
+/// - `metadata[2+num_dims..2+2*num_dims]`: strides (stride for each dimension)
+/// - `metadata[2+2*num_dims]`: offset (starting offset in input buffer)
+///
+/// Total metadata length: `2 + num_dims * 2 + 1`
+///
+/// # Example
+/// ```ignore
+/// let metadata = vec![
+///     4,      // num_els
+///     1,      // num_dims
+///     4,      // shape[0]
+///     1,      // strides[0]
+///     0,      // offset
+/// ];
+/// call_cast(&device, &command_buffer, &kernels, "cast_f32_to_i32",
+///           input_buffer, &output, &metadata)?;
+/// ```
 pub fn call_cast(
     device: &Device,
     ep: impl EncoderProvider,
     kernels: &Kernels,
     kernel_name: &'static str,
-    shape: &[usize],
     input: BufferOffset,
-    input_strides: &[usize],
-    input_offset: usize,
     output: &Buffer,
+    metadata: &[usize],
 ) -> Result<(), MetalKernelError> {
     let pipeline = kernels.load_pipeline(device, Source::Cast, kernel_name)?;
 
-    let num_dims = shape.len();
-    let num_els: usize = shape.iter().product();
-
-    // Prepare metadata: dims, strides, offset
-    let mut metadata = Vec::with_capacity(num_dims * 2 + 1);
-    metadata.extend_from_slice(shape);
-    metadata.extend_from_slice(input_strides);
-    metadata.push(input_offset);
+    let num_els = metadata[0];
 
     let encoder = ep.encoder();
     let encoder: &ComputeCommandEncoder = encoder.as_ref();
@@ -38,10 +61,8 @@ pub fn call_cast(
     // Metal kernel signature:
     // buffer(0): input
     // buffer(1): output
-    // buffer(2): num_els
-    // buffer(3): num_dims
-    // buffer(4): metadata (dims, strides, offset)
-    set_params!(encoder, (&input, output, num_els, num_dims, metadata.as_slice()));
+    // buffer(2): metadata
+    set_params!(encoder, (&input, output, metadata));
 
     encoder.use_resource(input.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);

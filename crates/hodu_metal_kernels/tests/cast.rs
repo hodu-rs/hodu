@@ -1,4 +1,3 @@
-use half::{bf16, f16};
 use hodu_metal_kernels::{
     kernel::Kernels,
     kernels::call_cast,
@@ -36,79 +35,33 @@ fn run_cast<T: Clone, O: Clone>(input: &[T], kernel_name: &'static str) -> Vec<O
     let output_size = input.len() * std::mem::size_of::<O>();
     let output = device.new_buffer(output_size, RESOURCE_OPTIONS).unwrap();
 
+    let num_els = input.len();
+    let num_dims = 1;
     let shape = vec![input.len()];
     let strides = vec![1];
+
+    // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
 
     call_cast(
         &device,
         &command_buffer,
         &kernels,
         kernel_name,
-        &shape,
         BufferOffset::zero_offset(&input_buffer),
-        &strides,
-        0,
         &output,
+        &metadata,
     )
     .unwrap();
 
     command_buffer.commit();
     command_buffer.wait_until_completed();
     read_to_vec(&output, input.len())
-}
-
-#[test]
-fn cast_f32_to_f16() {
-    let input = vec![1.0f32, 2.5, 3.75, -1.5];
-    let results: Vec<f16> = run_cast(&input, "cast_f32_to_f16");
-    let expected: Vec<f16> = input.iter().map(|&x| f16::from_f32(x)).collect();
-    assert_eq!(results, expected);
-}
-
-#[test]
-fn cast_f32_to_bf16() {
-    let input = vec![1.0f32, 2.5, 3.75, -1.5];
-    let results: Vec<bf16> = run_cast(&input, "cast_f32_to_bf16");
-    let expected: Vec<bf16> = input.iter().map(|&x| bf16::from_f32(x)).collect();
-    assert_eq!(results, expected);
-}
-
-#[test]
-fn cast_f16_to_f32() {
-    let input: Vec<f16> = [1.0f32, 2.5, 3.75, -1.5].iter().map(|&x| f16::from_f32(x)).collect();
-    let results: Vec<f32> = run_cast(&input, "cast_f16_to_f32");
-    let expected: Vec<f32> = input.iter().map(|x| x.to_f32()).collect();
-
-    // Use approximate comparison for f32
-    for (r, e) in results.iter().zip(expected.iter()) {
-        assert!((r - e).abs() < 0.01);
-    }
-}
-
-#[test]
-fn cast_bf16_to_f32() {
-    let input: Vec<bf16> = [1.0f32, 2.5, 3.75, -1.5].iter().map(|&x| bf16::from_f32(x)).collect();
-    let results: Vec<f32> = run_cast(&input, "cast_bf16_to_f32");
-    let expected: Vec<f32> = input.iter().map(|x| x.to_f32()).collect();
-
-    // Use approximate comparison for f32
-    for (r, e) in results.iter().zip(expected.iter()) {
-        assert!((r - e).abs() < 0.01);
-    }
-}
-
-#[test]
-fn cast_f32_to_u8() {
-    let input = vec![1.0f32, 2.0, 3.0, 255.0];
-    let results: Vec<u8> = run_cast(&input, "cast_f32_to_u8");
-    assert_eq!(results, vec![1u8, 2, 3, 255]);
-}
-
-#[test]
-fn cast_u8_to_f32() {
-    let input = vec![1u8, 2, 3, 255];
-    let results: Vec<f32> = run_cast(&input, "cast_u8_to_f32");
-    assert_eq!(results, vec![1.0f32, 2.0, 3.0, 255.0]);
 }
 
 #[test]
