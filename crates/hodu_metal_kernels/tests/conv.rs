@@ -1,3 +1,5 @@
+#![allow(clippy::identity_op)]
+
 use hodu_metal_kernels::{
     kernel::Kernels,
     kernels::{
@@ -31,7 +33,7 @@ fn new_buffer_zeroed<T>(device: &Device, count: usize) -> Buffer {
     let buffer = device.new_buffer(size, options).unwrap();
     // Zero initialize
     unsafe {
-        let ptr = buffer.contents() as *mut u8;
+        let ptr = buffer.contents();
         std::ptr::write_bytes(ptr, 0, size);
     }
     buffer

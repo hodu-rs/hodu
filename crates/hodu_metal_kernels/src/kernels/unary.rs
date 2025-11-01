@@ -62,8 +62,8 @@ ops!(
 /// * `ep` - Encoder provider (command buffer)
 /// * `kernels` - Kernel cache
 /// * `kernel_name` - Unary operation kernel (neg, abs, sign, square, sqrt, recip, relu, sigmoid,
-///                   tanh, gelu, softplus, silu, mish, sin, cos, tan, exp, exp2, exp10, ln, log2,
-///                   log10, logical_not, etc.)
+///   tanh, gelu, softplus, silu, mish, sin, cos, tan, exp, exp2, exp10, ln, log2,
+///   log10, logical_not, etc.)
 /// * `input` - Input tensor buffer
 /// * `output` - Output buffer
 /// * `metadata` - Metadata describing tensor shape, strides, and offset
@@ -169,8 +169,8 @@ pub fn call_unary(
 /// * `ep` - Encoder provider (command buffer)
 /// * `kernels` - Kernel cache
 /// * `kernel_name` - Unary scalar operation kernel (add_scalar, sub_scalar, mul_scalar, div_scalar,
-///                   pow_scalar, maximum_scalar, minimum_scalar, eq_scalar, ne_scalar, lt_scalar,
-///                   le_scalar, gt_scalar, ge_scalar, leaky_relu, elu, prelu, rrelu)
+///   pow_scalar, maximum_scalar, minimum_scalar, eq_scalar, ne_scalar, lt_scalar,
+///   le_scalar, gt_scalar, ge_scalar, leaky_relu, elu, prelu, rrelu)
 /// * `input` - Input tensor buffer
 /// * `output` - Output buffer
 /// * `metadata` - Metadata describing tensor shape, strides, and offset
@@ -232,6 +232,7 @@ pub fn call_unary(
 /// call_unary_scalar(&device, &command_buffer, &kernels, leaky_relu::F32,
 ///                   input_buffer, &output, &metadata, 0.01f32)?;
 /// ```
+#[allow(clippy::too_many_arguments)]
 pub fn call_unary_scalar<T: crate::utils::EncoderParam>(
     device: &Device,
     ep: impl EncoderProvider,

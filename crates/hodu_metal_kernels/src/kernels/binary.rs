@@ -70,6 +70,7 @@ ops!(
 /// call_binary(&device, &command_buffer, &kernels, add::F32,
 ///             lhs_buffer, rhs_buffer, &output, &metadata)?;
 /// ```
+#[allow(clippy::too_many_arguments)]
 pub fn call_binary(
     device: &Device,
     ep: impl EncoderProvider,

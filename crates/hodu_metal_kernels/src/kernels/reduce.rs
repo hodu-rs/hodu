@@ -32,7 +32,7 @@ ops!(
 /// * `ep` - Encoder provider (command buffer)
 /// * `kernels` - Kernel cache
 /// * `kernel_name` - Reduce kernel (reduce_sum::F32, reduce_max::F32, reduce_min::F32, reduce_mean::F32,
-///                   reduce_argmax::F32, reduce_argmin::F32, reduce_prod::F32, reduce_norm::F32, etc.)
+///   reduce_argmax::F32, reduce_argmin::F32, reduce_prod::F32, reduce_norm::F32, etc.)
 /// * `shape` - Shape of input tensor
 /// * `input` - Input tensor buffer
 /// * `input_strides` - Strides of input tensor

@@ -28,7 +28,7 @@ ops!(
 /// * `ep` - Encoder provider (command buffer)
 /// * `kernels` - Kernel cache
 /// * `kernel_name` - Reduce window kernel (reduce_window_max::F32, reduce_window_min::F32,
-///                   reduce_window_sum::F32, reduce_window_mean::F32)
+///   reduce_window_sum::F32, reduce_window_mean::F32)
 /// * `input` - Input tensor buffer
 /// * `output` - Output buffer for reduced windows
 /// * `metadata` - Metadata describing tensor shapes, window parameters, strides, and padding
