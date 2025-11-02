@@ -124,6 +124,19 @@ impl From<&[u32]> for Shape {
     }
 }
 
+impl From<&[usize]> for Shape {
+    fn from(dims: &[usize]) -> Self {
+        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        Self { dims }
+    }
+}
+
+impl From<&Vec<usize>> for Shape {
+    fn from(dims: &Vec<usize>) -> Self {
+        Self::from(dims.as_slice())
+    }
+}
+
 impl AsRef<[u32]> for Shape {
     fn as_ref(&self) -> &[u32] {
         &self.dims

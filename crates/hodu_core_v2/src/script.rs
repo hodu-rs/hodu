@@ -1,1 +1,2 @@
-pub(crate) mod ir;
+pub mod builder;
+pub mod compiler;

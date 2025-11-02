@@ -6,9 +6,7 @@ pub(crate) mod be;
 pub(crate) mod be_cpu;
 #[cfg(feature = "metal")]
 pub(crate) mod be_metal;
-pub mod builder;
 pub(crate) mod cache;
-pub mod compiler;
 pub mod error;
 pub(crate) mod into;
 pub(crate) mod layer;

@@ -29,10 +29,10 @@ impl Layout {
     }
 
     /// Creates a contiguous layout from a shape.
-    pub fn from_shape(shape: Shape) -> Self {
-        let strides = Self::compute_strides(&shape);
+    pub fn from_shape(shape: &Shape) -> Self {
+        let strides = Self::compute_strides(shape);
         Self {
-            shape,
+            shape: shape.clone(),
             strides,
             offset: 0,
         }

@@ -18,7 +18,7 @@ use dashmap::DashMap;
 // pub use gradient::{clear_default_context_tape, clear_tape, GradientContext};
 
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub struct TensorId(u32);
@@ -27,6 +27,11 @@ impl TensorId {
     pub(crate) fn new() -> Self {
         static TENSOR_COUNTER: AtomicU32 = AtomicU32::new(0);
         Self(TENSOR_COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+
+    #[cfg(test)]
+    pub fn test_new(id: u32) -> Self {
+        Self(id)
     }
 }
 
@@ -184,7 +189,7 @@ impl Tensor {
     }
 
     pub fn layout(&self) -> Layout {
-        with_tensor(self.0, |t| t.layout.clone()).unwrap_or_else(|| Layout::from_shape(Shape::scalar()))
+        with_tensor(self.0, |t| t.layout.clone()).unwrap_or_else(|| Layout::from_shape(&Shape::scalar()))
     }
 
     pub fn shape(&self) -> Shape {
@@ -298,16 +303,7 @@ impl Tensor {
     // }
 }
 
-pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: bool) -> Tensor {
-    from_storage_with_grad(storage, layout, is_runtime, false)
-}
-
-pub(crate) fn from_storage_with_grad(
-    storage: BackendStorage,
-    layout: Layout,
-    is_runtime: bool,
-    requires_grad: bool,
-) -> Tensor {
+pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: bool, requires_grad: bool) -> Tensor {
     let tensor_ = Tensor_ {
         storage: Some(Arc::new(storage)),
         is_runtime,
@@ -315,6 +311,23 @@ pub(crate) fn from_storage_with_grad(
         requires_grad,
         grad_tensor_id: None,
     };
+    let tensor_id = TensorId::new();
+    insert(tensor_id, tensor_);
+    Tensor(tensor_id)
+}
+
+pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, requires_grad: bool) -> Tensor {
+    let storage_arc =
+        with_tensor(source_tensor.id(), |tensor_ref| tensor_ref.storage.clone()).expect("Source tensor not found");
+
+    let tensor_ = Tensor_ {
+        storage: storage_arc,
+        is_runtime: true,
+        layout,
+        requires_grad,
+        grad_tensor_id: None,
+    };
+
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);
     Tensor(tensor_id)
@@ -363,21 +376,4 @@ pub(crate) fn set_grad_tensor_id(tensor_id: TensorId, grad_tensor_id: TensorId) 
     } else {
         Err(HoduError::TensorNotFound(tensor_id))
     }
-}
-
-pub(crate) fn from_shared_storage_with_grad(source_tensor: &Tensor, layout: Layout, requires_grad: bool) -> Tensor {
-    let storage_arc =
-        with_tensor(source_tensor.id(), |tensor_ref| tensor_ref.storage.clone()).expect("Source tensor not found");
-
-    let tensor_ = Tensor_ {
-        storage: storage_arc,
-        is_runtime: true,
-        layout,
-        requires_grad,
-        grad_tensor_id: None,
-    };
-
-    let tensor_id = TensorId::new();
-    insert(tensor_id, tensor_);
-    Tensor(tensor_id)
 }
