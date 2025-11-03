@@ -44,7 +44,7 @@
 /// @param INIT_VAL Initial accumulator value
 /// @param ACCUMULATE Expression to accumulate values (e.g., acc += val)
 #define REDUCE_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX, INIT_VAL, ACCUMULATE)                            \
-    void reduce_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+    void TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {            \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \
@@ -199,8 +199,7 @@ REDUCE_OP(uint64_t, uint64_t, prod_u64, 1u, acc *= val)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_STD_OP(TYPE, TYPE_SUFFIX)                                                           \
-    void reduce_std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
-                                  const size_t *metadata) {                                        \
+    void std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -303,8 +302,7 @@ REDUCE_STD_OP(f64_t, f64)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_VAR_OP(TYPE, TYPE_SUFFIX)                                                           \
-    void reduce_var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
-                                  const size_t *metadata) {                                        \
+    void var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -405,8 +403,7 @@ REDUCE_VAR_OP(f64_t, f64)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_MEAN_OP(TYPE, TYPE_SUFFIX)                                                          \
-    void reduce_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                        \
-                                   const size_t *metadata) {                                       \
+    void mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
         const size_t num_dims = metadata[0];                                                       \
         const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
         const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
@@ -417,7 +414,7 @@ REDUCE_VAR_OP(f64_t, f64)
         for (size_t i = 0; i < output_shape_len; i++) {                                            \
             num_els *= output_shape[i];                                                            \
         }                                                                                          \
-        reduce_sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                                 \
+        sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                                        \
         TYPE *output = (TYPE *)output_ptr;                                                         \
         for (size_t i = 0; i < num_els; i++) {                                                     \
             output[i] /= (TYPE)reduce_size;                                                        \
@@ -444,8 +441,7 @@ REDUCE_MEAN_OP(f64_t, f64)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_NORM_OP(TYPE, TYPE_SUFFIX)                                                          \
-    void reduce_norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                        \
-                                   const size_t *metadata) {                                       \
+    void norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -544,8 +540,7 @@ REDUCE_NORM_OP(f64_t, f64)
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ARGMAX_OP(IN_TYPE, TYPE_SUFFIX)                                                     \
-    void reduce_argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
-                                     const size_t *metadata) {                                     \
+    void argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
@@ -645,8 +640,7 @@ REDUCE_NORM_OP(f64_t, f64)
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ARGMIN_OP(IN_TYPE, TYPE_SUFFIX)                                                     \
-    void reduce_argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
-                                     const size_t *metadata) {                                     \
+    void argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
@@ -780,8 +774,7 @@ REDUCE_ARGMIN_OP(uint64_t, u64)
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ANY_OP(IN_TYPE, TYPE_SUFFIX)                                                        \
-    void reduce_any_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
-                                  const size_t *metadata) {                                        \
+    void any_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         bool *output = (bool *)output_ptr;                                                         \
                                                                                                    \
@@ -875,8 +868,7 @@ REDUCE_ARGMIN_OP(uint64_t, u64)
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ALL_OP(IN_TYPE, TYPE_SUFFIX)                                                        \
-    void reduce_all_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                         \
-                                  const size_t *metadata) {                                        \
+    void all_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         bool *output = (bool *)output_ptr;                                                         \
                                                                                                    \
