@@ -2,17 +2,18 @@
 
 extern crate alloc;
 
-pub mod be_hodu;
-#[cfg(feature = "xla")]
-pub mod be_xla;
-pub mod builder;
-pub mod compat;
+pub(crate) mod be;
+pub(crate) mod be_cpu;
+#[cfg(feature = "metal")]
+pub(crate) mod be_metal;
+pub(crate) mod cache;
 pub mod error;
-pub mod executor;
-pub(crate) mod flatten;
-pub mod op;
+pub(crate) mod into;
+pub mod layer;
+pub mod ops;
 pub mod prelude;
 pub mod scalar;
 pub mod script;
 pub mod tensor;
 pub mod types;
+pub(crate) mod utils;

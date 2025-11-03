@@ -21,7 +21,7 @@ impl Dropout {
 
         // Training mode: apply dropout
         let random = Tensor::rand_uniform_like(input, 0.0, 1.0)?;
-        let mask = random.gt_scalar(self.p)?.to_dtype(input.get_dtype())?;
+        let mask = random.gt_scalar(self.p)?.to_dtype(input.dtype())?;
         let scale = 1.0 / (1.0 - self.p.to_f32());
         let scaled_mask = mask.mul_scalar(scale)?;
 

@@ -1,10 +1,15 @@
 use crate::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 
-// Normalization Operations
 impl Tensor {
-    pub fn softmax<D: Into<Scalar>>(&self, dim: D) -> HoduResult<Self> {
+    pub fn softmax<T: Into<Scalar>>(&self, dim: T) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        } as usize;
 
         // Numerical stability: subtract max
         // softmax(x) = exp(x - max(x)) / sum(exp(x - max(x)))
@@ -17,7 +22,13 @@ impl Tensor {
 
     pub fn log_softmax<D: Into<Scalar>>(&self, dim: D) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        } as usize;
 
         // Numerical stability: log_softmax(x) = x - max(x) - log(sum(exp(x - max(x))))
         let max_val = self.max(&[dim_usize], true)?;

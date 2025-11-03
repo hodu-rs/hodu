@@ -1,6 +1,6 @@
 use crate::compat::*;
 use crate::module::Module;
-use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::dtype::DType};
+use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType};
 
 #[derive(Module, Clone)]
 pub struct Linear {
@@ -17,17 +17,17 @@ impl Linear {
         let k_scalar = Scalar::from_f32(k, dtype);
 
         // weight: [out_features, in_features]
-        let weight = Tensor::randn(&[out_features, in_features], zero, one)?;
+        let weight = Tensor::randn([out_features, in_features], zero, one)?;
         weight.set_requires_grad(true)?;
         // Scale by k (Xavier/Glorot initialization)
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_features], zero, one)?;
+            let bias = Tensor::randn([out_features], zero, one)?;
             bias.set_requires_grad(true)?;
             // Scale by k
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None

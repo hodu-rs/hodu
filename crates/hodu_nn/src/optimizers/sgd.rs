@@ -16,7 +16,7 @@ impl SGD {
     pub fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
         for param in parameters.iter_mut() {
             let grad = param.grad()?;
-            let lr = self.learning_rate.to_dtype(grad.get_dtype());
+            let lr = self.learning_rate.to_dtype(grad.dtype());
 
             param.set_(&param.sub(&grad.mul_scalar(lr)?)?)?;
         }

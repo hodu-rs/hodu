@@ -1,82 +1,71 @@
 use crate::{
-    builder,
-    compat::*,
     error::HoduResult,
-    op::{
-        self,
-        utils::{validate_dtype_for_device, validate_dtype_for_op, validate_same_device, validate_same_dtype},
-        Op,
-    },
+    layer::compat::*,
+    ops::{BinaryLogicalOp, BinaryOp, Op},
+    script::builder,
     tensor::{
-        create_builder_tensor_with_grad, from_storage_with_grad, gradient, register_operation_in_builder,
+        create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder,
         utils::broadcast_tensors2, Tensor,
     },
-    types::dtype::DType,
+    utils::valid::{
+        validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
+        validate_same_dtype,
+    },
 };
 
 macro_rules! binary_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
-            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
+            validate_same_device(&[self, rhs], Op::Binary(BinaryOp::$op_name))?;
+            validate_same_dtype(&[self, rhs], Op::Binary(BinaryOp::$op_name))?;
+            validate_dtype_for_device(self.dtype(), self.device())?;
+            validate_dtype_for_op(self.dtype(), Op::Binary(BinaryOp::$op_name))?;
+            let validate_requires_grad = validate_requires_grad_for_op(Op::Binary(BinaryOp::$op_name));
 
-            let (lhs_broadcasted, rhs_broadcasted) =
-                if lhs_broadcasted.get_dtype() == DType::BOOL && rhs_broadcasted.get_dtype() != DType::BOOL {
-                    let lhs_broadcasted = lhs_broadcasted.to_dtype(rhs_broadcasted.get_dtype())?;
-                    (lhs_broadcasted, rhs_broadcasted)
-                } else if lhs_broadcasted.get_dtype() != DType::BOOL && rhs_broadcasted.get_dtype() == DType::BOOL {
-                    let rhs_broadcasted = rhs_broadcasted.to_dtype(lhs_broadcasted.get_dtype())?;
-                    (lhs_broadcasted, rhs_broadcasted)
-                } else {
-                    (lhs_broadcasted, rhs_broadcasted)
-                };
-
-            // Validate device, dtype for device, and dtype for operation
-            validate_same_device(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
-            validate_dtype_for_device(
-                lhs_broadcasted.get_dtype(),
-                &lhs_broadcasted.get_device(),
-                stringify!($op_name),
-            )?;
-            let op = Op::Binary(op::BinaryOp::$op_name, lhs_broadcasted.id(), rhs_broadcasted.id());
-            validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
-            validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+            let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
             if builder::is_builder_active() {
-                let result_layout = lhs_broadcasted.get_layout().clone();
-                let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
+                let result_layout = lhs.layout();
+                let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
                 let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
-                    op.clone(),
+                    Op::Binary(BinaryOp::$op_name),
+                    None,
+                    vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![
-                        lhs_broadcasted.get_layout().clone(),
-                        rhs_broadcasted.get_layout().clone(),
-                    ],
+                    vec![lhs.layout(), rhs.layout()],
                     vec![result_layout],
-                );
+                )?;
 
-                if self.is_requires_grad() || rhs.is_requires_grad() {
-                    gradient::record_operation(result_id, op, vec![self.id(), rhs.id()])?;
+                if requires_grad {
+                    gradient::record_operation(
+                        result_id,
+                        Op::Binary(BinaryOp::$op_name),
+                        vec![self.id(), rhs.id()],
+                    )?;
                 }
 
                 Ok(result_tensor)
             } else {
-                let storage = lhs_broadcasted.with_storage(|lhs_storage| {
-                    rhs_broadcasted.with_storage(|rhs_storage| {
-                        lhs_storage.binary_impl::<op::$op_name>(
+                let storage = lhs.with_storage(|lhs_storage| {
+                    rhs.with_storage(|rhs_storage| {
+                        lhs_storage.call_binary(
                             rhs_storage,
-                            &lhs_broadcasted.get_layout(),
-                            &rhs_broadcasted.get_layout(),
+                            &lhs.layout(),
+                            &rhs.layout(),
+                            Op::Binary(BinaryOp::$op_name),
                         )
                     })
                 })?;
-                let layout = lhs_broadcasted.get_layout().clone();
-                let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
-                let result = from_storage_with_grad(storage, layout, true, requires_grad);
 
-                if !gradient::is_computing_gradients() && (self.is_requires_grad() || rhs.is_requires_grad()) {
-                    let op = Op::Binary(op::BinaryOp::$op_name, self.id(), rhs.id());
+                let requires_grad = lhs.is_requires_grad() || rhs.is_requires_grad();
+                let requires_grad = requires_grad && validate_requires_grad;
+
+                let result = from_storage(storage, lhs.layout(), true, requires_grad);
+
+                if !gradient::is_computing_gradients() && requires_grad {
+                    let op = Op::Binary(BinaryOp::$op_name);
                     gradient::record_operation(result.id(), op, vec![self.id(), rhs.id()])?;
                 }
 
@@ -89,61 +78,40 @@ macro_rules! binary_op {
 macro_rules! binary_logical_op {
     ($fn_name:ident, $op_name:ident) => {
         pub fn $fn_name(&self, rhs: &Self) -> HoduResult<Self> {
-            let (lhs_broadcasted, rhs_broadcasted) = broadcast_tensors2(self, rhs)?;
+            validate_same_device(&[self, rhs], Op::BinaryLogical(BinaryLogicalOp::$op_name))?;
+            validate_same_dtype(&[self, rhs], Op::BinaryLogical(BinaryLogicalOp::$op_name))?;
+            validate_dtype_for_device(self.dtype(), self.device())?;
+            validate_dtype_for_op(self.dtype(), Op::BinaryLogical(BinaryLogicalOp::$op_name))?;
 
-            // Validate device, dtype for device, and dtype for operation
-            validate_same_device(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
-            validate_dtype_for_device(
-                lhs_broadcasted.get_dtype(),
-                &lhs_broadcasted.get_device(),
-                stringify!($op_name),
-            )?;
-            let op = Op::BinaryLogical(
-                op::BinaryLogicalOp::$op_name,
-                lhs_broadcasted.id(),
-                rhs_broadcasted.id(),
-            );
-            validate_dtype_for_op(lhs_broadcasted.get_dtype(), &op)?;
-            validate_same_dtype(&[&lhs_broadcasted, &rhs_broadcasted], stringify!($op_name))?;
+            let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
             if builder::is_builder_active() {
-                let result_layout = lhs_broadcasted.get_layout().clone();
-                let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+                let result_layout = lhs.layout();
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), false);
 
                 register_operation_in_builder(
-                    op.clone(),
+                    Op::BinaryLogical(BinaryLogicalOp::$op_name),
+                    None,
+                    vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![
-                        lhs_broadcasted.get_layout().clone(),
-                        rhs_broadcasted.get_layout().clone(),
-                    ],
+                    vec![lhs.layout(), rhs.layout()],
                     vec![result_layout],
-                );
-
-                if self.is_requires_grad() || rhs.is_requires_grad() {
-                    gradient::record_operation(result_id, op, vec![self.id(), rhs.id()])?;
-                }
+                )?;
 
                 Ok(result_tensor)
             } else {
-                let storage = lhs_broadcasted.with_storage(|lhs_storage| {
-                    rhs_broadcasted.with_storage(|rhs_storage| {
-                        lhs_storage.binary_logical_impl::<op::$op_name>(
+                let storage = lhs.with_storage(|lhs_storage| {
+                    rhs.with_storage(|rhs_storage| {
+                        lhs_storage.call_binary_logical(
                             rhs_storage,
-                            &lhs_broadcasted.get_layout(),
-                            &rhs_broadcasted.get_layout(),
+                            &lhs.layout(),
+                            &rhs.layout(),
+                            Op::BinaryLogical(BinaryLogicalOp::$op_name),
                         )
                     })
                 })?;
-                let layout = lhs_broadcasted.get_layout().clone();
-                let requires_grad = self.is_requires_grad() || rhs.is_requires_grad();
-                let result = from_storage_with_grad(storage, layout, true, requires_grad);
 
-                if !gradient::is_computing_gradients() && (self.is_requires_grad() || rhs.is_requires_grad()) {
-                    let op = Op::BinaryLogical(op::BinaryLogicalOp::$op_name, self.id(), rhs.id());
-                    gradient::record_operation(result.id(), op, vec![self.id(), rhs.id()])?;
-                }
+                let result = from_storage(storage, lhs.layout(), true, false);
 
                 Ok(result)
             }
@@ -152,7 +120,7 @@ macro_rules! binary_logical_op {
 }
 
 impl Tensor {
-    // Binary operations
+    // binary operations
     binary_op!(add, Add);
     binary_op!(sub, Sub);
     binary_op!(mul, Mul);
@@ -161,7 +129,7 @@ impl Tensor {
     binary_op!(maximum, Maximum);
     binary_op!(minimum, Minimum);
 
-    // Binary logical operations
+    // binary logical operations
     binary_logical_op!(logical_and, LogicalAnd);
     binary_logical_op!(logical_or, LogicalOr);
     binary_logical_op!(logical_xor, LogicalXor);

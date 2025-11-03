@@ -90,7 +90,7 @@ pub fn derive_optimizer_impl(input: TokenStream) -> TokenStream {
                 }
 
                 // Clear default context tape (context 0)
-                #hodu_core_path::tensor::clear_default_context_tape();
+                #hodu_core_path::tensor::gradient::clear_default_context_tape();
 
                 Ok(())
             }
