@@ -54,14 +54,15 @@ impl Tensor {
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
 
-    pub fn zeros(shape: &Shape, dtype: DType) -> HoduResult<Self> {
+    pub fn zeros(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
+        let shape = shape.into();
         let device = if is_builder_active() {
             Device::CPU
         } else {
             get_runtime_device()
         };
-        let storage = BackendDevice::zeros(shape, device, dtype)?;
-        let layout = Layout::from_shape(shape);
+        let storage = BackendDevice::zeros(&shape, device, dtype)?;
+        let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
 
@@ -70,14 +71,15 @@ impl Tensor {
         Self::zeros(&shape, tensor.dtype())
     }
 
-    pub fn ones(shape: &Shape, dtype: DType) -> HoduResult<Self> {
+    pub fn ones(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
+        let shape = shape.into();
         let device = if is_builder_active() {
             Device::CPU
         } else {
             get_runtime_device()
         };
-        let layout = Layout::from_shape(shape);
-        let mut storage = BackendDevice::zeros(shape, device, dtype)?;
+        let layout = Layout::from_shape(&shape);
+        let mut storage = BackendDevice::zeros(&shape, device, dtype)?;
         storage.const_set(Scalar::one(dtype), &layout)?;
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
@@ -87,15 +89,16 @@ impl Tensor {
         Self::ones(&shape, tensor.dtype())
     }
 
-    pub fn full<T: Into<Scalar>>(shape: &Shape, value: T) -> HoduResult<Self> {
+    pub fn full<T: Into<Scalar>>(shape: impl Into<Shape>, value: T) -> HoduResult<Self> {
+        let shape = shape.into();
         let value = value.into();
         let device = if is_builder_active() {
             Device::CPU
         } else {
             get_runtime_device()
         };
-        let mut storage = BackendDevice::zeros(shape, device, value.dtype())?;
-        let layout = Layout::from_shape(shape);
+        let mut storage = BackendDevice::zeros(&shape, device, value.dtype())?;
+        let layout = Layout::from_shape(&shape);
         storage.const_set(value, &layout)?;
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
@@ -105,7 +108,8 @@ impl Tensor {
         Self::full(&shape, value)
     }
 
-    pub fn randn<T: Into<Scalar>>(shape: &Shape, mean: T, std: T) -> HoduResult<Self> {
+    pub fn randn<T: Into<Scalar>>(shape: impl Into<Shape>, mean: T, std: T) -> HoduResult<Self> {
+        let shape = shape.into();
         let mean = mean.into();
         let std = std.into();
         let device = if is_builder_active() {
@@ -120,8 +124,8 @@ impl Tensor {
         } else {
             DType::F32
         };
-        let storage = BackendDevice::randn(shape, device, dtype, mean.to_f32(), std.to_f32())?;
-        let layout = Layout::from_shape(shape);
+        let storage = BackendDevice::randn(&shape, device, dtype, mean.to_f32(), std.to_f32())?;
+        let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
 
@@ -130,7 +134,8 @@ impl Tensor {
         Self::randn(&shape, mean, std)
     }
 
-    pub fn rand_uniform<T: Into<Scalar>>(shape: &Shape, low: T, high: T) -> HoduResult<Self> {
+    pub fn rand_uniform<T: Into<Scalar>>(shape: impl Into<Shape>, low: T, high: T) -> HoduResult<Self> {
+        let shape = shape.into();
         let low = low.into();
         let high = high.into();
         let device = if is_builder_active() {
@@ -145,8 +150,8 @@ impl Tensor {
         } else {
             DType::F32
         };
-        let storage = BackendDevice::rand_uniform(shape, device, dtype, low.to_f32(), high.to_f32())?;
-        let layout = Layout::from_shape(shape);
+        let storage = BackendDevice::rand_uniform(&shape, device, dtype, low.to_f32(), high.to_f32())?;
+        let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
 

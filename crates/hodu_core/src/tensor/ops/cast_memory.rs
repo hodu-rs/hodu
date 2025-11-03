@@ -31,4 +31,9 @@ impl Tensor {
 
         Ok(result)
     }
+
+    pub fn set_(&mut self, src: &Self) -> HoduResult<()> {
+        self.0 = src.id();
+        Ok(())
+    }
 }

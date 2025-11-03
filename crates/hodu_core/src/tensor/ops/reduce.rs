@@ -10,15 +10,16 @@ use crate::{
 };
 
 impl Tensor {
-    pub fn sum(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn sum<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Sum, dims, keep_dim)
     }
 
     pub fn sum_all(&self) -> HoduResult<Self> {
-        self.reduce_operation(ReduceOp::Sum, &[], false)
+        self.reduce_operation::<i32>(ReduceOp::Sum, &[], false)
     }
 
-    pub fn sum_to_shape(&self, target_shape: &Shape) -> HoduResult<Self> {
+    pub fn sum_to_shape(&self, target_shape: impl Into<Shape>) -> HoduResult<Self> {
+        let target_shape = target_shape.into();
         let current_shape = self.shape();
         let current_dims = current_shape.dims();
         let target_dims = target_shape.dims();
@@ -50,43 +51,43 @@ impl Tensor {
         Ok(result)
     }
 
-    pub fn mean(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn mean<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Mean, dims, keep_dim)
     }
 
     pub fn mean_all(&self) -> HoduResult<Self> {
-        self.reduce_operation(ReduceOp::Mean, &[], false)
+        self.reduce_operation::<i32>(ReduceOp::Mean, &[], false)
     }
 
-    pub fn max(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn max<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Max, dims, keep_dim)
     }
 
-    pub fn min(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn min<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Min, dims, keep_dim)
     }
 
-    pub fn prod(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn prod<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Prod, dims, keep_dim)
     }
 
-    pub fn std(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn std<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Std, dims, keep_dim)
     }
 
     pub fn std_all(&self) -> HoduResult<Self> {
-        self.reduce_operation(ReduceOp::Std, &[], false)
+        self.reduce_operation::<i32>(ReduceOp::Std, &[], false)
     }
 
-    pub fn var(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn var<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Var, dims, keep_dim)
     }
 
     pub fn var_all(&self) -> HoduResult<Self> {
-        self.reduce_operation(ReduceOp::Var, &[], false)
+        self.reduce_operation::<i32>(ReduceOp::Var, &[], false)
     }
 
-    pub fn norm(&self, p: impl Into<Scalar>, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn norm<D: Into<Scalar> + Copy>(&self, p: impl Into<Scalar>, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         let p_scalar = p.into();
         match p_scalar.to_i32() {
             1 => self.l1_norm(dims, keep_dim),
@@ -101,31 +102,36 @@ impl Tensor {
         }
     }
 
-    pub fn l2_norm(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn l2_norm<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Norm, dims, keep_dim)
     }
 
-    pub fn l1_norm(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn l1_norm<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.abs()?.sum(dims, keep_dim)
     }
 
-    pub fn argmax(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn argmax<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::ArgMax, dims, keep_dim)
     }
 
-    pub fn argmin(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn argmin<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::ArgMin, dims, keep_dim)
     }
 
-    pub fn any(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn any<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::Any, dims, keep_dim)
     }
 
-    pub fn all(&self, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    pub fn all<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::All, dims, keep_dim)
     }
 
-    fn reduce_operation(&self, reduce_op: ReduceOp, dims: &[usize], keep_dim: bool) -> HoduResult<Self> {
+    fn reduce_operation<D: Into<Scalar> + Copy>(
+        &self,
+        reduce_op: ReduceOp,
+        dims: &[D],
+        keep_dim: bool,
+    ) -> HoduResult<Self> {
         // Validate dtype for device and operation
         validate_dtype_for_device(self.dtype(), self.device())?;
         validate_dtype_for_op(self.dtype(), Op::Reduce(reduce_op))?;
@@ -133,21 +139,36 @@ impl Tensor {
 
         let shape = self.shape();
         let shape_dims = shape.dims();
-        let ndim = shape_dims.len();
+        let ndim = shape_dims.len() as i32;
+
+        // Convert dims to i32 and handle negative indices
+        let dims_i32: Vec<i32> = dims
+            .iter()
+            .map(|&d| {
+                let scalar = d.into();
+                scalar.to_i32()
+            })
+            .collect();
 
         // Calculate output shape
-        let reduce_dims: Vec<usize> = if dims.is_empty() {
-            (0..ndim).collect()
+        let reduce_dims: Vec<u32> = if dims.is_empty() {
+            (0..ndim as u32).collect()
         } else {
-            dims.to_vec()
+            dims_i32
+                .iter()
+                .map(|&d| {
+                    let dim = if d < 0 { ndim + d } else { d };
+                    dim as u32
+                })
+                .collect()
         };
 
         let mut output_dims = shape_dims.to_vec();
         for &dim in &reduce_dims {
             if keep_dim {
-                output_dims[dim] = 1;
+                output_dims[dim as usize] = 1;
             } else {
-                output_dims[dim] = 0;
+                output_dims[dim as usize] = 0;
             }
         }
         if !keep_dim {
@@ -156,13 +177,11 @@ impl Tensor {
 
         let result_layout = Layout::from_shape(&Shape::from(output_dims));
 
-        let dims_u32: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
-
         if builder::is_builder_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d as u32)).collect();
+            let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d)).collect();
 
             register_operation_in_builder(
                 Op::Reduce(reduce_op),
@@ -190,7 +209,7 @@ impl Tensor {
             Ok(result_tensor)
         } else {
             let storage = self.with_storage(|storage| {
-                storage.call_reduce(&self.layout(), &dims_u32, keep_dim, Op::Reduce(reduce_op))
+                storage.call_reduce(&self.layout(), &reduce_dims, keep_dim, Op::Reduce(reduce_op))
             })?;
 
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
@@ -198,7 +217,7 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Reduce(reduce_op);
-                let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d as u32)).collect();
+                let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d)).collect();
                 gradient::record_operation_with_dims(result.id(), op, vec![self.id()], dims_scalars, Some(keep_dim))?;
             }
 

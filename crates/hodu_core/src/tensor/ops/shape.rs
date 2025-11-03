@@ -11,7 +11,8 @@ use crate::{
 };
 
 impl Tensor {
-    pub fn reshape(&self, shape: &Shape) -> HoduResult<Self> {
+    pub fn reshape(&self, shape: impl Into<Shape>) -> HoduResult<Self> {
+        let shape = shape.into();
         let current_size = self.size();
         let new_size = shape.size();
 
@@ -25,10 +26,10 @@ impl Tensor {
 
         if !self.is_contiguous() {
             let contiguous = self.contiguous()?;
-            return contiguous.reshape(shape);
+            return contiguous.reshape(&shape);
         }
 
-        let new_layout = self.layout().reshape(shape)?;
+        let new_layout = self.layout().reshape(&shape)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -60,7 +61,7 @@ impl Tensor {
         }
     }
 
-    pub fn view(&self, shape: &Shape) -> HoduResult<Self> {
+    pub fn view(&self, shape: impl Into<Shape>) -> HoduResult<Self> {
         self.reshape(shape)
     }
 
@@ -189,13 +190,14 @@ impl Tensor {
         }
     }
 
-    pub fn broadcast(&self, target_shape: &Shape) -> HoduResult<Self> {
+    pub fn broadcast(&self, target_shape: impl Into<Shape>) -> HoduResult<Self> {
+        let target_shape = target_shape.into();
         if !self.is_contiguous() {
             let contiguous = self.contiguous()?;
-            return contiguous.broadcast(target_shape);
+            return contiguous.broadcast(&target_shape);
         }
 
-        let new_layout = self.layout().broadcast_to(target_shape)?;
+        let new_layout = self.layout().broadcast_to(&target_shape)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -228,7 +230,7 @@ impl Tensor {
     }
 
     pub fn broadcast_like(&self, other: &Self) -> HoduResult<Self> {
-        self.broadcast(&other.shape())
+        self.broadcast(other.shape())
     }
 
     pub fn broadcast_left(&self, added_dims: &[u32]) -> HoduResult<Self> {
@@ -238,7 +240,7 @@ impl Tensor {
         let mut new_dims = added_dims.to_vec();
         new_dims.extend_from_slice(current_dims);
 
-        self.broadcast(&Shape::from(new_dims))
+        self.broadcast(Shape::from(new_dims))
     }
 
     pub fn transpose<D1: Into<Scalar>, D2: Into<Scalar>>(&self, dim1: D1, dim2: D2) -> HoduResult<Self> {

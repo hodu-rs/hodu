@@ -6,17 +6,18 @@ pub use hodu_core as core;
 pub use hodu_nn as nn;
 pub use hodu_utils as utils;
 
-pub use hodu_core::types::dtype::{
-    bf16, bfloat16, bool, f16, f32, f64, f8e4m3, f8e5m2, float16, float32, float64, half, i32, i8, int32, int8, u16,
-    uint16,
+pub use hodu_core::types::{
+    bf16, bfloat16, f16, f32, f8e4m3, float16, float32, float8e4m3, half, i32, i8, int32, int8, u32, u8, uint32, uint8,
 };
+#[cfg(feature = "f64")]
+pub use hodu_core::types::{f64, float64};
+#[cfg(feature = "f8e5m2")]
+pub use hodu_core::types::{f8e5m2, float8e5m2};
 #[cfg(feature = "i16")]
-pub use hodu_core::types::dtype::{i16, int16};
+pub use hodu_core::types::{i16, int16};
 #[cfg(feature = "i64")]
-pub use hodu_core::types::dtype::{i64, int64};
-#[cfg(feature = "u32")]
-pub use hodu_core::types::dtype::{u32, uint32};
+pub use hodu_core::types::{i64, int64};
+#[cfg(feature = "u16")]
+pub use hodu_core::types::{u16, uint16};
 #[cfg(feature = "u64")]
-pub use hodu_core::types::dtype::{u64, uint64};
-#[cfg(feature = "u8")]
-pub use hodu_core::types::dtype::{u8, uint8};
+pub use hodu_core::types::{u64, uint64};

@@ -19,7 +19,7 @@ use crate::{
 };
 use utils::create_add_tensor;
 
-pub trait VjpCompute {
+pub(crate) trait VjpCompute {
     fn compute_vjp(
         &self,
         _inputs: &[TensorId],

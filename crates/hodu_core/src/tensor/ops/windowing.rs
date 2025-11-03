@@ -10,11 +10,14 @@ use crate::{
 impl Tensor {
     pub fn reduce_window(
         &self,
-        window_shape: &[usize],
-        strides: &[usize],
-        padding: &[(usize, usize)],
+        window_shape: impl Into<Shape>,
+        strides: impl Into<Shape>,
+        padding: &[(u32, u32)],
         reduction: &str,
     ) -> HoduResult<Self> {
+        let window_shape = window_shape.into();
+        let strides = strides.into();
+
         let input_shape = self.shape();
         let rank = input_shape.ndim();
 
@@ -33,17 +36,17 @@ impl Tensor {
         };
 
         // Validate inputs
-        if window_shape.len() != rank as usize {
+        if window_shape.ndim() != rank {
             return Err(HoduError::InternalError(format!(
                 "window_shape length {} must match tensor rank {}",
-                window_shape.len(),
+                window_shape.ndim(),
                 rank
             )));
         }
-        if strides.len() != rank as usize {
+        if strides.ndim() != rank {
             return Err(HoduError::InternalError(format!(
                 "strides length {} must match tensor rank {}",
-                strides.len(),
+                strides.ndim(),
                 rank
             )));
         }
@@ -62,28 +65,30 @@ impl Tensor {
 
         // Calculate output shape
         let input_dims = input_shape.dims();
+        let window_dims = window_shape.dims();
+        let stride_dims = strides.dims();
         let mut output_dims = Vec::with_capacity(rank as usize);
         for i in 0..rank as usize {
-            let padded_size = input_dims[i] + padding[i].0 as u32 + padding[i].1 as u32;
-            let out_size = (padded_size - window_shape[i] as u32) / strides[i] as u32 + 1;
+            let padded_size = input_dims[i] + padding[i].0 + padding[i].1;
+            let out_size = (padded_size - window_dims[i]) / stride_dims[i] + 1;
             output_dims.push(out_size);
         }
 
-        // Convert to u32 arrays
-        let window_shape_u32: Vec<u32> = window_shape.iter().map(|&x| x as u32).collect();
-        let strides_u32: Vec<u32> = strides.iter().map(|&x| x as u32).collect();
+        // Get u32 arrays (already u32)
+        let window_shape_u32 = window_dims;
+        let strides_u32 = stride_dims;
         // Flatten padding to [lo, hi, lo, hi, ...]
         let mut padding_u32 = Vec::with_capacity(padding.len() * 2);
         for &(lo, hi) in padding {
-            padding_u32.push(lo as u32);
-            padding_u32.push(hi as u32);
+            padding_u32.push(lo);
+            padding_u32.push(hi);
         }
 
         let storage = self.with_storage(|input_storage| {
             input_storage.call_reduce_window(
                 &self.layout(),
-                &window_shape_u32,
-                &strides_u32,
+                window_shape_u32,
+                strides_u32,
                 &padding_u32,
                 Op::Windowing(windowing_op),
             )

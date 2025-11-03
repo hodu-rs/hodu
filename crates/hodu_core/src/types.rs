@@ -15,7 +15,10 @@ mod dtypes {
     use super::DType;
 
     pub const bool: DType = DType::BOOL;
+    pub const float8e4m3: DType = DType::F8E4M3;
     pub const f8e4m3: DType = DType::F8E4M3;
+    #[cfg(feature = "f8e5m2")]
+    pub const float8e5m2: DType = DType::F8E5M2;
     #[cfg(feature = "f8e5m2")]
     pub const f8e5m2: DType = DType::F8E5M2;
     pub const bfloat16: DType = DType::BF16;

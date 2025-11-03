@@ -31,19 +31,19 @@ impl TensorDataset {
     }
 
     fn len(&self) -> usize {
-        self.data.get_shape()[0]
+        self.data.shape()[0] as usize
     }
 
     fn get(&self, index: usize) -> HoduResult<DataItem> {
         let data_item = self
             .data
             .slice(0, index as isize, Some((index + 1) as isize), 1)?
-            .squeeze(Some(0))?;
+            .squeeze(&[0])?;
 
         if let Some(ref labels) = self.labels {
             let label_item = labels
                 .slice(0, index as isize, Some((index + 1) as isize), 1)?
-                .squeeze(Some(0))?;
+                .squeeze(&[0])?;
             Ok(DataItem::Pair(data_item, label_item))
         } else {
             Ok(DataItem::Single(data_item))

@@ -61,7 +61,7 @@ impl Tensor {
                 });
             }
 
-            let rhs_reshaped = other.reshape(&Shape::from(vec![k2, 1]))?;
+            let rhs_reshaped = other.reshape(Shape::from(vec![k2, 1]))?;
             let result = self.dot_2d(&rhs_reshaped)?;
             return result.squeeze(&[-1]);
         }
@@ -79,7 +79,7 @@ impl Tensor {
                 });
             }
 
-            let lhs_reshaped = self.reshape(&Shape::from(vec![1, k1]))?;
+            let lhs_reshaped = self.reshape(Shape::from(vec![1, k1]))?;
             let result = lhs_reshaped.dot_2d(other)?;
             return result.squeeze(&[0]);
         }
@@ -162,8 +162,8 @@ impl Tensor {
         rhs_broadcast_dims.push(rhs_dims[rhs_ndim - 2]);
         rhs_broadcast_dims.push(rhs_dims[rhs_ndim - 1]);
 
-        let lhs_broadcasted = self.broadcast(&Shape::from(lhs_broadcast_dims))?;
-        let rhs_broadcasted = other.broadcast(&Shape::from(rhs_broadcast_dims))?;
+        let lhs_broadcasted = self.broadcast(Shape::from(lhs_broadcast_dims))?;
+        let rhs_broadcasted = other.broadcast(Shape::from(rhs_broadcast_dims))?;
 
         // Result shape: batch_dims + [M, N]
         let mut result_dims = batch_dims;
@@ -255,7 +255,7 @@ impl Tensor {
                 });
             }
 
-            let rhs_reshaped = other.reshape(&Shape::from(vec![k2, 1]))?;
+            let rhs_reshaped = other.reshape(Shape::from(vec![k2, 1]))?;
             let result = self.dot_2d(&rhs_reshaped)?;
             return result.squeeze(&[-1]);
         }
@@ -273,7 +273,7 @@ impl Tensor {
                 });
             }
 
-            let lhs_reshaped = self.reshape(&Shape::from(vec![1, k1]))?;
+            let lhs_reshaped = self.reshape(Shape::from(vec![1, k1]))?;
             let result = lhs_reshaped.dot_2d(other)?;
             return result.squeeze(&[0]);
         }

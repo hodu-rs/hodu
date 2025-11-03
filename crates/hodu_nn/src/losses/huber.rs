@@ -18,11 +18,11 @@ impl HuberLoss {
         let abs_diff = diff.abs()?;
 
         let quadratic_loss = diff
-            .pow_scalar(Scalar::from_f32(2.0, diff.get_dtype()))?
-            .div_scalar(Scalar::from_f32(2.0, diff.get_dtype()))?;
+            .pow_scalar(Scalar::from_f32(2.0, diff.dtype()))?
+            .div_scalar(Scalar::from_f32(2.0, diff.dtype()))?;
         let linear_loss = abs_diff
             .mul_scalar(self.delta)?
-            .sub_scalar(self.delta.powi(2) / Scalar::from_f32(2.0, self.delta.get_dtype()))?;
+            .sub_scalar(self.delta.powi(2) / Scalar::from_f32(2.0, self.delta.dtype()))?;
 
         let mask = abs_diff.le_scalar(self.delta)?;
 
@@ -30,9 +30,8 @@ impl HuberLoss {
             .mul(&quadratic_loss)?
             .add(&mask.logical_not()?.mul(&linear_loss)?)?;
 
-        let pred_layout = pred.get_layout();
-        let pred_shape = pred_layout.get_shape();
-        let batch_size = Scalar::from_f32(pred_shape[0] as f32, diff.get_dtype());
+        let pred_shape = pred.shape();
+        let batch_size = Scalar::from_f32(pred_shape[0] as f32, diff.dtype());
         let mean = loss.sum_all()?.div_scalar(batch_size)?;
 
         Ok(mean)

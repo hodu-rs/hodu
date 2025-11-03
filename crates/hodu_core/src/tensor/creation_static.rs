@@ -6,12 +6,13 @@ use crate::{
 };
 
 impl Tensor {
-    pub fn input(name: &'static str, shape: &Shape) -> HoduResult<Self> {
+    pub fn input(name: &'static str, shape: impl Into<Shape>) -> HoduResult<Self> {
+        let shape = shape.into();
         if !is_builder_active() {
             return Err(HoduError::BuilderNotActive);
         }
 
-        let layout = Layout::from_shape(shape);
+        let layout = Layout::from_shape(&shape);
         let tensor_ = Tensor_ {
             storage: None,
             is_runtime: false,
