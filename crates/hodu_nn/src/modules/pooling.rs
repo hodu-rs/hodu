@@ -4,19 +4,18 @@ use hodu_core::{error::HoduResult, tensor::Tensor};
 
 #[derive(Module, Clone)]
 pub struct AdaptiveAvgPool1D {
-    output_size: usize,
+    output_size: u32,
 }
 
 impl AdaptiveAvgPool1D {
-    pub fn new(output_size: usize) -> Self {
+    pub fn new(output_size: u32) -> Self {
         Self { output_size }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveAvgPool1D: input [N, C, L]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 3 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -27,7 +26,7 @@ impl AdaptiveAvgPool1D {
 
         let input_length = input_shape[2];
 
-        let stride = (input_length as f64 / self.output_size as f64).floor() as usize;
+        let stride = (input_length as f64 / self.output_size as f64).floor() as u32;
         let kernel_size = input_length - (self.output_size - 1) * stride;
 
         let padding = vec![(0, 0), (0, 0), (0, 0)];
@@ -44,19 +43,18 @@ impl AdaptiveAvgPool1D {
 
 #[derive(Module, Clone)]
 pub struct AdaptiveAvgPool2D {
-    output_size: (usize, usize),
+    output_size: (u32, u32),
 }
 
 impl AdaptiveAvgPool2D {
-    pub fn new(output_size: (usize, usize)) -> Self {
+    pub fn new(output_size: (u32, u32)) -> Self {
         Self { output_size }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveAvgPool2D: input [N, C, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 4 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -68,8 +66,8 @@ impl AdaptiveAvgPool2D {
         let input_height = input_shape[2];
         let input_width = input_shape[3];
 
-        let stride_h = (input_height as f64 / self.output_size.0 as f64).floor() as usize;
-        let stride_w = (input_width as f64 / self.output_size.1 as f64).floor() as usize;
+        let stride_h = (input_height as f64 / self.output_size.0 as f64).floor() as u32;
+        let stride_w = (input_width as f64 / self.output_size.1 as f64).floor() as u32;
         let kernel_h = input_height - (self.output_size.0 - 1) * stride_h;
         let kernel_w = input_width - (self.output_size.1 - 1) * stride_w;
 
@@ -87,19 +85,18 @@ impl AdaptiveAvgPool2D {
 
 #[derive(Module, Clone)]
 pub struct AdaptiveAvgPool3D {
-    output_size: (usize, usize, usize),
+    output_size: (u32, u32, u32),
 }
 
 impl AdaptiveAvgPool3D {
-    pub fn new(output_size: (usize, usize, usize)) -> Self {
+    pub fn new(output_size: (u32, u32, u32)) -> Self {
         Self { output_size }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveAvgPool3D: input [N, C, D, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 5 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -112,9 +109,9 @@ impl AdaptiveAvgPool3D {
         let input_height = input_shape[3];
         let input_width = input_shape[4];
 
-        let stride_d = (input_depth as f64 / self.output_size.0 as f64).floor() as usize;
-        let stride_h = (input_height as f64 / self.output_size.1 as f64).floor() as usize;
-        let stride_w = (input_width as f64 / self.output_size.2 as f64).floor() as usize;
+        let stride_d = (input_depth as f64 / self.output_size.0 as f64).floor() as u32;
+        let stride_h = (input_height as f64 / self.output_size.1 as f64).floor() as u32;
+        let stride_w = (input_width as f64 / self.output_size.2 as f64).floor() as u32;
         let kernel_d = input_depth - (self.output_size.0 - 1) * stride_d;
         let kernel_h = input_height - (self.output_size.1 - 1) * stride_h;
         let kernel_w = input_width - (self.output_size.2 - 1) * stride_w;
@@ -133,19 +130,18 @@ impl AdaptiveAvgPool3D {
 
 #[derive(Module, Clone)]
 pub struct AdaptiveMaxPool1D {
-    output_size: usize,
+    output_size: u32,
 }
 
 impl AdaptiveMaxPool1D {
-    pub fn new(output_size: usize) -> Self {
+    pub fn new(output_size: u32) -> Self {
         Self { output_size }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveMaxPool1D: input [N, C, L]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 3 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -157,7 +153,7 @@ impl AdaptiveMaxPool1D {
         let input_length = input_shape[2];
 
         // Calculate kernel_size and stride for adaptive pooling
-        let stride = (input_length as f64 / self.output_size as f64).floor() as usize;
+        let stride = (input_length as f64 / self.output_size as f64).floor() as u32;
         let kernel_size = input_length - (self.output_size - 1) * stride;
 
         let padding = vec![(0, 0), (0, 0), (0, 0)];
@@ -174,19 +170,18 @@ impl AdaptiveMaxPool1D {
 
 #[derive(Module, Clone)]
 pub struct AdaptiveMaxPool2D {
-    output_size: (usize, usize),
+    output_size: (u32, u32),
 }
 
 impl AdaptiveMaxPool2D {
-    pub fn new(output_size: (usize, usize)) -> Self {
+    pub fn new(output_size: (u32, u32)) -> Self {
         Self { output_size }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveMaxPool2D: input [N, C, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 4 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -198,8 +193,8 @@ impl AdaptiveMaxPool2D {
         let input_height = input_shape[2];
         let input_width = input_shape[3];
 
-        let stride_h = (input_height as f64 / self.output_size.0 as f64).floor() as usize;
-        let stride_w = (input_width as f64 / self.output_size.1 as f64).floor() as usize;
+        let stride_h = (input_height as f64 / self.output_size.0 as f64).floor() as u32;
+        let stride_w = (input_width as f64 / self.output_size.1 as f64).floor() as u32;
         let kernel_h = input_height - (self.output_size.0 - 1) * stride_h;
         let kernel_w = input_width - (self.output_size.1 - 1) * stride_w;
 
@@ -217,19 +212,18 @@ impl AdaptiveMaxPool2D {
 
 #[derive(Module, Clone)]
 pub struct AdaptiveMaxPool3D {
-    output_size: (usize, usize, usize),
+    output_size: (u32, u32, u32),
 }
 
 impl AdaptiveMaxPool3D {
-    pub fn new(output_size: (usize, usize, usize)) -> Self {
+    pub fn new(output_size: (u32, u32, u32)) -> Self {
         Self { output_size }
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveMaxPool3D: input [N, C, D, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 5 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -242,9 +236,9 @@ impl AdaptiveMaxPool3D {
         let input_height = input_shape[3];
         let input_width = input_shape[4];
 
-        let stride_d = (input_depth as f64 / self.output_size.0 as f64).floor() as usize;
-        let stride_h = (input_height as f64 / self.output_size.1 as f64).floor() as usize;
-        let stride_w = (input_width as f64 / self.output_size.2 as f64).floor() as usize;
+        let stride_d = (input_depth as f64 / self.output_size.0 as f64).floor() as u32;
+        let stride_h = (input_height as f64 / self.output_size.1 as f64).floor() as u32;
+        let stride_w = (input_width as f64 / self.output_size.2 as f64).floor() as u32;
         let kernel_d = input_depth - (self.output_size.0 - 1) * stride_d;
         let kernel_h = input_height - (self.output_size.1 - 1) * stride_h;
         let kernel_w = input_width - (self.output_size.2 - 1) * stride_w;
@@ -263,13 +257,13 @@ impl AdaptiveMaxPool3D {
 
 #[derive(Module, Clone)]
 pub struct AvgPool1D {
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
+    kernel_size: u32,
+    stride: u32,
+    padding: u32,
 }
 
 impl AvgPool1D {
-    pub fn new(kernel_size: usize, stride: usize, padding: usize) -> Self {
+    pub fn new(kernel_size: u32, stride: u32, padding: u32) -> Self {
         Self {
             kernel_size,
             stride,
@@ -279,9 +273,8 @@ impl AvgPool1D {
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AvgPool1D: input [N, C, L]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 3 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -304,13 +297,13 @@ impl AvgPool1D {
 
 #[derive(Module, Clone)]
 pub struct AvgPool2D {
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
+    kernel_size: u32,
+    stride: u32,
+    padding: u32,
 }
 
 impl AvgPool2D {
-    pub fn new(kernel_size: usize, stride: usize, padding: usize) -> Self {
+    pub fn new(kernel_size: u32, stride: u32, padding: u32) -> Self {
         Self {
             kernel_size,
             stride,
@@ -320,9 +313,8 @@ impl AvgPool2D {
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AvgPool2D: input [N, C, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 4 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -350,13 +342,13 @@ impl AvgPool2D {
 
 #[derive(Module, Clone)]
 pub struct AvgPool3D {
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
+    kernel_size: u32,
+    stride: u32,
+    padding: u32,
 }
 
 impl AvgPool3D {
-    pub fn new(kernel_size: usize, stride: usize, padding: usize) -> Self {
+    pub fn new(kernel_size: u32, stride: u32, padding: u32) -> Self {
         Self {
             kernel_size,
             stride,
@@ -366,9 +358,8 @@ impl AvgPool3D {
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AvgPool3D: input [N, C, D, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 5 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -397,13 +388,13 @@ impl AvgPool3D {
 
 #[derive(Module, Clone)]
 pub struct MaxPool1D {
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
+    kernel_size: u32,
+    stride: u32,
+    padding: u32,
 }
 
 impl MaxPool1D {
-    pub fn new(kernel_size: usize, stride: usize, padding: usize) -> Self {
+    pub fn new(kernel_size: u32, stride: u32, padding: u32) -> Self {
         Self {
             kernel_size,
             stride,
@@ -413,9 +404,8 @@ impl MaxPool1D {
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // MaxPool1D: input [N, C, L]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 3 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -439,13 +429,13 @@ impl MaxPool1D {
 
 #[derive(Module, Clone)]
 pub struct MaxPool2D {
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
+    kernel_size: u32,
+    stride: u32,
+    padding: u32,
 }
 
 impl MaxPool2D {
-    pub fn new(kernel_size: usize, stride: usize, padding: usize) -> Self {
+    pub fn new(kernel_size: u32, stride: u32, padding: u32) -> Self {
         Self {
             kernel_size,
             stride,
@@ -455,9 +445,8 @@ impl MaxPool2D {
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // MaxPool2D: input [N, C, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 4 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
@@ -485,13 +474,13 @@ impl MaxPool2D {
 
 #[derive(Module, Clone)]
 pub struct MaxPool3D {
-    kernel_size: usize,
-    stride: usize,
-    padding: usize,
+    kernel_size: u32,
+    stride: u32,
+    padding: u32,
 }
 
 impl MaxPool3D {
-    pub fn new(kernel_size: usize, stride: usize, padding: usize) -> Self {
+    pub fn new(kernel_size: u32, stride: u32, padding: u32) -> Self {
         Self {
             kernel_size,
             stride,
@@ -501,9 +490,8 @@ impl MaxPool3D {
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // MaxPool3D: input [N, C, D, H, W]
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let rank = input_shape.len();
+        let input_shape = input.shape();
+        let rank = input_shape.ndim();
 
         if rank != 5 {
             return Err(hodu_core::error::HoduError::InternalError(format!(

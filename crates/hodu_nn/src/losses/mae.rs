@@ -15,8 +15,7 @@ impl MAELoss {
         let diff = pred.sub(target)?;
         let abs_diff = diff.abs()?;
 
-        let pred_layout = pred.get_layout();
-        let pred_shape = pred_layout.get_shape();
+        let pred_shape = pred.shape();
         let batch_size = Scalar::new(pred_shape[0]);
         let mean = abs_diff.sum_all()?.div_scalar(batch_size)?;
 

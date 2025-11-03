@@ -1,229 +1,198 @@
 use crate::{
-    be_hodu::metal::error::MetalError,
-    compat::*,
+    layer::compat::*,
+    ops::Op,
     tensor::TensorId,
-    types::{backend::Backend, device::Device, dtype::DType},
+    types::{Compiler, DType, Device, Shape},
 };
 
+/// Main error type for hodu_core.
+///
+/// This enum covers all possible error conditions that can occur
+/// during tensor operations, compilation, and execution.
+#[derive(Clone)]
 pub enum HoduError {
-    // Device
-    DeviceMismatch {
-        expected: Device,
-        got: Device,
-    },
-    DeviceConflictInOp {
-        left: Device,
-        right: Device,
-        op: String,
-    },
+    // ===== Device Errors =====
+    /// Device mismatch between expected and actual device.
+    DeviceMismatch { expected: Device, got: Device },
+    /// Device conflict in a binary operation.
+    DeviceConflictInOp { left: Device, right: Device, op: Op },
+    /// Unsupported device type.
     UnsupportedDevice(Device),
-    UnsupportedBackend(Backend),
-    // DType
-    DTypeMismatch {
-        expected: DType,
-        got: DType,
-    },
-    DTypeConflictInOp {
-        left: DType,
-        right: DType,
-        op: String,
-    },
-    UnsupportedDType {
-        dtype: DType,
-        op: String,
-    },
-    UnsupportedDTypeForDevice {
-        dtype: DType,
-        device: Device,
-    },
-    UnsupportedDTypeForDeviceInOp {
-        dtype: DType,
-        device: Device,
-        op: String,
-    },
-    UnsupportedDTypeForBackend {
-        dtype: DType,
-        backend: Backend,
-    },
-    UnsupportedDTypeForBackendInOp {
-        dtype: DType,
-        backend: Backend,
-        op: String,
-    },
-    // Shape and Layout
-    ShapeMismatch {
-        expected: Vec<usize>,
-        got: Vec<usize>,
-    },
-    IncompatibleShapes {
-        lhs: Vec<usize>,
-        rhs: Vec<usize>,
-        op: String,
-    },
-    InvalidLayout {
-        tensor_id: TensorId,
-        reason: String,
-    },
-    // Builder
-    BuilderContextAlreadyActive(String),
-    BuilderContextNotActive,
-    BuilderAlreadyEnded(String),
-    BuilderValidationFailed(String),
-    MissingInputs(Vec<String>),
-    MissingOutputs(Vec<String>),
-    // Static Tensor Creation
-    StaticTensorCreationRequiresBuilderContext,
-    // Tensor
+    /// Unsupported device type for a specific compiler
+    UnsupportedDeviceForCompiler(Device, Compiler),
+
+    // ===== DType Errors =====
+    /// Data type mismatch between expected and actual dtype.
+    DTypeMismatch { expected: DType, got: DType },
+    /// Data type conflict in a binary operation.
+    DTypeConflictInOp { left: DType, right: DType, op: Op },
+    /// Unsupported dtype with reason.
+    UnsupportedDType { dtype: DType, reason: String },
+    /// Unsupported dtype for a specific operation.
+    UnsupportedDTypeForOp { dtype: DType, op: Op },
+    /// Unsupported dtype for a specific device.
+    UnsupportedDTypeForDevice { dtype: DType, device: Device },
+    /// Unsupported dtype for a specific compiler.
+    UnsupportedDTypeForCompiler { dtype: DType, compiler: Compiler },
+
+    // ===== Shape and Layout Errors =====
+    /// Shape mismatch between expected and actual shapes.
+    ShapeMismatch { expected: Shape, got: Shape },
+    /// Incompatible shapes in a binary operation.
+    IncompatibleShapes { lhs: Shape, rhs: Shape, op: Op },
+    /// Invalid layout configuration.
+    InvalidLayout { reason: String },
+    /// Invalid axis for the given shape.
+    InvalidAxis { axis: i32, ndim: u32 },
+
+    // ===== Tensor Errors =====
+    /// Tensor not found in the global registry.
     TensorNotFound(TensorId),
+    /// Storage not found for a tensor.
     StorageNotFound(TensorId),
+    /// Storage data is corrupted or inaccessible.
     StorageCorrupted(TensorId),
-    // Gradient
-    GradientTapeCorrupted,
-    VjpFunctionNotFound(String),
-    GradientComputationFailed(String),
+    /// Requires grad is not set for tensor (only float tensors can have gradients).
     RequiresGradNotSet(TensorId),
+
+    // ===== Builder Errors =====
+    /// Builder context is not active.
+    BuilderNotActive,
+
+    // ===== Gradient Errors =====
+    /// VJP (Vector-Jacobian Product) function not found for operation.
+    VjpFunctionNotFound(String),
+    /// Gradient tape is corrupted or inaccessible.
+    GradientTapeCorrupted,
+    /// Gradient computation failed.
+    GradientComputationFailed(String),
+    /// Gradient has not been computed for this tensor.
     GradientNotComputed(TensorId),
-    // Script
-    InvalidScriptVersion(String),
-    ScriptValidationFailed(String),
-    CompressionError(String),
-    DecompressionError(String),
-    // IO and Serialization
+
+    // ===== IO Errors =====
+    /// I/O operation failed.
     IoError(String),
-    SerializationError(String),
-    // Internal
+    /// File not found.
+    FileNotFound(String),
+
+    // ===== Internal Errors =====
+    /// Internal error with a descriptive message.
     InternalError(String),
-    // Metal
-    Metal(MetalError),
-    // Ug
-    Ug(ug::Error),
+    /// Not yet implemented feature.
+    NotImplemented(String),
 }
 
 impl fmt::Display for HoduError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            // Device Errors
             Self::DeviceMismatch { expected, got } => {
-                write!(f, "Device mismatch - expected {expected}, got {got}")
+                write!(f, "device mismatch: expected {:?}, got {:?}", expected, got)
             },
             Self::DeviceConflictInOp { left, right, op } => {
                 write!(
                     f,
-                    "Device conflict in operation '{op}' - left operand on {left}, right operand on {right}"
+                    "device conflict in operation {:?}: left on {:?}, right on {:?}",
+                    op, left, right
                 )
             },
             Self::UnsupportedDevice(device) => {
-                write!(f, "Unsupported device - {device}")
+                write!(f, "unsupported {:?} device", device)
             },
-            Self::UnsupportedBackend(backend) => {
-                write!(f, "Unsupported backend - {backend:?}")
+            Self::UnsupportedDeviceForCompiler(device, compiler) => {
+                write!(f, "unsupported {:?} device for {:?} compiler", device, compiler)
             },
+
+            // DType Errors
             Self::DTypeMismatch { expected, got } => {
-                write!(f, "DType mismatch - expected {expected}, got {got}")
+                write!(f, "dtype mismatch: expected {:?}, got {:?}", expected, got)
             },
             Self::DTypeConflictInOp { left, right, op } => {
                 write!(
                     f,
-                    "DType conflict in operation '{op}' - left operand is {left}, right operand is {right}"
+                    "dtype conflict in operation {:?}: left is {:?}, right is {:?}",
+                    op, left, right
                 )
             },
-            Self::UnsupportedDType { dtype, op } => {
-                write!(f, "Unsupported dtype - {dtype} in operation '{op}'")
+            Self::UnsupportedDType { dtype, reason } => {
+                write!(f, "unsupported dtype {:?}: {}", dtype, reason)
+            },
+            Self::UnsupportedDTypeForOp { dtype, op } => {
+                write!(f, "unsupported dtype {:?} for operation {:?}", dtype, op)
             },
             Self::UnsupportedDTypeForDevice { dtype, device } => {
-                write!(f, "Unsupported dtype - {dtype} for device {device}")
+                write!(f, "unsupported dtype {:?} for {:?} device", dtype, device)
             },
-            Self::UnsupportedDTypeForDeviceInOp { dtype, device, op } => {
-                write!(f, "Unsupported dtype - {dtype} for device {device} in operation '{op}'")
+            Self::UnsupportedDTypeForCompiler { dtype, compiler } => {
+                write!(f, "unsupported dtype {:?} for {:?} compiler", dtype, compiler)
             },
-            Self::UnsupportedDTypeForBackend { dtype, backend } => {
-                write!(f, "Unsupported dtype - {dtype} for backend {backend:?}")
-            },
-            Self::UnsupportedDTypeForBackendInOp { dtype, backend, op } => {
-                write!(
-                    f,
-                    "Unsupported dtype - {dtype} for backend {backend:?} in operation '{op}'"
-                )
-            },
+
+            // Shape and Layout Errors
             Self::ShapeMismatch { expected, got } => {
-                write!(f, "Shape mismatch - expected {expected:?}, got {got:?}")
+                write!(f, "shape mismatch: expected {:?}, got {:?}", expected, got)
             },
             Self::IncompatibleShapes { lhs, rhs, op } => {
                 write!(
                     f,
-                    "Incompatible shapes in operation '{op}' - lhs: {lhs:?}, rhs: {rhs:?}"
+                    "incompatible shapes in operation {:?}: lhs {:?}, rhs {:?}",
+                    op, lhs, rhs
                 )
             },
-            Self::InvalidLayout { tensor_id, reason } => {
-                write!(f, "Invalid layout for tensor {tensor_id:?} - {reason}")
+            Self::InvalidLayout { reason } => {
+                write!(f, "invalid layout: {}", reason)
             },
-            Self::BuilderContextAlreadyActive(name) => {
-                write!(
-                    f,
-                    "Builder context already active - '{name}'. Call end() first before starting a new context."
-                )
+            Self::InvalidAxis { axis, ndim } => {
+                write!(f, "invalid axis {} for {}-dimensional tensor", axis, ndim)
             },
-            Self::BuilderContextNotActive => {
-                write!(f, "No active builder context - Call start() first.")
+
+            // Tensor Errors
+            Self::TensorNotFound(id) => {
+                write!(f, "tensor not found: id={:?}", id)
             },
-            Self::BuilderAlreadyEnded(name) => {
-                write!(f, "Builder '{name}' has already been ended and cannot be restarted.")
+            Self::StorageNotFound(id) => {
+                write!(f, "storage not found for tensor: id={:?}", id)
             },
-            Self::BuilderValidationFailed(msg) => {
-                write!(f, "Builder validation failed - {msg}")
+            Self::StorageCorrupted(id) => {
+                write!(f, "storage corrupted for tensor: id={:?}", id)
             },
-            Self::MissingInputs(inputs) => {
-                write!(f, "Missing required inputs - {inputs:?}")
+            Self::RequiresGradNotSet(id) => {
+                write!(f, "requires_grad not set or not allowed for tensor: id={:?}", id)
             },
-            Self::MissingOutputs(outputs) => {
-                write!(f, "Missing required outputs - {outputs:?}")
+
+            // Builder Errors
+            Self::BuilderNotActive => {
+                write!(f, "builder context is not active")
             },
-            Self::StaticTensorCreationRequiresBuilderContext => {
-                write!(f, "Static tensor creation (input, constant) requires an active builder context - Call builder.start() first.")
-            },
-            Self::TensorNotFound(tensor_id) => {
-                write!(f, "Tensor not found - TensorId({tensor_id:?})")
-            },
-            Self::StorageNotFound(tensor_id) => {
-                write!(f, "Storage not found for tensor - TensorId({tensor_id:?})")
-            },
-            Self::StorageCorrupted(tensor_id) => {
-                write!(f, "Storage corrupted for tensor - TensorId({tensor_id:?})")
+
+            // Gradient Errors
+            Self::VjpFunctionNotFound(msg) => {
+                write!(f, "vjp function not found: {}", msg)
             },
             Self::GradientTapeCorrupted => {
-                write!(f, "Gradient computation tape is corrupted")
-            },
-            Self::VjpFunctionNotFound(op) => {
-                write!(f, "VJP function not found for operation - {op}")
+                write!(f, "gradient tape is corrupted or inaccessible")
             },
             Self::GradientComputationFailed(msg) => {
-                write!(f, "Gradient computation failed - {msg}")
+                write!(f, "gradient computation failed: {}", msg)
             },
-            Self::RequiresGradNotSet(tensor_id) => {
-                write!(f, "Requires grad not set for tensor - TensorId({tensor_id:?})")
+            Self::GradientNotComputed(id) => {
+                write!(f, "gradient not computed for tensor: {}", id)
             },
-            Self::GradientNotComputed(tensor_id) => {
-                write!(
-                    f,
-                    "Gradient not computed for tensor - TensorId({tensor_id:?}). Call backward() first."
-                )
+
+            // IO Errors
+            Self::IoError(msg) => {
+                write!(f, "io error: {}", msg)
             },
-            Self::InvalidScriptVersion(version) => {
-                write!(f, "Invalid script version - {version}")
+            Self::FileNotFound(path) => {
+                write!(f, "file not found: {}", path)
             },
-            Self::ScriptValidationFailed(msg) => {
-                write!(f, "Script validation failed - {msg}")
+
+            // Internal Errors
+            Self::InternalError(msg) => {
+                write!(f, "internal error: {}", msg)
             },
-            Self::CompressionError(msg) => {
-                write!(f, "Compression error - {msg}")
+            Self::NotImplemented(feature) => {
+                write!(f, "not implemented: {}", feature)
             },
-            Self::DecompressionError(msg) => {
-                write!(f, "Decompression error - {msg}")
-            },
-            Self::IoError(msg) => write!(f, "IO error - {msg}"),
-            Self::SerializationError(msg) => write!(f, "Serialization error - {msg}"),
-            Self::InternalError(msg) => write!(f, "Internal error - {msg}"),
-            Self::Metal(e) => write!(f, "Metal error {}", e),
-            Self::Ug(e) => write!(f, "{}", e),
         }
     }
 }
@@ -237,23 +206,50 @@ impl fmt::Debug for HoduError {
 #[cfg(feature = "std")]
 impl std::error::Error for HoduError {}
 
+// Conversion from common error types
+#[cfg(feature = "std")]
+impl From<std::io::Error> for HoduError {
+    fn from(e: std::io::Error) -> Self {
+        HoduError::IoError(e.to_string())
+    }
+}
+
 #[cfg(feature = "std")]
 impl From<std::string::FromUtf8Error> for HoduError {
     fn from(e: std::string::FromUtf8Error) -> Self {
-        HoduError::InternalError(format!("UTF-8 conversion error: {}", e))
+        HoduError::InternalError(format!("utf-8 conversion error: {}", e))
     }
 }
 
-impl From<MetalError> for HoduError {
-    fn from(e: MetalError) -> Self {
-        HoduError::Metal(e)
+// Conversion from hodu_cpu_kernels error
+impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
+    fn from(e: hodu_cpu_kernels::CpuKernelError) -> Self {
+        HoduError::InternalError(format!("cpu kernel error: {}", e))
     }
 }
 
+// Conversion from hodu_metal_kernels error
+#[cfg(feature = "metal")]
+impl From<hodu_metal_kernels::error::MetalKernelError> for HoduError {
+    fn from(e: hodu_metal_kernels::error::MetalKernelError) -> Self {
+        HoduError::InternalError(format!("metal kernel error: {}", e))
+    }
+}
+
+// Conversion from PoisonError (for RwLock/Mutex)
+#[cfg(feature = "std")]
+impl<T> From<std::sync::PoisonError<T>> for HoduError {
+    fn from(e: std::sync::PoisonError<T>) -> Self {
+        HoduError::InternalError(format!("lock poisoned: {}", e))
+    }
+}
+
+// Conversion from ug::Error
 impl From<ug::Error> for HoduError {
     fn from(e: ug::Error) -> Self {
-        HoduError::Ug(e)
+        HoduError::InternalError(format!("ug error: {:?}", e))
     }
 }
 
+/// Result type alias for hodu_core_v2 operations.
 pub type HoduResult<T> = Result<T, HoduError>;

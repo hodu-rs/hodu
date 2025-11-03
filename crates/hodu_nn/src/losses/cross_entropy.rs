@@ -28,7 +28,7 @@ impl CrossEntropyLoss {
         let log_probs = logits.log_softmax(self.dim)?;
 
         // Normalize dim to positive index
-        let rank = log_probs.get_layout().get_shape().len() as i32;
+        let rank = log_probs.shape().ndim() as i32;
         let gather_dim = if self.dim < 0 { rank + self.dim } else { self.dim };
 
         // Gather the log probabilities for the correct classes
@@ -39,7 +39,7 @@ impl CrossEntropyLoss {
         let gathered = log_probs.gather(gather_dim as i64, &target_unsqueezed)?;
 
         // Remove the extra dimension
-        let gathered_squeezed = gathered.squeeze(Some(-1))?;
+        let gathered_squeezed = gathered.squeeze(&[-1])?;
 
         // Negative log likelihood
         let nll = gathered_squeezed.neg()?;

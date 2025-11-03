@@ -1,47 +1,50 @@
 #![allow(clippy::type_complexity)]
 
 use crate::{
-    be_hodu::{cpu::storage::CpuStorage, storage::HoduStorageT},
-    compat::*,
+    be::storage::BackendStorageT,
+    be_cpu::storage::CpuStorage,
     error::{HoduError, HoduResult},
+    layer::compat::*,
     tensor::Tensor,
-    types::{dtype::DType, layout::Layout},
+    types::{DType, Layout},
 };
-use float8::{F8E4M3, F8E5M2};
+#[cfg(feature = "f8e5m2")]
+use float::F8E5M2;
+use float8::F8E4M3;
 use half::{bf16, f16};
 
 impl Tensor {
     pub fn to_flatten_vec<T: Clone + 'static>(&self) -> HoduResult<Vec<T>> {
         let cpu_storage = self.with_storage(|storage| storage.to_cpu_storage())?;
-        let layout = self.get_layout();
+        let layout = self.layout();
 
         extract_vec_from_cpu_storage::<T>(&cpu_storage, &layout)
     }
 
     pub fn to_vec1d<T: Clone + 'static>(&self) -> HoduResult<Vec<T>> {
-        let layout = self.get_layout();
-        if layout.get_shape().len() != 1 {
+        let layout = self.layout();
+        if layout.shape().ndim() != 1 {
             return Err(HoduError::InternalError(format!(
                 "Expected 1D tensor, but got {}D tensor",
-                layout.get_shape().len()
+                layout.shape().ndim()
             )));
         }
         self.to_flatten_vec()
     }
 
     pub fn to_vec2d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<T>>> {
-        let layout = self.get_layout();
-        let dims = layout.get_shape();
-        if dims.len() != 2 {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 2 {
             return Err(HoduError::InternalError(format!(
                 "Expected 2D tensor, but got {}D tensor",
-                dims.len()
+                dims.ndim()
             )));
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let rows = dims[0];
-        let cols = dims[1];
+        let rows = dims[0] as usize;
+        let cols = dims[1] as usize;
 
         Ok((0..rows)
             .map(|i| {
@@ -52,17 +55,17 @@ impl Tensor {
     }
 
     pub fn to_vec3d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<T>>>> {
-        let layout = self.get_layout();
-        let dims = layout.get_shape();
-        if dims.len() != 3 {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 3 {
             return Err(HoduError::InternalError(format!(
                 "Expected 3D tensor, but got {}D tensor",
-                dims.len()
+                dims.ndim()
             )));
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2) = (dims[0], dims[1], dims[2]);
+        let (d0, d1, d2) = (dims[0] as usize, dims[1] as usize, dims[2] as usize);
         let stride1 = d1 * d2;
 
         Ok((0..d0)
@@ -79,17 +82,17 @@ impl Tensor {
     }
 
     pub fn to_vec4d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<T>>>>> {
-        let layout = self.get_layout();
-        let dims = layout.get_shape();
-        if dims.len() != 4 {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 4 {
             return Err(HoduError::InternalError(format!(
                 "Expected 4D tensor, but got {}D tensor",
-                dims.len()
+                dims.ndim()
             )));
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2, d3) = (dims[0], dims[1], dims[2], dims[3]);
+        let (d0, d1, d2, d3) = (dims[0] as usize, dims[1] as usize, dims[2] as usize, dims[3] as usize);
         let stride1 = d1 * d2 * d3;
         let stride2 = d2 * d3;
 
@@ -112,17 +115,23 @@ impl Tensor {
     }
 
     pub fn to_vec5d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<Vec<T>>>>>> {
-        let layout = self.get_layout();
-        let dims = layout.get_shape();
-        if dims.len() != 5 {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 5 {
             return Err(HoduError::InternalError(format!(
                 "Expected 5D tensor, but got {}D tensor",
-                dims.len()
+                dims.ndim()
             )));
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2, d3, d4) = (dims[0], dims[1], dims[2], dims[3], dims[4]);
+        let (d0, d1, d2, d3, d4) = (
+            dims[0] as usize,
+            dims[1] as usize,
+            dims[2] as usize,
+            dims[3] as usize,
+            dims[4] as usize,
+        );
         let stride1 = d1 * d2 * d3 * d4;
         let stride2 = d2 * d3 * d4;
         let stride3 = d3 * d4;
@@ -151,17 +160,24 @@ impl Tensor {
     }
 
     pub fn to_vec6d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<Vec<Vec<T>>>>>>> {
-        let layout = self.get_layout();
-        let dims = layout.get_shape();
-        if dims.len() != 6 {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 6 {
             return Err(HoduError::InternalError(format!(
                 "Expected 6D tensor, but got {}D tensor",
-                dims.len()
+                dims.ndim()
             )));
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2, d3, d4, d5) = (dims[0], dims[1], dims[2], dims[3], dims[4], dims[5]);
+        let (d0, d1, d2, d3, d4, d5) = (
+            dims[0] as usize,
+            dims[1] as usize,
+            dims[2] as usize,
+            dims[3] as usize,
+            dims[4] as usize,
+            dims[5] as usize,
+        );
         let stride1 = d1 * d2 * d3 * d4 * d5;
         let stride2 = d2 * d3 * d4 * d5;
         let stride3 = d3 * d4 * d5;
@@ -200,13 +216,13 @@ fn extract_vec_from_cpu_storage<T: Clone + 'static>(cpu_storage: &CpuStorage, la
     let target_dtype = get_dtype_for_type::<T>()
         .ok_or_else(|| HoduError::InternalError("Unsupported type for extraction".to_string()))?;
 
-    let cpu_storage = if cpu_storage.get_dtype() != target_dtype {
-        cpu_storage.to_dtype(target_dtype, layout)?
+    let cpu_storage = if cpu_storage.dtype() != target_dtype {
+        cpu_storage.to_dtype(layout, target_dtype)?
     } else {
         cpu_storage.clone()
     };
 
-    let total_elements = layout.get_shape().iter().product::<usize>();
+    let total_elements = layout.shape().dims().iter().map(|&d| d as usize).product::<usize>();
     let mut result = Vec::with_capacity(total_elements);
 
     macro_rules! extract_storage {
@@ -224,15 +240,16 @@ fn extract_vec_from_cpu_storage<T: Clone + 'static>(cpu_storage: &CpuStorage, la
     match &cpu_storage {
         CpuStorage::BOOL(data) => extract_storage!(data),
         CpuStorage::F8E4M3(data) => extract_storage!(data),
+        #[cfg(feature = "f8e5m2")]
         CpuStorage::F8E5M2(data) => extract_storage!(data),
         CpuStorage::BF16(data) => extract_storage!(data),
         CpuStorage::F16(data) => extract_storage!(data),
         CpuStorage::F32(data) => extract_storage!(data),
+        #[cfg(feature = "f64")]
         CpuStorage::F64(data) => extract_storage!(data),
-        #[cfg(feature = "u8")]
         CpuStorage::U8(data) => extract_storage!(data),
+        #[cfg(feature = "u16")]
         CpuStorage::U16(data) => extract_storage!(data),
-        #[cfg(feature = "u32")]
         CpuStorage::U32(data) => extract_storage!(data),
         #[cfg(feature = "u64")]
         CpuStorage::U64(data) => extract_storage!(data),
@@ -256,17 +273,22 @@ fn try_cast_slice<T: 'static, U: 'static>(data: &[U]) -> Result<&[T], ()> {
 }
 
 fn extract_with_layout<T: Clone>(result: &mut Vec<T>, data: &[T], layout: &Layout) {
-    let dims = layout.get_shape();
-    let strides = layout.get_strides();
+    let dims = layout.shape();
+    let strides = layout.strides();
 
     if layout.is_contiguous() {
         result.extend_from_slice(data);
     } else {
-        let total_elements = dims.iter().product::<usize>();
-        let mut indices = vec![0; dims.len()];
+        let total_elements = dims.dims().iter().map(|&d| d as usize).product::<usize>();
+        let ndim = dims.ndim() as usize;
+        let mut indices = vec![0usize; ndim];
 
         for _ in 0..total_elements {
-            let flat_idx = indices.iter().zip(strides.iter()).map(|(&i, &s)| i * s).sum::<usize>();
+            let flat_idx = indices
+                .iter()
+                .zip(strides.iter())
+                .map(|(&i, &s)| i * (s as usize))
+                .sum::<usize>();
 
             if flat_idx < data.len() {
                 result.push(data[flat_idx].clone());
@@ -274,9 +296,9 @@ fn extract_with_layout<T: Clone>(result: &mut Vec<T>, data: &[T], layout: &Layou
 
             // Increment indices
             let mut carry = 1;
-            for i in (0..dims.len()).rev() {
+            for i in (0..ndim).rev() {
                 indices[i] += carry;
-                if indices[i] < dims[i] {
+                if indices[i] < dims.dims()[i] as usize {
                     carry = 0;
                     break;
                 } else {
@@ -297,35 +319,42 @@ fn get_dtype_for_type<T: 'static>() -> Option<DType> {
     if type_id == core::any::TypeId::of::<bool>() {
         return Some(DType::BOOL);
     }
+
     if type_id == core::any::TypeId::of::<F8E4M3>() {
         return Some(DType::F8E4M3);
     }
+
+    #[cfg(feature = "f8e5m2")]
     if type_id == core::any::TypeId::of::<F8E5M2>() {
         return Some(DType::F8E5M2);
     }
+
     if type_id == core::any::TypeId::of::<bf16>() {
         return Some(DType::BF16);
     }
+
     if type_id == core::any::TypeId::of::<f16>() {
         return Some(DType::F16);
     }
+
     if type_id == core::any::TypeId::of::<f32>() {
         return Some(DType::F32);
     }
+
+    #[cfg(feature = "f64")]
     if type_id == core::any::TypeId::of::<f64>() {
         return Some(DType::F64);
     }
 
-    #[cfg(feature = "u8")]
     if type_id == core::any::TypeId::of::<u8>() {
         return Some(DType::U8);
     }
 
+    #[cfg(feature = "u16")]
     if type_id == core::any::TypeId::of::<u16>() {
         return Some(DType::U16);
     }
 
-    #[cfg(feature = "u32")]
     if type_id == core::any::TypeId::of::<u32>() {
         return Some(DType::U32);
     }

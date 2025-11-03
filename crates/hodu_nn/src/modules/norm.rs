@@ -1,11 +1,11 @@
 use crate::compat::*;
 use crate::module::Module;
 use crate::state::{get_state, State};
-use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::dtype::DType};
+use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType};
 
 #[derive(Module, Clone)]
 pub struct BatchNorm1D {
-    num_features: usize,
+    num_features: u32,
     eps: Scalar,
     momentum: Scalar,
     affine: bool,
@@ -17,7 +17,7 @@ pub struct BatchNorm1D {
 
 impl BatchNorm1D {
     pub fn new(
-        num_features: usize,
+        num_features: u32,
         eps: impl Into<Scalar>,
         momentum: impl Into<Scalar>,
         affine: bool,
@@ -27,10 +27,10 @@ impl BatchNorm1D {
         let momentum = momentum.into();
 
         let (gamma, beta) = if affine {
-            let gamma = Tensor::ones(&[num_features], dtype)?;
+            let gamma = Tensor::ones([num_features], dtype)?;
             gamma.set_requires_grad(true)?;
 
-            let beta = Tensor::zeros(&[num_features], dtype)?;
+            let beta = Tensor::zeros([num_features], dtype)?;
             beta.set_requires_grad(true)?;
 
             (Some(gamma), Some(beta))
@@ -38,8 +38,8 @@ impl BatchNorm1D {
             (None, None)
         };
 
-        let running_mean = RefCell::new(Tensor::zeros(&[num_features], dtype)?);
-        let running_var = RefCell::new(Tensor::ones(&[num_features], dtype)?);
+        let running_mean = RefCell::new(Tensor::zeros([num_features], dtype)?);
+        let running_var = RefCell::new(Tensor::ones([num_features], dtype)?);
 
         Ok(Self {
             num_features,
@@ -54,25 +54,24 @@ impl BatchNorm1D {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
+        let input_shape = input.shape();
 
         if get_state() == State::Training {
             // Training mode: compute batch statistics
-            let mean = if input_shape.len() == 2 {
+            let mean = if input_shape.ndim() == 2 {
                 // [N, C] -> mean over N (axis 0)
                 input.mean(&[0], true)?
-            } else if input_shape.len() == 3 {
+            } else if input_shape.ndim() == 3 {
                 // [N, C, L] -> mean over N, L (axes 0, 2)
                 input.mean(&[0, 2], true)?
             } else {
                 return Err(hodu_core::error::HoduError::InternalError(format!(
                     "BatchNorm1d expects 2D [N, C] or 3D [N, C, L] input, got {}D",
-                    input_shape.len()
+                    input_shape.ndim()
                 )));
             };
 
-            let var = if input_shape.len() == 2 {
+            let var = if input_shape.ndim() == 2 {
                 let centered = input.sub(&mean)?;
                 let squared = centered.mul(&centered)?;
                 squared.mean(&[0], true)?
@@ -89,8 +88,8 @@ impl BatchNorm1D {
                 let mut rm = self.running_mean.borrow_mut();
                 let mut rv = self.running_var.borrow_mut();
 
-                let momentum_typed = self.momentum.to_dtype(rm.get_dtype());
-                let one_minus_momentum = Scalar::from_f32(1.0, rm.get_dtype()) - momentum_typed;
+                let momentum_typed = self.momentum.to_dtype(rm.dtype());
+                let one_minus_momentum = Scalar::from_f32(1.0, rm.dtype()) - momentum_typed;
 
                 // Squeeze mean and var to match running stats shape [C]
                 let mean_squeezed = mean.reshape([self.num_features])?;
@@ -117,13 +116,13 @@ impl BatchNorm1D {
             let var = self.running_var.borrow();
 
             // Reshape for broadcasting
-            let mean = if input_shape.len() == 2 {
+            let mean = if input_shape.ndim() == 2 {
                 mean.reshape([1, self.num_features])?
             } else {
                 mean.reshape([1, self.num_features, 1])?
             };
 
-            let var = if input_shape.len() == 2 {
+            let var = if input_shape.ndim() == 2 {
                 var.reshape([1, self.num_features])?
             } else {
                 var.reshape([1, self.num_features, 1])?
@@ -136,12 +135,11 @@ impl BatchNorm1D {
     }
 
     fn normalize(&self, input: &Tensor, mean: &Tensor, var: &Tensor) -> HoduResult<Tensor> {
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
+        let input_shape = input.shape();
 
         // x_normalized = (x - mean) / sqrt(var + eps)
         let centered = input.sub(mean)?;
-        let eps_typed = self.eps.to_dtype(input.get_dtype());
+        let eps_typed = self.eps.to_dtype(input.dtype());
         let std = var.add_scalar(eps_typed)?.sqrt()?;
         let normalized = centered.div(&std)?;
 
@@ -150,13 +148,13 @@ impl BatchNorm1D {
             let gamma = self.gamma.as_ref().unwrap();
             let beta = self.beta.as_ref().unwrap();
 
-            let gamma_reshaped = if input_shape.len() == 2 {
+            let gamma_reshaped = if input_shape.ndim() == 2 {
                 gamma.reshape([1, self.num_features])?
             } else {
                 gamma.reshape([1, self.num_features, 1])?
             };
 
-            let beta_reshaped = if input_shape.len() == 2 {
+            let beta_reshaped = if input_shape.ndim() == 2 {
                 beta.reshape([1, self.num_features])?
             } else {
                 beta.reshape([1, self.num_features, 1])?
@@ -185,7 +183,7 @@ impl BatchNorm1D {
 
 #[derive(Module, Clone)]
 pub struct BatchNorm2D {
-    num_features: usize,
+    num_features: u32,
     eps: Scalar,
     momentum: Scalar,
     affine: bool,
@@ -197,7 +195,7 @@ pub struct BatchNorm2D {
 
 impl BatchNorm2D {
     pub fn new(
-        num_features: usize,
+        num_features: u32,
         eps: impl Into<Scalar>,
         momentum: impl Into<Scalar>,
         affine: bool,
@@ -207,10 +205,10 @@ impl BatchNorm2D {
         let momentum = momentum.into();
 
         let (gamma, beta) = if affine {
-            let gamma = Tensor::ones(&[num_features], dtype)?;
+            let gamma = Tensor::ones([num_features], dtype)?;
             gamma.set_requires_grad(true)?;
 
-            let beta = Tensor::zeros(&[num_features], dtype)?;
+            let beta = Tensor::zeros([num_features], dtype)?;
             beta.set_requires_grad(true)?;
 
             (Some(gamma), Some(beta))
@@ -218,8 +216,8 @@ impl BatchNorm2D {
             (None, None)
         };
 
-        let running_mean = RefCell::new(Tensor::zeros(&[num_features], dtype)?);
-        let running_var = RefCell::new(Tensor::ones(&[num_features], dtype)?);
+        let running_mean = RefCell::new(Tensor::zeros([num_features], dtype)?);
+        let running_var = RefCell::new(Tensor::ones([num_features], dtype)?);
 
         Ok(Self {
             num_features,
@@ -234,13 +232,12 @@ impl BatchNorm2D {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
+        let input_shape = input.shape();
 
-        if input_shape.len() != 4 {
+        if input_shape.ndim() != 4 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
                 "BatchNorm2d expects 4D input [N, C, H, W], got {}D",
-                input_shape.len()
+                input_shape.ndim()
             )));
         }
 
@@ -257,8 +254,8 @@ impl BatchNorm2D {
                 let mut rm = self.running_mean.borrow_mut();
                 let mut rv = self.running_var.borrow_mut();
 
-                let momentum_typed = self.momentum.to_dtype(rm.get_dtype());
-                let one_minus_momentum = Scalar::from_f32(1.0, rm.get_dtype()) - momentum_typed;
+                let momentum_typed = self.momentum.to_dtype(rm.dtype());
+                let one_minus_momentum = Scalar::from_f32(1.0, rm.dtype()) - momentum_typed;
 
                 // Squeeze mean and var to match running stats shape [C]
                 let mean_squeezed = mean.reshape([self.num_features])?;
@@ -293,7 +290,7 @@ impl BatchNorm2D {
     fn normalize(&self, input: &Tensor, mean: &Tensor, var: &Tensor) -> HoduResult<Tensor> {
         // x_normalized = (x - mean) / sqrt(var + eps)
         let centered = input.sub(mean)?;
-        let eps_typed = self.eps.to_dtype(input.get_dtype());
+        let eps_typed = self.eps.to_dtype(input.dtype());
         let std = var.add_scalar(eps_typed)?.sqrt()?;
         let normalized = centered.div(&std)?;
 
@@ -328,7 +325,7 @@ impl BatchNorm2D {
 
 #[derive(Module, Clone)]
 pub struct BatchNorm3D {
-    num_features: usize,
+    num_features: u32,
     eps: Scalar,
     momentum: Scalar,
     affine: bool,
@@ -340,7 +337,7 @@ pub struct BatchNorm3D {
 
 impl BatchNorm3D {
     pub fn new(
-        num_features: usize,
+        num_features: u32,
         eps: impl Into<Scalar>,
         momentum: impl Into<Scalar>,
         affine: bool,
@@ -350,10 +347,10 @@ impl BatchNorm3D {
         let momentum = momentum.into();
 
         let (gamma, beta) = if affine {
-            let gamma = Tensor::ones(&[num_features], dtype)?;
+            let gamma = Tensor::ones([num_features], dtype)?;
             gamma.set_requires_grad(true)?;
 
-            let beta = Tensor::zeros(&[num_features], dtype)?;
+            let beta = Tensor::zeros([num_features], dtype)?;
             beta.set_requires_grad(true)?;
 
             (Some(gamma), Some(beta))
@@ -361,8 +358,8 @@ impl BatchNorm3D {
             (None, None)
         };
 
-        let running_mean = RefCell::new(Tensor::zeros(&[num_features], dtype)?);
-        let running_var = RefCell::new(Tensor::ones(&[num_features], dtype)?);
+        let running_mean = RefCell::new(Tensor::zeros([num_features], dtype)?);
+        let running_var = RefCell::new(Tensor::ones([num_features], dtype)?);
 
         Ok(Self {
             num_features,
@@ -377,13 +374,12 @@ impl BatchNorm3D {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
+        let input_shape = input.shape();
 
-        if input_shape.len() != 5 {
+        if input_shape.ndim() != 5 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
                 "BatchNorm3D expects 5D input [N, C, D, H, W], got {}D",
-                input_shape.len()
+                input_shape.ndim()
             )));
         }
 
@@ -400,8 +396,8 @@ impl BatchNorm3D {
                 let mut rm = self.running_mean.borrow_mut();
                 let mut rv = self.running_var.borrow_mut();
 
-                let momentum_typed = self.momentum.to_dtype(rm.get_dtype());
-                let one_minus_momentum = Scalar::from_f32(1.0, rm.get_dtype()) - momentum_typed;
+                let momentum_typed = self.momentum.to_dtype(rm.dtype());
+                let one_minus_momentum = Scalar::from_f32(1.0, rm.dtype()) - momentum_typed;
 
                 // Squeeze mean and var to match running stats shape [C]
                 let mean_squeezed = mean.reshape([self.num_features])?;
@@ -436,7 +432,7 @@ impl BatchNorm3D {
     fn normalize(&self, input: &Tensor, mean: &Tensor, var: &Tensor) -> HoduResult<Tensor> {
         // x_normalized = (x - mean) / sqrt(var + eps)
         let centered = input.sub(mean)?;
-        let eps_typed = self.eps.to_dtype(input.get_dtype());
+        let eps_typed = self.eps.to_dtype(input.dtype());
         let std = var.add_scalar(eps_typed)?.sqrt()?;
         let normalized = centered.div(&std)?;
 
@@ -471,7 +467,7 @@ impl BatchNorm3D {
 
 #[derive(Module, Clone)]
 pub struct LayerNorm {
-    normalized_shape: Vec<usize>,
+    normalized_shape: Vec<u32>,
     eps: Scalar,
     elementwise_affine: bool,
     gamma: Option<Tensor>,
@@ -480,7 +476,7 @@ pub struct LayerNorm {
 
 impl LayerNorm {
     pub fn new(
-        normalized_shape: Vec<usize>,
+        normalized_shape: Vec<u32>,
         eps: impl Into<Scalar>,
         elementwise_affine: bool,
         dtype: DType,
@@ -509,10 +505,9 @@ impl LayerNorm {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
-        let input_rank = input_shape.len();
-        let norm_rank = self.normalized_shape.len();
+        let input_shape = input.shape();
+        let input_rank = input_shape.ndim();
+        let norm_rank = self.normalized_shape.len() as u32;
 
         // Verify that the last dimensions match normalized_shape
         if input_rank < norm_rank {
@@ -523,7 +518,7 @@ impl LayerNorm {
         }
 
         for i in 0..norm_rank {
-            if input_shape[input_rank - norm_rank + i] != self.normalized_shape[i] {
+            if input_shape[input_rank - norm_rank + i] != self.normalized_shape[i as usize] {
                 return Err(hodu_core::error::HoduError::InternalError(format!(
                     "Input shape mismatch at dimension {}",
                     i
@@ -532,7 +527,7 @@ impl LayerNorm {
         }
 
         // Compute axes to normalize over (last norm_rank dimensions)
-        let axes: Vec<usize> = (0..norm_rank).map(|i| input_rank - norm_rank + i).collect();
+        let axes: Vec<u32> = (0..norm_rank).map(|i| input_rank - norm_rank + i).collect();
 
         // Compute mean and variance over the normalized dimensions
         let mean = input.mean(&axes, true)?;
@@ -541,7 +536,7 @@ impl LayerNorm {
         let var = squared.mean(&axes, true)?;
 
         // Normalize: (x - mean) / sqrt(var + eps)
-        let eps_typed = self.eps.to_dtype(input.get_dtype());
+        let eps_typed = self.eps.to_dtype(input.dtype());
         let std = var.add_scalar(eps_typed)?.sqrt()?;
         let normalized = centered.div(&std)?;
 

@@ -1,22 +1,19 @@
 use crate::{
-    builder,
-    compat::*,
     error::{HoduError, HoduResult},
-    op::{
-        self,
-        utils::{validate_dtype_for_device, validate_dtype_for_op, validate_same_device, validate_same_dtype},
-        Op,
-    },
+    layer::compat::*,
+    ops::{ConcatOp, Op, OpParams, SplitOp},
     scalar::Scalar,
-    tensor::{
-        create_builder_tensor_with_grad, from_storage_with_grad, gradient, register_operation_in_builder, Tensor,
-        TensorId,
+    script::builder,
+    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    types::{Layout, Shape},
+    utils::valid::{
+        validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
+        validate_same_dtype,
     },
-    types::layout::Layout,
 };
 
 impl Tensor {
-    // Concat Operations
+    // concat Operations
     pub fn concat<D: Into<Scalar>>(tensors: &[&Self], dim: D) -> HoduResult<Self> {
         if tensors.is_empty() {
             return Err(HoduError::InternalError(
@@ -24,49 +21,71 @@ impl Tensor {
             ));
         }
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
 
         let first = tensors[0];
+        let ndim = first.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
+        let dim_usize = dim_u32 as usize;
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(tensors, "concat")?;
-        validate_dtype_for_device(first.get_dtype(), &first.get_device(), "concat")?;
-        let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
-        let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
-        validate_dtype_for_op(first.get_dtype(), &op)?;
-        validate_same_dtype(tensors, "concat")?;
+        validate_same_device(tensors, Op::Concat(ConcatOp::Concat))?;
+        validate_same_dtype(tensors, Op::Concat(ConcatOp::Concat))?;
+        validate_dtype_for_device(first.dtype(), first.device())?;
+        validate_dtype_for_op(first.dtype(), Op::Concat(ConcatOp::Concat))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Concat(ConcatOp::Concat));
 
-        let mut output_shape = first.get_layout().get_shape().to_vec();
+        let mut output_dims = first.shape().dims().to_vec();
         for tensor in &tensors[1..] {
-            let layout = tensor.get_layout();
-            let shape = layout.get_shape();
-            if shape.len() != output_shape.len() {
+            let shape = tensor.shape();
+            let dims = shape.dims();
+            if dims.len() != output_dims.len() {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: output_shape,
-                    rhs: shape.to_vec(),
-                    op: "concat - all tensors must have same number of dimensions".to_string(),
+                    lhs: Shape::from(output_dims),
+                    rhs: shape.clone(),
+                    op: Op::Concat(ConcatOp::Concat),
                 });
             }
-            output_shape[dim_usize] += shape[dim_usize];
+            output_dims[dim_usize] += dims[dim_usize];
         }
 
+        let layouts: Vec<_> = tensors.iter().map(|t| t.layout()).collect();
+        let layout_refs: Vec<_> = layouts.iter().collect();
+
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&output_shape);
-            let requires_grad = tensors.iter().any(|t| t.is_requires_grad());
+            let result_layout = Layout::from_shape(&Shape::from(output_dims));
+            let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let input_layouts: Vec<Layout> = tensors.iter().map(|t| t.get_layout().clone()).collect();
-            register_operation_in_builder(op.clone(), vec![result_id], input_layouts, vec![result_layout]);
+            let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
+            register_operation_in_builder(
+                Op::Concat(ConcatOp::Concat),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                input_ids.clone(),
+                vec![result_id],
+                layouts.clone(),
+                vec![result_layout],
+            )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, op, tensor_ids)?;
+                gradient::record_operation_with_dims(
+                    result_id,
+                    Op::Concat(ConcatOp::Concat),
+                    input_ids,
+                    vec![dim_scalar],
+                    None,
+                )?;
             }
 
             Ok(result_tensor)
         } else {
-            let layouts: Vec<_> = tensors.iter().map(|t| t.get_layout()).collect();
-            let layout_refs: Vec<_> = layouts.iter().collect();
-
             // Clone storages to avoid lifetime issues
             let mut all_storages: Vec<_> = Vec::new();
             for tensor in tensors.iter() {
@@ -76,16 +95,17 @@ impl Tensor {
 
             let first_storage = &all_storages[0];
             let other_refs: Vec<_> = all_storages[1..].iter().collect();
-            let storage = first_storage.concat(&other_refs, &layout_refs, dim_usize)?;
+            let storage =
+                first_storage.call_concat(&other_refs, &layout_refs, dim_u32, Op::Concat(ConcatOp::Concat))?;
 
-            let result_layout = Layout::from_shape(&output_shape);
-            let requires_grad = tensors.iter().any(|t| t.is_requires_grad());
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let result_layout = Layout::from_shape(&Shape::from(output_dims));
+            let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let tensor_ids: Vec<TensorId> = tensors.iter().map(|t| t.id()).collect();
-                let op = Op::Concat(op::ConcatOp::Concat, tensor_ids.clone(), vec![dim_scalar]);
-                gradient::record_operation(result.id(), op, tensor_ids)?;
+                let op = Op::Concat(ConcatOp::Concat);
+                let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
+                gradient::record_operation_with_dims(result.id(), op, input_ids, vec![dim_scalar], None)?;
             }
 
             Ok(result)
@@ -103,88 +123,119 @@ impl Tensor {
             ));
         }
         let dim_scalar = dim.into();
-        let dim_isize = dim_scalar.to_i64() as isize;
 
         let unsqueezed: Vec<Self> = tensors
             .iter()
-            .map(|t| t.unsqueeze(dim_isize))
+            .map(|t| t.unsqueeze(dim_scalar))
             .collect::<HoduResult<_>>()?;
         let unsqueezed_refs: Vec<&Self> = unsqueezed.iter().collect();
         Self::concat(&unsqueezed_refs, dim_scalar)
     }
 
-    // Split Operations
+    // split Operations
     pub fn split<D: Into<Scalar>>(&self, sizes: &[usize], dim: D) -> HoduResult<Vec<Self>> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
+        let dim_usize = dim_u32 as usize;
 
         // Validate dtype for device and operation
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "split")?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Split(SplitOp::Split))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Split(SplitOp::Split));
+
+        let shape = self.shape();
+        let shape_dims = shape.dims();
+        let requires_grad = self.is_requires_grad() && validate_requires_grad;
+
+        // Prepare params for gradient: [dim, size1, size2, ...]
         let mut params = vec![dim_scalar];
-        params.extend(sizes.iter().map(|&s| Scalar::I32(s as i32)));
-        let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), 0);
-        validate_dtype_for_op(self.get_dtype(), &op)?;
+        params.extend(sizes.iter().map(|&s| Scalar::from(s as u32)));
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let shape = layout.get_shape();
+            let mut results = Vec::new();
 
-            let requires_grad = self.is_requires_grad();
-            let mut result_tensors = Vec::new();
-            let mut result_layouts = Vec::new();
-
-            for &size in sizes {
-                let mut result_shape = shape.to_vec();
-                result_shape[dim_usize] = size;
-                let result_layout = Layout::from_shape(&result_shape);
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
-                result_tensors.push((result_id, result_tensor));
-                result_layouts.push(result_layout);
-            }
-
-            // Register separate operation for each split output with its output_index
-            for (output_index, ((result_id, _), result_layout)) in
-                result_tensors.iter().zip(&result_layouts).enumerate()
-            {
-                let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), output_index);
-                register_operation_in_builder(
-                    op.clone(),
-                    vec![*result_id],
-                    vec![layout.clone()],
-                    vec![result_layout.clone()],
-                );
-
-                if requires_grad {
-                    gradient::record_operation(*result_id, op, vec![self.id()])?;
-                }
-            }
-
-            Ok(result_tensors.into_iter().map(|(_, t)| t).collect())
-        } else {
-            let storages = self.with_storage(|storage| storage.split(&self.get_layout(), dim_usize, sizes))?;
-            let layout = self.get_layout();
-            let shape = layout.get_shape();
-            let requires_grad = self.is_requires_grad();
-
-            let results: Vec<Self> = storages
-                .into_iter()
-                .zip(sizes.iter())
-                .map(|(storage, &size)| {
-                    let mut result_shape = shape.to_vec();
-                    result_shape[dim_usize] = size;
-                    let result_layout = Layout::from_shape(&result_shape);
-                    from_storage_with_grad(storage, result_layout, true, requires_grad)
+            // Create all output tensors first
+            let output_ids: Vec<_> = sizes
+                .iter()
+                .map(|&size| {
+                    let mut result_dims = shape_dims.to_vec();
+                    result_dims[dim_usize] = size as u32;
+                    let result_layout = Layout::from_shape(&Shape::from(result_dims));
+                    let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout, requires_grad);
+                    results.push(result_tensor);
+                    result_id
                 })
                 .collect();
 
-            if !gradient::is_computing_gradients() && requires_grad {
-                let mut params = vec![dim_scalar];
-                params.extend(sizes.iter().map(|&s| Scalar::I32(s as i32)));
-                // Record operation for each split result with its output_index
-                for (output_index, result) in results.iter().enumerate() {
-                    let op = Op::Split(op::SplitOp::Split, self.id(), params.clone(), output_index);
-                    gradient::record_operation(result.id(), op, vec![self.id()])?;
+            // Register the operation once with all outputs
+            let output_layouts: Vec<_> = sizes
+                .iter()
+                .map(|&size| {
+                    let mut result_dims = shape_dims.to_vec();
+                    result_dims[dim_usize] = size as u32;
+                    Layout::from_shape(&Shape::from(result_dims))
+                })
+                .collect();
+
+            register_operation_in_builder(
+                Op::Split(SplitOp::Split),
+                Some(OpParams {
+                    scalars: params.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id()],
+                output_ids.clone(),
+                vec![self.layout()],
+                output_layouts,
+            )?;
+
+            // Record gradient for each output
+            if requires_grad {
+                for (output_index, &result_id) in output_ids.iter().enumerate() {
+                    gradient::record_operation_with_split_info(
+                        result_id,
+                        Op::Split(SplitOp::Split),
+                        vec![self.id()],
+                        params.clone(),
+                        output_index,
+                    )?;
                 }
+            }
+
+            Ok(results)
+        } else {
+            let mut results = Vec::new();
+            let mut start = 0u32;
+
+            for (output_index, &size) in sizes.iter().enumerate() {
+                let storage = self.with_storage(|storage| {
+                    storage.call_split(&self.layout(), dim_u32, start, size as u32, Op::Split(SplitOp::Split))
+                })?;
+
+                let mut result_dims = shape_dims.to_vec();
+                result_dims[dim_usize] = size as u32;
+                let result_layout = Layout::from_shape(&Shape::from(result_dims));
+                let result = from_storage(storage, result_layout, true, requires_grad);
+
+                if !gradient::is_computing_gradients() && requires_grad {
+                    let op = Op::Split(SplitOp::Split);
+                    gradient::record_operation_with_split_info(
+                        result.id(),
+                        op,
+                        vec![self.id()],
+                        params.clone(),
+                        output_index,
+                    )?;
+                }
+
+                results.push(result);
+                start += size as u32;
             }
 
             Ok(results)
@@ -193,10 +244,16 @@ impl Tensor {
 
     pub fn chunk<D: Into<Scalar>>(&self, chunks: usize, dim: D) -> HoduResult<Vec<Self>> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
-        let layout = self.get_layout();
-        let shape = layout.get_shape();
-        let dim_size = shape[dim_usize];
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
+        } else {
+            dim_i32 as usize
+        };
+        let shape = self.shape();
+        let shape_dims = shape.dims();
+        let dim_size = shape_dims[dim_usize] as usize;
 
         let chunk_size = dim_size.div_ceil(chunks);
         let sizes: Vec<usize> = (0..chunks)

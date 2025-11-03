@@ -1,88 +1,93 @@
 use crate::{
-    builder,
-    compat::*,
     error::HoduResult,
-    op::{
-        self,
-        utils::{
-            validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_same_device,
-            validate_same_dtype,
-        },
-        Op,
-    },
+    layer::compat::*,
+    ops::{IndexingOp, Op, OpParams},
     scalar::Scalar,
-    tensor::{
-        create_builder_tensor_with_grad, from_storage_with_grad, gradient, register_operation_in_builder, Tensor,
+    script::builder,
+    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    types::Layout,
+    utils::valid::{
+        validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_requires_grad_for_op,
+        validate_same_device, validate_same_dtype,
     },
-    types::layout::Layout,
 };
 
-// Indexing Operations
 impl Tensor {
     pub fn index_select<D: Into<Scalar>>(&self, dim: D, indices: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices], "index_select")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "index_select")?;
-        let op = Op::Indexing(
-            op::IndexingOp::IndexSelect,
-            vec![self.id(), indices.id()],
-            vec![dim_scalar],
-        );
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_indices_dtype(indices, "index_select")?;
+        validate_same_device(&[self, indices], Op::Indexing(IndexingOp::IndexSelect))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::IndexSelect))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::IndexSelect))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::IndexSelect));
+
+        let shape = self.shape();
+        let shape_dims = shape.dims();
+        let indices_size = indices.size();
+        let mut output_dims = shape_dims.to_vec();
+        output_dims[dim_u32 as usize] = indices_size;
+
+        let result_layout = Layout::from_shape(&crate::types::Shape::from(output_dims));
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let shape = layout.get_shape();
-
-            // Output shape: replace indexed dimension with indices size
-            let mut output_shape = shape.to_vec();
-            output_shape[dim_usize] = indices_layout.get_size();
-
-            let result_layout = Layout::from_shape(&output_shape);
-            let requires_grad = self.is_requires_grad();
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::IndexSelect),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone()],
+                vec![self.layout(), indices.layout()],
                 vec![result_layout],
-            );
+            )?;
 
-            if self.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id(), indices.id()])?;
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::IndexSelect),
+                    vec![self.id(), indices.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
         } else {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
-                    storage.index_select(&self.get_layout(), indices_storage, &indices.get_layout(), dim_usize)
+                    storage.call_index_select(
+                        &self.layout(),
+                        indices_storage,
+                        &indices.layout(),
+                        dim_u32,
+                        Op::Indexing(IndexingOp::IndexSelect),
+                    )
                 })
             })?;
 
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let shape = layout.get_shape();
-            let mut output_shape = shape.to_vec();
-            output_shape[dim_usize] = indices_layout.get_size();
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
-            let result_layout = Layout::from_shape(&output_shape);
-            let requires_grad = self.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
-
-            if !gradient::is_computing_gradients() && self.is_requires_grad() {
-                let op = Op::Indexing(
-                    op::IndexingOp::IndexSelect,
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(IndexingOp::IndexSelect);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
                     vec![self.id(), indices.id()],
                     vec![dim_scalar],
-                );
-                gradient::record_operation(result.id(), op, vec![self.id(), indices.id()])?;
+                )?;
             }
 
             Ok(result)
@@ -91,39 +96,47 @@ impl Tensor {
 
     pub fn index_put<D: Into<Scalar>>(&self, dim: D, indices: &Self, values: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices, values], "index_put")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "index_put")?;
-        let op = Op::Indexing(
-            op::IndexingOp::IndexPut,
-            vec![self.id(), indices.id(), values.id()],
-            vec![dim_scalar],
-        );
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_same_dtype(&[self, values], "index_put")?;
-        validate_indices_dtype(indices, "index_put")?;
+        validate_same_device(&[self, indices, values], Op::Indexing(IndexingOp::IndexPut))?;
+        validate_same_dtype(&[self, values], Op::Indexing(IndexingOp::IndexPut))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::IndexPut))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::IndexPut))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::IndexPut));
+
+        let result_layout = self.layout();
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let values_layout = values.get_layout();
-
-            // Output has same shape as input
-            let result_layout = layout.clone();
-            let requires_grad = self.is_requires_grad() || values.is_requires_grad();
+            let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::IndexPut),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id(), values.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone(), values_layout.clone()],
+                vec![self.layout(), indices.layout(), values.layout()],
                 vec![result_layout],
-            );
+            )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, op, vec![self.id(), values.id(), indices.id()])?;
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::IndexPut),
+                    vec![self.id(), indices.id(), values.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
@@ -131,29 +144,30 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     values.with_storage(|values_storage| {
-                        storage.index_put(
-                            &self.get_layout(),
+                        storage.call_index_put(
+                            &self.layout(),
                             indices_storage,
-                            &indices.get_layout(),
+                            &indices.layout(),
                             values_storage,
-                            &values.get_layout(),
-                            dim_usize,
+                            &values.layout(),
+                            dim_u32,
+                            Op::Indexing(IndexingOp::IndexPut),
                         )
                     })
                 })
             })?;
 
-            let result_layout = self.get_layout();
-            let requires_grad = self.is_requires_grad() || values.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(
-                    op::IndexingOp::IndexPut,
+                let op = Op::Indexing(IndexingOp::IndexPut);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
                     vec![self.id(), indices.id(), values.id()],
                     vec![dim_scalar],
-                );
-                gradient::record_operation(result.id(), op, vec![self.id(), values.id(), indices.id()])?;
+                )?;
             }
 
             Ok(result)
@@ -162,50 +176,74 @@ impl Tensor {
 
     pub fn gather<D: Into<Scalar>>(&self, dim: D, indices: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices], "gather")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "gather")?;
-        let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_indices_dtype(indices, "gather")?;
+        validate_same_device(&[self, indices], Op::Indexing(IndexingOp::Gather))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Gather))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::Gather))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::Gather));
+
+        // Output has same shape as indices
+        let result_layout = indices.layout();
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-
-            // Output has same shape as indices
-            let result_layout = indices_layout.clone();
-            let requires_grad = self.is_requires_grad();
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::Gather),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone()],
+                vec![self.layout(), indices.layout()],
                 vec![result_layout],
-            );
+            )?;
 
-            if self.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id(), indices.id()])?;
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::Gather),
+                    vec![self.id(), indices.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
         } else {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
-                    storage.gather(&self.get_layout(), indices_storage, &indices.get_layout(), dim_usize)
+                    storage.call_gather(
+                        &self.layout(),
+                        indices_storage,
+                        &indices.layout(),
+                        dim_u32,
+                        Op::Indexing(IndexingOp::Gather),
+                    )
                 })
             })?;
 
-            let result_layout = indices.get_layout().clone();
-            let requires_grad = self.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
-            if !gradient::is_computing_gradients() && self.is_requires_grad() {
-                let op = Op::Indexing(op::IndexingOp::Gather, vec![self.id(), indices.id()], vec![dim_scalar]);
-                gradient::record_operation(result.id(), op, vec![self.id(), indices.id()])?;
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(IndexingOp::Gather);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
+                    vec![self.id(), indices.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result)
@@ -214,39 +252,48 @@ impl Tensor {
 
     pub fn scatter<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices, src], "scatter")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter")?;
-        let op = Op::Indexing(
-            op::IndexingOp::Scatter,
-            vec![self.id(), indices.id(), src.id()],
-            vec![dim_scalar],
-        );
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_same_dtype(&[self, src], "scatter")?;
-        validate_indices_dtype(indices, "scatter")?;
+        validate_same_device(&[self, indices, src], Op::Indexing(IndexingOp::Scatter))?;
+        validate_same_dtype(&[self, src], Op::Indexing(IndexingOp::Scatter))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Scatter))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::Scatter))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::Scatter));
+
+        // Output has same shape as self
+        let result_layout = self.layout();
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let src_layout = src.get_layout();
-
-            // Output has same shape as self
-            let result_layout = layout.clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::Scatter),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id(), src.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![self.layout(), indices.layout(), src.layout()],
                 vec![result_layout],
-            );
+            )?;
 
-            if self.is_requires_grad() || src.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::Scatter),
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
@@ -254,29 +301,30 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.scatter(
-                            &self.get_layout(),
+                        storage.call_scatter(
+                            &self.layout(),
                             indices_storage,
-                            &indices.get_layout(),
+                            &indices.layout(),
                             src_storage,
-                            &src.get_layout(),
-                            dim_usize,
+                            &src.layout(),
+                            dim_u32,
+                            Op::Indexing(IndexingOp::Scatter),
                         )
                     })
                 })
             })?;
 
-            let result_layout = self.get_layout().clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
-            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
-                let op = Op::Indexing(
-                    op::IndexingOp::Scatter,
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(IndexingOp::Scatter);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
-                );
-                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+                )?;
             }
 
             Ok(result)
@@ -285,38 +333,47 @@ impl Tensor {
 
     pub fn scatter_add<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices, src], "scatter_add")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter_add")?;
-        let op = Op::Indexing(
-            op::IndexingOp::ScatterAdd,
-            vec![self.id(), indices.id(), src.id()],
-            vec![dim_scalar],
-        );
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_same_dtype(&[self, src], "scatter_add")?;
-        validate_indices_dtype(indices, "scatter_add")?;
+        validate_same_device(&[self, indices, src], Op::Indexing(IndexingOp::ScatterAdd))?;
+        validate_same_dtype(&[self, src], Op::Indexing(IndexingOp::ScatterAdd))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::ScatterAdd))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::ScatterAdd))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::ScatterAdd));
+
+        let result_layout = self.layout();
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let src_layout = src.get_layout();
-
-            let result_layout = layout.clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::ScatterAdd),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id(), src.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![self.layout(), indices.layout(), src.layout()],
                 vec![result_layout],
-            );
+            )?;
 
-            if self.is_requires_grad() || src.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::ScatterAdd),
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
@@ -324,29 +381,30 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.scatter_add(
-                            &self.get_layout(),
+                        storage.call_scatter(
+                            &self.layout(),
                             indices_storage,
-                            &indices.get_layout(),
+                            &indices.layout(),
                             src_storage,
-                            &src.get_layout(),
-                            dim_usize,
+                            &src.layout(),
+                            dim_u32,
+                            Op::Indexing(IndexingOp::ScatterAdd),
                         )
                     })
                 })
             })?;
 
-            let result_layout = self.get_layout().clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
-            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
-                let op = Op::Indexing(
-                    op::IndexingOp::ScatterAdd,
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(IndexingOp::ScatterAdd);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
-                );
-                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+                )?;
             }
 
             Ok(result)
@@ -355,38 +413,47 @@ impl Tensor {
 
     pub fn scatter_max<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices, src], "scatter_max")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter_max")?;
-        let op = Op::Indexing(
-            op::IndexingOp::ScatterMax,
-            vec![self.id(), indices.id(), src.id()],
-            vec![dim_scalar],
-        );
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_same_dtype(&[self, src], "scatter_max")?;
-        validate_indices_dtype(indices, "scatter_max")?;
+        validate_same_device(&[self, indices, src], Op::Indexing(IndexingOp::ScatterMax))?;
+        validate_same_dtype(&[self, src], Op::Indexing(IndexingOp::ScatterMax))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::ScatterMax))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::ScatterMax))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::ScatterMax));
+
+        let result_layout = self.layout();
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let src_layout = src.get_layout();
-
-            let result_layout = layout.clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::ScatterMax),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id(), src.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![self.layout(), indices.layout(), src.layout()],
                 vec![result_layout],
-            );
+            )?;
 
-            if self.is_requires_grad() || src.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::ScatterMax),
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
@@ -394,29 +461,30 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.scatter_max(
-                            &self.get_layout(),
+                        storage.call_scatter(
+                            &self.layout(),
                             indices_storage,
-                            &indices.get_layout(),
+                            &indices.layout(),
                             src_storage,
-                            &src.get_layout(),
-                            dim_usize,
+                            &src.layout(),
+                            dim_u32,
+                            Op::Indexing(IndexingOp::ScatterMax),
                         )
                     })
                 })
             })?;
 
-            let result_layout = self.get_layout().clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
-            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
-                let op = Op::Indexing(
-                    op::IndexingOp::ScatterMax,
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(IndexingOp::ScatterMax);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
-                );
-                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+                )?;
             }
 
             Ok(result)
@@ -425,38 +493,47 @@ impl Tensor {
 
     pub fn scatter_min<D: Into<Scalar>>(&self, dim: D, indices: &Self, src: &Self) -> HoduResult<Self> {
         let dim_scalar = dim.into();
-        let dim_usize = dim_scalar.to_u64() as usize;
+        let dim_i32 = dim_scalar.to_i32();
+        let ndim = self.ndim() as i32;
+        let dim_u32 = if dim_i32 < 0 {
+            (ndim + dim_i32) as u32
+        } else {
+            dim_i32 as u32
+        };
 
         // Validate device, dtype for device, and dtype for operation
-        validate_same_device(&[self, indices, src], "scatter_min")?;
-        validate_dtype_for_device(self.get_dtype(), &self.get_device(), "scatter_min")?;
-        let op = Op::Indexing(
-            op::IndexingOp::ScatterMin,
-            vec![self.id(), indices.id(), src.id()],
-            vec![dim_scalar],
-        );
-        validate_dtype_for_op(self.get_dtype(), &op)?;
-        validate_same_dtype(&[self, src], "scatter_min")?;
-        validate_indices_dtype(indices, "scatter_min")?;
+        validate_same_device(&[self, indices, src], Op::Indexing(IndexingOp::ScatterMin))?;
+        validate_same_dtype(&[self, src], Op::Indexing(IndexingOp::ScatterMin))?;
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::ScatterMin))?;
+        validate_indices_dtype(indices, Op::Indexing(IndexingOp::ScatterMin))?;
+        let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::ScatterMin));
+
+        let result_layout = self.layout();
 
         if builder::is_builder_active() {
-            let layout = self.get_layout();
-            let indices_layout = indices.get_layout();
-            let src_layout = src.get_layout();
-
-            let result_layout = layout.clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
-                op.clone(),
+                Op::Indexing(IndexingOp::ScatterMin),
+                Some(OpParams {
+                    scalars: vec![dim_scalar],
+                    ..Default::default()
+                }),
+                vec![self.id(), indices.id(), src.id()],
                 vec![result_id],
-                vec![layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![self.layout(), indices.layout(), src.layout()],
                 vec![result_layout],
-            );
+            )?;
 
-            if self.is_requires_grad() || src.is_requires_grad() {
-                gradient::record_operation(result_id, op, vec![self.id(), src.id(), indices.id()])?;
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Indexing(IndexingOp::ScatterMin),
+                    vec![self.id(), indices.id(), src.id()],
+                    vec![dim_scalar],
+                )?;
             }
 
             Ok(result_tensor)
@@ -464,29 +541,30 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.scatter_min(
-                            &self.get_layout(),
+                        storage.call_scatter(
+                            &self.layout(),
                             indices_storage,
-                            &indices.get_layout(),
+                            &indices.layout(),
                             src_storage,
-                            &src.get_layout(),
-                            dim_usize,
+                            &src.layout(),
+                            dim_u32,
+                            Op::Indexing(IndexingOp::ScatterMin),
                         )
                     })
                 })
             })?;
 
-            let result_layout = self.get_layout().clone();
-            let requires_grad = self.is_requires_grad() || src.is_requires_grad();
-            let result = from_storage_with_grad(storage, result_layout, true, requires_grad);
+            let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
-            if !gradient::is_computing_gradients() && (self.is_requires_grad() || src.is_requires_grad()) {
-                let op = Op::Indexing(
-                    op::IndexingOp::ScatterMin,
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Indexing(IndexingOp::ScatterMin);
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
-                );
-                gradient::record_operation(result.id(), op, vec![self.id(), src.id(), indices.id()])?;
+                )?;
             }
 
             Ok(result)
