@@ -130,6 +130,161 @@ impl Layout {
         strides
     }
 
+    /// Reshapes the layout to a new shape (view operation).
+    pub fn reshape(&self, new_shape: &Shape) -> HoduResult<Self> {
+        let old_size = self.size();
+        let new_size = new_shape.size();
+
+        // Check that total number of elements is the same
+        if old_size != new_size {
+            return Err(HoduError::IncompatibleShapes {
+                lhs: self.shape.clone(),
+                rhs: new_shape.clone(),
+                op: Op::Shape(ShapeOp::Reshape),
+            });
+        }
+
+        // Reshape only works on contiguous tensors
+        if !self.is_contiguous() {
+            return Err(HoduError::InvalidLayout {
+                reason: "Cannot reshape a non-contiguous tensor. Use .contiguous() before .reshape()".to_string(),
+            });
+        }
+
+        // Create new layout with the new shape and recomputed strides
+        let new_strides = Self::compute_strides(new_shape);
+
+        Ok(Self {
+            shape: new_shape.clone(),
+            strides: new_strides,
+            offset: self.offset,
+        })
+    }
+
+    /// Flattens the layout to 1D.
+    pub fn flatten(&self) -> HoduResult<Self> {
+        let total_size = self.size();
+        let new_shape = Shape::from(vec![total_size]);
+
+        // Flatten only works on contiguous tensors
+        if !self.is_contiguous() {
+            return Err(HoduError::InvalidLayout {
+                reason: "Cannot flatten a non-contiguous tensor. Use .contiguous() before .flatten()".to_string(),
+            });
+        }
+
+        let new_strides = Self::compute_strides(&new_shape);
+
+        Ok(Self {
+            shape: new_shape,
+            strides: new_strides,
+            offset: self.offset,
+        })
+    }
+
+    /// Squeezes dimensions of size 1.
+    ///
+    /// If `dims` is empty, all dimensions of size 1 are removed.
+    /// If `dims` is not empty, only the specified dimensions are removed (if they have size 1).
+    /// The layout must be contiguous for squeezing to succeed.
+    pub fn squeeze(&self, dims_to_squeeze: &[i32]) -> HoduResult<Self> {
+        let ndim = self.ndim() as i32;
+        let shape_dims = self.shape.dims();
+
+        // Squeeze only works on contiguous tensors
+        if !self.is_contiguous() {
+            return Err(HoduError::InvalidLayout {
+                reason: "Cannot squeeze a non-contiguous tensor. Use .contiguous() before .squeeze()".to_string(),
+            });
+        }
+
+        let new_dims = if dims_to_squeeze.is_empty() {
+            // Squeeze all dimensions of size 1
+            shape_dims.iter().filter(|&&size| size != 1).copied().collect()
+        } else {
+            // Normalize and validate dimensions to squeeze
+            let mut actual_dims = Vec::new();
+            for &dim in dims_to_squeeze {
+                let actual_dim = if dim < 0 { (ndim + dim) as usize } else { dim as usize };
+
+                if actual_dim >= ndim as usize {
+                    return Err(HoduError::InvalidAxis {
+                        axis: dim,
+                        ndim: self.ndim(),
+                    });
+                }
+
+                if shape_dims[actual_dim] != 1 {
+                    return Err(HoduError::InvalidLayout {
+                        reason: format!("Cannot squeeze dimension {} with size {}", dim, shape_dims[actual_dim]),
+                    });
+                }
+
+                actual_dims.push(actual_dim);
+            }
+
+            // Sort dimensions in descending order to remove from back to front
+            actual_dims.sort_unstable();
+            actual_dims.reverse();
+
+            let mut new_dims = shape_dims.to_vec();
+            for &dim_idx in &actual_dims {
+                new_dims.remove(dim_idx);
+            }
+            new_dims
+        };
+
+        let new_shape = Shape::from(new_dims);
+        let new_strides = Self::compute_strides(&new_shape);
+
+        Ok(Self {
+            shape: new_shape,
+            strides: new_strides,
+            offset: self.offset,
+        })
+    }
+
+    /// Unsqueezes (adds) a dimension of size 1 at the specified position.
+    pub fn unsqueeze(&self, dim: i32) -> HoduResult<Self> {
+        let ndim = self.ndim() as usize;
+        let dims = self.shape.dims();
+
+        // Convert negative dimension to positive
+        let actual_dim = if dim < 0 {
+            (ndim as i32 + dim + 1) as usize
+        } else {
+            dim as usize
+        };
+
+        // Check bounds (can insert at position 0 to ndim inclusive)
+        if actual_dim > ndim {
+            return Err(HoduError::InvalidAxis {
+                axis: dim,
+                ndim: self.ndim(),
+            });
+        }
+
+        // Create new shape with dimension of size 1 inserted
+        let mut new_dims = dims.to_vec();
+        new_dims.insert(actual_dim, 1);
+
+        // Unsqueeze only works on contiguous tensors
+        if !self.is_contiguous() {
+            return Err(HoduError::InvalidLayout {
+                reason: "Cannot unsqueeze a non-contiguous tensor. Use .contiguous() before .unsqueeze()".to_string(),
+            });
+        }
+
+        let new_shape = Shape::from(new_dims);
+        let new_strides = Self::compute_strides(&new_shape);
+
+        Ok(Self {
+            shape: new_shape,
+            strides: new_strides,
+            offset: self.offset,
+        })
+    }
+
     /// Broadcasts this layout to a target shape.
     pub fn broadcast_to(&self, target_shape: &Shape) -> HoduResult<Self> {
         let shape = &self.shape;
@@ -229,10 +384,10 @@ impl Layout {
     }
 
     /// Permutes dimensions according to the given axes.
-    pub fn permute(&self, axes: &[u32]) -> HoduResult<Self> {
-        let ndim = self.ndim();
+    pub fn permute(&self, axes: &[i32]) -> HoduResult<Self> {
+        let ndim = self.ndim() as i32;
 
-        if axes.len() as u32 != ndim {
+        if axes.len() as i32 != ndim {
             return Err(HoduError::InternalError(format!(
                 "permute axes length {} must match tensor dimensions {}",
                 axes.len(),
@@ -240,34 +395,42 @@ impl Layout {
             )));
         }
 
-        // Validate axes
+        // Normalize negative axes and validate
         let ndim_usize = ndim as usize;
+        let mut actual_axes = Vec::with_capacity(ndim_usize);
         let mut seen = vec![false; ndim_usize];
+
         for &axis in axes {
-            if axis >= ndim {
-                return Err(HoduError::InternalError(format!(
-                    "permute axis {} out of range for {}-dimensional tensor",
-                    axis, ndim
-                )));
+            let actual_axis = if axis < 0 {
+                (ndim + axis) as usize
+            } else {
+                axis as usize
+            };
+
+            if actual_axis >= ndim_usize {
+                return Err(HoduError::InvalidAxis {
+                    axis,
+                    ndim: self.ndim(),
+                });
             }
-            let axis_usize = axis as usize;
-            if seen[axis_usize] {
+
+            if seen[actual_axis] {
                 return Err(HoduError::InternalError(format!(
                     "permute axis {} appears more than once",
                     axis
                 )));
             }
-            seen[axis_usize] = true;
+            seen[actual_axis] = true;
+            actual_axes.push(actual_axis);
         }
 
         // Permute shape and strides according to axes
         let mut new_dims = Vec::with_capacity(ndim_usize);
         let mut new_strides = Vec::with_capacity(ndim_usize);
 
-        for &axis in axes {
-            new_dims.push(self.shape[axis]);
-            let axis_usize = axis as usize;
-            new_strides.push(self.strides[axis_usize]);
+        for &axis_idx in &actual_axes {
+            new_dims.push(self.shape.dims()[axis_idx]);
+            new_strides.push(self.strides[axis_idx]);
         }
 
         Ok(Self {
@@ -278,20 +441,24 @@ impl Layout {
     }
 
     /// Slices a dimension with start, end, and step.
-    pub fn slice(&self, dim: u32, start: i32, end: Option<i32>, step: i32) -> HoduResult<Self> {
-        if dim >= self.ndim() {
-            return Err(HoduError::InternalError(format!(
-                "slice dimension {} out of range for {}-dimensional tensor",
-                dim,
-                self.ndim()
-            )));
+    pub fn slice(&self, dim: i32, start: i32, end: Option<i32>, step: i32) -> HoduResult<Self> {
+        let ndim = self.ndim() as i32;
+
+        // Normalize negative dim
+        let actual_dim = if dim < 0 { (ndim + dim) as usize } else { dim as usize };
+
+        if actual_dim >= ndim as usize {
+            return Err(HoduError::InvalidAxis {
+                axis: dim,
+                ndim: self.ndim(),
+            });
         }
 
         if step == 0 {
             return Err(HoduError::InternalError("slice step cannot be zero".to_string()));
         }
 
-        let dim_size = self.shape[dim] as i32;
+        let dim_size = self.shape.dims()[actual_dim] as i32;
 
         // Normalize negative indices and handle None for end
         let start_idx = if start < 0 { dim_size + start } else { start };
@@ -341,12 +508,11 @@ impl Layout {
         let mut new_shape = self.shape.clone();
         let mut new_strides = self.strides.clone();
 
-        let dim_usize = dim as usize;
-        new_shape.dims_mut()[dim_usize] = new_size as u32;
-        new_strides[dim_usize] = self.strides[dim_usize] * step.unsigned_abs();
+        new_shape.dims_mut()[actual_dim] = new_size as u32;
+        new_strides[actual_dim] = self.strides[actual_dim] * step.unsigned_abs();
 
         // Calculate new offset
-        let new_offset = self.offset + clamped_start as u32 * self.strides[dim_usize];
+        let new_offset = self.offset + clamped_start as u32 * self.strides[actual_dim];
 
         Ok(Self {
             shape: new_shape,

@@ -1,8 +1,9 @@
 use crate::{
     error::{HoduError, HoduResult},
+    layer::compat::*,
     ops::{BinaryOp, CmpOp, CmpScalarOp, IndexingOp, Op, ReduceOp, UnaryOp, UnaryScalarOp, WindowingOp},
     tensor::Tensor,
-    types::{DType, Device},
+    types::{DType, Device, Shape},
 };
 
 pub fn validate_dtype_for_device(dtype: DType, device: Device) -> HoduResult<()> {
@@ -23,6 +24,56 @@ pub fn validate_dtype_for_device(dtype: DType, device: Device) -> HoduResult<()>
             }
         },
     }
+}
+
+pub fn validate_same_device(tensors: &[&Tensor], op: Op) -> HoduResult<()> {
+    if tensors.is_empty() {
+        return Ok(());
+    }
+
+    let first_device = tensors[0].device();
+
+    for tensor in tensors.iter().skip(1) {
+        let current_device = tensor.device();
+        if current_device != first_device {
+            return Err(HoduError::DeviceConflictInOp {
+                left: first_device,
+                right: current_device,
+                op,
+            });
+        }
+    }
+
+    Ok(())
+}
+
+pub fn validate_same_dtype(tensors: &[&Tensor], op: Op) -> HoduResult<()> {
+    if tensors.is_empty() {
+        return Ok(());
+    }
+
+    let first_dtype = tensors[0].dtype();
+
+    for tensor in tensors.iter().skip(1) {
+        let current_dtype = tensor.dtype();
+        if current_dtype != first_dtype {
+            return Err(HoduError::DTypeConflictInOp {
+                left: first_dtype,
+                right: current_dtype,
+                op,
+            });
+        }
+    }
+
+    Ok(())
+}
+
+pub fn validate_indices_dtype(indices: &Tensor, op: Op) -> HoduResult<()> {
+    let dtype = indices.dtype();
+    if !dtype.is_int() && !dtype.is_uint() {
+        return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+    }
+    Ok(())
 }
 
 pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
@@ -219,52 +270,84 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
     Ok(())
 }
 
-pub fn validate_same_device(tensors: &[&Tensor], op: Op) -> HoduResult<()> {
-    if tensors.is_empty() {
-        return Ok(());
+pub fn validate_requires_grad_for_op(op: Op) -> bool {
+    match op {
+        // Binary operations
+        Op::Binary(_) => true,
+
+        // Binary logical operations - no backprop
+        Op::BinaryLogical(_) => false, // !
+
+        // Comparison operations - no backprop
+        Op::Cmp(_) => false, // !
+
+        // Comparison with scalar - no backprop
+        Op::CmpScalar(_) => false, // !
+
+        // Unary operations
+        Op::Unary(inner_op) => match inner_op {
+            UnaryOp::Neg | UnaryOp::Square | UnaryOp::Sqrt | UnaryOp::Recip => true,
+            UnaryOp::Abs | UnaryOp::Sign => false, // !
+            UnaryOp::Relu
+            | UnaryOp::Sigmoid
+            | UnaryOp::Tanh
+            | UnaryOp::Gelu
+            | UnaryOp::Softplus
+            | UnaryOp::Silu
+            | UnaryOp::Mish => true,
+            UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan => true,
+            UnaryOp::Exp | UnaryOp::Exp2 | UnaryOp::Exp10 | UnaryOp::Ln | UnaryOp::Log2 | UnaryOp::Log10 => true,
+        },
+
+        // Unary logical operations - no backprop
+        Op::UnaryLogical(_) => false, // !
+
+        // Unary with scalar
+        Op::UnaryScalar(inner_op) => match inner_op {
+            UnaryScalarOp::AddScalar
+            | UnaryScalarOp::SubScalar
+            | UnaryScalarOp::MulScalar
+            | UnaryScalarOp::DivScalar
+            | UnaryScalarOp::PowScalar => true,
+            UnaryScalarOp::MaximumScalar | UnaryScalarOp::MinimumScalar => false, // !
+            UnaryScalarOp::LeakyRelu | UnaryScalarOp::Elu | UnaryScalarOp::Prelu => true,
+        },
+
+        // Matrix operations
+        Op::Matrix(_) => true,
+
+        // Reduce operations
+        Op::Reduce(inner_op) => match inner_op {
+            ReduceOp::Sum | ReduceOp::Mean | ReduceOp::Prod | ReduceOp::Std | ReduceOp::Var | ReduceOp::Norm => true,
+            ReduceOp::Max | ReduceOp::Min => false,       // !
+            ReduceOp::ArgMax | ReduceOp::ArgMin => false, // !
+            ReduceOp::Any | ReduceOp::All => false,       // !
+        },
+
+        // Concat and Split
+        Op::Concat(_) | Op::Split(_) => true,
+
+        // Indexing operations
+        Op::Indexing(_) => true,
+
+        // Convolution operations
+        Op::Conv(_) => true,
+
+        // Windowing operations
+        Op::Windowing(inner_op) => match inner_op {
+            WindowingOp::ReduceWindowMean | WindowingOp::ReduceWindowSum => true,
+            WindowingOp::ReduceWindowMax | WindowingOp::ReduceWindowMin => false, // !
+        },
+
+        // Shape operations
+        Op::Shape(_) | Op::ShapeScalars(_) => true,
+
+        // Cast operations - no backprop
+        Op::Cast(_) => false, // !
+
+        // Memory operations - no backprop
+        Op::Memory(_) => false, // !
+
+        Op::Dummy => true,
     }
-
-    let first_device = tensors[0].device();
-
-    for tensor in tensors.iter().skip(1) {
-        let current_device = tensor.device();
-        if current_device != first_device {
-            return Err(HoduError::DeviceConflictInOp {
-                left: first_device,
-                right: current_device,
-                op,
-            });
-        }
-    }
-
-    Ok(())
-}
-
-pub fn validate_same_dtype(tensors: &[&Tensor], op: Op) -> HoduResult<()> {
-    if tensors.is_empty() {
-        return Ok(());
-    }
-
-    let first_dtype = tensors[0].dtype();
-
-    for tensor in tensors.iter().skip(1) {
-        let current_dtype = tensor.dtype();
-        if current_dtype != first_dtype {
-            return Err(HoduError::DTypeConflictInOp {
-                left: first_dtype,
-                right: current_dtype,
-                op,
-            });
-        }
-    }
-
-    Ok(())
-}
-
-pub fn validate_indices_dtype(indices: &Tensor, op: Op) -> HoduResult<()> {
-    let dtype = indices.dtype();
-    if !dtype.is_int() && !dtype.is_uint() {
-        return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
-    }
-    Ok(())
 }

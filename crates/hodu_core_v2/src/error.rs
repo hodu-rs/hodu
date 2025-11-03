@@ -55,6 +55,20 @@ pub enum HoduError {
     /// Requires grad is not set for tensor (only float tensors can have gradients).
     RequiresGradNotSet(TensorId),
 
+    // ===== Builder Errors =====
+    /// Builder context is not active.
+    BuilderNotActive,
+
+    // ===== Gradient Errors =====
+    /// VJP (Vector-Jacobian Product) function not found for operation.
+    VjpFunctionNotFound(String),
+    /// Gradient tape is corrupted or inaccessible.
+    GradientTapeCorrupted,
+    /// Gradient computation failed.
+    GradientComputationFailed(String),
+    /// Gradient has not been computed for this tensor.
+    GradientNotComputed(TensorId),
+
     // ===== IO Errors =====
     /// I/O operation failed.
     IoError(String),
@@ -143,6 +157,25 @@ impl fmt::Display for HoduError {
             },
             Self::RequiresGradNotSet(id) => {
                 write!(f, "requires_grad not set or not allowed for tensor: id={:?}", id)
+            },
+
+            // Builder Errors
+            Self::BuilderNotActive => {
+                write!(f, "builder context is not active")
+            },
+
+            // Gradient Errors
+            Self::VjpFunctionNotFound(msg) => {
+                write!(f, "vjp function not found: {}", msg)
+            },
+            Self::GradientTapeCorrupted => {
+                write!(f, "gradient tape is corrupted or inaccessible")
+            },
+            Self::GradientComputationFailed(msg) => {
+                write!(f, "gradient computation failed: {}", msg)
+            },
+            Self::GradientNotComputed(id) => {
+                write!(f, "gradient not computed for tensor: {}", id)
             },
 
             // IO Errors

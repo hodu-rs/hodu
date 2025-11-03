@@ -10,8 +10,8 @@ sub
 mul
 div
 pow
-maximum!
-minimum!
+maximum
+minimum
 // binary logical
 logical_and!
 logical_or!

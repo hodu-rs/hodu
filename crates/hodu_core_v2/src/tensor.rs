@@ -4,6 +4,7 @@ mod creation_static;
 mod display;
 mod gradient;
 mod ops;
+pub(crate) mod utils;
 mod vec;
 
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
 pub use creation::{get_runtime_device, set_runtime_device};
 #[cfg(feature = "std")]
 use dashmap::DashMap;
-// pub use gradient::{clear_default_context_tape, clear_tape, GradientContext};
+pub use gradient::{is_computing_gradients, GradientContext};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -257,50 +258,50 @@ impl Tensor {
         self.layout().is_contiguous()
     }
 
-    // pub fn backward(&self) -> HoduResult<()> {
-    //     let dtype = self.get_dtype();
-    //     if !dtype.is_float() {
-    //         return Err(HoduError::GradientComputationFailed(format!(
-    //             "Cannot compute gradients for non-float tensor with dtype {dtype:?}"
-    //         )));
-    //     }
+    pub fn backward(&self) -> HoduResult<()> {
+        let dtype = self.dtype();
+        if !dtype.is_float() {
+            return Err(HoduError::GradientComputationFailed(format!(
+                "Cannot compute gradients for non-float tensor with dtype {dtype:?}"
+            )));
+        }
 
-    //     if !self.is_requires_grad() {
-    //         return Err(HoduError::RequiresGradNotSet(self.0));
-    //     }
+        if !self.is_requires_grad() {
+            return Err(HoduError::RequiresGradNotSet(self.0));
+        }
 
-    //     gradient::compute_gradients(self.id())
-    // }
+        gradient::compute_gradients(self.id())
+    }
 
-    // pub fn grad(&self) -> HoduResult<Self> {
-    //     if let Some(result) = with_tensor(self.0, |tensor_ref| {
-    //         if let Some(grad_id) = tensor_ref.grad_tensor_id {
-    //             Ok(Tensor(grad_id))
-    //         } else {
-    //             Err(HoduError::GradientNotComputed(self.0))
-    //         }
-    //     }) {
-    //         result
-    //     } else {
-    //         Err(HoduError::TensorNotFound(self.0))
-    //     }
-    // }
+    pub fn grad(&self) -> HoduResult<Self> {
+        if let Some(result) = with_tensor(self.0, |tensor_ref| {
+            if let Some(grad_id) = tensor_ref.grad_tensor_id {
+                Ok(Tensor(grad_id))
+            } else {
+                Err(HoduError::GradientNotComputed(self.0))
+            }
+        }) {
+            result
+        } else {
+            Err(HoduError::TensorNotFound(self.0))
+        }
+    }
 
-    // pub fn zero_grad(&self) -> HoduResult<()> {
-    //     if !self.is_requires_grad() {
-    //         return Ok(()); // No gradient to zero
-    //     }
+    pub fn zero_grad(&self) -> HoduResult<()> {
+        if !self.is_requires_grad() {
+            return Ok(()); // No gradient to zero
+        }
 
-    //     if let Ok(grad_tensor) = self.grad() {
-    //         let zeros = Self::zeros(grad_tensor.get_layout().get_shape(), grad_tensor.get_dtype())?;
+        if let Ok(grad_tensor) = self.grad() {
+            let zeros = Self::zeros(&grad_tensor.shape(), grad_tensor.dtype())?;
 
-    //         with_tensor_mut(self.0, |tensor_ref| {
-    //             tensor_ref.grad_tensor_id = Some(zeros.0);
-    //         });
-    //     }
+            with_tensor_mut(self.0, |tensor_ref| {
+                tensor_ref.grad_tensor_id = Some(zeros.0);
+            });
+        }
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 }
 
 pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: bool, requires_grad: bool) -> Tensor {
@@ -337,19 +338,19 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
 //     create_builder_tensor_with_grad(layout, false)
 // }
 
-pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
-    let tensor_ = Tensor_ {
-        storage: None,
-        is_runtime: false,
-        layout,
-        requires_grad,
-        grad_tensor_id: None,
-    };
-    let tensor_id = TensorId::new();
-    insert(tensor_id, tensor_);
-    let tensor = Tensor(tensor_id);
-    (tensor_id, tensor)
-}
+// pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
+//     let tensor_ = Tensor_ {
+//         storage: None,
+//         is_runtime: false,
+//         layout,
+//         requires_grad,
+//         grad_tensor_id: None,
+//     };
+//     let tensor_id = TensorId::new();
+//     insert(tensor_id, tensor_);
+//     let tensor = Tensor(tensor_id);
+//     (tensor_id, tensor)
+// }
 
 // pub(crate) fn register_operation_in_builder(
 //     op: crate::op::Op,

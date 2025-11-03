@@ -3,6 +3,7 @@ use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::Op,
+    scalar::Scalar,
     tensor::{Tensor, TensorId},
     types::Layout,
 };
@@ -148,7 +149,9 @@ impl Builder {
     pub fn add_operation(
         &self,
         op: Op,
+        inputs: Vec<TensorId>,
         outputs: Vec<TensorId>,
+        parameters: Vec<Scalar>,
         input_layouts: Vec<Layout>,
         output_layouts: Vec<Layout>,
     ) -> HoduResult<()> {

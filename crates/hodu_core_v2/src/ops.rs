@@ -2,7 +2,7 @@
 // BinaryLogicalOp -> binary_logical_and (not binary_logical_logical_and)
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
-use crate::layer::compat::fmt;
+use crate::layer::compat::{fmt, Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -13,8 +13,8 @@ pub enum BinaryOp {
     Mul,
     Div,
     Pow,
-    Maximum, // no-backprop
-    Minimum, // no-backprop
+    Maximum,
+    Minimum,
 }
 
 impl fmt::Display for BinaryOp {
@@ -637,4 +637,24 @@ impl fmt::Debug for Op {
             Self::Dummy => write!(f, "Dummy"),
         }
     }
+}
+
+/// Parameters for operations, used in gradient computation
+#[derive(Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct OpParams {
+    /// Single scalar parameter (for UnaryScalar, CmpScalar)
+    pub scalar: Option<crate::scalar::Scalar>,
+
+    /// Vector of scalars (for Conv, Windowing, Split, Slice, etc.)
+    pub scalars: Vec<crate::scalar::Scalar>,
+
+    /// Dimension indices (for Reduce, Indexing)
+    pub dims: Vec<crate::scalar::Scalar>,
+
+    /// Keep dimension flag (for Reduce)
+    pub keep_dim: Option<bool>,
+
+    /// Output index (for Split gradient computation)
+    pub output_index: Option<usize>,
 }
