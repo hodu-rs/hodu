@@ -194,7 +194,7 @@ impl VjpCompute for ConvOp {
                 let channels_input = scalars[3].to_u32() as usize;
                 let kernel_size = scalars[4].to_u32() as usize;
                 let padding = scalars[5].to_u32() as usize;
-                let output_padding = scalars[6].to_u32() as usize;
+                let _output_padding = scalars[6].to_u32() as usize;
                 let stride = scalars[7].to_u32() as usize;
                 let dilation = scalars[8].to_u32() as usize;
 
@@ -238,7 +238,7 @@ impl VjpCompute for ConvOp {
                 let channels_output = scalars[5].to_u32() as usize;
                 let channels_input = scalars[6].to_u32() as usize;
                 let padding = scalars[7].to_u32() as usize;
-                let output_padding = scalars[8].to_u32() as usize;
+                let _output_padding = scalars[8].to_u32() as usize;
                 let stride = scalars[9].to_u32() as usize;
                 let dilation = scalars[10].to_u32() as usize;
 
@@ -287,7 +287,7 @@ impl VjpCompute for ConvOp {
                 let channels_output = scalars[7].to_u32() as usize;
                 let channels_input = scalars[8].to_u32() as usize;
                 let padding = scalars[9].to_u32() as usize;
-                let output_padding = scalars[10].to_u32() as usize;
+                let _output_padding = scalars[10].to_u32() as usize;
                 let stride = scalars[11].to_u32() as usize;
                 let dilation = scalars[12].to_u32() as usize;
 

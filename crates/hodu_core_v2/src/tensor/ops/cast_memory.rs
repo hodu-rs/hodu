@@ -1,6 +1,5 @@
 use crate::{
     error::HoduResult,
-    layer::compat::*,
     tensor::{from_storage, Tensor},
     types::{DType, Layout},
     utils::valid::validate_dtype_for_device,

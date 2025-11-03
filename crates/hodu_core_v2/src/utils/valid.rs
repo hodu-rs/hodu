@@ -1,9 +1,8 @@
 use crate::{
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::{BinaryOp, CmpOp, CmpScalarOp, IndexingOp, Op, ReduceOp, UnaryOp, UnaryScalarOp, WindowingOp},
     tensor::Tensor,
-    types::{DType, Device, Shape},
+    types::{DType, Device},
 };
 
 pub fn validate_dtype_for_device(dtype: DType, device: Device) -> HoduResult<()> {

@@ -1,6 +1,5 @@
 use crate::{
     error::HoduResult,
-    layer::compat::*,
     ops::{CmpOp, CmpScalarOp, Op},
     scalar::Scalar,
     tensor::{from_storage, utils::broadcast_tensors2, Tensor},
