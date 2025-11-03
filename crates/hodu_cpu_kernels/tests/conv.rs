@@ -38,9 +38,9 @@ fn test_conv1d_f32() {
 
     call_conv(
         conv1d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -81,9 +81,9 @@ fn test_conv1d_f32_stride() {
 
     call_conv(
         conv1d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -136,9 +136,9 @@ fn test_conv2d_f32() {
 
     call_conv(
         conv2d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -191,9 +191,9 @@ fn test_conv2d_f32_with_padding() {
 
     call_conv(
         conv2d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -261,9 +261,9 @@ fn test_conv3d_f32() {
 
     call_conv(
         conv3d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -307,9 +307,9 @@ fn test_conv_transpose1d_f32() {
 
     call_conv(
         conv_transpose1d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -362,9 +362,9 @@ fn test_conv_transpose2d_f32() {
 
     call_conv(
         conv_transpose2d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -432,9 +432,9 @@ fn test_conv_transpose3d_f32() {
 
     call_conv(
         conv_transpose3d::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        weight.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        weight.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -475,9 +475,9 @@ fn test_conv1d_grad_weight_f32() {
 
     call_conv_grad_weight(
         conv1d_grad_weight::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        grad_output.as_ptr() as *const std::ffi::c_void,
-        grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        grad_output.as_ptr() as *const core::ffi::c_void,
+        grad_weight.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -530,9 +530,9 @@ fn test_conv2d_grad_weight_f32() {
 
     call_conv_grad_weight(
         conv2d_grad_weight::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        grad_output.as_ptr() as *const std::ffi::c_void,
-        grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        grad_output.as_ptr() as *const core::ffi::c_void,
+        grad_weight.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -597,9 +597,9 @@ fn test_conv3d_grad_weight_f32() {
 
     call_conv_grad_weight(
         conv3d_grad_weight::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        grad_output.as_ptr() as *const std::ffi::c_void,
-        grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        grad_output.as_ptr() as *const core::ffi::c_void,
+        grad_weight.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -640,9 +640,9 @@ fn test_conv_transpose1d_grad_weight_f32() {
 
     call_conv_grad_weight(
         conv_transpose1d_grad_weight::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        grad_output.as_ptr() as *const std::ffi::c_void,
-        grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        grad_output.as_ptr() as *const core::ffi::c_void,
+        grad_weight.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -695,9 +695,9 @@ fn test_conv_transpose2d_grad_weight_f32() {
 
     call_conv_grad_weight(
         conv_transpose2d_grad_weight::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        grad_output.as_ptr() as *const std::ffi::c_void,
-        grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        grad_output.as_ptr() as *const core::ffi::c_void,
+        grad_weight.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -762,9 +762,9 @@ fn test_conv_transpose3d_grad_weight_f32() {
 
     call_conv_grad_weight(
         conv_transpose3d_grad_weight::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        grad_output.as_ptr() as *const std::ffi::c_void,
-        grad_weight.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        grad_output.as_ptr() as *const core::ffi::c_void,
+        grad_weight.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();

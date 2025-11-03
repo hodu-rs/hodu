@@ -38,8 +38,8 @@ fn test_concat_f32_dim0() {
 
     call_concat(
         concat::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -85,8 +85,8 @@ fn test_concat_f32_dim1() {
 
     call_concat(
         concat::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -126,8 +126,8 @@ fn test_concat_i32_dim0() {
 
     call_concat(
         concat::I32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -174,8 +174,8 @@ fn test_concat_3_tensors() {
 
     call_concat(
         concat::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -214,8 +214,8 @@ fn test_split_f32_dim0() {
 
     call_split(
         split::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -250,8 +250,8 @@ fn test_split_f32_dim0_offset() {
 
     call_split(
         split::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -286,8 +286,8 @@ fn test_split_f32_dim1() {
 
     call_split(
         split::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -322,8 +322,8 @@ fn test_split_f32_dim1_offset() {
 
     call_split(
         split::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -358,8 +358,8 @@ fn test_split_i32_dim0() {
 
     call_split(
         split::I32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -396,8 +396,8 @@ fn test_split_3d_tensor() {
 
     call_split(
         split::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();

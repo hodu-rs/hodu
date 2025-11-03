@@ -48,9 +48,9 @@ fn test_matmul_f32_2d() {
 
     call_matmul(
         matmul::F32,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -103,9 +103,9 @@ fn test_matmul_f32_batch() {
 
     call_matmul(
         matmul::F32,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -134,9 +134,9 @@ fn test_dot_f32_simple() {
 
     call_dot(
         dot::F32,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();

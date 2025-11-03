@@ -19,8 +19,8 @@ fn run_unary(input: &[f32], kernel: Kernel) -> Vec<f32> {
     metadata.push(0); // offset
     call_unary(
         kernel,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -41,8 +41,8 @@ fn run_unary_to_bool(input: &[f32], kernel: Kernel) -> Vec<u8> {
     metadata.push(0); // offset
     call_unary(
         kernel,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -63,8 +63,8 @@ fn run_unary_scalar(input: &[f32], kernel: Kernel, scalar: f32) -> Vec<f32> {
     metadata.push(0); // offset
     call_unary_scalar(
         kernel,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
         scalar,
     )
@@ -86,8 +86,8 @@ fn run_unary_scalar_to_bool(input: &[f32], kernel: Kernel, scalar: f32) -> Vec<u
     metadata.push(0); // offset
     call_unary_scalar(
         kernel,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
         scalar,
     )
@@ -213,9 +213,9 @@ fn test_mish_f32() {
 fn test_sin_f32() {
     let input = vec![
         0.0f32,
-        std::f32::consts::PI / 6.0,
-        std::f32::consts::PI / 4.0,
-        std::f32::consts::PI / 2.0,
+        core::f32::consts::PI / 6.0,
+        core::f32::consts::PI / 4.0,
+        core::f32::consts::PI / 2.0,
     ];
     let output = run_unary(&input, sin::F32);
     let expected: Vec<f32> = input.iter().map(|x| x.sin()).collect();
@@ -226,9 +226,9 @@ fn test_sin_f32() {
 fn test_cos_f32() {
     let input = vec![
         0.0f32,
-        std::f32::consts::PI / 6.0,
-        std::f32::consts::PI / 4.0,
-        std::f32::consts::PI / 2.0,
+        core::f32::consts::PI / 6.0,
+        core::f32::consts::PI / 4.0,
+        core::f32::consts::PI / 2.0,
     ];
     let output = run_unary(&input, cos::F32);
     let expected: Vec<f32> = input.iter().map(|x| x.cos()).collect();
@@ -237,7 +237,7 @@ fn test_cos_f32() {
 
 #[test]
 fn test_tan_f32() {
-    let input = vec![0.0f32, std::f32::consts::PI / 6.0, std::f32::consts::PI / 4.0];
+    let input = vec![0.0f32, core::f32::consts::PI / 6.0, core::f32::consts::PI / 4.0];
     let output = run_unary(&input, tan::F32);
     let expected: Vec<f32> = input.iter().map(|x| x.tan()).collect();
     assert_eq!(approx(output, 2), approx(expected, 2));
@@ -270,7 +270,7 @@ fn test_exp10_f32() {
 
 #[test]
 fn test_ln_f32() {
-    let input = vec![1.0f32, 2.0, std::f32::consts::E, 10.0];
+    let input = vec![1.0f32, 2.0, core::f32::consts::E, 10.0];
     let output = run_unary(&input, ln::F32);
     let expected: Vec<f32> = input.iter().map(|x| x.ln()).collect();
     assert_eq!(approx(output, 2), approx(expected, 2));

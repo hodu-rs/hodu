@@ -19,9 +19,9 @@ fn run_binary_f8e4m3(lhs: &[F8E4M3], rhs: &[F8E4M3], kernel: Kernel) -> Vec<F8E4
     metadata.push(0);
     call_binary(
         kernel,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -45,9 +45,9 @@ fn run_binary_f8e5m2(lhs: &[F8E5M2], rhs: &[F8E5M2], kernel: Kernel) -> Vec<F8E5
     metadata.push(0);
     call_binary(
         kernel,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -71,9 +71,9 @@ fn run_binary_bf16(lhs: &[bf16], rhs: &[bf16], kernel: Kernel) -> Vec<bf16> {
     metadata.push(0);
     call_binary(
         kernel,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -97,9 +97,9 @@ fn run_binary_f16(lhs: &[f16], rhs: &[f16], kernel: Kernel) -> Vec<f16> {
     metadata.push(0);
     call_binary(
         kernel,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();

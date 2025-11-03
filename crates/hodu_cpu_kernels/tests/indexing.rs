@@ -28,9 +28,9 @@ fn test_index_select_f32_1d() {
 
     call_index_select(
         index_select::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -66,9 +66,9 @@ fn test_index_select_f32_2d_dim0() {
 
     call_index_select(
         index_select::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -104,9 +104,9 @@ fn test_index_select_f32_2d_dim1() {
 
     call_index_select(
         index_select::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -142,9 +142,9 @@ fn test_index_select_negative_indices() {
 
     call_index_select(
         index_select::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -178,9 +178,9 @@ fn test_index_select_i32() {
 
     call_index_select(
         index_select::I32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -222,10 +222,10 @@ fn test_index_put_f32_1d() {
 
     call_index_put(
         index_put::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        values.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        values.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -267,10 +267,10 @@ fn test_index_put_f32_2d() {
 
     call_index_put(
         index_put::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        values.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        values.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -309,9 +309,9 @@ fn test_gather_f32_1d() {
 
     call_gather(
         gather::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -348,9 +348,9 @@ fn test_gather_i32() {
 
     call_gather(
         gather::I32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -389,9 +389,9 @@ fn test_gather_f32_2d() {
 
     call_gather(
         gather::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -430,9 +430,9 @@ fn test_gather_f32_3d() {
 
     call_gather(
         gather::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -478,10 +478,10 @@ fn test_scatter_f32_1d() {
 
     call_scatter(
         scatter::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -527,10 +527,10 @@ fn test_scatter_f32_2d() {
 
     call_scatter(
         scatter::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -576,10 +576,10 @@ fn test_scatter_add_f32_1d() {
 
     call_scatter(
         scatter_add::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -622,10 +622,10 @@ fn test_scatter_add_i32() {
 
     call_scatter(
         scatter_add::I32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -671,10 +671,10 @@ fn test_scatter_max_f32_1d() {
 
     call_scatter(
         scatter_max::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -717,10 +717,10 @@ fn test_scatter_max_i32() {
 
     call_scatter(
         scatter_max::I32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -766,10 +766,10 @@ fn test_scatter_min_f32_1d() {
 
     call_scatter(
         scatter_min::F32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -812,10 +812,10 @@ fn test_scatter_min_i32() {
 
     call_scatter(
         scatter_min::I32,
-        input.as_ptr() as *const std::ffi::c_void,
+        input.as_ptr() as *const core::ffi::c_void,
         indices.as_ptr(),
-        src.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        src.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();

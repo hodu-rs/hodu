@@ -1,11 +1,11 @@
 //! Reduction operations for aggregating tensor values along dimensions
 //!
 //! This module provides various reduction operations:
-//! - Aggregations: `reduce_sum`, `reduce_mean`, `reduce_prod`
-//! - Statistics: `reduce_std`, `reduce_var`, `reduce_norm`
-//! - Extrema: `reduce_max`, `reduce_min`
-//! - Indices: `reduce_argmax`, `reduce_argmin`
-//! - Logical: `reduce_any`, `reduce_all`
+//! - Aggregations: `sum`, `mean`, `prod`
+//! - Statistics: `std`, `var`, `norm`
+//! - Extrema: `max`, `min`
+//! - Indices: `argmax`, `argmin`
+//! - Logical: `any`, `all`
 //!
 //! All operations support multi-dimensional reductions with configurable dimensions
 //! and optional dimension preservation (keep_dim).
@@ -14,20 +14,7 @@ use crate::{error::Result, kernels::macros::ops};
 use core::ffi::c_void;
 
 // Define all reduce operations using the macro
-ops!(
-    reduce_sum,
-    reduce_mean,
-    reduce_max,
-    reduce_min,
-    reduce_prod,
-    reduce_std,
-    reduce_var,
-    reduce_norm,
-    reduce_argmax,
-    reduce_argmin,
-    reduce_any,
-    reduce_all
-);
+ops!(sum, mean, max, min, prod, std, var, norm, argmax, argmin, any, all);
 
 /// Execute a reduction operation
 ///
@@ -35,7 +22,7 @@ ops!(
 /// The reduction can preserve dimensions (keep_dim=true) or squeeze them (keep_dim=false).
 ///
 /// # Arguments
-/// * `kernel_name` - The reduction kernel to execute (e.g., reduce_sum::F32, reduce_mean::F64)
+/// * `kernel_name` - The reduction kernel to execute (e.g., sum::F32, mean::F64)
 /// * `input` - Pointer to input tensor data
 /// * `output` - Pointer to output tensor buffer
 /// * `metadata` - Tensor metadata array (see layout below)
@@ -53,11 +40,11 @@ ops!(
 /// - metadata[5+2*shape_len+output_shape_len+num_reduce_dims]: reduce_size (total number of elements to reduce per output element)
 ///
 /// # Operation-specific behaviors
-/// - `reduce_sum`, `reduce_mean`, `reduce_prod`: Available for all numeric types
-/// - `reduce_std`, `reduce_var`, `reduce_norm`, `reduce_mean`: Float types only
-/// - `reduce_max`, `reduce_min`: Available for all numeric types
-/// - `reduce_argmax`, `reduce_argmin`: Return int32 indices, available for all types including bool
-/// - `reduce_any`, `reduce_all`: Return bool, available for all types including bool
+/// - `sum`, `mean`, `prod`: Available for all numeric types
+/// - `std`, `var`, `norm`, `mean`: Float types only
+/// - `max`, `min`: Available for all numeric types
+/// - `argmax`, `argmin`: Return int32 indices, available for all types including bool
+/// - `any`, `all`: Return bool, available for all types including bool
 ///
 /// # Safety
 /// This function uses unsafe FFI calls to C kernels. Caller must ensure:
@@ -155,9 +142,9 @@ macro_rules! declare_reduce_ops {
 }
 
 // Declare all reduce operations
-declare_reduce_ops!(all_types: reduce_sum, reduce_max, reduce_min, reduce_prod);
-declare_reduce_ops!(float_types: reduce_std, reduce_var, reduce_mean, reduce_norm);
-declare_reduce_ops!(all_and_bool_types: reduce_argmax, reduce_argmin, reduce_any, reduce_all);
+declare_reduce_ops!(all_types: sum, max, min, prod);
+declare_reduce_ops!(float_types: std, var, mean, norm);
+declare_reduce_ops!(all_and_bool_types: argmax, argmin, any, all);
 
 // Macro to generate dispatch match arms
 macro_rules! dispatch_all_types {
@@ -233,178 +220,151 @@ macro_rules! dispatch_all_and_bool_types {
 
 // Dispatch function for reduce operations
 unsafe fn dispatch_reduce(name: &str, input: *const c_void, output: *mut c_void, metadata: *const usize) {
-    dispatch_all_types!(
-        name,
-        input,
-        output,
-        metadata,
-        reduce_sum,
-        reduce_max,
-        reduce_min,
-        reduce_prod
-    );
+    dispatch_all_types!(name, input, output, metadata, sum, max, min, prod);
 
-    dispatch_float_types!(
-        name,
-        input,
-        output,
-        metadata,
-        reduce_std,
-        reduce_var,
-        reduce_mean,
-        reduce_norm
-    );
+    dispatch_float_types!(name, input, output, metadata, std, var, mean, norm);
 
-    dispatch_all_and_bool_types!(
-        name,
-        input,
-        output,
-        metadata,
-        reduce_argmax,
-        reduce_argmin,
-        reduce_any,
-        reduce_all
-    );
+    dispatch_all_and_bool_types!(name, input, output, metadata, argmax, argmin, any, all);
 
     // If we get here, kernel was not found
     if !matches!(
         name,
-        "reduce_sum_f8e4m3"
-            | "reduce_sum_f8e5m2"
-            | "reduce_sum_bf16"
-            | "reduce_sum_f16"
-            | "reduce_sum_f32"
-            | "reduce_sum_f64"
-            | "reduce_sum_i8"
-            | "reduce_sum_i16"
-            | "reduce_sum_i32"
-            | "reduce_sum_i64"
-            | "reduce_sum_u8"
-            | "reduce_sum_u16"
-            | "reduce_sum_u32"
-            | "reduce_sum_u64"
-            | "reduce_mean_f8e4m3"
-            | "reduce_mean_f8e5m2"
-            | "reduce_mean_bf16"
-            | "reduce_mean_f16"
-            | "reduce_mean_f32"
-            | "reduce_mean_f64"
-            | "reduce_max_f8e4m3"
-            | "reduce_max_f8e5m2"
-            | "reduce_max_bf16"
-            | "reduce_max_f16"
-            | "reduce_max_f32"
-            | "reduce_max_f64"
-            | "reduce_max_i8"
-            | "reduce_max_i16"
-            | "reduce_max_i32"
-            | "reduce_max_i64"
-            | "reduce_max_u8"
-            | "reduce_max_u16"
-            | "reduce_max_u32"
-            | "reduce_max_u64"
-            | "reduce_min_f8e4m3"
-            | "reduce_min_f8e5m2"
-            | "reduce_min_bf16"
-            | "reduce_min_f16"
-            | "reduce_min_f32"
-            | "reduce_min_f64"
-            | "reduce_min_i8"
-            | "reduce_min_i16"
-            | "reduce_min_i32"
-            | "reduce_min_i64"
-            | "reduce_min_u8"
-            | "reduce_min_u16"
-            | "reduce_min_u32"
-            | "reduce_min_u64"
-            | "reduce_prod_f8e4m3"
-            | "reduce_prod_f8e5m2"
-            | "reduce_prod_bf16"
-            | "reduce_prod_f16"
-            | "reduce_prod_f32"
-            | "reduce_prod_f64"
-            | "reduce_prod_i8"
-            | "reduce_prod_i16"
-            | "reduce_prod_i32"
-            | "reduce_prod_i64"
-            | "reduce_prod_u8"
-            | "reduce_prod_u16"
-            | "reduce_prod_u32"
-            | "reduce_prod_u64"
-            | "reduce_std_f8e4m3"
-            | "reduce_std_f8e5m2"
-            | "reduce_std_bf16"
-            | "reduce_std_f16"
-            | "reduce_std_f32"
-            | "reduce_std_f64"
-            | "reduce_var_f8e4m3"
-            | "reduce_var_f8e5m2"
-            | "reduce_var_bf16"
-            | "reduce_var_f16"
-            | "reduce_var_f32"
-            | "reduce_var_f64"
-            | "reduce_norm_f8e4m3"
-            | "reduce_norm_f8e5m2"
-            | "reduce_norm_bf16"
-            | "reduce_norm_f16"
-            | "reduce_norm_f32"
-            | "reduce_norm_f64"
-            | "reduce_argmax_bool"
-            | "reduce_argmax_f8e4m3"
-            | "reduce_argmax_f8e5m2"
-            | "reduce_argmax_bf16"
-            | "reduce_argmax_f16"
-            | "reduce_argmax_f32"
-            | "reduce_argmax_i8"
-            | "reduce_argmax_i16"
-            | "reduce_argmax_i32"
-            | "reduce_argmax_i64"
-            | "reduce_argmax_u8"
-            | "reduce_argmax_u16"
-            | "reduce_argmax_u32"
-            | "reduce_argmax_u64"
-            | "reduce_argmin_bool"
-            | "reduce_argmin_f8e4m3"
-            | "reduce_argmin_f8e5m2"
-            | "reduce_argmin_bf16"
-            | "reduce_argmin_f16"
-            | "reduce_argmin_f32"
-            | "reduce_argmin_i8"
-            | "reduce_argmin_i16"
-            | "reduce_argmin_i32"
-            | "reduce_argmin_i64"
-            | "reduce_argmin_u8"
-            | "reduce_argmin_u16"
-            | "reduce_argmin_u32"
-            | "reduce_argmin_u64"
-            | "reduce_any_bool"
-            | "reduce_any_f8e4m3"
-            | "reduce_any_f8e5m2"
-            | "reduce_any_bf16"
-            | "reduce_any_f16"
-            | "reduce_any_f32"
-            | "reduce_any_i8"
-            | "reduce_any_i16"
-            | "reduce_any_i32"
-            | "reduce_any_i64"
-            | "reduce_any_u8"
-            | "reduce_any_u16"
-            | "reduce_any_u32"
-            | "reduce_any_u64"
-            | "reduce_all_bool"
-            | "reduce_all_f8e4m3"
-            | "reduce_all_f8e5m2"
-            | "reduce_all_bf16"
-            | "reduce_all_f16"
-            | "reduce_all_f32"
-            | "reduce_all_i8"
-            | "reduce_all_i16"
-            | "reduce_all_i32"
-            | "reduce_all_i64"
-            | "reduce_all_u8"
-            | "reduce_all_u16"
-            | "reduce_all_u32"
-            | "reduce_all_u64"
+        "sum_f8e4m3"
+            | "sum_f8e5m2"
+            | "sum_bf16"
+            | "sum_f16"
+            | "sum_f32"
+            | "sum_f64"
+            | "sum_i8"
+            | "sum_i16"
+            | "sum_i32"
+            | "sum_i64"
+            | "sum_u8"
+            | "sum_u16"
+            | "sum_u32"
+            | "sum_u64"
+            | "mean_f8e4m3"
+            | "mean_f8e5m2"
+            | "mean_bf16"
+            | "mean_f16"
+            | "mean_f32"
+            | "mean_f64"
+            | "max_f8e4m3"
+            | "max_f8e5m2"
+            | "max_bf16"
+            | "max_f16"
+            | "max_f32"
+            | "max_f64"
+            | "max_i8"
+            | "max_i16"
+            | "max_i32"
+            | "max_i64"
+            | "max_u8"
+            | "max_u16"
+            | "max_u32"
+            | "max_u64"
+            | "min_f8e4m3"
+            | "min_f8e5m2"
+            | "min_bf16"
+            | "min_f16"
+            | "min_f32"
+            | "min_f64"
+            | "min_i8"
+            | "min_i16"
+            | "min_i32"
+            | "min_i64"
+            | "min_u8"
+            | "min_u16"
+            | "min_u32"
+            | "min_u64"
+            | "prod_f8e4m3"
+            | "prod_f8e5m2"
+            | "prod_bf16"
+            | "prod_f16"
+            | "prod_f32"
+            | "prod_f64"
+            | "prod_i8"
+            | "prod_i16"
+            | "prod_i32"
+            | "prod_i64"
+            | "prod_u8"
+            | "prod_u16"
+            | "prod_u32"
+            | "prod_u64"
+            | "std_f8e4m3"
+            | "std_f8e5m2"
+            | "std_bf16"
+            | "std_f16"
+            | "std_f32"
+            | "std_f64"
+            | "var_f8e4m3"
+            | "var_f8e5m2"
+            | "var_bf16"
+            | "var_f16"
+            | "var_f32"
+            | "var_f64"
+            | "norm_f8e4m3"
+            | "norm_f8e5m2"
+            | "norm_bf16"
+            | "norm_f16"
+            | "norm_f32"
+            | "norm_f64"
+            | "argmax_bool"
+            | "argmax_f8e4m3"
+            | "argmax_f8e5m2"
+            | "argmax_bf16"
+            | "argmax_f16"
+            | "argmax_f32"
+            | "argmax_i8"
+            | "argmax_i16"
+            | "argmax_i32"
+            | "argmax_i64"
+            | "argmax_u8"
+            | "argmax_u16"
+            | "argmax_u32"
+            | "argmax_u64"
+            | "argmin_bool"
+            | "argmin_f8e4m3"
+            | "argmin_f8e5m2"
+            | "argmin_bf16"
+            | "argmin_f16"
+            | "argmin_f32"
+            | "argmin_i8"
+            | "argmin_i16"
+            | "argmin_i32"
+            | "argmin_i64"
+            | "argmin_u8"
+            | "argmin_u16"
+            | "argmin_u32"
+            | "argmin_u64"
+            | "any_bool"
+            | "any_f8e4m3"
+            | "any_f8e5m2"
+            | "any_bf16"
+            | "any_f16"
+            | "any_f32"
+            | "any_i8"
+            | "any_i16"
+            | "any_i32"
+            | "any_i64"
+            | "any_u8"
+            | "any_u16"
+            | "any_u32"
+            | "any_u64"
+            | "all_bool"
+            | "all_f8e4m3"
+            | "all_f8e5m2"
+            | "all_bf16"
+            | "all_f16"
+            | "all_f32"
+            | "all_i8"
+            | "all_i16"
+            | "all_i32"
+            | "all_i64"
+            | "all_u8"
+            | "all_u16"
+            | "all_u32"
+            | "all_u64"
     ) {
         panic!("Unsupported reduce kernel: {}", name);
     }

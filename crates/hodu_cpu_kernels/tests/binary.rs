@@ -25,9 +25,9 @@ fn run_binary(lhs: &[f32], rhs: &[f32], kernel: Kernel) -> Vec<f32> {
 
     call_binary(
         kernel,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -54,9 +54,9 @@ fn run_binary_to_bool(lhs: &[f32], rhs: &[f32], kernel: Kernel) -> Vec<u8> {
 
     call_binary(
         kernel,
-        lhs.as_ptr() as *const std::ffi::c_void,
-        rhs.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        lhs.as_ptr() as *const core::ffi::c_void,
+        rhs.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();

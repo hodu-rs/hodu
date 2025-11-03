@@ -1,5 +1,5 @@
+use core::ffi::c_void;
 use hodu_cpu_kernels::*;
-use std::ffi::c_void;
 
 fn calculate_strides(shape: &[usize]) -> Vec<usize> {
     let mut strides = vec![1; shape.len()];

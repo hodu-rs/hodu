@@ -60,9 +60,9 @@ fn test_reduce_sum_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_sum::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        sum::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -95,9 +95,9 @@ fn test_reduce_sum_f32_dim0() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_sum::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        sum::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -130,9 +130,9 @@ fn test_reduce_sum_3d() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_sum::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        sum::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -167,9 +167,9 @@ fn test_reduce_sum_f32_keep_dim() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_sum::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        sum::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -203,9 +203,9 @@ fn test_reduce_sum_i32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_sum::I32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        sum::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -239,9 +239,9 @@ fn test_reduce_mean_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_mean::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        mean::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -275,9 +275,9 @@ fn test_reduce_max_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_max::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        max::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -310,9 +310,9 @@ fn test_reduce_max_f32_keep_dim() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_max::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        max::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -346,9 +346,9 @@ fn test_reduce_min_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_min::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        min::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -382,9 +382,9 @@ fn test_reduce_prod_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_prod::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        prod::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -423,9 +423,9 @@ fn test_reduce_std_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_std::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        std::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -464,9 +464,9 @@ fn test_reduce_var_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_var::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        var::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -500,9 +500,9 @@ fn test_reduce_norm_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_norm::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        norm::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -538,9 +538,9 @@ fn test_reduce_argmax_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_argmax::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        argmax::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -574,9 +574,9 @@ fn test_reduce_argmin_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_argmin::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        argmin::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -610,9 +610,9 @@ fn test_reduce_any_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_any::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        any::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -645,9 +645,9 @@ fn test_reduce_any_f32_all_zeros() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_any::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        any::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -680,9 +680,9 @@ fn test_reduce_any_i32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_any::I32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        any::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -716,9 +716,9 @@ fn test_reduce_all_f32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_all::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        all::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -751,9 +751,9 @@ fn test_reduce_all_f32_with_zero() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_all::F32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        all::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
@@ -786,9 +786,9 @@ fn test_reduce_all_i32() {
     metadata.push(reduce_size);
 
     call_reduce(
-        reduce_all::I32,
-        input.as_ptr() as *const std::ffi::c_void,
-        output.as_mut_ptr() as *mut std::ffi::c_void,
+        all::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
         &metadata,
     )
     .unwrap();
