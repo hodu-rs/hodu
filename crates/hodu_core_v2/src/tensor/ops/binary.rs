@@ -2,7 +2,11 @@ use crate::{
     error::HoduResult,
     layer::compat::*,
     ops::{BinaryLogicalOp, BinaryOp, Op},
-    tensor::{from_storage, gradient, utils::broadcast_tensors2, Tensor},
+    script::builder,
+    tensor::{
+        create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder,
+        utils::broadcast_tensors2, Tensor,
+    },
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
         validate_same_dtype,
@@ -20,28 +24,53 @@ macro_rules! binary_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
-            let storage = lhs.with_storage(|lhs_storage| {
-                rhs.with_storage(|rhs_storage| {
-                    lhs_storage.call_binary(
-                        rhs_storage,
-                        &lhs.layout(),
-                        &rhs.layout(),
+            if builder::is_builder_active() {
+                let result_layout = lhs.layout();
+                let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+                register_operation_in_builder(
+                    Op::Binary(BinaryOp::$op_name),
+                    None,
+                    vec![lhs.id(), rhs.id()],
+                    vec![result_id],
+                    vec![lhs.layout(), rhs.layout()],
+                    vec![result_layout],
+                )?;
+
+                if requires_grad {
+                    gradient::record_operation(
+                        result_id,
                         Op::Binary(BinaryOp::$op_name),
-                    )
-                })
-            })?;
+                        vec![self.id(), rhs.id()],
+                    )?;
+                }
 
-            let requires_grad = lhs.is_requires_grad() || rhs.is_requires_grad();
-            let requires_grad = requires_grad && validate_requires_grad;
+                Ok(result_tensor)
+            } else {
+                let storage = lhs.with_storage(|lhs_storage| {
+                    rhs.with_storage(|rhs_storage| {
+                        lhs_storage.call_binary(
+                            rhs_storage,
+                            &lhs.layout(),
+                            &rhs.layout(),
+                            Op::Binary(BinaryOp::$op_name),
+                        )
+                    })
+                })?;
 
-            let result = from_storage(storage, lhs.layout(), true, requires_grad);
+                let requires_grad = lhs.is_requires_grad() || rhs.is_requires_grad();
+                let requires_grad = requires_grad && validate_requires_grad;
 
-            if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Binary(BinaryOp::$op_name);
-                gradient::record_operation(result.id(), op, vec![self.id(), rhs.id()])?;
+                let result = from_storage(storage, lhs.layout(), true, requires_grad);
+
+                if !gradient::is_computing_gradients() && requires_grad {
+                    let op = Op::Binary(BinaryOp::$op_name);
+                    gradient::record_operation(result.id(), op, vec![self.id(), rhs.id()])?;
+                }
+
+                Ok(result)
             }
-
-            Ok(result)
         }
     };
 }
@@ -56,20 +85,36 @@ macro_rules! binary_logical_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
-            let storage = lhs.with_storage(|lhs_storage| {
-                rhs.with_storage(|rhs_storage| {
-                    lhs_storage.call_binary_logical(
-                        rhs_storage,
-                        &lhs.layout(),
-                        &rhs.layout(),
-                        Op::BinaryLogical(BinaryLogicalOp::$op_name),
-                    )
-                })
-            })?;
+            if builder::is_builder_active() {
+                let result_layout = lhs.layout();
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), false);
 
-            let result = from_storage(storage, lhs.layout(), true, false);
+                register_operation_in_builder(
+                    Op::BinaryLogical(BinaryLogicalOp::$op_name),
+                    None,
+                    vec![lhs.id(), rhs.id()],
+                    vec![result_id],
+                    vec![lhs.layout(), rhs.layout()],
+                    vec![result_layout],
+                )?;
 
-            Ok(result)
+                Ok(result_tensor)
+            } else {
+                let storage = lhs.with_storage(|lhs_storage| {
+                    rhs.with_storage(|rhs_storage| {
+                        lhs_storage.call_binary_logical(
+                            rhs_storage,
+                            &lhs.layout(),
+                            &rhs.layout(),
+                            Op::BinaryLogical(BinaryLogicalOp::$op_name),
+                        )
+                    })
+                })?;
+
+                let result = from_storage(storage, lhs.layout(), true, false);
+
+                Ok(result)
+            }
         }
     };
 }

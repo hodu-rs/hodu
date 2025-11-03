@@ -149,16 +149,93 @@ impl Builder {
     pub fn add_operation(
         &self,
         op: Op,
+        op_params: Option<crate::ops::OpParams>,
         inputs: Vec<TensorId>,
         outputs: Vec<TensorId>,
-        parameters: Vec<Scalar>,
-        input_layouts: Vec<Layout>,
-        output_layouts: Vec<Layout>,
+        _input_layouts: Vec<Layout>,
+        _output_layouts: Vec<Layout>,
     ) -> HoduResult<()> {
         self.with_state_mut(|s| {
-            // Operations are converted to IR in build()
-            // For now, just store them (or we can build IR incrementally)
-            // This is a placeholder - actual codegen happens in build()
+            // Get or create default function and block
+            if s.current_function.is_none() {
+                let fn_name = format!("{}_main", s.name);
+                let entry_block_id = BlockId(s.block_counter);
+                s.block_counter += 1;
+
+                let signature = FunctionSignature::new(Vec::new(), Vec::new());
+                let function = Function::new(fn_name.clone(), signature, entry_block_id);
+
+                s.module.add_function(function);
+                s.current_function = Some(fn_name.clone());
+
+                // Create entry block
+                let block = BasicBlock::new(entry_block_id);
+
+                if let Some(function) = s.module.get_function_mut(&fn_name) {
+                    function.add_block(block);
+                }
+                s.current_block = Some(entry_block_id);
+            }
+
+            // Map input TensorIds to ValueIds
+            let input_values: Vec<ValueId> = inputs
+                .iter()
+                .map(|&tensor_id| {
+                    *s.tensor_to_value.entry(tensor_id).or_insert_with(|| {
+                        let value_id = ValueId(s.value_counter);
+                        s.value_counter += 1;
+                        value_id
+                    })
+                })
+                .collect();
+
+            // Create ValueId for result (single output)
+            let result_value = ValueId(s.value_counter);
+            s.value_counter += 1;
+
+            // Store output tensor to value mapping (for first output)
+            if let Some(&first_output) = outputs.first() {
+                s.tensor_to_value.insert(first_output, result_value);
+            }
+
+            // Convert OpParams to attributes
+            let mut attributes = HashMap::new();
+            if let Some(params) = op_params {
+                if let Some(scalar) = params.scalar {
+                    attributes.insert("scalar".to_string(), Attribute::Float(scalar.to_f32()));
+                }
+                if !params.scalars.is_empty() {
+                    let floats: Vec<f32> = params.scalars.iter().map(|s| s.to_f32()).collect();
+                    attributes.insert("scalars".to_string(), Attribute::FloatArray(floats));
+                }
+                if !params.dims.is_empty() {
+                    let dims: Vec<i32> = params.dims.iter().map(|s| s.to_i32()).collect();
+                    attributes.insert("dims".to_string(), Attribute::IntArray(dims));
+                }
+                if let Some(keep_dim) = params.keep_dim {
+                    attributes.insert("keep_dim".to_string(), Attribute::Bool(keep_dim));
+                }
+                if let Some(output_index) = params.output_index {
+                    attributes.insert("output_index".to_string(), Attribute::Int(output_index as i32));
+                }
+            }
+
+            // Create instruction
+            let instruction = Instruction::Compute {
+                result: result_value,
+                op,
+                inputs: input_values,
+                attributes,
+            };
+
+            // Add instruction to current block
+            if let (Some(fn_name), Some(block_id)) = (&s.current_function, &s.current_block) {
+                if let Some(function) = s.module.get_function_mut(fn_name) {
+                    if let Some(block) = function.get_block_mut(*block_id) {
+                        block.add_instruction(instruction);
+                    }
+                }
+            }
         })
         .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))
     }

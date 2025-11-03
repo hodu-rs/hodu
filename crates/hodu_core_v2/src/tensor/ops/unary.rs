@@ -1,9 +1,10 @@
 use crate::{
     error::HoduResult,
     layer::compat::*,
-    ops::{Op, UnaryLogicalOp, UnaryOp, UnaryScalarOp},
+    ops::{Op, OpParams, UnaryLogicalOp, UnaryOp, UnaryScalarOp},
     scalar::Scalar,
-    tensor::{from_storage, gradient, Tensor},
+    script::builder,
+    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
     types::Layout,
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -15,20 +16,41 @@ macro_rules! unary_op {
             validate_dtype_for_op(self.dtype(), Op::Unary(UnaryOp::$op_name))?;
             let validate_requires_grad = validate_requires_grad_for_op(Op::Unary(UnaryOp::$op_name));
 
-            let storage =
-                self.with_storage(|storage| storage.call_unary(&self.layout(), Op::Unary(UnaryOp::$op_name)))?;
+            if builder::is_builder_active() {
+                let result_layout = Layout::from_shape(&self.shape());
+                let requires_grad = self.is_requires_grad() && validate_requires_grad;
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-            let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let layout = Layout::from_shape(&self.shape());
+                register_operation_in_builder(
+                    Op::Unary(UnaryOp::$op_name),
+                    None,
+                    vec![self.id()],
+                    vec![result_id],
+                    vec![self.layout()],
+                    vec![result_layout],
+                )?;
 
-            let result = from_storage(storage, layout, true, requires_grad);
+                if requires_grad {
+                    gradient::record_operation(result_id, Op::Unary(UnaryOp::$op_name), vec![self.id()])?;
+                }
 
-            if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Unary(UnaryOp::$op_name);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                Ok(result_tensor)
+            } else {
+                let storage =
+                    self.with_storage(|storage| storage.call_unary(&self.layout(), Op::Unary(UnaryOp::$op_name)))?;
+
+                let requires_grad = self.is_requires_grad() && validate_requires_grad;
+                let layout = Layout::from_shape(&self.shape());
+
+                let result = from_storage(storage, layout, true, requires_grad);
+
+                if !gradient::is_computing_gradients() && requires_grad {
+                    let op = Op::Unary(UnaryOp::$op_name);
+                    gradient::record_operation(result.id(), op, vec![self.id()])?;
+                }
+
+                Ok(result)
             }
-
-            Ok(result)
         }
     };
 }
@@ -39,15 +61,31 @@ macro_rules! unary_logical_op {
             validate_dtype_for_device(self.dtype(), self.device())?;
             validate_dtype_for_op(self.dtype(), Op::UnaryLogical(UnaryLogicalOp::$op_name))?;
 
-            let storage = self.with_storage(|storage| {
-                storage.call_unary_logical(&self.layout(), Op::UnaryLogical(UnaryLogicalOp::$op_name))
-            })?;
+            if builder::is_builder_active() {
+                let result_layout = Layout::from_shape(&self.shape());
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), false);
 
-            let layout = Layout::from_shape(&self.shape());
+                register_operation_in_builder(
+                    Op::UnaryLogical(UnaryLogicalOp::$op_name),
+                    None,
+                    vec![self.id()],
+                    vec![result_id],
+                    vec![self.layout()],
+                    vec![result_layout],
+                )?;
 
-            let result = from_storage(storage, layout, true, false);
+                Ok(result_tensor)
+            } else {
+                let storage = self.with_storage(|storage| {
+                    storage.call_unary_logical(&self.layout(), Op::UnaryLogical(UnaryLogicalOp::$op_name))
+                })?;
 
-            Ok(result)
+                let layout = Layout::from_shape(&self.shape());
+
+                let result = from_storage(storage, layout, true, false);
+
+                Ok(result)
+            }
         }
     };
 }
@@ -60,25 +98,55 @@ macro_rules! unary_scalar_op {
             let validate_requires_grad = validate_requires_grad_for_op(Op::UnaryScalar(UnaryScalarOp::$op_name));
 
             let scalar_value = scalar.into();
-            let storage = self.with_storage(|storage| {
-                storage.call_unary_scalar(
-                    &self.layout(),
-                    scalar_value,
+
+            if builder::is_builder_active() {
+                let result_layout = Layout::from_shape(&self.shape());
+                let requires_grad = self.is_requires_grad() && validate_requires_grad;
+                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
+                register_operation_in_builder(
                     Op::UnaryScalar(UnaryScalarOp::$op_name),
-                )
-            })?;
+                    Some(OpParams {
+                        scalar: Some(scalar_value),
+                        ..Default::default()
+                    }),
+                    vec![self.id()],
+                    vec![result_id],
+                    vec![self.layout()],
+                    vec![result_layout],
+                )?;
 
-            let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let layout = Layout::from_shape(&self.shape());
+                if requires_grad {
+                    gradient::record_operation_with_scalar(
+                        result_id,
+                        Op::UnaryScalar(UnaryScalarOp::$op_name),
+                        vec![self.id()],
+                        scalar_value,
+                    )?;
+                }
 
-            let result = from_storage(storage, layout, true, requires_grad);
+                Ok(result_tensor)
+            } else {
+                let storage = self.with_storage(|storage| {
+                    storage.call_unary_scalar(
+                        &self.layout(),
+                        scalar_value,
+                        Op::UnaryScalar(UnaryScalarOp::$op_name),
+                    )
+                })?;
 
-            if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::UnaryScalar(UnaryScalarOp::$op_name);
-                gradient::record_operation_with_scalar(result.id(), op, vec![self.id()], scalar_value)?;
+                let requires_grad = self.is_requires_grad() && validate_requires_grad;
+                let layout = Layout::from_shape(&self.shape());
+
+                let result = from_storage(storage, layout, true, requires_grad);
+
+                if !gradient::is_computing_gradients() && requires_grad {
+                    let op = Op::UnaryScalar(UnaryScalarOp::$op_name);
+                    gradient::record_operation_with_scalar(result.id(), op, vec![self.id()], scalar_value)?;
+                }
+
+                Ok(result)
             }
-
-            Ok(result)
         }
     };
 }

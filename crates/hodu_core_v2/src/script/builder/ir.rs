@@ -153,11 +153,11 @@ pub struct ValueInfo {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum Attribute {
     Bool(bool),
-    Int(i64),
-    Float(f64),
+    Int(i32),
+    Float(f32),
     String(String),
-    IntArray(Vec<i64>),
-    FloatArray(Vec<f64>),
+    IntArray(Vec<i32>),
+    FloatArray(Vec<f32>),
 }
 
 /// Constant data stored in module

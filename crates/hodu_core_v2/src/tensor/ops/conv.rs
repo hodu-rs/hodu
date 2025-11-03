@@ -1,9 +1,10 @@
 use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::{ConvOp, Op},
+    ops::{ConvOp, Op, OpParams},
     scalar::Scalar,
-    tensor::{from_storage, gradient, Tensor},
+    script::builder,
+    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -63,26 +64,15 @@ impl Tensor {
         let padding_arr = [padding];
         let dilation_arr = [dilation];
 
-        let storage = self.with_storage(|input_storage| {
-            weight.with_storage(|weight_storage| {
-                input_storage.call_conv(
-                    &self.layout(),
-                    weight_storage,
-                    &weight.layout(),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::Conv1d),
-                )
-            })
-        })?;
-
-        let result_layout = Layout::from_shape(&Shape::from(output_shape));
+        // Calculate layouts before if-else block
+        let input_layout = self.layout();
+        let weight_layout = weight.layout();
+        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Conv(ConvOp::Conv1d);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
             let channels_input = input_dims[1];
             let scalars = vec![
                 Scalar::from(batch_size),
@@ -94,10 +84,64 @@ impl Tensor {
                 Scalar::from(stride),
                 Scalar::from(dilation),
             ];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Conv(ConvOp::Conv1d),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id(), weight.id()],
+                vec![result_id],
+                vec![input_layout, weight_layout],
+                vec![result_layout],
+            )?;
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Conv(ConvOp::Conv1d),
+                    vec![self.id(), weight.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                weight.with_storage(|weight_storage| {
+                    input_storage.call_conv(
+                        &self.layout(),
+                        weight_storage,
+                        &weight.layout(),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::Conv1d),
+                    )
+                })
+            })?;
+
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Conv(ConvOp::Conv1d);
+                let channels_input = input_dims[1];
+                let scalars = vec![
+                    Scalar::from(batch_size),
+                    Scalar::from(length_input),
+                    Scalar::from(channels_output),
+                    Scalar::from(channels_input),
+                    Scalar::from(kernel_size),
+                    Scalar::from(padding),
+                    Scalar::from(stride),
+                    Scalar::from(dilation),
+                ];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 
     pub fn conv2d(&self, weight: &Self, stride: u32, padding: u32, dilation: u32) -> HoduResult<Self> {
@@ -154,26 +198,15 @@ impl Tensor {
         let padding_arr = [padding; 2];
         let dilation_arr = [dilation; 2];
 
-        let storage = self.with_storage(|input_storage| {
-            weight.with_storage(|weight_storage| {
-                input_storage.call_conv(
-                    &self.layout(),
-                    weight_storage,
-                    &weight.layout(),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::Conv2d),
-                )
-            })
-        })?;
-
-        let result_layout = Layout::from_shape(&Shape::from(output_shape));
+        // Calculate layouts before if-else block
+        let input_layout = self.layout();
+        let weight_layout = weight.layout();
+        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Conv(ConvOp::Conv2d);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
             let channels_input = input_dims[1];
             let scalars = vec![
                 Scalar::from(batch_size),
@@ -187,10 +220,66 @@ impl Tensor {
                 Scalar::from(stride),
                 Scalar::from(dilation),
             ];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Conv(ConvOp::Conv2d),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id(), weight.id()],
+                vec![result_id],
+                vec![input_layout, weight_layout],
+                vec![result_layout],
+            )?;
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Conv(ConvOp::Conv2d),
+                    vec![self.id(), weight.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                weight.with_storage(|weight_storage| {
+                    input_storage.call_conv(
+                        &self.layout(),
+                        weight_storage,
+                        &weight.layout(),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::Conv2d),
+                    )
+                })
+            })?;
+
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Conv(ConvOp::Conv2d);
+                let channels_input = input_dims[1];
+                let scalars = vec![
+                    Scalar::from(batch_size),
+                    Scalar::from(input_height),
+                    Scalar::from(input_width),
+                    Scalar::from(kernel_height),
+                    Scalar::from(kernel_width),
+                    Scalar::from(channels_output),
+                    Scalar::from(channels_input),
+                    Scalar::from(padding),
+                    Scalar::from(stride),
+                    Scalar::from(dilation),
+                ];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 
     pub fn conv3d(&self, weight: &Self, stride: u32, padding: u32, dilation: u32) -> HoduResult<Self> {
@@ -250,26 +339,15 @@ impl Tensor {
         let padding_arr = [padding; 3];
         let dilation_arr = [dilation; 3];
 
-        let storage = self.with_storage(|input_storage| {
-            weight.with_storage(|weight_storage| {
-                input_storage.call_conv(
-                    &self.layout(),
-                    weight_storage,
-                    &weight.layout(),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::Conv3d),
-                )
-            })
-        })?;
-
-        let result_layout = Layout::from_shape(&Shape::from(output_shape));
+        // Calculate layouts before if-else block
+        let input_layout = self.layout();
+        let weight_layout = weight.layout();
+        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Conv(ConvOp::Conv3d);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
             let channels_input = input_dims[1];
             let scalars = vec![
                 Scalar::from(batch_size),
@@ -285,10 +363,68 @@ impl Tensor {
                 Scalar::from(stride),
                 Scalar::from(dilation),
             ];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Conv(ConvOp::Conv3d),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id(), weight.id()],
+                vec![result_id],
+                vec![input_layout, weight_layout],
+                vec![result_layout],
+            )?;
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Conv(ConvOp::Conv3d),
+                    vec![self.id(), weight.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                weight.with_storage(|weight_storage| {
+                    input_storage.call_conv(
+                        &self.layout(),
+                        weight_storage,
+                        &weight.layout(),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::Conv3d),
+                    )
+                })
+            })?;
+
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Conv(ConvOp::Conv3d);
+                let channels_input = input_dims[1];
+                let scalars = vec![
+                    Scalar::from(batch_size),
+                    Scalar::from(input_depth),
+                    Scalar::from(input_height),
+                    Scalar::from(input_width),
+                    Scalar::from(kernel_depth),
+                    Scalar::from(kernel_height),
+                    Scalar::from(kernel_width),
+                    Scalar::from(channels_output),
+                    Scalar::from(channels_input),
+                    Scalar::from(padding),
+                    Scalar::from(stride),
+                    Scalar::from(dilation),
+                ];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 
     pub fn conv_transpose1d(
@@ -350,26 +486,15 @@ impl Tensor {
         let padding_arr = [padding];
         let dilation_arr = [dilation];
 
-        let storage = self.with_storage(|input_storage| {
-            weight.with_storage(|weight_storage| {
-                input_storage.call_conv(
-                    &self.layout(),
-                    weight_storage,
-                    &weight.layout(),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::ConvTranspose1d),
-                )
-            })
-        })?;
-
-        let result_layout = Layout::from_shape(&Shape::from(output_shape));
+        // Calculate layouts before if-else block
+        let input_layout = self.layout();
+        let weight_layout = weight.layout();
+        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Conv(ConvOp::ConvTranspose1d);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
             let channels_input = input_dims[1];
             let scalars = vec![
                 Scalar::from(batch_size),
@@ -382,10 +507,65 @@ impl Tensor {
                 Scalar::from(stride),
                 Scalar::from(dilation),
             ];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Conv(ConvOp::ConvTranspose1d),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id(), weight.id()],
+                vec![result_id],
+                vec![input_layout, weight_layout],
+                vec![result_layout],
+            )?;
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Conv(ConvOp::ConvTranspose1d),
+                    vec![self.id(), weight.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                weight.with_storage(|weight_storage| {
+                    input_storage.call_conv(
+                        &self.layout(),
+                        weight_storage,
+                        &weight.layout(),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::ConvTranspose1d),
+                    )
+                })
+            })?;
+
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Conv(ConvOp::ConvTranspose1d);
+                let channels_input = input_dims[1];
+                let scalars = vec![
+                    Scalar::from(batch_size),
+                    Scalar::from(length_input),
+                    Scalar::from(channels_output),
+                    Scalar::from(channels_input),
+                    Scalar::from(kernel_size),
+                    Scalar::from(padding),
+                    Scalar::from(output_padding),
+                    Scalar::from(stride),
+                    Scalar::from(dilation),
+                ];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 
     pub fn conv_transpose2d(
@@ -451,26 +631,15 @@ impl Tensor {
         let padding_arr = [padding; 2];
         let dilation_arr = [dilation; 2];
 
-        let storage = self.with_storage(|input_storage| {
-            weight.with_storage(|weight_storage| {
-                input_storage.call_conv(
-                    &self.layout(),
-                    weight_storage,
-                    &weight.layout(),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::ConvTranspose2d),
-                )
-            })
-        })?;
-
-        let result_layout = Layout::from_shape(&Shape::from(output_shape));
+        // Calculate layouts before if-else block
+        let input_layout = self.layout();
+        let weight_layout = weight.layout();
+        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Conv(ConvOp::ConvTranspose2d);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
             let channels_input = input_dims[1];
             let scalars = vec![
                 Scalar::from(batch_size),
@@ -485,10 +654,67 @@ impl Tensor {
                 Scalar::from(stride),
                 Scalar::from(dilation),
             ];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Conv(ConvOp::ConvTranspose2d),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id(), weight.id()],
+                vec![result_id],
+                vec![input_layout, weight_layout],
+                vec![result_layout],
+            )?;
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Conv(ConvOp::ConvTranspose2d),
+                    vec![self.id(), weight.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                weight.with_storage(|weight_storage| {
+                    input_storage.call_conv(
+                        &self.layout(),
+                        weight_storage,
+                        &weight.layout(),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::ConvTranspose2d),
+                    )
+                })
+            })?;
+
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Conv(ConvOp::ConvTranspose2d);
+                let channels_input = input_dims[1];
+                let scalars = vec![
+                    Scalar::from(batch_size),
+                    Scalar::from(input_height),
+                    Scalar::from(input_width),
+                    Scalar::from(kernel_height),
+                    Scalar::from(kernel_width),
+                    Scalar::from(channels_output),
+                    Scalar::from(channels_input),
+                    Scalar::from(padding),
+                    Scalar::from(output_padding),
+                    Scalar::from(stride),
+                    Scalar::from(dilation),
+                ];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 
     pub fn conv_transpose3d(
@@ -558,26 +784,15 @@ impl Tensor {
         let padding_arr = [padding; 3];
         let dilation_arr = [dilation; 3];
 
-        let storage = self.with_storage(|input_storage| {
-            weight.with_storage(|weight_storage| {
-                input_storage.call_conv(
-                    &self.layout(),
-                    weight_storage,
-                    &weight.layout(),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::ConvTranspose3d),
-                )
-            })
-        })?;
-
-        let result_layout = Layout::from_shape(&Shape::from(output_shape));
+        // Calculate layouts before if-else block
+        let input_layout = self.layout();
+        let weight_layout = weight.layout();
+        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Conv(ConvOp::ConvTranspose3d);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+
             let channels_input = input_dims[1];
             let scalars = vec![
                 Scalar::from(batch_size),
@@ -594,10 +809,69 @@ impl Tensor {
                 Scalar::from(stride),
                 Scalar::from(dilation),
             ];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Conv(ConvOp::ConvTranspose3d),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id(), weight.id()],
+                vec![result_id],
+                vec![input_layout, weight_layout],
+                vec![result_layout],
+            )?;
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Conv(ConvOp::ConvTranspose3d),
+                    vec![self.id(), weight.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                weight.with_storage(|weight_storage| {
+                    input_storage.call_conv(
+                        &self.layout(),
+                        weight_storage,
+                        &weight.layout(),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::ConvTranspose3d),
+                    )
+                })
+            })?;
+
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Conv(ConvOp::ConvTranspose3d);
+                let channels_input = input_dims[1];
+                let scalars = vec![
+                    Scalar::from(batch_size),
+                    Scalar::from(input_depth),
+                    Scalar::from(input_height),
+                    Scalar::from(input_width),
+                    Scalar::from(kernel_depth),
+                    Scalar::from(kernel_height),
+                    Scalar::from(kernel_width),
+                    Scalar::from(channels_output),
+                    Scalar::from(channels_input),
+                    Scalar::from(padding),
+                    Scalar::from(output_padding),
+                    Scalar::from(stride),
+                    Scalar::from(dilation),
+                ];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id(), weight.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 
     // Convolution gradient operations (internal use for backpropagation)

@@ -334,35 +334,38 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
     Tensor(tensor_id)
 }
 
-// pub(crate) fn create_builder_tensor(layout: Layout) -> (TensorId, Tensor) {
-//     create_builder_tensor_with_grad(layout, false)
-// }
+pub(crate) fn create_builder_tensor(layout: Layout) -> (TensorId, Tensor) {
+    create_builder_tensor_with_grad(layout, false)
+}
 
-// pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
-//     let tensor_ = Tensor_ {
-//         storage: None,
-//         is_runtime: false,
-//         layout,
-//         requires_grad,
-//         grad_tensor_id: None,
-//     };
-//     let tensor_id = TensorId::new();
-//     insert(tensor_id, tensor_);
-//     let tensor = Tensor(tensor_id);
-//     (tensor_id, tensor)
-// }
+pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
+    let tensor_ = Tensor_ {
+        storage: None,
+        is_runtime: false,
+        layout,
+        requires_grad,
+        grad_tensor_id: None,
+    };
+    let tensor_id = TensorId::new();
+    insert(tensor_id, tensor_);
+    let tensor = Tensor(tensor_id);
+    (tensor_id, tensor)
+}
 
-// pub(crate) fn register_operation_in_builder(
-//     op: crate::op::Op,
-//     output_ids: Vec<TensorId>,
-//     input_layouts: Vec<Layout>,
-//     output_layouts: Vec<Layout>,
-// ) {
-//     use crate::builder;
-//     if let Ok(active_builder) = builder::get_active_builder() {
-//         let _ = active_builder.add_operation(op, output_ids, input_layouts, output_layouts);
-//     }
-// }
+pub(crate) fn register_operation_in_builder(
+    op: crate::ops::Op,
+    op_params: Option<crate::ops::OpParams>,
+    inputs: Vec<TensorId>,
+    outputs: Vec<TensorId>,
+    input_layouts: Vec<Layout>,
+    output_layouts: Vec<Layout>,
+) -> HoduResult<()> {
+    use crate::script::builder;
+    if let Ok(active_builder) = builder::get_active_builder() {
+        active_builder.add_operation(op, op_params, inputs, outputs, input_layouts, output_layouts)?;
+    }
+    Ok(())
+}
 
 pub(crate) fn tensor_from_id(tensor_id: TensorId) -> Tensor {
     Tensor(tensor_id)

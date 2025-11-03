@@ -1,9 +1,10 @@
 use crate::{
     error::HoduResult,
     layer::compat::*,
-    ops::{Op, ReduceOp},
+    ops::{Op, OpParams, ReduceOp},
     scalar::Scalar,
-    tensor::{from_storage, gradient, Tensor},
+    script::builder,
+    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -157,18 +158,51 @@ impl Tensor {
 
         let dims_u32: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
 
-        let storage = self
-            .with_storage(|storage| storage.call_reduce(&self.layout(), &dims_u32, keep_dim, Op::Reduce(reduce_op)))?;
+        if builder::is_builder_active() {
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-        let requires_grad = self.is_requires_grad() && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
-
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Reduce(reduce_op);
             let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d as u32)).collect();
-            gradient::record_operation_with_dims(result.id(), op, vec![self.id()], dims_scalars, Some(keep_dim))?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::Reduce(reduce_op),
+                Some(OpParams {
+                    dims: dims_scalars.clone(),
+                    keep_dim: Some(keep_dim),
+                    ..Default::default()
+                }),
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![result_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation_with_dims(
+                    result_id,
+                    Op::Reduce(reduce_op),
+                    vec![self.id()],
+                    dims_scalars,
+                    Some(keep_dim),
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                storage.call_reduce(&self.layout(), &dims_u32, keep_dim, Op::Reduce(reduce_op))
+            })?;
+
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Reduce(reduce_op);
+                let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d as u32)).collect();
+                gradient::record_operation_with_dims(result.id(), op, vec![self.id()], dims_scalars, Some(keep_dim))?;
+            }
+
+            Ok(result)
+        }
     }
 }

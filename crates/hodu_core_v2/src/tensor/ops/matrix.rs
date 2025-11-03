@@ -2,7 +2,8 @@ use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::{MatrixOp, Op},
-    tensor::{from_storage, gradient, Tensor},
+    script::builder,
+    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -171,27 +172,47 @@ impl Tensor {
 
         let result_layout = Layout::from_shape(&Shape::from(result_dims));
 
-        let storage = lhs_broadcasted.with_storage(|lhs_storage| {
-            rhs_broadcasted.with_storage(|rhs_storage| {
-                lhs_storage.call_matmul(
-                    rhs_storage,
-                    &lhs_broadcasted.layout(),
-                    &rhs_broadcasted.layout(),
-                    Op::Matrix(MatrixOp::Matmul),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-        let requires_grad = self.is_requires_grad() || other.is_requires_grad();
-        let requires_grad = requires_grad && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
+            register_operation_in_builder(
+                Op::Matrix(MatrixOp::Matmul),
+                None,
+                vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
+                vec![result_id],
+                vec![lhs_broadcasted.layout(), rhs_broadcasted.layout()],
+                vec![result_layout],
+            )?;
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Matrix(MatrixOp::Matmul);
-            gradient::record_operation(result.id(), op, vec![self.id(), other.id()])?;
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Matrix(MatrixOp::Matmul), vec![self.id(), other.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = lhs_broadcasted.with_storage(|lhs_storage| {
+                rhs_broadcasted.with_storage(|rhs_storage| {
+                    lhs_storage.call_matmul(
+                        rhs_storage,
+                        &lhs_broadcasted.layout(),
+                        &rhs_broadcasted.layout(),
+                        Op::Matrix(MatrixOp::Matmul),
+                    )
+                })
+            })?;
+
+            let requires_grad = self.is_requires_grad() || other.is_requires_grad();
+            let requires_grad = requires_grad && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Matrix(MatrixOp::Matmul);
+                gradient::record_operation(result.id(), op, vec![self.id(), other.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn dot(&self, other: &Self) -> HoduResult<Self> {
@@ -291,21 +312,41 @@ impl Tensor {
         let result_layout = Layout::from_shape(&Shape::from(result_dims));
         let validate_requires_grad = validate_requires_grad_for_op(Op::Matrix(MatrixOp::Dot));
 
-        let storage = self.with_storage(|lhs_storage| {
-            other.with_storage(|rhs_storage| {
-                lhs_storage.call_dot(rhs_storage, &self.layout(), &other.layout(), Op::Matrix(MatrixOp::Dot))
-            })
-        })?;
+        if builder::is_builder_active() {
+            let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
 
-        let requires_grad = self.is_requires_grad() || other.is_requires_grad();
-        let requires_grad = requires_grad && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
+            register_operation_in_builder(
+                Op::Matrix(MatrixOp::Dot),
+                None,
+                vec![self.id(), other.id()],
+                vec![result_id],
+                vec![self.layout(), other.layout()],
+                vec![result_layout],
+            )?;
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Matrix(MatrixOp::Dot);
-            gradient::record_operation(result.id(), op, vec![self.id(), other.id()])?;
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Matrix(MatrixOp::Dot), vec![self.id(), other.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|lhs_storage| {
+                other.with_storage(|rhs_storage| {
+                    lhs_storage.call_dot(rhs_storage, &self.layout(), &other.layout(), Op::Matrix(MatrixOp::Dot))
+                })
+            })?;
+
+            let requires_grad = self.is_requires_grad() || other.is_requires_grad();
+            let requires_grad = requires_grad && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Matrix(MatrixOp::Dot);
+                gradient::record_operation(result.id(), op, vec![self.id(), other.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 }

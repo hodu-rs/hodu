@@ -1,9 +1,12 @@
 use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::{Op, ShapeOp, ShapeScalarsOp},
+    ops::{Op, OpParams, ShapeOp, ShapeScalarsOp},
     scalar::Scalar,
-    tensor::{from_shared_storage_with, gradient, Tensor},
+    script::builder,
+    tensor::{
+        create_builder_tensor_with_grad, from_shared_storage_with, gradient, register_operation_in_builder, Tensor,
+    },
     types::Shape,
 };
 
@@ -28,14 +31,33 @@ impl Tensor {
         let new_layout = self.layout().reshape(shape)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Reshape);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Reshape),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Reshape), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Reshape);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn view(&self, shape: &Shape) -> HoduResult<Self> {
@@ -51,14 +73,33 @@ impl Tensor {
         let new_layout = self.layout().flatten()?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Flatten);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Flatten),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Flatten), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Flatten);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn squeeze<D: Into<Scalar> + Copy>(&self, dims: &[D]) -> HoduResult<Self> {
@@ -78,14 +119,33 @@ impl Tensor {
         let new_layout = self.layout().squeeze(&dims_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Squeeze);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Squeeze),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Squeeze), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Squeeze);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn unsqueeze<D: Into<Scalar>>(&self, dim: D) -> HoduResult<Self> {
@@ -100,14 +160,33 @@ impl Tensor {
         let new_layout = self.layout().unsqueeze(dim_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Unsqueeze);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Unsqueeze),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Unsqueeze), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Unsqueeze);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn broadcast(&self, target_shape: &Shape) -> HoduResult<Self> {
@@ -119,14 +198,33 @@ impl Tensor {
         let new_layout = self.layout().broadcast_to(target_shape)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Broadcast);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Broadcast),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Broadcast), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Broadcast);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn broadcast_like(&self, other: &Self) -> HoduResult<Self> {
@@ -157,14 +255,33 @@ impl Tensor {
         let new_layout = self.layout().transpose(dim1_i32, dim2_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Transpose);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Transpose),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Transpose), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Transpose);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn t(&self) -> HoduResult<Self> {
@@ -188,14 +305,33 @@ impl Tensor {
         let new_layout = self.layout().permute(&axes_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::Shape(ShapeOp::Permute);
-            gradient::record_operation(result.id(), op, vec![self.id()])?;
+            register_operation_in_builder(
+                Op::Shape(ShapeOp::Permute),
+                None,
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation(result_id, Op::Shape(ShapeOp::Permute), vec![self.id()])?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::Shape(ShapeOp::Permute);
+                gradient::record_operation(result.id(), op, vec![self.id()])?;
+            }
+
+            Ok(result)
         }
-
-        Ok(result)
     }
 
     pub fn slice<D: Into<Scalar>, S: Into<Scalar> + Copy>(
@@ -227,15 +363,45 @@ impl Tensor {
         let new_layout = self.layout().slice(dim_i32, start_i32, end_i32, step_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        let result = from_shared_storage_with(self, new_layout, requires_grad);
+        if builder::is_builder_active() {
+            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
 
-        if !gradient::is_computing_gradients() && requires_grad {
-            let op = Op::ShapeScalars(ShapeScalarsOp::Slice);
             let end_scalar = Scalar::from(end_i32.unwrap_or(i32::MAX));
             let scalars = vec![dim_scalar, start_scalar, end_scalar, step_scalar];
-            gradient::record_operation_with_scalars(result.id(), op, vec![self.id()], scalars)?;
-        }
 
-        Ok(result)
+            register_operation_in_builder(
+                Op::ShapeScalars(ShapeScalarsOp::Slice),
+                Some(OpParams {
+                    scalars: scalars.clone(),
+                    ..Default::default()
+                }),
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![new_layout],
+            )?;
+
+            if requires_grad {
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::ShapeScalars(ShapeScalarsOp::Slice),
+                    vec![self.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let result = from_shared_storage_with(self, new_layout, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let op = Op::ShapeScalars(ShapeScalarsOp::Slice);
+                let end_scalar = Scalar::from(end_i32.unwrap_or(i32::MAX));
+                let scalars = vec![dim_scalar, start_scalar, end_scalar, step_scalar];
+                gradient::record_operation_with_scalars(result.id(), op, vec![self.id()], scalars)?;
+            }
+
+            Ok(result)
+        }
     }
 }
