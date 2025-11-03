@@ -7,7 +7,7 @@ mod indexing;
 mod matrix;
 mod normalization;
 mod reduce;
-mod reduce_window;
 mod selection;
 mod shape;
 mod unary;
+mod windowing;

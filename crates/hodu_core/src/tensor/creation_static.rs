@@ -1,14 +1,14 @@
 use crate::{
-    builder::{get_active_builder, is_builder_active},
     error::{HoduError, HoduResult},
+    script::builder::{get_active_builder, is_builder_active},
     tensor::{insert, Tensor, TensorId, Tensor_},
-    types::layout::Layout,
+    types::{Layout, Shape},
 };
 
 impl Tensor {
-    pub fn input(name: &'static str, shape: &[usize]) -> HoduResult<Self> {
+    pub fn input(name: &'static str, shape: &Shape) -> HoduResult<Self> {
         if !is_builder_active() {
-            return Err(HoduError::StaticTensorCreationRequiresBuilderContext);
+            return Err(HoduError::BuilderNotActive);
         }
 
         let layout = Layout::from_shape(shape);

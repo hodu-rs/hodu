@@ -1,40 +1,43 @@
 mod creation;
-mod creation_ops;
+mod creation_from_ops;
 mod creation_static;
 mod display;
 mod gradient;
 mod ops;
-pub(super) mod utils;
+pub(crate) mod utils;
 mod vec;
 
 use crate::{
-    be_hodu::storage::HoduStorage,
-    compat::*,
+    be::storage::BackendStorage,
     error::{HoduError, HoduResult},
-    types::{device::Device, dtype::DType, layout::Layout},
+    layer::compat::*,
+    types::{DType, Device, Layout, Shape},
 };
 pub use creation::{get_runtime_device, set_runtime_device};
 #[cfg(feature = "std")]
 use dashmap::DashMap;
-pub use gradient::{clear_default_context_tape, clear_tape, GradientContext};
+pub use gradient::{is_computing_gradients, GradientContext};
 
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub struct TensorId(usize);
+pub struct TensorId(u32);
 
 impl TensorId {
     pub(crate) fn new() -> Self {
-        static TENSOR_COUNTER: AtomicUsize = AtomicUsize::new(0);
+        static TENSOR_COUNTER: AtomicU32 = AtomicU32::new(0);
         Self(TENSOR_COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+
+    #[cfg(test)]
+    pub fn test_new(id: u32) -> Self {
+        Self(id)
     }
 }
 
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-/// # Tensor
-///
 pub struct Tensor(TensorId);
 
 impl AsRef<Tensor> for Tensor {
@@ -44,7 +47,7 @@ impl AsRef<Tensor> for Tensor {
 }
 
 pub struct Tensor_ {
-    storage: Option<Arc<RwLock<HoduStorage>>>,
+    storage: Option<Arc<BackendStorage>>,
     is_runtime: bool,
     layout: Layout,
     requires_grad: bool,
@@ -52,11 +55,18 @@ pub struct Tensor_ {
 }
 
 #[cfg(feature = "std")]
-static TENSORS: LazyLock<DashMap<TensorId, Tensor_>> =
-    LazyLock::new(|| DashMap::with_capacity_and_shard_amount(1 << 14, 64));
+static TENSORS: LazyLock<DashMap<TensorId, Tensor_>> = LazyLock::new(|| {
+    // Use number of available parallelism (CPU cores) for optimal shard count
+    // Fallback to 64 if detection fails
+    let shard_count = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(64);
+    DashMap::with_capacity_and_shard_amount(1 << 14, shard_count)
+});
 
 #[cfg(not(feature = "std"))]
-static TENSORS: LazyLock<RwLock<HashMap<TensorId, Tensor_>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
+static TENSORS: LazyLock<RwLock<HashMap<TensorId, Tensor_>>> = LazyLock::new(|| {
+    // Note: BTreeMap doesn't support reserve(), but provides O(log n) access
+    RwLock::new(HashMap::new())
+});
 
 #[cfg(feature = "std")]
 pub fn insert(tensor_id: TensorId, tensor_: Tensor_) {
@@ -147,28 +157,16 @@ impl Tensor {
         with_tensor(self.0, |t| t.storage.is_some()).unwrap_or(false)
     }
 
-    #[cfg(feature = "std")]
-    pub(crate) fn with_storage<R>(&self, f: impl FnOnce(&HoduStorage) -> HoduResult<R>) -> HoduResult<R> {
+    pub(crate) fn with_storage<R>(&self, f: impl FnOnce(&BackendStorage) -> HoduResult<R>) -> HoduResult<R> {
         with_tensor(self.0, |tensor_ref| {
             let storage = tensor_ref.storage.as_ref().ok_or(HoduError::StorageNotFound(self.0))?;
-            let storage_guard = storage.read().map_err(|_| HoduError::StorageCorrupted(self.0))?;
-            f(&storage_guard)
-        })
-        .ok_or(HoduError::TensorNotFound(self.0))?
-    }
-
-    #[cfg(not(feature = "std"))]
-    pub(crate) fn with_storage<R>(&self, f: impl FnOnce(&HoduStorage) -> HoduResult<R>) -> HoduResult<R> {
-        with_tensor(self.0, |tensor_ref| {
-            let storage = tensor_ref.storage.as_ref().ok_or(HoduError::StorageNotFound(self.0))?;
-            let storage_guard = storage.read();
-            f(&storage_guard)
+            f(storage.as_ref())
         })
         .ok_or(HoduError::TensorNotFound(self.0))?
     }
 
     // #[cfg(feature = "std")]
-    // pub(crate) fn with_storage_mut<R>(&self, f: impl FnOnce(&mut HoduStorage) -> HoduResult<R>) -> HoduResult<R> {
+    // pub(crate) fn with_storage_mut<R>(&self, f: impl FnOnce(&mut BackendStorage) -> HoduResult<R>) -> HoduResult<R> {
     //     with_tensor(self.0, |tensor_ref| {
     //         let storage = tensor_ref.storage.as_ref().ok_or(HoduError::StorageNotFound(self.0))?;
     //         let mut storage_guard = storage.write().map_err(|_| HoduError::StorageCorrupted(self.0))?;
@@ -178,7 +176,7 @@ impl Tensor {
     // }
     //
     // #[cfg(not(feature = "std"))]
-    // pub(crate) fn with_storage_mut<R>(&self, f: impl FnOnce(&mut HoduStorage) -> HoduResult<R>) -> HoduResult<R> {
+    // pub(crate) fn with_storage_mut<R>(&self, f: impl FnOnce(&mut BackendStorage) -> HoduResult<R>) -> HoduResult<R> {
     //     with_tensor(self.0, |tensor_ref| {
     //         let storage = tensor_ref.storage.as_ref().ok_or(HoduError::StorageNotFound(self.0))?;
     //         let mut storage_guard = storage.write();
@@ -191,50 +189,48 @@ impl Tensor {
         with_tensor(self.0, |t| t.is_runtime).unwrap_or(false)
     }
 
-    pub fn get_layout(&self) -> Layout {
-        with_tensor(self.0, |t| t.layout.clone()).unwrap_or_else(|| Layout::from_shape(&[]))
+    pub fn layout(&self) -> Layout {
+        with_tensor(self.0, |t| t.layout.clone()).unwrap_or_else(|| Layout::from_shape(&Shape::scalar()))
     }
 
-    pub fn get_shape(&self) -> Vec<usize> {
-        let layout = self.get_layout();
-        layout.get_shape().to_vec()
+    pub fn shape(&self) -> Shape {
+        let layout = self.layout();
+        layout.shape().clone()
     }
 
-    pub fn get_strides(&self) -> Vec<usize> {
-        let layout = self.get_layout();
-        layout.get_strides().to_vec()
+    pub fn strides(&self) -> Vec<u32> {
+        let layout = self.layout();
+        layout.strides().to_vec()
     }
 
-    pub fn get_offset(&self) -> usize {
-        let layout = self.get_layout();
-        layout.get_offset()
+    pub fn offset(&self) -> u32 {
+        let layout = self.layout();
+        layout.offset()
     }
 
-    pub fn get_ndim(&self) -> usize {
-        self.get_shape().len()
+    pub fn ndim(&self) -> u32 {
+        self.shape().ndim()
     }
 
-    pub fn get_dim_size(&self, dim: usize) -> usize {
-        self.get_shape()[dim]
+    pub fn dim(&self, index: u32) -> Option<u32> {
+        self.shape().dim(index)
     }
 
-    pub fn get_size(&self) -> usize {
-        self.get_shape().iter().product()
+    pub fn size(&self) -> u32 {
+        self.shape().size()
     }
 
-    pub fn get_device(&self) -> Device {
-        self.with_storage(|storage| Ok(storage.get_device()))
-            .unwrap_or(Device::CPU)
+    pub fn device(&self) -> Device {
+        self.with_storage(|storage| Ok(storage.device())).unwrap_or(Device::CPU)
     }
 
-    pub fn get_dtype(&self) -> DType {
-        self.with_storage(|storage| Ok(storage.get_dtype()))
-            .unwrap_or(DType::F32)
+    pub fn dtype(&self) -> DType {
+        self.with_storage(|storage| Ok(storage.dtype())).unwrap_or(DType::F32)
     }
 
     pub fn set_requires_grad(&self, requires: bool) -> HoduResult<()> {
         if requires {
-            let dtype = self.get_dtype();
+            let dtype = self.dtype();
             if !dtype.is_float() {
                 return Err(HoduError::RequiresGradNotSet(self.0));
             }
@@ -259,11 +255,11 @@ impl Tensor {
     }
 
     pub fn is_contiguous(&self) -> bool {
-        self.get_layout().is_contiguous()
+        self.layout().is_contiguous()
     }
 
     pub fn backward(&self) -> HoduResult<()> {
-        let dtype = self.get_dtype();
+        let dtype = self.dtype();
         if !dtype.is_float() {
             return Err(HoduError::GradientComputationFailed(format!(
                 "Cannot compute gradients for non-float tensor with dtype {dtype:?}"
@@ -297,7 +293,7 @@ impl Tensor {
         }
 
         if let Ok(grad_tensor) = self.grad() {
-            let zeros = Self::zeros(grad_tensor.get_layout().get_shape(), grad_tensor.get_dtype())?;
+            let zeros = Self::zeros(&grad_tensor.shape(), grad_tensor.dtype())?;
 
             with_tensor_mut(self.0, |tensor_ref| {
                 tensor_ref.grad_tensor_id = Some(zeros.0);
@@ -308,18 +304,9 @@ impl Tensor {
     }
 }
 
-pub(crate) fn from_storage(storage: HoduStorage, layout: Layout, is_runtime: bool) -> Tensor {
-    from_storage_with_grad(storage, layout, is_runtime, false)
-}
-
-pub(crate) fn from_storage_with_grad(
-    storage: HoduStorage,
-    layout: Layout,
-    is_runtime: bool,
-    requires_grad: bool,
-) -> Tensor {
+pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: bool, requires_grad: bool) -> Tensor {
     let tensor_ = Tensor_ {
-        storage: Some(Arc::new(RwLock::new(storage))),
+        storage: Some(Arc::new(storage)),
         is_runtime,
         layout,
         requires_grad,
@@ -330,9 +317,26 @@ pub(crate) fn from_storage_with_grad(
     Tensor(tensor_id)
 }
 
-// pub(crate) fn create_builder_tensor(layout: Layout) -> (TensorId, Tensor) {
-//     create_builder_tensor_with_grad(layout, false)
-// }
+pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, requires_grad: bool) -> Tensor {
+    let storage_arc =
+        with_tensor(source_tensor.id(), |tensor_ref| tensor_ref.storage.clone()).expect("Source tensor not found");
+
+    let tensor_ = Tensor_ {
+        storage: storage_arc,
+        is_runtime: true,
+        layout,
+        requires_grad,
+        grad_tensor_id: None,
+    };
+
+    let tensor_id = TensorId::new();
+    insert(tensor_id, tensor_);
+    Tensor(tensor_id)
+}
+
+pub(crate) fn create_builder_tensor(layout: Layout) -> (TensorId, Tensor) {
+    create_builder_tensor_with_grad(layout, false)
+}
 
 pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
     let tensor_ = Tensor_ {
@@ -349,15 +353,18 @@ pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: boo
 }
 
 pub(crate) fn register_operation_in_builder(
-    op: crate::op::Op,
-    output_ids: Vec<TensorId>,
+    op: crate::ops::Op,
+    op_params: Option<crate::ops::OpParams>,
+    inputs: Vec<TensorId>,
+    outputs: Vec<TensorId>,
     input_layouts: Vec<Layout>,
     output_layouts: Vec<Layout>,
-) {
-    use crate::builder;
+) -> HoduResult<()> {
+    use crate::script::builder;
     if let Ok(active_builder) = builder::get_active_builder() {
-        let _ = active_builder.add_operation(op, output_ids, input_layouts, output_layouts);
+        active_builder.add_operation(op, op_params, inputs, outputs, input_layouts, output_layouts)?;
     }
+    Ok(())
 }
 
 pub(crate) fn tensor_from_id(tensor_id: TensorId) -> Tensor {
@@ -373,21 +380,4 @@ pub(crate) fn set_grad_tensor_id(tensor_id: TensorId, grad_tensor_id: TensorId) 
     } else {
         Err(HoduError::TensorNotFound(tensor_id))
     }
-}
-
-pub(crate) fn from_shared_storage_with_grad(source_tensor: &Tensor, layout: Layout, requires_grad: bool) -> Tensor {
-    let storage_arc =
-        with_tensor(source_tensor.id(), |tensor_ref| tensor_ref.storage.clone()).expect("Source tensor not found");
-
-    let tensor_ = Tensor_ {
-        storage: storage_arc,
-        is_runtime: true,
-        layout,
-        requires_grad,
-        grad_tensor_id: None,
-    };
-
-    let tensor_id = TensorId::new();
-    insert(tensor_id, tensor_);
-    Tensor(tensor_id)
 }
