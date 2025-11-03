@@ -294,7 +294,9 @@ CONV3D_OP(double, f64)
 // Transposed convolution (deconvolution) is the inverse of convolution,
 // commonly used in decoder networks and generative models.
 //
-// Metadata layout: Same as conv1d (includes batch parameter)
+// Metadata layout for conv_transpose1d: Same as conv1d
+// output_padding is used only for calculating out_width at the Rust level,
+// not needed in the kernel as it's already reflected in out_width
 
 /// Macro to implement 1D transposed convolution operation
 ///
@@ -358,7 +360,9 @@ CONV_TRANSPOSE1D_OP(double, f64)
 // 2D TRANSPOSED CONVOLUTION OPERATIONS
 // ============================================================================
 //
-// Metadata layout: Same as conv2d
+// Metadata layout for conv_transpose2d: Same as conv2d
+// output_padding is used only for calculating out_height/out_width at the Rust level,
+// not needed in the kernel as it's already reflected in out_height/out_width
 
 /// Macro to implement 2D transposed convolution operation
 ///

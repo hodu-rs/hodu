@@ -2,6 +2,7 @@ use crate::{
     error::HoduResult,
     scalar::Scalar,
     tensor::{tensor_from_id, Tensor, TensorId},
+    types::Shape,
 };
 
 // Binary operations
@@ -122,6 +123,11 @@ pub fn create_exp_tensor(a: TensorId) -> HoduResult<TensorId> {
     tensor_a.exp().map(|t| t.id())
 }
 
+// pub fn create_sqrt_tensor(a: TensorId) -> HoduResult<TensorId> {
+//     let tensor_a = tensor_from_id(a);
+//     tensor_a.sqrt().map(|t| t.id())
+// }
+
 // Unary Scalar operations
 pub fn create_add_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
@@ -144,7 +150,7 @@ pub fn create_pow_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<Tenso
 }
 
 // Reduce operations
-pub fn create_sum_to_shape_tensor(tensor_id: TensorId, target_shape: &[usize]) -> HoduResult<TensorId> {
+pub fn create_sum_to_shape_tensor(tensor_id: TensorId, target_shape: &Shape) -> HoduResult<TensorId> {
     let tensor = tensor_from_id(tensor_id);
     tensor.sum_to_shape(target_shape).map(|t| t.id())
 }
@@ -152,16 +158,16 @@ pub fn create_sum_to_shape_tensor(tensor_id: TensorId, target_shape: &[usize]) -
 // Utility functions
 pub fn create_zeros_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
-    let layout = tensor_a.get_layout();
-    let dtype = tensor_a.get_dtype();
-    let zeros_tensor = Tensor::zeros(layout.get_shape(), dtype)?;
+    let shape = tensor_a.shape();
+    let dtype = tensor_a.dtype();
+    let zeros_tensor = Tensor::zeros(&shape, dtype)?;
     Ok(zeros_tensor.id())
 }
 
 pub fn create_ones_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
-    let layout = tensor_a.get_layout();
-    let dtype = tensor_a.get_dtype();
-    let ones_tensor = Tensor::ones(layout.get_shape(), dtype)?;
+    let shape = tensor_a.shape();
+    let dtype = tensor_a.dtype();
+    let ones_tensor = Tensor::ones(&shape, dtype)?;
     Ok(ones_tensor.id())
 }

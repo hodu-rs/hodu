@@ -1,3 +1,3 @@
 //! std/no-std compatibility layer
 
-pub use hodu_core::compat::*;
+pub use hodu_core::layer::compat::*;

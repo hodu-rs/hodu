@@ -47,11 +47,11 @@ impl Adam {
 
         for ((param, m), v) in parameters.iter_mut().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
             let grad = param.grad()?;
-            let lr = self.learning_rate.to_dtype(grad.get_dtype());
-            let beta1 = self.beta1.to_dtype(grad.get_dtype());
-            let beta2 = self.beta2.to_dtype(grad.get_dtype());
-            let epsilon = self.epsilon.to_dtype(grad.get_dtype());
-            let one = Scalar::one(grad.get_dtype());
+            let lr = self.learning_rate.to_dtype(grad.dtype());
+            let beta1 = self.beta1.to_dtype(grad.dtype());
+            let beta2 = self.beta2.to_dtype(grad.dtype());
+            let epsilon = self.epsilon.to_dtype(grad.dtype());
+            let one = Scalar::one(grad.dtype());
 
             let mut beta1_t = beta1;
             let mut beta2_t = beta2;
@@ -141,12 +141,12 @@ impl AdamW {
             let grad = param.grad()?;
 
             // Convert scalars to match gradient dtype
-            let lr = self.learning_rate.to_dtype(grad.get_dtype());
-            let beta1 = self.beta1.to_dtype(grad.get_dtype());
-            let beta2 = self.beta2.to_dtype(grad.get_dtype());
-            let epsilon = self.epsilon.to_dtype(grad.get_dtype());
-            let weight_decay = self.weight_decay.to_dtype(grad.get_dtype());
-            let one = Scalar::one(grad.get_dtype());
+            let lr = self.learning_rate.to_dtype(grad.dtype());
+            let beta1 = self.beta1.to_dtype(grad.dtype());
+            let beta2 = self.beta2.to_dtype(grad.dtype());
+            let epsilon = self.epsilon.to_dtype(grad.dtype());
+            let weight_decay = self.weight_decay.to_dtype(grad.dtype());
+            let one = Scalar::one(grad.dtype());
 
             // Compute bias correction terms: β₁^t and β₂^t
             let mut beta1_t = beta1;

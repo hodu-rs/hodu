@@ -4,12 +4,11 @@ use crate::{
     tensor::{utils::broadcast_tensors3, Tensor},
 };
 
-// Selection Operations
 impl Tensor {
     pub fn where3(&self, condition: &Tensor, other: &Tensor) -> HoduResult<Self> {
         let (condition, x, y) = broadcast_tensors3(condition, self, other)?;
 
-        let mask = condition.to_dtype(x.get_dtype())?;
+        let mask = condition.to_dtype(x.dtype())?;
         let one = Self::ones_like(&mask)?;
         let inv_mask = one.sub(&mask)?;
 

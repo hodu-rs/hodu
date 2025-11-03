@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*", "benchmarks/*"]
-exclude = ["benchmarks/.venvs"]
+exclude = ["benchmarks/.venvs", "crates/hodu_core_old"]
 
 [package]
 name = "hodu"
@@ -50,8 +50,10 @@ default = ["std", "serde", "rayon"]
 std = ["hodu_internal/std"]
 serde = ["hodu_internal/serde"]
 rayon = ["std", "hodu_internal/rayon"]
-u8 = ["hodu_internal/u8"]
-u32 = ["hodu_internal/u32"]
+
+f8e5m2 = ["hodu_internal/f8e5m2"]
+f64 = ["hodu_internal/f64"]
+u16 = ["hodu_internal/u16"]
 u64 = ["hodu_internal/u64"]
 i16 = ["hodu_internal/i16"]
 i64 = ["hodu_internal/i64"]

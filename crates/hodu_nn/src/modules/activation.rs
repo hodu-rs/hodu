@@ -154,7 +154,7 @@ impl LeakyReLU {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let exponent = self.exponent.to_dtype(input.get_dtype());
+        let exponent = self.exponent.to_dtype(input.dtype());
         input.leaky_relu(exponent)
     }
 
@@ -176,7 +176,7 @@ impl ELU {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let exponent = self.exponent.to_dtype(input.get_dtype());
+        let exponent = self.exponent.to_dtype(input.dtype());
         input.elu(exponent)
     }
 
@@ -196,7 +196,7 @@ impl PReLU {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let weight = self.weight.to_dtype(input.get_dtype());
+        let weight = self.weight.to_dtype(input.dtype());
         input.prelu(weight)
     }
 
@@ -220,7 +220,7 @@ impl RReLU {
     }
 
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
-        let dtype = input.get_dtype();
+        let dtype = input.dtype();
         let zero = Scalar::zero(dtype);
 
         // Compute alpha based on training/evaluation mode

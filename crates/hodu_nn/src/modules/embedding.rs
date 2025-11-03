@@ -1,22 +1,22 @@
 use crate::compat::*;
 use crate::module::Module;
-use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::dtype::DType};
+use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType};
 
 #[derive(Module, Clone)]
 pub struct Embedding {
-    num_embeddings: usize,
-    embedding_dim: usize,
+    num_embeddings: u32,
+    embedding_dim: u32,
     weight: Tensor,
-    padding_idx: Option<usize>,
+    padding_idx: Option<u32>,
     max_norm: Option<Scalar>,
     norm_type: Scalar,
 }
 
 impl Embedding {
     pub fn new(
-        num_embeddings: usize,
-        embedding_dim: usize,
-        padding_idx: Option<usize>,
+        num_embeddings: u32,
+        embedding_dim: u32,
+        padding_idx: Option<u32>,
         max_norm: Option<impl Into<Scalar>>,
         norm_type: impl Into<Scalar>,
         dtype: DType,
@@ -32,7 +32,7 @@ impl Embedding {
         let one = Scalar::one(dtype);
 
         // weight: [num_embeddings, embedding_dim]
-        let weight = Tensor::randn(&[num_embeddings, embedding_dim], zero, one)?;
+        let weight = Tensor::randn([num_embeddings, embedding_dim], zero, one)?;
         weight.set_requires_grad(true)?;
         // Scale by k
         let weight = weight.mul_scalar(k_scalar)?;
@@ -47,7 +47,7 @@ impl Embedding {
             }
             // Set weight[idx] to zeros using index_put
             let indices = Tensor::new(vec![idx as i32])?.reshape([1])?;
-            let zeros = Tensor::zeros(&[1, embedding_dim], dtype)?;
+            let zeros = Tensor::zeros([1, embedding_dim], dtype)?;
             weight.index_put(0, &indices, &zeros)?
         } else {
             weight
@@ -64,13 +64,12 @@ impl Embedding {
     }
 
     pub fn from_pretrained(weight: Tensor, freeze: bool) -> HoduResult<Self> {
-        let weight_layout = weight.get_layout();
-        let weight_shape = weight_layout.get_shape();
+        let weight_shape = weight.shape();
 
-        if weight_shape.len() != 2 {
+        if weight_shape.ndim() != 2 {
             return Err(hodu_core::error::HoduError::InternalError(format!(
                 "Embedding weight must be 2D [num_embeddings, embedding_dim], got {}D",
-                weight_shape.len()
+                weight_shape.ndim()
             )));
         }
 
@@ -93,12 +92,10 @@ impl Embedding {
         // input: indices of shape [batch_size] or [batch_size, seq_len] or any shape
         // output: embeddings of shape [..., embedding_dim]
 
-        let input_layout = input.get_layout();
-        let input_shape = input_layout.get_shape();
+        let input_shape = input.shape();
 
         // Flatten input to 1D for easier processing
-        let num_indices: usize = input_shape.iter().product();
-        let flat_input = input.reshape([num_indices])?;
+        let flat_input = input.flatten()?;
 
         // Use index_select on the weight tensor (same as gather on axis 0)
         // axis 0 is the num_embeddings dimension
@@ -130,8 +127,7 @@ impl Embedding {
     fn apply_max_norm(&self, embeddings: &Tensor, max_norm: Scalar) -> HoduResult<Tensor> {
         // Compute L2 norm along the embedding dimension (last dimension)
         // embeddings shape: [num_indices, embedding_dim]
-        let embeddings_layout = embeddings.get_layout();
-        let embedding_dim = embeddings_layout.get_shape().last().unwrap();
+        let embedding_dim = embeddings.shape().last().unwrap();
 
         // squared_sum = sum(x^2, dim=-1, keepdim=true)
         let squared = embeddings.mul(embeddings)?;
@@ -141,22 +137,22 @@ impl Embedding {
         let norm = squared_sum.sqrt()?;
 
         // scale = min(max_norm / norm, 1.0)
-        let max_norm_tensor = Tensor::full(norm.get_layout().get_shape(), max_norm)?;
+        let max_norm_tensor = Tensor::full(norm.shape(), max_norm)?;
         let scale = max_norm_tensor.div(&norm)?;
 
         // Clamp scale to maximum of 1.0
-        let one = Tensor::full(scale.get_layout().get_shape(), Scalar::one(embeddings.get_dtype()))?;
+        let one = Tensor::full(scale.shape(), Scalar::one(embeddings.dtype()))?;
         let scale = scale.minimum(&one)?;
 
         // Apply scaling: embeddings * scale
         embeddings.mul(&scale)
     }
 
-    fn handle_padding_idx(&self, embeddings: &Tensor, indices: &Tensor, padding_idx: usize) -> HoduResult<Tensor> {
+    fn handle_padding_idx(&self, embeddings: &Tensor, indices: &Tensor, padding_idx: u32) -> HoduResult<Tensor> {
         // Create a mask where padding indices are marked
         // mask = (indices == padding_idx)
-        let padding_idx_scalar = Scalar::from_f32(padding_idx as f32, indices.get_dtype());
-        let padding_idx_tensor = Tensor::full(indices.get_layout().get_shape(), padding_idx_scalar)?;
+        let padding_idx_scalar = Scalar::from_f32(padding_idx as f32, indices.dtype());
+        let padding_idx_tensor = Tensor::full(indices.shape(), padding_idx_scalar)?;
 
         // mask: [num_indices], true where index == padding_idx
         let mask = indices.eq(&padding_idx_tensor)?;
@@ -166,8 +162,8 @@ impl Embedding {
 
         // Zero out embeddings where mask is true
         // result = embeddings * (1 - mask)
-        let one = Tensor::ones(mask.get_layout().get_shape(), embeddings.get_dtype())?;
-        let zero = Tensor::zeros(mask.get_layout().get_shape(), embeddings.get_dtype())?;
+        let one = Tensor::ones(mask.shape(), embeddings.dtype())?;
+        let zero = Tensor::zeros(mask.shape(), embeddings.dtype())?;
 
         // Convert bool mask to float: where(mask, 0.0, 1.0)
         let float_mask = mask.where3(&zero, &one)?;
@@ -184,15 +180,15 @@ impl Embedding {
         &self.weight
     }
 
-    pub fn num_embeddings(&self) -> usize {
+    pub fn num_embeddings(&self) -> u32 {
         self.num_embeddings
     }
 
-    pub fn embedding_dim(&self) -> usize {
+    pub fn embedding_dim(&self) -> u32 {
         self.embedding_dim
     }
 
-    pub fn padding_idx(&self) -> Option<usize> {
+    pub fn padding_idx(&self) -> Option<u32> {
         self.padding_idx
     }
 

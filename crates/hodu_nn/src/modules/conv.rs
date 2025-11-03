@@ -2,25 +2,25 @@
 
 use crate::compat::*;
 use crate::module::Module;
-use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::dtype::DType};
+use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType};
 
 #[derive(Module, Clone)]
 pub struct Conv1D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: usize,
-    padding: usize,
-    dilation: usize,
+    stride: u32,
+    padding: u32,
+    dilation: u32,
 }
 
 impl Conv1D {
     pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: usize,
-        stride: usize,
-        padding: usize,
-        dilation: usize,
+        in_channels: u32,
+        out_channels: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+        dilation: u32,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -32,15 +32,15 @@ impl Conv1D {
         let k_scalar = Scalar::from_f32(k, dtype);
 
         // weight: [out_channels, in_channels, kernel_size]
-        let weight = Tensor::randn(&[out_channels, in_channels, kernel_size], zero, one)?;
+        let weight = Tensor::randn([out_channels, in_channels, kernel_size], zero, one)?;
         weight.set_requires_grad(true)?;
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias: [out_channels]
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_channels], zero, one)?;
+            let bias = Tensor::randn([out_channels], zero, one)?;
             bias.set_requires_grad(true)?;
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None
@@ -62,8 +62,7 @@ impl Conv1D {
         if let Some(ref bias) = self.bias {
             // Add bias: output [N, Co, L_out], bias [Co]
             // Need to reshape bias to [1, Co, 1] for broadcasting
-            let bias_layout = bias.get_layout();
-            let bias_shape = bias_layout.get_shape();
+            let bias_shape = bias.shape();
             let bias_reshaped = bias.reshape([1, bias_shape[0], 1])?;
             output.add(&bias_reshaped)
         } else {
@@ -84,19 +83,19 @@ impl Conv1D {
 pub struct Conv2D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: usize,
-    padding: usize,
-    dilation: usize,
+    stride: u32,
+    padding: u32,
+    dilation: u32,
 }
 
 impl Conv2D {
     pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: usize,
-        stride: usize,
-        padding: usize,
-        dilation: usize,
+        in_channels: u32,
+        out_channels: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+        dilation: u32,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -108,15 +107,15 @@ impl Conv2D {
         let k_scalar = Scalar::from_f32(k, dtype);
 
         // weight: [out_channels, in_channels, kernel_size, kernel_size]
-        let weight = Tensor::randn(&[out_channels, in_channels, kernel_size, kernel_size], zero, one)?;
+        let weight = Tensor::randn([out_channels, in_channels, kernel_size, kernel_size], zero, one)?;
         weight.set_requires_grad(true)?;
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias: [out_channels]
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_channels], zero, one)?;
+            let bias = Tensor::randn([out_channels], zero, one)?;
             bias.set_requires_grad(true)?;
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None
@@ -138,8 +137,7 @@ impl Conv2D {
         if let Some(ref bias) = self.bias {
             // Add bias: output [N, Co, H_out, W_out], bias [Co]
             // Need to reshape bias to [1, Co, 1, 1] for broadcasting
-            let bias_layout = bias.get_layout();
-            let bias_shape = bias_layout.get_shape();
+            let bias_shape = bias.shape();
             let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1])?;
             output.add(&bias_reshaped)
         } else {
@@ -160,19 +158,19 @@ impl Conv2D {
 pub struct Conv3D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: usize,
-    padding: usize,
-    dilation: usize,
+    stride: u32,
+    padding: u32,
+    dilation: u32,
 }
 
 impl Conv3D {
     pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: usize,
-        stride: usize,
-        padding: usize,
-        dilation: usize,
+        in_channels: u32,
+        out_channels: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+        dilation: u32,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -185,18 +183,18 @@ impl Conv3D {
 
         // weight: [out_channels, in_channels, kernel_size, kernel_size, kernel_size]
         let weight = Tensor::randn(
-            &[out_channels, in_channels, kernel_size, kernel_size, kernel_size],
+            [out_channels, in_channels, kernel_size, kernel_size, kernel_size],
             zero,
             one,
         )?;
         weight.set_requires_grad(true)?;
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias: [out_channels]
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_channels], zero, one)?;
+            let bias = Tensor::randn([out_channels], zero, one)?;
             bias.set_requires_grad(true)?;
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None
@@ -218,8 +216,7 @@ impl Conv3D {
         if let Some(ref bias) = self.bias {
             // Add bias: output [N, Co, D_out, H_out, W_out], bias [Co]
             // Need to reshape bias to [1, Co, 1, 1, 1] for broadcasting
-            let bias_layout = bias.get_layout();
-            let bias_shape = bias_layout.get_shape();
+            let bias_shape = bias.shape();
             let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1, 1])?;
             output.add(&bias_reshaped)
         } else {
@@ -240,21 +237,21 @@ impl Conv3D {
 pub struct ConvTranspose1D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: usize,
-    padding: usize,
-    output_padding: usize,
-    dilation: usize,
+    stride: u32,
+    padding: u32,
+    output_padding: u32,
+    dilation: u32,
 }
 
 impl ConvTranspose1D {
     pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: usize,
-        stride: usize,
-        padding: usize,
-        output_padding: usize,
-        dilation: usize,
+        in_channels: u32,
+        out_channels: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+        output_padding: u32,
+        dilation: u32,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -266,15 +263,15 @@ impl ConvTranspose1D {
         let k_scalar = Scalar::from_f32(k, dtype);
 
         // weight: [in_channels, out_channels, kernel_size]
-        let weight = Tensor::randn(&[in_channels, out_channels, kernel_size], zero, one)?;
+        let weight = Tensor::randn([in_channels, out_channels, kernel_size], zero, one)?;
         weight.set_requires_grad(true)?;
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias: [out_channels]
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_channels], zero, one)?;
+            let bias = Tensor::randn([out_channels], zero, one)?;
             bias.set_requires_grad(true)?;
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None
@@ -303,8 +300,7 @@ impl ConvTranspose1D {
         if let Some(ref bias) = self.bias {
             // Add bias: output [N, Co, L_out], bias [Co]
             // Need to reshape bias to [1, Co, 1] for broadcasting
-            let bias_layout = bias.get_layout();
-            let bias_shape = bias_layout.get_shape();
+            let bias_shape = bias.shape();
             let bias_reshaped = bias.reshape([1, bias_shape[0], 1])?;
             output.add(&bias_reshaped)
         } else {
@@ -325,21 +321,21 @@ impl ConvTranspose1D {
 pub struct ConvTranspose2D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: usize,
-    padding: usize,
-    output_padding: usize,
-    dilation: usize,
+    stride: u32,
+    padding: u32,
+    output_padding: u32,
+    dilation: u32,
 }
 
 impl ConvTranspose2D {
     pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: usize,
-        stride: usize,
-        padding: usize,
-        output_padding: usize,
-        dilation: usize,
+        in_channels: u32,
+        out_channels: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+        output_padding: u32,
+        dilation: u32,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -351,15 +347,15 @@ impl ConvTranspose2D {
         let k_scalar = Scalar::from_f32(k, dtype);
 
         // weight: [in_channels, out_channels, kernel_size, kernel_size]
-        let weight = Tensor::randn(&[in_channels, out_channels, kernel_size, kernel_size], zero, one)?;
+        let weight = Tensor::randn([in_channels, out_channels, kernel_size, kernel_size], zero, one)?;
         weight.set_requires_grad(true)?;
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias: [out_channels]
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_channels], zero, one)?;
+            let bias = Tensor::randn([out_channels], zero, one)?;
             bias.set_requires_grad(true)?;
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None
@@ -388,8 +384,7 @@ impl ConvTranspose2D {
         if let Some(ref bias) = self.bias {
             // Add bias: output [N, Co, H_out, W_out], bias [Co]
             // Need to reshape bias to [1, Co, 1, 1] for broadcasting
-            let bias_layout = bias.get_layout();
-            let bias_shape = bias_layout.get_shape();
+            let bias_shape = bias.shape();
             let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1])?;
             output.add(&bias_reshaped)
         } else {
@@ -410,21 +405,21 @@ impl ConvTranspose2D {
 pub struct ConvTranspose3D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: usize,
-    padding: usize,
-    output_padding: usize,
-    dilation: usize,
+    stride: u32,
+    padding: u32,
+    output_padding: u32,
+    dilation: u32,
 }
 
 impl ConvTranspose3D {
     pub fn new(
-        in_channels: usize,
-        out_channels: usize,
-        kernel_size: usize,
-        stride: usize,
-        padding: usize,
-        output_padding: usize,
-        dilation: usize,
+        in_channels: u32,
+        out_channels: u32,
+        kernel_size: u32,
+        stride: u32,
+        padding: u32,
+        output_padding: u32,
+        dilation: u32,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -437,18 +432,18 @@ impl ConvTranspose3D {
 
         // weight: [in_channels, out_channels, kernel_size, kernel_size, kernel_size]
         let weight = Tensor::randn(
-            &[in_channels, out_channels, kernel_size, kernel_size, kernel_size],
+            [in_channels, out_channels, kernel_size, kernel_size, kernel_size],
             zero,
             one,
         )?;
         weight.set_requires_grad(true)?;
-        let weight = weight.mul(&Tensor::full(&[], k_scalar)?)?;
+        let weight = weight.mul_scalar(k_scalar)?;
 
         // bias: [out_channels]
         let bias = if with_bias {
-            let bias = Tensor::randn(&[out_channels], zero, one)?;
+            let bias = Tensor::randn([out_channels], zero, one)?;
             bias.set_requires_grad(true)?;
-            let bias = bias.mul(&Tensor::full(&[], k_scalar)?)?;
+            let bias = bias.mul_scalar(k_scalar)?;
             Some(bias)
         } else {
             None
@@ -477,8 +472,7 @@ impl ConvTranspose3D {
         if let Some(ref bias) = self.bias {
             // Add bias: output [N, Co, D_out, H_out, W_out], bias [Co]
             // Need to reshape bias to [1, Co, 1, 1, 1] for broadcasting
-            let bias_layout = bias.get_layout();
-            let bias_shape = bias_layout.get_shape();
+            let bias_shape = bias.shape();
             let bias_reshaped = bias.reshape([1, bias_shape[0], 1, 1, 1])?;
             output.add(&bias_reshaped)
         } else {
