@@ -9,18 +9,7 @@ use crate::{
 };
 use objc2_metal::MTLResourceUsage;
 
-ops!(
-    reduce_sum,
-    reduce_max,
-    reduce_min,
-    reduce_prod,
-    reduce_mean,
-    reduce_norm,
-    reduce_argmax,
-    reduce_argmin,
-    reduce_any,
-    reduce_all
-);
+ops!(sum, max, min, prod, mean, norm, argmax, argmin, any, all);
 
 /// Executes a reduction operation along specified dimensions using Metal compute pipeline.
 ///
@@ -74,16 +63,16 @@ ops!(
 /// ```
 ///
 /// # Supported Operations
-/// - `reduce_sum`: Sum of elements
-/// - `reduce_max`: Maximum element
-/// - `reduce_min`: Minimum element
-/// - `reduce_mean`: Mean (average) of elements
-/// - `reduce_prod`: Product of elements
-/// - `reduce_norm`: L2 norm
-/// - `reduce_argmax`: Index of maximum element (returns i32)
-/// - `reduce_argmin`: Index of minimum element (returns i32)
-/// - `reduce_any`: Logical OR (for boolean tensors)
-/// - `reduce_all`: Logical AND (for boolean tensors)
+/// - `sum`: Sum of elements
+/// - `max`: Maximum element
+/// - `min`: Minimum element
+/// - `mean`: Mean (average) of elements
+/// - `prod`: Product of elements
+/// - `norm`: L2 norm
+/// - `argmax`: Index of maximum element (returns i32)
+/// - `argmin`: Index of minimum element (returns i32)
+/// - `any`: Logical OR (for boolean tensors)
+/// - `all`: Logical AND (for boolean tensors)
 #[allow(clippy::too_many_arguments)]
 pub fn call_reduce(
     device: &Device,
