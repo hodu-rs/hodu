@@ -4,8 +4,7 @@ use crate::{
     ops::{BinaryLogicalOp, BinaryOp, Op},
     script::builder,
     tensor::{
-        create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder,
-        utils::broadcast_tensors2, Tensor,
+        create_builder_tensor, from_storage, gradient, register_operation_in_builder, utils::broadcast_tensors2, Tensor,
     },
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -27,7 +26,7 @@ macro_rules! binary_op {
             if builder::is_builder_active() {
                 let result_layout = lhs.layout();
                 let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::Binary(BinaryOp::$op_name),
@@ -87,7 +86,7 @@ macro_rules! binary_logical_op {
 
             if builder::is_builder_active() {
                 let result_layout = lhs.layout();
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::BinaryLogical(BinaryLogicalOp::$op_name),

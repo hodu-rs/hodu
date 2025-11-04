@@ -2,6 +2,9 @@ use hodu::{nn::SGD, prelude::*};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "metal")]
+    set_runtime_device(Device::Metal);
+
     let input_data: Vec<Vec<f32>> = (0..10000)
         .map(|i| {
             vec![

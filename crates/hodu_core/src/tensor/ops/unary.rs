@@ -4,7 +4,7 @@ use crate::{
     ops::{Op, OpParams, UnaryLogicalOp, UnaryOp, UnaryScalarOp},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
     types::Layout,
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -19,7 +19,7 @@ macro_rules! unary_op {
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::Unary(UnaryOp::$op_name),
@@ -63,7 +63,7 @@ macro_rules! unary_logical_op {
 
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::UnaryLogical(UnaryLogicalOp::$op_name),
@@ -102,7 +102,7 @@ macro_rules! unary_scalar_op {
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::UnaryScalar(UnaryScalarOp::$op_name),

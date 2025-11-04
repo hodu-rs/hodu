@@ -9,14 +9,74 @@ use crate::{
 
 /// Build IR Module from BuilderState
 pub fn build_module(state: &mut BuilderState) -> HoduResult<Module> {
-    let mut module = Module::new(state.name.clone());
+    // Use existing module that already has operations recorded
+    let mut module = state.module.clone();
 
-    // Create main function
-    let function = build_function(state)?;
-    module.add_function(function);
+    // Update function signature with proper inputs and outputs
+    let signature = build_signature(state)?;
 
-    // Copy module metadata
-    module.metadata = state.module.metadata.clone();
+    if let Some(fn_name) = &state.current_function {
+        if let Some(function) = module.get_function_mut(fn_name) {
+            function.signature = signature;
+
+            // Set return terminator for the current block
+            if let Some(block_id) = state.current_block {
+                // For each output, ensure it has a value_id
+                // If output is a constant (has storage but not runtime), load it
+                let outputs_to_load: Vec<TensorId> = state
+                    .graph_outputs
+                    .iter()
+                    .filter_map(|(_, tensor)| {
+                        if !state.tensor_to_value.contains_key(&tensor.id()) {
+                            if let Some(_) = crate::tensor::get(tensor.id()) {
+                                if tensor.has_storage() && !tensor.is_runtime() {
+                                    return Some(tensor.id());
+                                }
+                            }
+                        }
+                        None
+                    })
+                    .collect();
+
+                // Load constants
+                for tensor_id in outputs_to_load {
+                    if let Some(block) = function.get_block_mut(block_id) {
+                        load_constant(state, block, tensor_id)?;
+                    }
+                }
+
+                let output_values: Vec<ValueId> = state
+                    .graph_outputs
+                    .iter()
+                    .filter_map(|(_, tensor)| state.tensor_to_value.get(&tensor.id()).copied())
+                    .collect();
+
+                if let Some(block) = function.get_block_mut(block_id) {
+                    block.set_terminator(Terminator::Return { values: output_values });
+                }
+            }
+
+            // Copy constants to module
+            function.value_info = state
+                .tensor_to_value
+                .iter()
+                .filter_map(|(tensor_id, value_id)| {
+                    crate::tensor::get(*tensor_id).map(|_| {
+                        let tensor = crate::tensor::tensor_from_id(*tensor_id);
+                        let layout = tensor.layout();
+                        let info = ValueInfo::new(*value_id)
+                            .with_shape(layout.shape().clone())
+                            .with_dtype(tensor.dtype())
+                            .with_layout(layout.clone());
+                        (*value_id, info)
+                    })
+                })
+                .collect();
+
+            // Copy constant data from state.module
+            module.constants = state.module.constants.clone();
+        }
+    }
 
     Ok(module)
 }
@@ -48,7 +108,7 @@ fn build_function(state: &mut BuilderState) -> HoduResult<Function> {
         .iter()
         .filter_map(|(tensor_id, value_id)| {
             // Get tensor info if available
-            crate::tensor::get(*tensor_id).map(|tensor_ref| {
+            crate::tensor::get(*tensor_id).map(|_tensor_ref| {
                 let tensor = crate::tensor::tensor_from_id(*tensor_id);
                 let layout = tensor.layout();
                 let info = ValueInfo::new(*value_id)
@@ -151,7 +211,7 @@ fn trace_tensor_operations(
     }
 
     // Check if tensor has storage (constant)
-    if let Some(tensor_ref) = crate::tensor::get(tensor_id) {
+    if let Some(_tensor_ref) = crate::tensor::get(tensor_id) {
         let tensor = crate::tensor::tensor_from_id(tensor_id);
         if tensor.has_storage() && !tensor.is_runtime() {
             // This is a constant tensor (weight/bias)
@@ -200,14 +260,15 @@ fn load_constant(state: &mut BuilderState, block: &mut BasicBlock, tensor_id: Te
 }
 
 /// Generate SSA instruction for an operation
+#[allow(dead_code)]
 fn emit_operation(
     state: &mut BuilderState,
     block: &mut BasicBlock,
     op: Op,
     input_tensors: &[TensorId],
     output_tensors: &[TensorId],
-    input_layouts: &[Layout],
-    output_layouts: &[Layout],
+    _input_layouts: &[Layout],
+    _output_layouts: &[Layout],
 ) -> HoduResult<Vec<ValueId>> {
     // Trace input tensors first
     let mut input_values = Vec::new();

@@ -4,7 +4,7 @@ use crate::{
     ops::{ConcatOp, Op, OpParams, SplitOp},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -59,7 +59,7 @@ impl Tensor {
         if builder::is_builder_active() {
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
             register_operation_in_builder(
@@ -167,7 +167,7 @@ impl Tensor {
                     let mut result_dims = shape_dims.to_vec();
                     result_dims[dim_usize] = size as u32;
                     let result_layout = Layout::from_shape(&Shape::from(result_dims));
-                    let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout, requires_grad);
+                    let (result_id, result_tensor) = create_builder_tensor(result_layout, requires_grad);
                     results.push(result_tensor);
                     result_id
                 })

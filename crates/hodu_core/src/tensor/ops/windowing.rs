@@ -2,7 +2,9 @@ use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::{Op, WindowingOp},
-    tensor::{from_storage, Tensor},
+    scalar::Scalar,
+    script::builder,
+    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -84,20 +86,94 @@ impl Tensor {
             padding_u32.push(hi);
         }
 
-        let storage = self.with_storage(|input_storage| {
-            input_storage.call_reduce_window(
-                &self.layout(),
-                window_shape_u32,
-                strides_u32,
-                &padding_u32,
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(output_dims));
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+
+            let mut scalars = Vec::new();
+            // Add window_shape
+            for &dim in window_shape_u32 {
+                scalars.push(Scalar::from(dim));
+            }
+            // Add strides
+            for &stride in strides_u32 {
+                scalars.push(Scalar::from(stride));
+            }
+            // Add padding
+            for &pad in &padding_u32 {
+                scalars.push(Scalar::from(pad));
+            }
+
+            let mut op_params = crate::ops::OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
                 Op::Windowing(windowing_op),
-            )
-        })?;
+                Some(op_params),
+                vec![self.id()],
+                vec![result_id],
+                vec![self.layout()],
+                vec![result_layout],
+            )?;
 
-        let result_layout = Layout::from_shape(&Shape::from(output_dims));
-        let requires_grad = self.is_requires_grad() && validate_requires_grad;
-        let result = from_storage(storage, result_layout, true, requires_grad);
+            if requires_grad {
+                let mut grad_scalars = Vec::new();
+                for &dim in window_shape_u32 {
+                    grad_scalars.push(Scalar::from(dim));
+                }
+                for &stride in strides_u32 {
+                    grad_scalars.push(Scalar::from(stride));
+                }
+                for &pad in &padding_u32 {
+                    grad_scalars.push(Scalar::from(pad));
+                }
 
-        Ok(result)
+                gradient::record_operation_with_scalars(
+                    result_id,
+                    Op::Windowing(windowing_op),
+                    vec![self.id()],
+                    grad_scalars,
+                )?;
+            }
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                input_storage.call_reduce_window(
+                    &self.layout(),
+                    window_shape_u32,
+                    strides_u32,
+                    &padding_u32,
+                    Op::Windowing(windowing_op),
+                )
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(output_dims));
+            let requires_grad = self.is_requires_grad() && validate_requires_grad;
+            let result = from_storage(storage, result_layout, true, requires_grad);
+
+            if !gradient::is_computing_gradients() && requires_grad {
+                let mut scalars = Vec::new();
+                for &dim in window_shape_u32 {
+                    scalars.push(Scalar::from(dim));
+                }
+                for &stride in strides_u32 {
+                    scalars.push(Scalar::from(stride));
+                }
+                for &pad in &padding_u32 {
+                    scalars.push(Scalar::from(pad));
+                }
+
+                gradient::record_operation_with_scalars(
+                    result.id(),
+                    Op::Windowing(windowing_op),
+                    vec![self.id()],
+                    scalars,
+                )?;
+            }
+
+            Ok(result)
+        }
     }
 }

@@ -334,11 +334,7 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
     Tensor(tensor_id)
 }
 
-pub(crate) fn create_builder_tensor(layout: Layout) -> (TensorId, Tensor) {
-    create_builder_tensor_with_grad(layout, false)
-}
-
-pub(crate) fn create_builder_tensor_with_grad(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
+pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
     let tensor_ = Tensor_ {
         storage: None,
         is_runtime: false,

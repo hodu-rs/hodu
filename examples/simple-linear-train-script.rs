@@ -1,4 +1,8 @@
-use hodu::{nn::SGD, prelude::*};
+use hodu::{
+    core::script::{builder::Builder, Script},
+    nn::SGD,
+    prelude::*,
+};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input_tensor = Tensor::new(input_data)?;
     let target_tensor = Tensor::new(target_data)?;
 
-    // Build script
+    // Build script using new API
     let builder = Builder::new("linear_training".to_string());
     builder.start()?;
 
@@ -29,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let target = Tensor::input("target", &[10000, 1])?;
 
     let epochs = 1000;
-    let mut final_loss = Tensor::full(&[], 0.0)?;
+    let mut final_loss = Tensor::scalar(0.0)?;
 
     for _ in 0..epochs {
         let pred = linear.forward(&input)?;
@@ -50,12 +54,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     builder.end()?;
 
-    let mut script = builder.build()?;
-    #[cfg(feature = "xla")]
-    script.set_backend(Backend::XLA);
+    // Build module and create script
+    let module = builder.build()?;
+    let mut script = Script::new(module);
 
-    script.add_input("input", input_tensor);
-    script.add_input("target", target_tensor);
+    // Set device
+    #[cfg(feature = "metal")]
+    script.set_device(Device::Metal);
+
+    // Set compiler type
+    #[cfg(feature = "xla")]
+    script.set_compiler(Compiler::XLA);
+
+    // Set runtime inputs
+    script.set_input("input", input_tensor);
+    script.set_input("target", target_tensor);
 
     println!("Compiling script...");
     let compile_start = Instant::now();

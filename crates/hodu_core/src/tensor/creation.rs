@@ -108,6 +108,10 @@ impl Tensor {
         Self::full(&shape, value)
     }
 
+    pub fn scalar<T: Into<Scalar>>(value: T) -> HoduResult<Self> {
+        Self::full(&[] as &[u32], value)
+    }
+
     pub fn randn<T: Into<Scalar>>(shape: impl Into<Shape>, mean: T, std: T) -> HoduResult<Self> {
         let shape = shape.into();
         let mean = mean.into();

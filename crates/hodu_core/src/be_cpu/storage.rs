@@ -108,6 +108,71 @@ impl CpuStorage {
         panic!("Unsupported vector type for CpuStorage");
     }
 
+    pub fn from_bytes(bytes: &[u8], dtype: DType) -> HoduResult<Self> {
+        use half::{bf16, f16};
+
+        macro_rules! from_bytes_float_convert {
+            ($bytes:expr, $elem_size:expr, $float_ty:ty) => {{
+                if $bytes.len() % $elem_size != 0 {
+                    return Err(HoduError::InternalError(format!(
+                        "Invalid byte length for dtype: expected multiple of {}, got {}",
+                        $elem_size,
+                        $bytes.len()
+                    )));
+                }
+                let mut data = Vec::with_capacity($bytes.len() / $elem_size);
+                for chunk in $bytes.chunks_exact($elem_size) {
+                    let f = f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+                    data.push(<$float_ty>::from_f32(f));
+                }
+                data
+            }};
+        }
+
+        macro_rules! from_bytes_direct {
+            ($bytes:expr, $elem_size:expr, $ty:ty) => {{
+                if $bytes.len() % $elem_size != 0 {
+                    return Err(HoduError::InternalError(format!(
+                        "Invalid byte length for dtype: expected multiple of {}, got {}",
+                        $elem_size,
+                        $bytes.len()
+                    )));
+                }
+                let mut data = Vec::with_capacity($bytes.len() / $elem_size);
+                for chunk in $bytes.chunks_exact($elem_size) {
+                    let mut arr = [0u8; 16];
+                    arr[..$elem_size].copy_from_slice(chunk);
+                    data.push(<$ty>::from_le_bytes(arr[..$elem_size].try_into().unwrap()));
+                }
+                data
+            }};
+        }
+
+        Ok(match dtype {
+            DType::BOOL => Self::BOOL(bytes.iter().map(|&b| b != 0).collect()),
+            DType::F8E4M3 => Self::F8E4M3(from_bytes_float_convert!(bytes, 4, F8E4M3)),
+            #[cfg(feature = "f8e5m2")]
+            DType::F8E5M2 => Self::F8E5M2(from_bytes_float_convert!(bytes, 4, F8E5M2)),
+            DType::BF16 => Self::BF16(from_bytes_float_convert!(bytes, 4, bf16)),
+            DType::F16 => Self::F16(from_bytes_float_convert!(bytes, 4, f16)),
+            DType::F32 => Self::F32(from_bytes_direct!(bytes, 4, f32)),
+            #[cfg(feature = "f64")]
+            DType::F64 => Self::F64(from_bytes_direct!(bytes, 8, f64)),
+            DType::U8 => Self::U8(bytes.to_vec()),
+            #[cfg(feature = "u16")]
+            DType::U16 => Self::U16(from_bytes_direct!(bytes, 2, u16)),
+            DType::U32 => Self::U32(from_bytes_direct!(bytes, 4, u32)),
+            #[cfg(feature = "u64")]
+            DType::U64 => Self::U64(from_bytes_direct!(bytes, 8, u64)),
+            DType::I8 => Self::I8(bytes.iter().map(|&n| n as i8).collect()),
+            #[cfg(feature = "i16")]
+            DType::I16 => Self::I16(from_bytes_direct!(bytes, 2, i16)),
+            DType::I32 => Self::I32(from_bytes_direct!(bytes, 4, i32)),
+            #[cfg(feature = "i64")]
+            DType::I64 => Self::I64(from_bytes_direct!(bytes, 8, i64)),
+        })
+    }
+
     pub fn to_bytes(&self) -> Vec<u8> {
         macro_rules! to_bytes_float_convert {
             ($data:expr, $elem_size:expr) => {{

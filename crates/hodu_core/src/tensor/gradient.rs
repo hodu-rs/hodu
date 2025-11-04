@@ -287,7 +287,7 @@ pub fn record_operation_with_split_info(
     )
 }
 
-fn record_operation_with_params(
+pub(crate) fn record_operation_with_params(
     output_id: TensorId,
     op: Op,
     input_ids: Vec<TensorId>,

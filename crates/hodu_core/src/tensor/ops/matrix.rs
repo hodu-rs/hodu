@@ -3,7 +3,7 @@ use crate::{
     layer::compat::*,
     ops::{MatrixOp, Op},
     script::builder,
-    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -174,7 +174,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Matrix(MatrixOp::Matmul),
@@ -314,7 +314,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Matrix(MatrixOp::Dot),

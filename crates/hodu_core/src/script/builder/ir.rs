@@ -154,10 +154,14 @@ pub struct ValueInfo {
 pub enum Attribute {
     Bool(bool),
     Int(i32),
+    U32(u32),
     Float(f32),
     String(String),
     IntArray(Vec<i32>),
     FloatArray(Vec<f32>),
+    Scalar(crate::scalar::Scalar),
+    Scalars(Vec<crate::scalar::Scalar>),
+    DType(crate::types::DType),
 }
 
 /// Constant data stored in module

@@ -1,16 +1,15 @@
 mod codegen;
 mod context;
-mod ir;
+pub mod ir;
 mod printer;
 
+use crate::error::HoduResult;
 pub use context::{get_active_builder, is_builder_active, with_active_builder, Builder, BuilderState};
 pub use ir::{
     Attribute, BasicBlock, BlockId, CompressionType, ConstantData, Function, FunctionSignature, Instruction, Module,
     ModuleMetadata, Parameter, Terminator, ValueId, ValueInfo,
 };
 pub use printer::print_module;
-
-use crate::{error::HoduResult, layer::compat::*};
 
 impl Module {
     /// Save module as text IR (.hds.ir)
@@ -84,16 +83,17 @@ impl Module {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::layer::compat::String;
 
     #[test]
     fn test_builder_creation() {
-        let builder = Builder::new("test_model".to_string());
+        let builder = Builder::new(String::from("test_model"));
         assert_eq!(builder.get_name(), "test_model");
     }
 
     #[test]
     fn test_module_serialization() {
-        let module = Module::new("test_model".to_string());
+        let module = Module::new(String::from("test_model"));
 
         #[cfg(feature = "serde")]
         {
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_ir_text_generation() {
-        let module = Module::new("test_model".to_string());
+        let module = Module::new(String::from("test_model"));
         let ir_text = print_module(&module);
 
         #[cfg(feature = "std")]

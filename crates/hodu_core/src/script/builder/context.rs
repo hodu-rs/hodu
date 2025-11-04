@@ -3,7 +3,6 @@ use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::Op,
-    scalar::Scalar,
     tensor::{Tensor, TensorId},
     types::Layout,
 };
@@ -178,14 +177,62 @@ impl Builder {
             }
 
             // Map input TensorIds to ValueIds
+            // If input is a constant, load it first
             let input_values: Vec<ValueId> = inputs
                 .iter()
                 .map(|&tensor_id| {
-                    *s.tensor_to_value.entry(tensor_id).or_insert_with(|| {
-                        let value_id = ValueId(s.value_counter);
-                        s.value_counter += 1;
-                        value_id
-                    })
+                    // Check if already mapped
+                    if let Some(&value_id) = s.tensor_to_value.get(&tensor_id) {
+                        return value_id;
+                    }
+
+                    // Check if this is a constant that needs to be loaded
+                    if let Some(_) = crate::tensor::get(tensor_id) {
+                        let tensor = crate::tensor::tensor_from_id(tensor_id);
+                        if tensor.has_storage() && !tensor.is_runtime() {
+                            // This is a constant - add LoadConstant instruction
+                            let value_id = ValueId(s.value_counter);
+                            s.value_counter += 1;
+                            s.tensor_to_value.insert(tensor_id, value_id);
+
+                            // Add constant data to module if not already present
+                            if !s.module.constants.contains_key(&tensor_id) {
+                                let layout = tensor.layout();
+                                let cpu_storage = tensor.with_storage(|storage| storage.to_cpu_storage()).ok();
+
+                                if let Some(cpu_storage) = cpu_storage {
+                                    let constant = ConstantData {
+                                        tensor_id,
+                                        shape: layout.shape().clone(),
+                                        dtype: tensor.dtype(),
+                                        data: cpu_storage.to_bytes(),
+                                        compression: None,
+                                    };
+                                    s.module.add_constant(tensor_id, constant);
+                                }
+                            }
+
+                            // Add LoadConstant instruction
+                            if let (Some(fn_name), Some(block_id)) = (&s.current_function, &s.current_block) {
+                                if let Some(function) = s.module.get_function_mut(fn_name) {
+                                    if let Some(block) = function.get_block_mut(*block_id) {
+                                        block.add_instruction(Instruction::LoadConstant {
+                                            result: value_id,
+                                            tensor_id,
+                                        });
+                                    }
+                                }
+                            }
+
+                            return value_id;
+                        }
+                    }
+
+                    // Not a constant, just allocate value_id
+                    let value_id = ValueId(s.value_counter);
+                    s.value_counter += 1;
+                    s.tensor_to_value.insert(tensor_id, value_id);
+                    value_id
                 })
                 .collect();
 
@@ -202,21 +249,22 @@ impl Builder {
             let mut attributes = HashMap::new();
             if let Some(params) = op_params {
                 if let Some(scalar) = params.scalar {
-                    attributes.insert("scalar".to_string(), Attribute::Float(scalar.to_f32()));
+                    attributes.insert("scalar".to_string(), Attribute::Scalar(scalar));
                 }
                 if !params.scalars.is_empty() {
-                    let floats: Vec<f32> = params.scalars.iter().map(|s| s.to_f32()).collect();
-                    attributes.insert("scalars".to_string(), Attribute::FloatArray(floats));
+                    attributes.insert("scalars".to_string(), Attribute::Scalars(params.scalars.clone()));
                 }
                 if !params.dims.is_empty() {
-                    let dims: Vec<i32> = params.dims.iter().map(|s| s.to_i32()).collect();
-                    attributes.insert("dims".to_string(), Attribute::IntArray(dims));
+                    attributes.insert("dims".to_string(), Attribute::Scalars(params.dims.clone()));
                 }
                 if let Some(keep_dim) = params.keep_dim {
                     attributes.insert("keep_dim".to_string(), Attribute::Bool(keep_dim));
                 }
                 if let Some(output_index) = params.output_index {
                     attributes.insert("output_index".to_string(), Attribute::Int(output_index as i32));
+                }
+                if let Some(dtype) = params.dtype {
+                    attributes.insert("dtype".to_string(), Attribute::DType(dtype));
                 }
             }
 

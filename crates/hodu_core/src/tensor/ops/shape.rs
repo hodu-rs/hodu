@@ -4,9 +4,7 @@ use crate::{
     ops::{Op, OpParams, ShapeOp, ShapeScalarsOp},
     scalar::Scalar,
     script::builder,
-    tensor::{
-        create_builder_tensor_with_grad, from_shared_storage_with, gradient, register_operation_in_builder, Tensor,
-    },
+    tensor::{create_builder_tensor, from_shared_storage_with, gradient, register_operation_in_builder, Tensor},
     types::Shape,
 };
 
@@ -33,7 +31,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Reshape),
@@ -75,7 +73,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Flatten),
@@ -121,7 +119,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Squeeze),
@@ -162,7 +160,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Unsqueeze),
@@ -201,7 +199,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Broadcast),
@@ -258,7 +256,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Transpose),
@@ -308,7 +306,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Shape(ShapeOp::Permute),
@@ -366,7 +364,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
             let end_scalar = Scalar::from(end_i32.unwrap_or(i32::MAX));
             let scalars = vec![dim_scalar, start_scalar, end_scalar, step_scalar];

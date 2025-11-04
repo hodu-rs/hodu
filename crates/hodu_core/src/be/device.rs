@@ -42,9 +42,12 @@ impl BackendDevice {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::zeros(shape, dtype)?)),
             #[cfg(feature = "metal")]
-            Device::Metal => Ok(BackendStorage::Metal(crate::be_metal::device::MetalDevice::zeros(
-                shape, dtype,
-            )?)),
+            Device::Metal => {
+                let cpu_storage = CpuDevice::zeros(shape, dtype)?;
+                Ok(BackendStorage::Metal(
+                    crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?,
+                ))
+            },
             #[allow(unreachable_patterns)]
             _ => panic!("Unsupported device: {:?}", device),
         }
@@ -60,9 +63,12 @@ impl BackendDevice {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::randn(shape, dtype, mean, std)?)),
             #[cfg(feature = "metal")]
-            Device::Metal => Ok(BackendStorage::Metal(crate::be_metal::device::MetalDevice::randn(
-                shape, dtype, mean, std,
-            )?)),
+            Device::Metal => {
+                let cpu_storage = CpuDevice::randn(shape, dtype, mean, std)?;
+                Ok(BackendStorage::Metal(
+                    crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?,
+                ))
+            },
             #[allow(unreachable_patterns)]
             _ => panic!("Unsupported device: {:?}", device),
         }
@@ -78,9 +84,12 @@ impl BackendDevice {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::rand_uniform(shape, dtype, low, high)?)),
             #[cfg(feature = "metal")]
-            Device::Metal => Ok(BackendStorage::Metal(
-                crate::be_metal::device::MetalDevice::rand_uniform(shape, dtype, low, high)?,
-            )),
+            Device::Metal => {
+                let cpu_storage = CpuDevice::rand_uniform(shape, dtype, low, high)?;
+                Ok(BackendStorage::Metal(
+                    crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?,
+                ))
+            },
             #[allow(unreachable_patterns)]
             _ => panic!("Unsupported device: {:?}", device),
         }

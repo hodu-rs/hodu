@@ -4,7 +4,7 @@ use crate::{
     ops::{ConvOp, Op, OpParams},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -71,7 +71,7 @@ impl Tensor {
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let channels_input = input_dims[1];
             let scalars = vec![
@@ -205,7 +205,7 @@ impl Tensor {
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let channels_input = input_dims[1];
             let scalars = vec![
@@ -346,7 +346,7 @@ impl Tensor {
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let channels_input = input_dims[1];
             let scalars = vec![
@@ -493,7 +493,7 @@ impl Tensor {
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let channels_input = input_dims[1];
             let scalars = vec![
@@ -638,7 +638,7 @@ impl Tensor {
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let channels_input = input_dims[1];
             let scalars = vec![
@@ -791,7 +791,7 @@ impl Tensor {
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let channels_input = input_dims[1];
             let scalars = vec![
@@ -915,25 +915,53 @@ impl Tensor {
         let padding_arr = [padding];
         let dilation_arr = [dilation];
 
-        let storage = self.with_storage(|input_storage| {
-            grad_output.with_storage(|grad_output_storage| {
-                input_storage.call_conv_grad_weight(
-                    &self.layout(),
-                    grad_output_storage,
-                    &grad_output.layout(),
-                    &Shape::from(weight_shape.to_vec()),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::Conv1dGradWeight),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-        let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
-        let result = from_storage(storage, result_layout, true, false);
+            let scalars = vec![
+                Scalar::from(stride),
+                Scalar::from(padding),
+                Scalar::from(dilation),
+                Scalar::from(weight_shape[0]), // out_channels
+                Scalar::from(weight_shape[1]), // in_channels
+                Scalar::from(weight_shape[2]), // kernel_size
+            ];
 
-        Ok(result)
+            let mut op_params = OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
+                Op::Conv(ConvOp::Conv1dGradWeight),
+                Some(op_params),
+                vec![self.id(), grad_output.id()],
+                vec![result_id],
+                vec![self.layout(), grad_output.layout()],
+                vec![result_layout],
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                grad_output.with_storage(|grad_output_storage| {
+                    input_storage.call_conv_grad_weight(
+                        &self.layout(),
+                        grad_output_storage,
+                        &grad_output.layout(),
+                        &Shape::from(weight_shape.to_vec()),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::Conv1dGradWeight),
+                    )
+                })
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result = from_storage(storage, result_layout, true, false);
+
+            Ok(result)
+        }
     }
 
     pub(crate) fn conv2d_grad_weight(
@@ -976,25 +1004,54 @@ impl Tensor {
         let padding_arr = [padding; 2];
         let dilation_arr = [dilation; 2];
 
-        let storage = self.with_storage(|input_storage| {
-            grad_output.with_storage(|grad_output_storage| {
-                input_storage.call_conv_grad_weight(
-                    &self.layout(),
-                    grad_output_storage,
-                    &grad_output.layout(),
-                    &Shape::from(weight_shape.to_vec()),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::Conv2dGradWeight),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-        let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
-        let result = from_storage(storage, result_layout, true, false);
+            let scalars = vec![
+                Scalar::from(stride),
+                Scalar::from(padding),
+                Scalar::from(dilation),
+                Scalar::from(weight_shape[0]), // out_channels
+                Scalar::from(weight_shape[1]), // in_channels
+                Scalar::from(weight_shape[2]), // kernel_height
+                Scalar::from(weight_shape[3]), // kernel_width
+            ];
 
-        Ok(result)
+            let mut op_params = OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
+                Op::Conv(ConvOp::Conv2dGradWeight),
+                Some(op_params),
+                vec![self.id(), grad_output.id()],
+                vec![result_id],
+                vec![self.layout(), grad_output.layout()],
+                vec![result_layout],
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                grad_output.with_storage(|grad_output_storage| {
+                    input_storage.call_conv_grad_weight(
+                        &self.layout(),
+                        grad_output_storage,
+                        &grad_output.layout(),
+                        &Shape::from(weight_shape.to_vec()),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::Conv2dGradWeight),
+                    )
+                })
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result = from_storage(storage, result_layout, true, false);
+
+            Ok(result)
+        }
     }
 
     pub(crate) fn conv3d_grad_weight(
@@ -1037,25 +1094,55 @@ impl Tensor {
         let padding_arr = [padding; 3];
         let dilation_arr = [dilation; 3];
 
-        let storage = self.with_storage(|input_storage| {
-            grad_output.with_storage(|grad_output_storage| {
-                input_storage.call_conv_grad_weight(
-                    &self.layout(),
-                    grad_output_storage,
-                    &grad_output.layout(),
-                    &Shape::from(weight_shape.to_vec()),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::Conv3dGradWeight),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-        let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
-        let result = from_storage(storage, result_layout, true, false);
+            let scalars = vec![
+                Scalar::from(stride),
+                Scalar::from(padding),
+                Scalar::from(dilation),
+                Scalar::from(weight_shape[0]), // out_channels
+                Scalar::from(weight_shape[1]), // in_channels
+                Scalar::from(weight_shape[2]), // kernel_depth
+                Scalar::from(weight_shape[3]), // kernel_height
+                Scalar::from(weight_shape[4]), // kernel_width
+            ];
 
-        Ok(result)
+            let mut op_params = OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
+                Op::Conv(ConvOp::Conv3dGradWeight),
+                Some(op_params),
+                vec![self.id(), grad_output.id()],
+                vec![result_id],
+                vec![self.layout(), grad_output.layout()],
+                vec![result_layout],
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                grad_output.with_storage(|grad_output_storage| {
+                    input_storage.call_conv_grad_weight(
+                        &self.layout(),
+                        grad_output_storage,
+                        &grad_output.layout(),
+                        &Shape::from(weight_shape.to_vec()),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::Conv3dGradWeight),
+                    )
+                })
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result = from_storage(storage, result_layout, true, false);
+
+            Ok(result)
+        }
     }
 
     pub(crate) fn conv_transpose1d_grad_weight(
@@ -1098,25 +1185,53 @@ impl Tensor {
         let padding_arr = [padding];
         let dilation_arr = [dilation];
 
-        let storage = self.with_storage(|input_storage| {
-            grad_output.with_storage(|grad_output_storage| {
-                input_storage.call_conv_grad_weight(
-                    &self.layout(),
-                    grad_output_storage,
-                    &grad_output.layout(),
-                    &Shape::from(weight_shape.to_vec()),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::ConvTranspose1dGradWeight),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-        let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
-        let result = from_storage(storage, result_layout, true, false);
+            let scalars = vec![
+                Scalar::from(stride),
+                Scalar::from(padding),
+                Scalar::from(dilation),
+                Scalar::from(weight_shape[0]), // in_channels
+                Scalar::from(weight_shape[1]), // out_channels
+                Scalar::from(weight_shape[2]), // kernel_size
+            ];
 
-        Ok(result)
+            let mut op_params = OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
+                Op::Conv(ConvOp::ConvTranspose1dGradWeight),
+                Some(op_params),
+                vec![self.id(), grad_output.id()],
+                vec![result_id],
+                vec![self.layout(), grad_output.layout()],
+                vec![result_layout],
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                grad_output.with_storage(|grad_output_storage| {
+                    input_storage.call_conv_grad_weight(
+                        &self.layout(),
+                        grad_output_storage,
+                        &grad_output.layout(),
+                        &Shape::from(weight_shape.to_vec()),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::ConvTranspose1dGradWeight),
+                    )
+                })
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result = from_storage(storage, result_layout, true, false);
+
+            Ok(result)
+        }
     }
 
     pub(crate) fn conv_transpose2d_grad_weight(
@@ -1159,25 +1274,54 @@ impl Tensor {
         let padding_arr = [padding; 2];
         let dilation_arr = [dilation; 2];
 
-        let storage = self.with_storage(|input_storage| {
-            grad_output.with_storage(|grad_output_storage| {
-                input_storage.call_conv_grad_weight(
-                    &self.layout(),
-                    grad_output_storage,
-                    &grad_output.layout(),
-                    &Shape::from(weight_shape.to_vec()),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::ConvTranspose2dGradWeight),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-        let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
-        let result = from_storage(storage, result_layout, true, false);
+            let scalars = vec![
+                Scalar::from(stride),
+                Scalar::from(padding),
+                Scalar::from(dilation),
+                Scalar::from(weight_shape[0]), // in_channels
+                Scalar::from(weight_shape[1]), // out_channels
+                Scalar::from(weight_shape[2]), // kernel_height
+                Scalar::from(weight_shape[3]), // kernel_width
+            ];
 
-        Ok(result)
+            let mut op_params = OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
+                Op::Conv(ConvOp::ConvTranspose2dGradWeight),
+                Some(op_params),
+                vec![self.id(), grad_output.id()],
+                vec![result_id],
+                vec![self.layout(), grad_output.layout()],
+                vec![result_layout],
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                grad_output.with_storage(|grad_output_storage| {
+                    input_storage.call_conv_grad_weight(
+                        &self.layout(),
+                        grad_output_storage,
+                        &grad_output.layout(),
+                        &Shape::from(weight_shape.to_vec()),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::ConvTranspose2dGradWeight),
+                    )
+                })
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result = from_storage(storage, result_layout, true, false);
+
+            Ok(result)
+        }
     }
 
     pub(crate) fn conv_transpose3d_grad_weight(
@@ -1220,24 +1364,54 @@ impl Tensor {
         let padding_arr = [padding; 3];
         let dilation_arr = [dilation; 3];
 
-        let storage = self.with_storage(|input_storage| {
-            grad_output.with_storage(|grad_output_storage| {
-                input_storage.call_conv_grad_weight(
-                    &self.layout(),
-                    grad_output_storage,
-                    &grad_output.layout(),
-                    &Shape::from(weight_shape.to_vec()),
-                    &stride_arr,
-                    &padding_arr,
-                    &dilation_arr,
-                    Op::Conv(ConvOp::ConvTranspose3dGradWeight),
-                )
-            })
-        })?;
+        if builder::is_builder_active() {
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-        let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
-        let result = from_storage(storage, result_layout, true, false);
+            let scalars = vec![
+                Scalar::from(stride),
+                Scalar::from(padding),
+                Scalar::from(dilation),
+                Scalar::from(weight_shape[0]), // in_channels
+                Scalar::from(weight_shape[1]), // out_channels
+                Scalar::from(weight_shape[2]), // kernel_depth
+                Scalar::from(weight_shape[3]), // kernel_height
+                Scalar::from(weight_shape[4]), // kernel_width
+            ];
 
-        Ok(result)
+            let mut op_params = OpParams::default();
+            op_params.scalars = scalars;
+
+            register_operation_in_builder(
+                Op::Conv(ConvOp::ConvTranspose3dGradWeight),
+                Some(op_params),
+                vec![self.id(), grad_output.id()],
+                vec![result_id],
+                vec![self.layout(), grad_output.layout()],
+                vec![result_layout],
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|input_storage| {
+                grad_output.with_storage(|grad_output_storage| {
+                    input_storage.call_conv_grad_weight(
+                        &self.layout(),
+                        grad_output_storage,
+                        &grad_output.layout(),
+                        &Shape::from(weight_shape.to_vec()),
+                        &stride_arr,
+                        &padding_arr,
+                        &dilation_arr,
+                        Op::Conv(ConvOp::ConvTranspose3dGradWeight),
+                    )
+                })
+            })?;
+
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result = from_storage(storage, result_layout, true, false);
+
+            Ok(result)
+        }
     }
 }

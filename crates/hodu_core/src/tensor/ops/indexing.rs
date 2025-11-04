@@ -4,7 +4,7 @@ use crate::{
     ops::{IndexingOp, Op, OpParams},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor_with_grad, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
     types::Layout,
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_requires_grad_for_op,
@@ -40,7 +40,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::IndexSelect),
@@ -116,7 +116,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::IndexPut),
@@ -196,7 +196,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::Gather),
@@ -273,7 +273,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::Scatter),
@@ -353,7 +353,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::ScatterAdd),
@@ -433,7 +433,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::ScatterMax),
@@ -513,7 +513,7 @@ impl Tensor {
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor_with_grad(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             register_operation_in_builder(
                 Op::Indexing(IndexingOp::ScatterMin),

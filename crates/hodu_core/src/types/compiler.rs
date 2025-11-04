@@ -44,7 +44,8 @@ impl Compiler {
                 Device::CPU => true,
                 #[cfg(feature = "cuda")]
                 Device::CUDA(_) => true,
-                _ => false,
+                #[cfg(feature = "metal")]
+                Device::Metal => false,
             },
         }
     }

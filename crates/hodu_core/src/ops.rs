@@ -657,4 +657,7 @@ pub struct OpParams {
 
     /// Output index (for Split gradient computation)
     pub output_index: Option<usize>,
+
+    /// Data type (for Cast operations)
+    pub dtype: Option<crate::types::DType>,
 }
