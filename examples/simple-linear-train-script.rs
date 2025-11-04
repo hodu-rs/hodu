@@ -1,8 +1,4 @@
-use hodu::{
-    core::script::{builder::Builder, Script},
-    nn::SGD,
-    prelude::*,
-};
+use hodu::{nn::SGD, prelude::*};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,9 +24,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mse_loss = MSELoss::new();
     let mut optimizer = SGD::new(0.01);
 
-    let input = Tensor::input("input", &[10000, 3])?;
+    let input = Tensor::input("input", [10000, 3])?;
     input.requires_grad()?;
-    let target = Tensor::input("target", &[10000, 1])?;
+    let target = Tensor::input("target", [10000, 1])?;
 
     let epochs = 1000;
     let mut final_loss = Tensor::scalar(0.0)?;

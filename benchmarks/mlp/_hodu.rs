@@ -163,7 +163,8 @@ fn benchmark_static(
     builder.add_output("result", result)?;
     builder.end()?;
 
-    let mut script = builder.build()?;
+    let module = builder.build()?;
+    let mut script = Script::new(module);
 
     match mode {
         BenchMode::StaticCPU => {
@@ -176,12 +177,12 @@ fn benchmark_static(
         #[cfg(feature = "xla")]
         BenchMode::StaticXLACPU => {
             script.set_device(Device::CPU);
-            script.set_backend(Backend::XLA);
+            script.set_compiler(Compiler::XLA);
         },
         _ => unreachable!(),
     }
 
-    script.add_input("x", x_data.clone());
+    script.set_input("x", x_data.clone());
 
     // Compile
     script.compile()?;
