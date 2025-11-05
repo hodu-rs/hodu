@@ -8,9 +8,9 @@ use crate::{
     tensor::Tensor,
     types::{DType, Layout},
 };
-#[cfg(feature = "f8e5m2")]
-use float::F8E5M2;
 use float8::F8E4M3;
+#[cfg(feature = "f8e5m2")]
+use float8::F8E5M2;
 use half::{bf16, f16};
 
 impl Tensor {

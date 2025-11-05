@@ -27,12 +27,12 @@ pub fn build_module(state: &mut BuilderState) -> HoduResult<Module> {
                     .graph_outputs
                     .iter()
                     .filter_map(|(_, tensor)| {
-                        if !state.tensor_to_value.contains_key(&tensor.id()) {
-                            if let Some(_) = crate::tensor::get(tensor.id()) {
-                                if tensor.has_storage() && !tensor.is_runtime() {
-                                    return Some(tensor.id());
-                                }
-                            }
+                        if !state.tensor_to_value.contains_key(&tensor.id())
+                            && crate::tensor::get(tensor.id()).is_some()
+                            && tensor.has_storage()
+                            && !tensor.is_runtime()
+                        {
+                            return Some(tensor.id());
                         }
                         None
                     })
@@ -82,6 +82,7 @@ pub fn build_module(state: &mut BuilderState) -> HoduResult<Module> {
 }
 
 /// Build a function from builder state
+#[allow(dead_code)]
 fn build_function(state: &mut BuilderState) -> HoduResult<Function> {
     // Reset counters
     state.value_counter = 0;
@@ -317,28 +318,4 @@ fn allocate_value_id(state: &mut BuilderState, tensor_id: TensorId) -> ValueId {
     state.value_counter += 1;
     state.tensor_to_value.insert(tensor_id, value_id);
     value_id
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_build_empty_module() {
-        let mut state = BuilderState {
-            name: "test".to_string(),
-            module: Module::new("test".to_string()),
-            current_function: None,
-            current_block: None,
-            value_counter: 0,
-            block_counter: 0,
-            tensor_to_value: HashMap::new(),
-            graph_inputs: Vec::new(),
-            graph_outputs: Vec::new(),
-            is_ended: false,
-        };
-
-        // Can't build without inputs/outputs
-        // This would fail, but demonstrates the structure
-    }
 }

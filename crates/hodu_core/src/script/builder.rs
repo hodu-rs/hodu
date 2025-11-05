@@ -3,7 +3,8 @@ mod context;
 pub mod ir;
 mod printer;
 
-use crate::error::HoduResult;
+#[cfg(any(feature = "std", feature = "serde"))]
+use crate::{error::HoduResult, layer::compat::*};
 pub use context::{get_active_builder, is_builder_active, with_active_builder, Builder, BuilderState};
 pub use ir::{
     Attribute, BasicBlock, BlockId, CompressionType, ConstantData, Function, FunctionSignature, Instruction, Module,

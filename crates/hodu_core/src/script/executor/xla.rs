@@ -44,6 +44,7 @@ impl XlaExecutor {
             #[cfg(feature = "cuda")]
             Device::CUDA(_) => PjRtClient::gpu(0.95, true)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create XLA GPU client: {:?}", e)))?,
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => {
                 return Err(HoduError::InternalError(format!(
                     "Device {:?} not supported for XLA",
@@ -62,7 +63,7 @@ impl XlaExecutor {
 
         for (i, input_name) in input_names.iter().enumerate() {
             if let Some(&value_id) = compiled.input_mapping.get(input_name) {
-                let tensor = inputs
+                let _tensor = inputs
                     .get(input_name.as_str())
                     .ok_or_else(|| HoduError::InternalError(format!("Missing input: {}", input_name)))?;
 
@@ -122,7 +123,7 @@ impl XlaExecutor {
             }
 
             // Execute operation
-            let result_op = execute_xla_op(&builder, &instr.op, &input_ops, &instr.attributes, &compiled, &instr)?;
+            let result_op = execute_xla_op(&builder, &instr.op, &input_ops, &instr.attributes, compiled, instr)?;
             xla_ops.insert(instr.result, result_op);
         }
 
@@ -244,7 +245,7 @@ impl ExecutorT for XlaExecutor {
 
     fn execute(&self, compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
         // Validate inputs
-        for (name, _value_id) in &compiled.input_mapping {
+        for name in compiled.input_mapping.keys() {
             if !inputs.contains_key(name.as_str()) {
                 return Err(HoduError::InternalError(format!("Missing required input: {}", name)));
             }
@@ -302,7 +303,6 @@ fn create_constant_op(
     constant_data: &crate::script::builder::ir::ConstantData,
 ) -> HoduResult<hodu_xla::XlaOp> {
     use crate::be_cpu::storage::CpuStorage;
-    use hodu_xla::Literal;
 
     // Parse the data bytes into appropriate CPU storage
     let cpu_storage = CpuStorage::from_bytes(&constant_data.data, constant_data.dtype)
@@ -687,7 +687,7 @@ fn execute_xla_op(
                         None
                     }
                 })
-                .unwrap_or_else(Vec::new);
+                .unwrap_or_default();
 
             match reduce_op {
                 ReduceOp::Sum => if dims.is_empty() {
@@ -1924,12 +1924,6 @@ fn execute_xla_op(
                     let is_mean = matches!(windowing_op, WindowingOp::ReduceWindowMean);
                     (init, comp, is_mean)
                 },
-                _ => {
-                    return Err(HoduError::InternalError(format!(
-                        "Windowing operation {:?} not yet implemented",
-                        windowing_op
-                    )));
-                },
             };
 
             // Convert to i64
@@ -2322,6 +2316,7 @@ fn get_scalar_from_attributes(attributes: &HashMap<String, Attribute>) -> HoduRe
 fn tensor_to_literal(tensor: &crate::tensor::Tensor) -> HoduResult<hodu_xla::Literal> {
     tensor.with_storage(|storage| match storage {
         BackendStorage::CPU(cpu_storage) => cpu_storage_to_literal(cpu_storage),
+        #[cfg(any(feature = "cuda", feature = "metal"))]
         _ => Err(HoduError::InternalError(
             "Only CPU storage supported for XLA conversion".to_string(),
         )),

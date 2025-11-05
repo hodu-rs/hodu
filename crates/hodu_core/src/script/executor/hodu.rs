@@ -25,7 +25,7 @@ impl HoduExecutor {
 
     /// Validate that inputs match the compiled module's requirements
     fn validate_inputs(&self, compiled: &CompiledModule, inputs: &ExecutionInputs<'_>) -> HoduResult<()> {
-        for (name, _value_id) in &compiled.input_mapping {
+        for name in compiled.input_mapping.keys() {
             if !inputs.contains_key(name.as_str()) {
                 return Err(HoduError::InternalError(format!("Missing required input: {}", name)));
             }

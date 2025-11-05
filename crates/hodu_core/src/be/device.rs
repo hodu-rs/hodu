@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 use crate::{
     be::storage::{BackendStorage, BackendStorageT},
     be_cpu::device::CpuDevice,
@@ -17,8 +19,10 @@ pub trait BackendDeviceT: Sized {
 }
 
 pub enum BackendDevice {
+    #[allow(dead_code)]
     CPU(CpuDevice),
     #[cfg(feature = "metal")]
+    #[allow(dead_code)]
     Metal(crate::be_metal::device::MetalDevice),
 }
 

@@ -1,4 +1,5 @@
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::upper_case_acronyms)]
 
 use crate::{
     be::device::{BackendDevice, BackendDeviceT},
@@ -19,6 +20,7 @@ pub trait BackendStorageT: Sized {
 
     fn backend_device(&self) -> &Self::BackendDevice;
 
+    #[allow(dead_code)]
     fn to_cpu_storage(&self) -> HoduResult<CpuStorage>;
 
     fn const_set(&mut self, _: Scalar, _: &Layout) -> HoduResult<()>;
@@ -100,6 +102,7 @@ impl BackendStorage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn backend_device(&self) -> BackendDevice {
         match self {
             Self::CPU(storage) => BackendDevice::CPU(storage.backend_device().clone()),
@@ -108,6 +111,7 @@ impl BackendStorage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn to_cpu_storage(&self) -> HoduResult<CpuStorage> {
         match self {
             Self::CPU(storage) => Ok(storage.clone()),

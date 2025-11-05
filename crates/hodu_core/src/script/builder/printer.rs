@@ -1,5 +1,5 @@
 use super::ir::*;
-use crate::{layer::compat::*, types::Shape};
+use crate::layer::compat::*;
 
 /// Print Module to readable text format (.hds.ir)
 pub fn print_module(module: &Module) -> String {
@@ -238,14 +238,10 @@ fn print_attribute(attr: &Attribute) -> String {
     }
 }
 
-fn shape_to_string(shape: &Shape) -> String {
-    shape.dims().iter().map(|d| d.to_string()).collect::<Vec<_>>().join("x")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::DType;
+    use crate::types::{DType, Shape};
 
     #[test]
     fn test_print_simple_module() {

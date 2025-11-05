@@ -187,7 +187,7 @@ impl Builder {
                     }
 
                     // Check if this is a constant that needs to be loaded
-                    if let Some(_) = crate::tensor::get(tensor_id) {
+                    if crate::tensor::get(tensor_id).is_some() {
                         let tensor = crate::tensor::tensor_from_id(tensor_id);
                         if tensor.has_storage() && !tensor.is_runtime() {
                             // This is a constant - add LoadConstant instruction
@@ -353,7 +353,7 @@ impl Builder {
     }
 
     pub fn build(&self) -> HoduResult<Module> {
-        self.with_state_mut(|s| super::codegen::build_module(s))
+        self.with_state_mut(super::codegen::build_module)
             .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))?
     }
 }

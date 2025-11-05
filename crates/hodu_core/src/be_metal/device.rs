@@ -7,7 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{
     kernel::Kernels,
-    metal::{Buffer, BufferMap, CommandBuffer, Commands, ComputePipeline, Device, MTLResourceOptions},
+    metal::{Buffer, BufferMap, CommandBuffer, Commands, Device, MTLResourceOptions},
 };
 use std::sync::{Arc, LazyLock, RwLock};
 
@@ -68,24 +68,6 @@ impl MetalDevice {
     /// Returns a reference to the global Metal device singleton
     pub fn global() -> &'static MetalDevice {
         &METAL_DEVICE
-    }
-
-    pub fn compile(&self, func_name: &'static str, kernel: ug::lang::ssa::Kernel) -> HoduResult<ComputePipeline> {
-        let mut buf = vec![];
-        ug_metal::code_gen::gen(&mut buf, func_name, &kernel)?;
-        let metal_code = String::from_utf8(buf)?;
-        let lib = self.device.new_library_with_source(&metal_code, None)?;
-        let func = lib.get_function(func_name, None)?;
-        let pl = self.device.new_compute_pipeline_state_with_function(&func)?;
-        Ok(pl)
-    }
-
-    pub fn id(&self) -> DeviceId {
-        self.id
-    }
-
-    pub fn metal_device(&self) -> &Device {
-        &self.device
     }
 
     fn drop_unused_buffers(&self) -> HoduResult<()> {

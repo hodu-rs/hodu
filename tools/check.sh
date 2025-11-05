@@ -151,11 +151,11 @@ tests+=(
 # PHASE 2: Data type feature combinations (no-std and std)
 # ============================================================================
 tests+=(
-    "$DTYPE_ALL|[dtype] all int types (no-std)"
-    "std,$DTYPE_ALL|[dtype] all int types (std)"
-    "std,serde,$DTYPE_ALL|[dtype] all int types + serde (std)"
-    "std,rayon,$DTYPE_ALL|[dtype] all int types + rayon (std)"
-    "std,serde,rayon,$DTYPE_ALL|[dtype] all int types + serde + rayon (std)"
+    "$DTYPE_ALL|[dtype] all dtypes (no-std)"
+    "std,$DTYPE_ALL|[dtype] all dtypes (std)"
+    "std,serde,$DTYPE_ALL|[dtype] all dtypes + serde (std)"
+    "std,rayon,$DTYPE_ALL|[dtype] all dtypes + rayon (std)"
+    "std,serde,rayon,$DTYPE_ALL|[dtype] all dtypes + serde + rayon (std)"
 )
 
 # ============================================================================

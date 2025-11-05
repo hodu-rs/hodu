@@ -1,3 +1,5 @@
+#![allow(clippy::upper_case_acronyms)]
+
 mod ops_binary;
 mod ops_concat_split;
 mod ops_conv;
@@ -46,30 +48,30 @@ pub enum CpuStorage {
     I64(Vec<i64>),
 }
 
-#[derive(Debug, Clone)]
-pub enum CpuStorageRef<'a> {
-    BOOL(&'a [bool]),
-    F8E4M3(&'a [F8E4M3]),
-    #[cfg(feature = "f8e5m2")]
-    F8E5M2(&'a [F8E5M2]),
-    BF16(&'a [bf16]),
-    F16(&'a [f16]),
-    F32(&'a [f32]),
-    #[cfg(feature = "f64")]
-    F64(&'a [f64]),
-    U8(&'a [u8]),
-    #[cfg(feature = "u16")]
-    U16(&'a [u16]),
-    U32(&'a [u32]),
-    #[cfg(feature = "u64")]
-    U64(&'a [u64]),
-    I8(&'a [i8]),
-    #[cfg(feature = "i16")]
-    I16(&'a [i16]),
-    I32(&'a [i32]),
-    #[cfg(feature = "i64")]
-    I64(&'a [i64]),
-}
+// #[derive(Debug, Clone)]
+// pub enum CpuStorageRef<'a> {
+//     BOOL(&'a [bool]),
+//     F8E4M3(&'a [F8E4M3]),
+//     #[cfg(feature = "f8e5m2")]
+//     F8E5M2(&'a [F8E5M2]),
+//     BF16(&'a [bf16]),
+//     F16(&'a [f16]),
+//     F32(&'a [f32]),
+//     #[cfg(feature = "f64")]
+//     F64(&'a [f64]),
+//     U8(&'a [u8]),
+//     #[cfg(feature = "u16")]
+//     U16(&'a [u16]),
+//     U32(&'a [u32]),
+//     #[cfg(feature = "u64")]
+//     U64(&'a [u64]),
+//     I8(&'a [i8]),
+//     #[cfg(feature = "i16")]
+//     I16(&'a [i16]),
+//     I32(&'a [i32]),
+//     #[cfg(feature = "i64")]
+//     I64(&'a [i64]),
+// }
 
 impl CpuStorage {
     pub fn from_vec<T: 'static>(vec: Vec<T>) -> Self {
