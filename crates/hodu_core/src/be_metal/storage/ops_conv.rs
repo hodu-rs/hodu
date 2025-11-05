@@ -7,6 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_conv(
     input_storage: &MetalStorage,
     input_layout: &Layout,
@@ -18,10 +19,10 @@ pub fn call_conv(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _conv_op = match op {
+    match op {
         Op::Conv(_) => (),
         _ => return Err(HoduError::InternalError("call_conv expects conv op".to_string())),
-    };
+    }
 
     let input_shape = input_layout.shape();
     let weight_shape = weight_layout.shape();
@@ -129,6 +130,7 @@ pub fn call_conv(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_conv_grad_weight(
     input_storage: &MetalStorage,
     input_layout: &Layout,
@@ -141,14 +143,14 @@ pub fn call_conv_grad_weight(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _conv_grad_weight_op = match op {
+    match op {
         Op::Conv(_) => (),
         _ => {
             return Err(HoduError::InternalError(
                 "call_conv_grad_weight expects conv op".to_string(),
             ))
         },
-    };
+    }
 
     let input_shape = input_layout.shape();
     let grad_output_shape = grad_output_layout.shape();

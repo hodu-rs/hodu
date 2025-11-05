@@ -91,9 +91,9 @@ impl VjpCompute for IndexingOp {
 
                 // Gradient w.r.t. self: everywhere except indexed positions
                 // Create a mask: 1 everywhere, 0 at indexed positions
-                let ones = Tensor::ones(&self_tensor.shape(), dtype)?;
+                let ones = Tensor::ones(self_tensor.shape(), dtype)?;
                 let zeros_at_indices =
-                    ones.index_put(dim, &indices_tensor, &Tensor::zeros(&indices_tensor.shape(), dtype)?)?;
+                    ones.index_put(dim, &indices_tensor, &Tensor::zeros(indices_tensor.shape(), dtype)?)?;
                 let grad_self = grad_tensor.mul(&zeros_at_indices)?;
 
                 // Gradient w.r.t. values: gather from grad_output at indices
@@ -121,9 +121,9 @@ impl VjpCompute for IndexingOp {
 
                 // Gradient w.r.t. self: everywhere except scattered positions
                 // Create a mask: 1 everywhere, 0 at scattered positions
-                let ones = Tensor::ones(&self_tensor.shape(), dtype)?;
+                let ones = Tensor::ones(self_tensor.shape(), dtype)?;
                 let zeros_at_indices =
-                    ones.scatter(dim, &indices_tensor, &Tensor::zeros(&indices_tensor.shape(), dtype)?)?;
+                    ones.scatter(dim, &indices_tensor, &Tensor::zeros(indices_tensor.shape(), dtype)?)?;
                 let grad_self = grad_tensor.mul(&zeros_at_indices)?;
 
                 // Gradient w.r.t. src: gather from grad_output at indices
@@ -192,14 +192,14 @@ impl VjpCompute for IndexingOp {
                 // Gradient w.r.t. self: flows through where self won
                 // Create mask where self won (opposite of src_won)
                 let dtype = self_tensor.dtype();
-                let ones = Tensor::ones(&src_won.shape(), dtype)?;
+                let ones = Tensor::ones(src_won.shape(), dtype)?;
                 let self_won = ones.sub(&src_won)?;
 
                 // Scatter the masked gradient back
                 let grad_src_scattered = grad_tensor.gather(dim, &indices_tensor)?;
                 let grad_self_at_indices = grad_src_scattered.mul(&self_won)?;
 
-                let zeros = Tensor::zeros(&self_tensor.shape(), dtype)?;
+                let zeros = Tensor::zeros(self_tensor.shape(), dtype)?;
                 let grad_self = zeros.scatter_add(dim, &indices_tensor, &grad_self_at_indices)?;
 
                 // Add gradient from positions not affected by scatter

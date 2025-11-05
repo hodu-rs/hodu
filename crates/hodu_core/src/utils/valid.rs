@@ -5,6 +5,7 @@ use crate::{
     types::{DType, Device},
 };
 
+#[allow(unused_variables)]
 pub fn validate_dtype_for_device(dtype: DType, device: Device) -> HoduResult<()> {
     match device {
         Device::CPU => Ok(()),

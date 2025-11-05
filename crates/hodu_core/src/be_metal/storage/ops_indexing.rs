@@ -16,14 +16,14 @@ pub fn call_index_select(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _index_select_op = match op {
+    match op {
         Op::Indexing(_) => (),
         _ => {
             return Err(HoduError::InternalError(
                 "call_index_select expects indexing op".to_string(),
             ))
         },
-    };
+    }
 
     let input_shape = input_layout.shape();
     let indices_shape = indices_layout.shape();
@@ -88,6 +88,7 @@ pub fn call_index_select(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_index_put(
     input_storage: &MetalStorage,
     input_layout: &Layout,
@@ -99,14 +100,14 @@ pub fn call_index_put(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _index_put_op = match op {
+    match op {
         Op::Indexing(_) => (),
         _ => {
             return Err(HoduError::InternalError(
                 "call_index_put expects indexing op".to_string(),
             ))
         },
-    };
+    }
 
     let input_shape = input_layout.shape();
     let indices_shape = indices_layout.shape();
@@ -182,10 +183,10 @@ pub fn call_gather(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _gather_op = match op {
+    match op {
         Op::Indexing(_) => (),
         _ => return Err(HoduError::InternalError("call_gather expects indexing op".to_string())),
-    };
+    }
 
     let input_shape = input_layout.shape();
     let indices_shape = indices_layout.shape();
@@ -238,6 +239,7 @@ pub fn call_gather(
     ))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_scatter(
     input_storage: &MetalStorage,
     input_layout: &Layout,
@@ -249,10 +251,10 @@ pub fn call_scatter(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _scatter_op = match op {
+    match op {
         Op::Indexing(_) => (),
         _ => return Err(HoduError::InternalError("call_scatter expects indexing op".to_string())),
-    };
+    }
 
     let input_shape = input_layout.shape();
     let src_shape = src_layout.shape();

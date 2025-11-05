@@ -32,10 +32,10 @@ pub fn call_concat(
     let mut storages = vec![first];
     storages.extend(others.iter().copied());
     // Validate op
-    let _concat_op = match op {
+    match op {
         Op::Concat(_) => (),
         _ => return Err(HoduError::InternalError("call_concat expects concat op".to_string())),
-    };
+    }
 
     if layouts.is_empty() {
         return Err(HoduError::InternalError(
@@ -237,10 +237,10 @@ pub fn call_split(
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate op
-    let _split_op = match op {
+    match op {
         Op::Split(_) => (),
         _ => return Err(HoduError::InternalError("call_split expects split op".to_string())),
-    };
+    }
 
     let input_shape = layout.shape();
     let ndim = input_shape.ndim();

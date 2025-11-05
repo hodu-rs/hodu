@@ -151,6 +151,7 @@ pub fn call_index_select(
 ///
 /// # Returns
 /// Output storage with values written at indices
+#[allow(clippy::too_many_arguments)]
 pub fn call_index_put(
     storage: &CpuStorage,
     layout: &Layout,
@@ -475,6 +476,7 @@ pub fn call_gather(
 ///
 /// # Returns
 /// Output storage with scattered values
+#[allow(clippy::too_many_arguments)]
 pub fn call_scatter(
     storage: &CpuStorage,
     layout: &Layout,

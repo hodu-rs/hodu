@@ -293,7 +293,7 @@ impl Tensor {
         }
 
         if let Ok(grad_tensor) = self.grad() {
-            let zeros = Self::zeros(&grad_tensor.shape(), grad_tensor.dtype())?;
+            let zeros = Self::zeros(grad_tensor.shape(), grad_tensor.dtype())?;
 
             with_tensor_mut(self.0, |tensor_ref| {
                 tensor_ref.grad_tensor_id = Some(zeros.0);

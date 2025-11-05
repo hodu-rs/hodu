@@ -1,5 +1,6 @@
 use crate::{
     error::HoduResult,
+    layer::compat::*,
     ops::{CmpOp, CmpScalarOp, Op},
     scalar::Scalar,
     script::builder,

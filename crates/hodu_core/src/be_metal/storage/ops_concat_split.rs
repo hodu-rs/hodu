@@ -7,6 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
+#[allow(clippy::needless_range_loop)]
 pub fn call_concat(
     first: &MetalStorage,
     others: &[&MetalStorage],
@@ -19,10 +20,10 @@ pub fn call_concat(
     storages.extend(others.iter().copied());
 
     // Validate op
-    let _concat_op = match op {
+    match op {
         Op::Concat(_) => (),
         _ => return Err(HoduError::InternalError("call_concat expects concat op".to_string())),
-    };
+    }
 
     if layouts.is_empty() {
         return Err(HoduError::InternalError(
@@ -83,7 +84,45 @@ pub fn call_concat(
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
-    // Build metadata for Metal kernel
+    let device = first.backend_device();
+
+    // Strategy (matching CPU backend exactly):
+    // 1. Pack all input raw data into a temporary buffer (no need to make contiguous!)
+    // 2. Pass original layouts (shapes, strides, offsets) to kernel
+    // 3. Kernel handles non-contiguous access using strides and offsets
+    // 4. Only buffer_offsets indicate position in packed buffer
+
+    // Calculate total size needed: sum of all storage buffer sizes
+    // We need to copy the entire raw buffer data (not just shape size, because of offset/strides)
+    let element_size = dtype.get_size_in_bytes();
+    let total_bytes: usize = storages.iter().map(|s| s.buffer().length()).sum();
+    let temp_input_buffer = device.new_buffer(total_bytes / element_size, dtype, "concat_temp_input")?;
+
+    let command_buffer = device.command_buffer()?;
+
+    // Pack all input raw data into temporary buffer using blit
+    let blit = command_buffer.blit_command_encoder();
+    blit.set_label("concat_pack_inputs");
+
+    let mut buffer_offset_bytes = 0;
+    for storage in storages.iter() {
+        let byte_size = storage.buffer().length();
+
+        // Copy entire raw buffer data
+        blit.copy_from_buffer(
+            storage.buffer(),
+            0, // Copy from start of buffer
+            &temp_input_buffer,
+            buffer_offset_bytes,
+            byte_size,
+        );
+
+        buffer_offset_bytes += byte_size;
+    }
+
+    blit.end_encoding();
+
+    // Build metadata for concat kernel (same as CPU backend)
     let mut metadata = Vec::new();
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);
@@ -96,47 +135,42 @@ pub fn call_concat(
     metadata.push(dim as usize);
     metadata.push(num_inputs);
 
-    // Add shapes, strides, and offsets for each input
-    for i in 0..num_inputs {
-        let shape = layouts[i].shape();
-        for &d in shape.dims() {
+    // Add input shapes (from original layouts)
+    for layout in layouts {
+        for &d in layout.shape().dims() {
             metadata.push(d as usize);
         }
     }
 
-    for i in 0..num_inputs {
-        let strides = layouts[i].strides();
-        for &s in strides {
+    // Add input strides (from original layouts - kernel will handle non-contiguous)
+    for layout in layouts {
+        for &s in layout.strides() {
             metadata.push(s as usize);
         }
     }
 
-    for i in 0..num_inputs {
-        metadata.push(layouts[i].offset() as usize);
+    // Add input offsets (from original layouts - kernel will handle this)
+    for layout in layouts {
+        metadata.push(layout.offset() as usize);
     }
 
-    let device = first.backend_device();
+    // Add input buffer offsets - cumulative positions in packed temp buffer (in elements)
+    let mut buffer_offset_elements = 0;
+    for storage in storages.iter() {
+        metadata.push(buffer_offset_elements);
+        buffer_offset_elements += storage.buffer().length() / element_size;
+    }
 
     // Create output buffer
     let output_buffer = device.new_buffer(num_els as usize, dtype, "concat_output")?;
 
-    // Get kernel name
+    // Call concat kernel
     let kernel_name = format!("concat_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Add buffer offsets - for now assume all from same underlying allocation
-    // TODO: This may need revision if inputs come from different buffers
-    for _ in 0..num_inputs {
-        metadata.push(0); // buffer offset for each input
-    }
+    let input_offset = BufferOffset::zero_offset(&temp_input_buffer);
 
-    // Use first input's buffer as the combined input buffer
-    // Note: This assumes all inputs share the same buffer or are properly offset
-    let input_offset = BufferOffset::zero_offset(first.buffer());
-
-    // Get command buffer and call kernel
-    let command_buffer = device.command_buffer()?;
     kernels::call_concat(
         device.device(),
         &command_buffer,
@@ -164,10 +198,10 @@ pub fn call_split(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    let _split_op = match op {
+    match op {
         Op::Split(_) => (),
         _ => return Err(HoduError::InternalError("call_split expects split op".to_string())),
-    };
+    }
 
     let input_shape = layout.shape();
     let ndim = input_shape.ndim();

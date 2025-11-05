@@ -1,6 +1,7 @@
 use crate::{
     error::HoduResult,
-    ops::{CastOp, MemoryOp, Op},
+    layer::compat::*,
+    ops::{CastOp, MemoryOp, Op, OpParams},
     script::builder,
     tensor::{create_builder_tensor, from_storage, register_operation_in_builder, Tensor},
     types::{DType, Layout},
@@ -16,8 +17,10 @@ impl Tensor {
             let layout = Layout::from_shape(&self.shape());
             let (result_id, result_tensor) = create_builder_tensor(layout.clone(), false);
 
-            let mut op_params = crate::ops::OpParams::default();
-            op_params.dtype = Some(dtype);
+            let op_params = OpParams {
+                dtype: Some(dtype),
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Cast(CastOp::ToDType),

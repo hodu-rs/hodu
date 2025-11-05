@@ -128,8 +128,7 @@ echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Cargo] Testing feature combinations...${
 
 # Data type feature presets
 DTYPE_NONE=""
-DTYPE_ALL="u8,u32,u64,i16,i64"
-DTYPE_MINIMAL="u8,i64"
+DTYPE_ALL="f8e5m2,f64,u16,u64,i16,i64"
 
 # Initialize tests array
 tests=()
@@ -153,13 +152,9 @@ tests+=(
 # ============================================================================
 tests+=(
     "$DTYPE_ALL|[dtype] all int types (no-std)"
-    "$DTYPE_MINIMAL|[dtype] minimal int types (no-std)"
     "std,$DTYPE_ALL|[dtype] all int types (std)"
-    "std,$DTYPE_MINIMAL|[dtype] minimal int types (std)"
     "std,serde,$DTYPE_ALL|[dtype] all int types + serde (std)"
-    "std,serde,$DTYPE_MINIMAL|[dtype] minimal int types + serde (std)"
     "std,rayon,$DTYPE_ALL|[dtype] all int types + rayon (std)"
-    "std,rayon,$DTYPE_MINIMAL|[dtype] minimal int types + rayon (std)"
     "std,serde,rayon,$DTYPE_ALL|[dtype] all int types + serde + rayon (std)"
 )
 
@@ -168,11 +163,8 @@ tests+=(
 # ============================================================================
 tests+=(
     "std,xla|[xla] xla only (std)"
-    "std,xla,$DTYPE_MINIMAL|[xla] xla + minimal dtypes (std)"
     "std,serde,xla|[xla] xla + serde (std)"
-    "std,serde,xla,$DTYPE_MINIMAL|[xla] xla + serde + minimal dtypes (std)"
     "std,rayon,xla|[xla] xla + rayon (std)"
-    "std,rayon,xla,$DTYPE_MINIMAL|[xla] xla + rayon + minimal dtypes (std)"
     "std,serde,rayon,xla|[xla] xla + serde + rayon (std)"
     "std,serde,rayon,xla,$DTYPE_ALL|[xla] xla + serde + rayon + all dtypes (std)"
 )
@@ -183,11 +175,8 @@ tests+=(
 if [ "$HAS_METAL" = true ]; then
     tests+=(
         "std,metal|[metal] metal only (std)"
-        "std,metal,$DTYPE_MINIMAL|[metal] metal + minimal dtypes (std)"
         "std,serde,metal|[metal] metal + serde (std)"
-        "std,serde,metal,$DTYPE_MINIMAL|[metal] metal + serde + minimal dtypes (std)"
         "std,rayon,metal|[metal] metal + rayon (std)"
-        "std,rayon,metal,$DTYPE_MINIMAL|[metal] metal + rayon + minimal dtypes (std)"
         "std,serde,rayon,metal|[metal] metal + serde + rayon (std)"
         "std,serde,rayon,metal,$DTYPE_ALL|[metal] metal + serde + rayon + all dtypes (std)"
     )
@@ -195,7 +184,6 @@ if [ "$HAS_METAL" = true ]; then
     # Metal + XLA combinations
     tests+=(
         "std,xla,metal|[metal+xla] xla + metal (std)"
-        "std,xla,metal,$DTYPE_MINIMAL|[metal+xla] xla + metal + minimal dtypes (std)"
         "std,serde,xla,metal|[metal+xla] xla + metal + serde (std)"
         "std,rayon,xla,metal|[metal+xla] xla + metal + rayon (std)"
         "std,serde,rayon,xla,metal|[metal+xla] xla + metal + serde + rayon (std)"

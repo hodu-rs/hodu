@@ -22,6 +22,7 @@ use core::ffi::c_void;
 ///
 /// # Returns
 /// Output storage containing the convolution result
+#[allow(clippy::too_many_arguments)]
 pub fn call_conv(
     input_storage: &CpuStorage,
     input_layout: &Layout,
@@ -310,6 +311,7 @@ pub fn call_conv(
 ///
 /// # Returns
 /// Output storage containing the gradient weights
+#[allow(clippy::too_many_arguments)]
 pub fn call_conv_grad_weight(
     input_storage: &CpuStorage,
     input_layout: &Layout,

@@ -928,8 +928,10 @@ impl Tensor {
                 Scalar::from(weight_shape[2]), // kernel_size
             ];
 
-            let mut op_params = OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Conv(ConvOp::Conv1dGradWeight),
@@ -1018,8 +1020,10 @@ impl Tensor {
                 Scalar::from(weight_shape[3]), // kernel_width
             ];
 
-            let mut op_params = OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Conv(ConvOp::Conv2dGradWeight),
@@ -1109,8 +1113,10 @@ impl Tensor {
                 Scalar::from(weight_shape[4]), // kernel_width
             ];
 
-            let mut op_params = OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Conv(ConvOp::Conv3dGradWeight),
@@ -1198,8 +1204,10 @@ impl Tensor {
                 Scalar::from(weight_shape[2]), // kernel_size
             ];
 
-            let mut op_params = OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Conv(ConvOp::ConvTranspose1dGradWeight),
@@ -1288,8 +1296,10 @@ impl Tensor {
                 Scalar::from(weight_shape[3]), // kernel_width
             ];
 
-            let mut op_params = OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Conv(ConvOp::ConvTranspose2dGradWeight),
@@ -1379,8 +1389,10 @@ impl Tensor {
                 Scalar::from(weight_shape[4]), // kernel_width
             ];
 
-            let mut op_params = OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Conv(ConvOp::ConvTranspose3dGradWeight),

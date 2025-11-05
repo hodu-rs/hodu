@@ -1,7 +1,7 @@
 use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::{Op, WindowingOp},
+    ops::{Op, OpParams, WindowingOp},
     scalar::Scalar,
     script::builder,
     tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
@@ -105,8 +105,10 @@ impl Tensor {
                 scalars.push(Scalar::from(pad));
             }
 
-            let mut op_params = crate::ops::OpParams::default();
-            op_params.scalars = scalars;
+            let op_params = OpParams {
+                scalars,
+                ..Default::default()
+            };
 
             register_operation_in_builder(
                 Op::Windowing(windowing_op),
