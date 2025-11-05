@@ -2,33 +2,42 @@ pub mod builder;
 pub mod compiler;
 pub mod executor;
 
+mod compilation;
+mod config;
+mod execution;
+mod input_manager;
+#[cfg(feature = "serde")]
+mod io;
+
 use crate::{
-    error::{HoduError, HoduResult},
+    error::HoduResult,
     layer::compat::*,
     tensor::Tensor,
     types::{Compiler, Device},
 };
 use builder::ir::Module;
-use compiler::{CompileOptions, CompiledModule, CompilerInstance, CompilerT};
-use executor::{ExecutionInputs, ExecutorInstance, ExecutorT};
+use compilation::CompilationManager;
+use config::ScriptConfig;
+use execution::ExecutionManager;
+use input_manager::InputManager;
 
 /// Script - executable module with compilation and execution capabilities
 pub struct Script {
     module: Module,
-    compiler_type: Compiler,
-    device: Device,
-    runtime_inputs: HashMap<String, Tensor>,
-    compiled: Option<CompiledModule>,
+    config: ScriptConfig,
+    inputs: InputManager,
+    compilation: CompilationManager,
+    execution: ExecutionManager,
 }
 
 impl fmt::Debug for Script {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Script")
             .field("module", &self.module.name)
-            .field("compiler", &self.compiler_type)
-            .field("device", &self.device)
-            .field("runtime_inputs", &self.runtime_inputs.len())
-            .field("compiled", &self.compiled.is_some())
+            .field("compiler", &self.config.compiler_type)
+            .field("device", &self.config.device)
+            .field("runtime_inputs", &self.inputs.len())
+            .field("compiled", &self.compilation.is_compiled())
             .finish()
     }
 }
@@ -38,10 +47,10 @@ impl Script {
     pub fn new(module: Module) -> Self {
         Self {
             module,
-            compiler_type: Compiler::default(),
-            device: Device::CPU,
-            runtime_inputs: HashMap::new(),
-            compiled: None,
+            config: ScriptConfig::new(),
+            inputs: InputManager::new(),
+            compilation: CompilationManager::new(),
+            execution: ExecutionManager::new(),
         }
     }
 
@@ -57,35 +66,37 @@ impl Script {
 
     /// Set compiler type
     pub fn set_compiler(&mut self, compiler: Compiler) {
-        if self.compiler_type != compiler {
-            self.compiler_type = compiler;
-            // Invalidate compilation
-            self.compiled = None;
+        if self.config.compiler_type != compiler {
+            self.config.set_compiler(compiler);
+            // Invalidate compilation and execution caches
+            self.compilation.invalidate();
+            self.execution.invalidate();
         }
     }
 
     /// Set target device
     pub fn set_device(&mut self, device: Device) {
-        if self.device != device {
-            self.device = device;
-            // Invalidate compilation
-            self.compiled = None;
+        if self.config.device != device {
+            self.config.set_device(device);
+            // Invalidate compilation and execution caches
+            self.compilation.invalidate();
+            self.execution.invalidate();
         }
     }
 
     /// Get current compiler type
     pub fn compiler(&self) -> Compiler {
-        self.compiler_type
+        self.config.compiler_type
     }
 
     /// Get current device
     pub fn device(&self) -> Device {
-        self.device
+        self.config.device
     }
 
     /// Add an input tensor
     pub fn set_input(&mut self, name: &str, tensor: Tensor) {
-        self.runtime_inputs.insert(name.to_string(), tensor);
+        self.inputs.set(name, tensor);
     }
 
     /// Add an input tensor (builder pattern)
@@ -96,82 +107,22 @@ impl Script {
 
     /// Clear all runtime inputs
     pub fn clear_inputs(&mut self) {
-        self.runtime_inputs.clear();
+        self.inputs.clear();
     }
 
     /// Get current runtime inputs
     pub fn inputs(&self) -> &HashMap<String, Tensor> {
-        &self.runtime_inputs
+        self.inputs.get()
     }
 
     /// Compile the module
     pub fn compile(&mut self) -> HoduResult<()> {
-        // Validate compiler and device compatibility
-        if !self.compiler_type.is_supported(self.device) {
-            return Err(HoduError::InternalError(format!(
-                "Compiler {:?} does not support device {:?}. Available devices for {:?}: {}",
-                self.compiler_type,
-                self.device,
-                self.compiler_type,
-                match self.compiler_type {
-                    Compiler::HODU => "CPU, Metal, CUDA",
-                    #[cfg(feature = "xla")]
-                    Compiler::XLA => "CPU, CUDA",
-                    #[allow(unreachable_patterns)]
-                    _ => "unknown",
-                }
-            )));
-        }
-
-        // Convert runtime_inputs to target device if needed
-        let mut converted_inputs = HashMap::new();
-        for (name, tensor) in &self.runtime_inputs {
-            let converted = if tensor.device() != self.device {
-                // Get CPU storage
-                let cpu_storage = tensor.with_storage(|s| s.to_cpu_storage())?;
-                // Create new storage on target device
-                let new_storage = match self.device {
-                    Device::CPU => crate::be::storage::BackendStorage::CPU(cpu_storage),
-                    #[cfg(feature = "metal")]
-                    Device::Metal => crate::be::storage::BackendStorage::Metal(
-                        crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?,
-                    ),
-                    #[allow(unreachable_patterns)]
-                    _ => {
-                        return Err(HoduError::InternalError(format!(
-                            "Unsupported device: {:?}",
-                            self.device
-                        )))
-                    },
-                };
-                let layout = tensor.layout();
-                crate::tensor::from_storage(new_storage, layout, true, false)
-            } else {
-                *tensor
-            };
-            converted_inputs.insert(name.clone(), converted);
-        }
-        self.runtime_inputs = converted_inputs;
-
-        // Create compiler instance
-        let compiler = CompilerInstance::new(self.compiler_type, self.device)?;
-
-        // Compile options
-        let options = CompileOptions {
-            device: self.device,
-            ..Default::default()
-        };
-
-        // Compile the module
-        let compiled = compiler.compile(&self.module, options)?;
-        self.compiled = Some(compiled);
-
-        Ok(())
+        self.compilation.compile(&self.module, &self.config, &mut self.inputs)
     }
 
     /// Check if the script is compiled
     pub fn is_compiled(&self) -> bool {
-        self.compiled.is_some()
+        self.compilation.is_compiled()
     }
 
     /// Execute the compiled script
@@ -181,33 +132,32 @@ impl Script {
             self.compile()?;
         }
 
-        let compiled = self
-            .compiled
-            .as_ref()
-            .ok_or_else(|| HoduError::InternalError("Script not compiled".to_string()))?;
-
-        // Create executor instance
-        let executor = ExecutorInstance::new(self.compiler_type, self.device)?;
-
-        // Convert runtime inputs to ExecutionInputs format
-        let inputs: ExecutionInputs<'_> = self.runtime_inputs.iter().map(|(k, v)| (k.as_str(), *v)).collect();
-
-        // Execute
-        let outputs = executor.execute(compiled, inputs)?;
-
-        Ok(outputs)
+        self.execution.run(&self.config, &self.compilation, &self.inputs)
     }
 
-    /// Save the module
+    /// Serialize the module to bytes (no_std compatible)
+    #[cfg(feature = "serde")]
+    pub fn to_bytes(&self) -> HoduResult<Vec<u8>> {
+        io::save_module_to_bytes(&self.module)
+    }
+
+    /// Deserialize a script from bytes (no_std compatible)
+    #[cfg(feature = "serde")]
+    pub fn from_bytes(bytes: &[u8]) -> HoduResult<Self> {
+        let module = io::load_module_from_bytes(bytes)?;
+        Ok(Self::new(module))
+    }
+
+    /// Save the module to file (requires std)
     #[cfg(all(feature = "serde", feature = "std"))]
     pub fn save<P: AsRef<std::path::Path>>(&self, path: P) -> HoduResult<()> {
-        self.module.save_bc(path)
+        io::save_module(&self.module, path)
     }
 
-    /// Load a script from file
+    /// Load a script from file (requires std)
     #[cfg(all(feature = "serde", feature = "std"))]
     pub fn load<P: AsRef<std::path::Path>>(path: P) -> HoduResult<Self> {
-        let module = Module::load_bc(path)?;
+        let module = io::load_module(path)?;
         Ok(Self::new(module))
     }
 }

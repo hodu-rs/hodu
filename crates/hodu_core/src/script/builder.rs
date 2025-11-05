@@ -1,4 +1,4 @@
-mod codegen;
+pub mod codegen;
 mod context;
 pub mod ir;
 mod printer;

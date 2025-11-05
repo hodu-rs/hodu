@@ -221,6 +221,20 @@ impl From<std::string::FromUtf8Error> for HoduError {
     }
 }
 
+#[cfg(feature = "serde")]
+impl From<bincode::error::DecodeError> for HoduError {
+    fn from(e: bincode::error::DecodeError) -> Self {
+        HoduError::IoError(format!("decode error: {}", e))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl From<bincode::error::EncodeError> for HoduError {
+    fn from(e: bincode::error::EncodeError) -> Self {
+        HoduError::IoError(format!("encode error: {}", e))
+    }
+}
+
 // Conversion from hodu_cpu_kernels error
 impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
     fn from(e: hodu_cpu_kernels::CpuKernelError) -> Self {

@@ -75,6 +75,9 @@ pub trait BackendStorageT: Sized {
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
+    // only implemented in BackendStorage
+    // fn to_device(&self, _: &Layout, _: Device) -> HoduResult<Self>;
+
     fn contiguous(&self, _: &Layout) -> HoduResult<Self>;
 }
 
@@ -755,6 +758,36 @@ impl BackendStorage {
             Self::Metal(storage) => {
                 let converted_storage = storage.to_dtype(layout, target_dtype)?;
                 Ok(Self::Metal(converted_storage))
+            },
+        }
+    }
+
+    pub(crate) fn to_device(&self, layout: &Layout, target_device: Device) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => match target_device {
+                Device::CPU => {
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    Ok(Self::CPU(contiguous_storage))
+                },
+                #[cfg(feature = "metal")]
+                Device::Metal => {
+                    use crate::be_metal::storage::MetalStorage;
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    let converted_storage = MetalStorage::from_cpu_storage(&contiguous_storage)?;
+                    Ok(Self::Metal(converted_storage))
+                },
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => match target_device {
+                Device::CPU => {
+                    let contiguoused_storage = storage.contiguous(layout)?;
+                    let converted_storage = contiguoused_storage.to_cpu_storage()?;
+                    Ok(Self::CPU(converted_storage))
+                },
+                Device::Metal => {
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    Ok(Self::Metal(contiguous_storage))
+                },
             },
         }
     }

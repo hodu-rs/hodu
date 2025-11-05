@@ -1,10 +1,10 @@
 use crate::{
-    error::HoduResult,
+    error::{HoduError, HoduResult},
     layer::compat::*,
     ops::{CastOp, MemoryOp, Op, OpParams},
     script::builder,
     tensor::{create_builder_tensor, from_storage, register_operation_in_builder, Tensor},
-    types::{DType, Layout},
+    types::{DType, Device, Layout},
     utils::valid::validate_dtype_for_device,
 };
 
@@ -35,6 +35,21 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|storage| storage.to_dtype(&self.layout(), dtype))?;
             let layout = Layout::from_shape(&self.shape());
+
+            let result = from_storage(storage, layout, true, false);
+
+            Ok(result)
+        }
+    }
+
+    pub fn to_device(&self, device: Device) -> HoduResult<Self> {
+        validate_dtype_for_device(self.dtype(), device)?;
+
+        if builder::is_builder_active() {
+            Err(HoduError::InternalError("dont to_device in builder".to_string()))
+        } else {
+            let layout = Layout::from_shape(&self.shape());
+            let storage = self.with_storage(|storage| storage.to_device(&layout, device))?;
 
             let result = from_storage(storage, layout, true, false);
 
