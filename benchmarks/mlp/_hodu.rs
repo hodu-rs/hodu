@@ -163,8 +163,7 @@ fn benchmark_static(
     builder.add_output("result", result)?;
     builder.end()?;
 
-    let module = builder.build()?;
-    let mut script = Script::new(module);
+    let mut script = builder.build()?;
 
     match mode {
         BenchMode::StaticCPU => {

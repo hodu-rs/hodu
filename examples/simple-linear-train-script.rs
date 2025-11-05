@@ -50,9 +50,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     builder.end()?;
 
-    // Build module and create script
-    let module = builder.build()?;
-    let mut script = Script::new(module);
+    // Build script
+    let mut script = builder.build()?;
 
     // Set device
     #[cfg(feature = "metal")]

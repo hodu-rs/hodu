@@ -118,8 +118,16 @@ impl Builder {
         }
     }
 
-    /// Build the final module from the builder state
-    pub fn build(&self) -> HoduResult<super::Module> {
+    /// Build the final script from the builder state
+    pub fn build(&self) -> HoduResult<crate::script::Script> {
+        let module = self
+            .with_state_mut(super::super::codegen::build_module)
+            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))??;
+        Ok(crate::script::Script::new(module))
+    }
+
+    /// Build the final module from the builder state (if you need the module directly)
+    pub fn build_module(&self) -> HoduResult<super::Module> {
         self.with_state_mut(super::super::codegen::build_module)
             .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))?
     }
