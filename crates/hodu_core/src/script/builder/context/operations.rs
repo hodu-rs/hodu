@@ -77,7 +77,7 @@ impl BuilderState {
             // Check if this is a constant that needs to be loaded
             if crate::tensor::get(tensor_id).is_some() {
                 let tensor = crate::tensor::tensor_from_id(tensor_id);
-                if tensor.has_storage() && !tensor.is_runtime() {
+                if tensor.has_storage() {
                     // This is a constant - add LoadConstant instruction
                     let value_id = self.allocate_value_id();
                     self.tensor_to_value.insert(tensor_id, value_id);
