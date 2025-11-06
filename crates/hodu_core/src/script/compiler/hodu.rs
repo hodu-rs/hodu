@@ -1,5 +1,7 @@
 use super::{base, instance::CompilerT, types::*};
 use crate::{
+    be::storage::BackendStorage,
+    be_cpu::storage::CpuStorage,
     error::{HoduError, HoduResult},
     layer::compat::*,
     script::builder::ir::*,
@@ -15,6 +17,39 @@ pub struct HoduCompiler {
 impl HoduCompiler {
     pub fn new(device: Device) -> Self {
         Self { device }
+    }
+
+    /// Convert constant data to target device storage
+    fn convert_constants_to_device(
+        &self,
+        constant_data: &HashMap<crate::tensor::TensorId, ConstantData>,
+        device: Device,
+    ) -> HoduResult<HashMap<crate::tensor::TensorId, Arc<BackendStorage>>> {
+        let mut constant_storages = HashMap::new();
+
+        for (tensor_id, constant) in constant_data {
+            // Create CPU storage from constant data
+            let cpu_storage = CpuStorage::from_bytes(&constant.data, constant.dtype)?;
+
+            // Convert to target device
+            let storage = match device {
+                Device::CPU => BackendStorage::CPU(cpu_storage),
+                #[cfg(feature = "metal")]
+                Device::Metal => {
+                    BackendStorage::Metal(crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?)
+                },
+                #[cfg(feature = "cuda")]
+                Device::CUDA(_) => {
+                    return Err(HoduError::UnsupportedDevice(device));
+                },
+                #[allow(unreachable_patterns)]
+                _ => return Err(HoduError::UnsupportedDevice(device)),
+            };
+
+            constant_storages.insert(*tensor_id, Arc::new(storage));
+        }
+
+        Ok(constant_storages)
     }
 }
 
@@ -49,12 +84,16 @@ impl CompilerT for HoduCompiler {
         // Copy constant data
         let constant_data = module.constants.clone();
 
+        // Pre-convert constants to target device
+        let constant_storages = self.convert_constants_to_device(&constant_data, options.device)?;
+
         Ok(CompiledModule {
             module: module.clone(),
             execution_plan,
             input_mapping,
             output_mapping,
             constant_data,
+            constant_storages,
             value_layouts,
             value_dtypes,
             value_to_tensor,

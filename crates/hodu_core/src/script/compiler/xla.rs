@@ -49,12 +49,16 @@ impl CompilerT for XlaCompiler {
         // Copy constant data
         let constant_data = module.constants.clone();
 
+        // XLA doesn't use constant_storages (XLA executor builds constants directly)
+        let constant_storages = HashMap::new();
+
         Ok(CompiledModule {
             module: module.clone(),
             execution_plan,
             input_mapping,
             output_mapping,
             constant_data,
+            constant_storages,
             value_layouts,
             value_dtypes,
             value_to_tensor,

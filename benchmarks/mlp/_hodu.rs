@@ -197,8 +197,9 @@ fn benchmark_static(
         let _ = script.run()?;
 
         // Check timeout after each iteration
-        let elapsed = start.elapsed();
-        if elapsed.as_secs_f64() > 1.0 {
+        let start_iteration = Instant::now();
+        let elapsed_iteration = start_iteration.elapsed();
+        if elapsed_iteration.as_secs_f64() > 1.0 {
             return Err(format!("TIMEOUT: Exceeded 1 second after {} iterations", i + 1).into());
         }
     }

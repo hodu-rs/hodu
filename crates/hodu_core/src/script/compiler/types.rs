@@ -1,4 +1,5 @@
 use crate::{
+    be::storage::BackendStorage,
     layer::compat::*,
     ops::Op,
     script::builder::ir::*,
@@ -43,6 +44,8 @@ pub struct CompiledModule {
     pub input_mapping: HashMap<String, ValueId>,
     pub output_mapping: HashMap<String, ValueId>,
     pub constant_data: HashMap<TensorId, ConstantData>,
+    /// Pre-converted constants on target device (cached for performance)
+    pub constant_storages: HashMap<TensorId, Arc<BackendStorage>>,
     pub value_layouts: HashMap<ValueId, Layout>,
     pub value_dtypes: HashMap<ValueId, DType>,
     pub value_to_tensor: HashMap<ValueId, TensorId>,

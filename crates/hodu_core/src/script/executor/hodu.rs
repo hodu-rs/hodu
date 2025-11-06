@@ -33,7 +33,7 @@ impl ExecutorT for HoduExecutor {
     }
 
     fn execute(&self, compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
-        execute::execute(self.device, compiled, inputs)
+        execute::execute(compiled, inputs)
     }
 }
 

@@ -11,11 +11,11 @@ use crate::{
         compiler::CompiledModule,
     },
     tensor::from_storage,
-    types::{Device, Layout},
+    types::Layout,
 };
 
 /// Execute a compiled module with the given inputs
-pub fn execute(device: Device, compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
+pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
     validate_inputs(compiled, &inputs)?;
 
     // Map value_id to storage for runtime
@@ -36,30 +36,17 @@ pub fn execute(device: Device, compiled: &CompiledModule, inputs: ExecutionInput
     for instr in &compiled.execution_plan {
         // Check if this is a constant load
         if let Some(Attribute::Bool(true)) = instr.attributes.get("is_constant") {
-            // Load constant from value_to_tensor mapping
+            // Load constant from pre-converted storage cache
             if let Some(tensor_id) = compiled.value_to_tensor.get(&instr.result) {
-                // Get the tensor and extract storage
-                let tensor = crate::tensor::tensor_from_id(*tensor_id);
-                let storage = if tensor.device() != device {
-                    // Convert to target device
-                    let cpu_storage = tensor.with_storage(|s| s.to_cpu_storage())?;
-                    let new_storage = match device {
-                        Device::CPU => BackendStorage::CPU(cpu_storage),
-                        #[cfg(feature = "metal")]
-                        Device::Metal => BackendStorage::Metal(
-                            crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?,
-                        ),
-                        #[allow(unreachable_patterns)]
-                        _ => return Err(HoduError::InternalError(format!("Unsupported device: {:?}", device))),
-                    };
-                    Arc::new(new_storage)
-                } else {
-                    tensor.with_storage(|s| Ok(Arc::new(s.clone())))?
-                };
-                value_storage.insert(instr.result, storage);
-                continue;
+                if let Some(storage) = compiled.constant_storages.get(tensor_id) {
+                    // Use pre-converted storage (no conversion needed!)
+                    value_storage.insert(instr.result, storage.clone());
+                    continue;
+                }
             }
-            return Err(HoduError::InternalError("Failed to load constant".to_string()));
+            return Err(HoduError::InternalError(
+                "Failed to load constant from cache".to_string(),
+            ));
         }
 
         // Get input storages for this operation
