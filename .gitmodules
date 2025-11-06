@@ -1,0 +1,4 @@
+[submodule "crates/hodu_cpu_kernels/libs/OpenBLAS"]
+	path = crates/hodu_cpu_kernels/libs/OpenBLAS
+	url = https://github.com/OpenMathLib/OpenBLAS.git
+	tag = "v0.3.30"

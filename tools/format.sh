@@ -34,7 +34,7 @@ else
         echo -e "  ${CYAN}→${NC} ${DIM}$file${NC}"
         clang-format -i "$file"
         ((c_count++))
-    done < <(find . -type f \( -name "*.c" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" \) -not -path "*/target/*" -not -path "*/.*" -print0)
+    done < <(find . -type f \( -name "*.c" -o -name "*.h" -o -name "*.cpp" -o -name "*.hpp" \) -not -path "*/target/*" -not -path "*/.*" -not -path "*/libs/*" -print0)
 
     if [ $c_count -eq 0 ]; then
         echo -e "${DIM}  No C/C++ files found${NC}"
@@ -90,7 +90,7 @@ else
         echo -e "  ${CYAN}→${NC} ${DIM}$file${NC}"
         ruff format "$file"
         ((py_count++))
-    done < <(find . -type f -name "*.py" -not -path "*/.*" -not -path "*/venv/*" -not -path "*/__pycache__/*" -not -path "*/venvs/*" -not -path "*/target/*" -print0)
+    done < <(find . -type f -name "*.py" -not -path "*/.*" -not -path "*/venv/*" -not -path "*/__pycache__/*" -not -path "*/venvs/*" -not -path "*/target/*" -not -path "*/libs/*" -print0)
 
     if [ $py_count -eq 0 ]; then
         echo -e "${DIM}  No .py files found${NC}"

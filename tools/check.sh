@@ -66,7 +66,7 @@ else
             echo -e "  ${CYAN}→${NC} ${DIM}${filename}${NC}"
         fi
         ((c_count++))
-    done < <(find . -type f \( -name "*.c" -o -name "*.cpp" \) -not -path "*/target/*" -not -path "*/.*" -print0)
+    done < <(find . -type f \( -name "*.c" -o -name "*.cpp" \) -not -path "*/target/*" -not -path "*/.*" -not -path "*/libs/*" -print0)
 
     if [ $c_count -eq 0 ]; then
         echo -e "${DIM}  No C/C++ files found${NC}"
