@@ -3,8 +3,12 @@ use crate::{
     script::compiler::CompiledModule,
     types::Device,
 };
-use hodu_xla::{PjRtClient, XlaBuilder};
-use std::collections::HashMap;
+use hodu_xla::{PjRtClient, PjRtLoadedExecutable, XlaBuilder};
+use std::{
+    collections::HashMap,
+    hash::{Hash, Hasher},
+    sync::{Arc, LazyLock, RwLock},
+};
 
 use super::super::types::*;
 use super::{
@@ -12,28 +16,179 @@ use super::{
     ops::execute_xla_op,
 };
 
+// Thread-safe wrapper for PjRtLoadedExecutable
+// SAFETY: PjRtLoadedExecutable is internally thread-safe but doesn't implement Send
+struct SendExecutable(PjRtLoadedExecutable);
+unsafe impl Send for SendExecutable {}
+unsafe impl Sync for SendExecutable {}
+
+// XLA executable cache for reusing compiled computations
+static EXECUTABLE_CACHE: LazyLock<RwLock<HashMap<u64, Arc<SendExecutable>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+/// Compute hash of compiled module for caching
+fn compute_module_hash(compiled: &CompiledModule, device: Device) -> u64 {
+    use std::collections::hash_map::DefaultHasher;
+
+    let mut hasher = DefaultHasher::new();
+
+    // Hash device
+    std::mem::discriminant(&device).hash(&mut hasher);
+
+    // Hash execution plan (operation types and attributes)
+    for instr in &compiled.execution_plan {
+        std::mem::discriminant(&instr.op).hash(&mut hasher);
+        instr.result.0.hash(&mut hasher);
+        for input in &instr.inputs {
+            input.0.hash(&mut hasher);
+        }
+    }
+
+    // Hash input/output mappings
+    let mut input_keys: Vec<_> = compiled.input_mapping.keys().collect();
+    input_keys.sort();
+    for key in input_keys {
+        key.hash(&mut hasher);
+        compiled.input_mapping[key].0.hash(&mut hasher);
+    }
+
+    let mut output_keys: Vec<_> = compiled.output_mapping.keys().collect();
+    output_keys.sort();
+    for key in output_keys {
+        key.hash(&mut hasher);
+        compiled.output_mapping[key].0.hash(&mut hasher);
+    }
+
+    // Hash constant data (shapes and dtypes, not actual data for performance)
+    let mut constant_keys: Vec<_> = compiled.constant_data.keys().collect();
+    constant_keys.sort();
+    for key in constant_keys {
+        let constant = &compiled.constant_data[key];
+        constant.shape.size().hash(&mut hasher);
+        std::mem::discriminant(&constant.dtype).hash(&mut hasher);
+    }
+
+    hasher.finish()
+}
+
 /// Build and execute XLA computation from the compiled module
-/// This is called at runtime for each execution
+/// Uses compilation cache to avoid recompiling the same computation
 pub fn build_and_execute_xla(
     device: Device,
     compiled: &CompiledModule,
     inputs: &ExecutionInputs<'_>,
 ) -> HoduResult<ExecutionOutputs> {
-    // Create XLA client
-    let client = match device {
-        Device::CPU => PjRtClient::cpu()?,
-        #[cfg(feature = "cuda")]
-        Device::CUDA(_) => PjRtClient::gpu(0.95, true)?,
-        #[cfg(any(feature = "cuda", feature = "metal"))]
-        _ => {
-            return Err(HoduError::InternalError(format!(
-                "Device {:?} not supported for XLA",
-                device
-            )))
-        },
+    // Compute hash for cache lookup
+    let cache_key = compute_module_hash(compiled, device);
+
+    // Check if executable is cached
+    let executable = {
+        let cache = EXECUTABLE_CACHE
+            .read()
+            .map_err(|e| HoduError::InternalError(format!("Failed to read executable cache: {}", e)))?;
+
+        if let Some(cached_exec) = cache.get(&cache_key) {
+            // Cache hit - reuse compiled executable
+            cached_exec.clone()
+        } else {
+            // Cache miss - need to compile
+            drop(cache); // Release read lock before compiling
+
+            // Create XLA client
+            let client = match device {
+                Device::CPU => PjRtClient::cpu()?,
+                #[cfg(feature = "cuda")]
+                Device::CUDA(_) => PjRtClient::gpu(0.95, true)?,
+                #[cfg(any(feature = "cuda", feature = "metal"))]
+                _ => {
+                    return Err(HoduError::InternalError(format!(
+                        "Device {:?} not supported for XLA",
+                        device
+                    )))
+                },
+            };
+
+            // Build and compile computation
+            let computation = build_xla_computation(compiled)?;
+            let executable = Arc::new(SendExecutable(client.compile(&computation)?));
+
+            // Store in cache
+            let mut cache = EXECUTABLE_CACHE
+                .write()
+                .map_err(|e| HoduError::InternalError(format!("Failed to write executable cache: {}", e)))?;
+            cache.insert(cache_key, executable.clone());
+
+            executable
+        }
     };
 
-    // Build XLA computation
+    // Convert inputs to literals
+    let mut input_names: Vec<_> = compiled.input_mapping.keys().cloned().collect();
+    input_names.sort();
+
+    let input_literals: Vec<_> = input_names
+        .iter()
+        .filter_map(|name| {
+            inputs
+                .get(name.as_str())
+                .and_then(|tensor| tensor_to_literal(tensor).ok())
+        })
+        .collect();
+
+    // Execute cached/compiled computation
+    let result_buffers = executable.0.execute::<hodu_xla::Literal>(&input_literals)?;
+
+    // Convert results back to tensors
+    let mut outputs = HashMap::new();
+
+    let mut output_names: Vec<_> = compiled.output_mapping.keys().cloned().collect();
+    output_names.sort();
+
+    if output_names.len() == 1 {
+        let result_literal = result_buffers[0][0]
+            .to_literal_sync()
+            .map_err(|e| HoduError::InternalError(format!("Failed to get result literal: {:?}", e)))?;
+
+        let output_name = &output_names[0];
+        let value_id = compiled
+            .output_mapping
+            .get(output_name)
+            .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
+        let dtype = compiled
+            .value_dtypes
+            .get(value_id)
+            .copied()
+            .unwrap_or(crate::types::DType::F32);
+
+        let tensor = literal_to_tensor(&result_literal, dtype)?;
+        outputs.insert(output_name.clone(), tensor);
+    } else {
+        for (i, output_name) in output_names.iter().enumerate() {
+            let element_literal = result_buffers[0][i]
+                .to_literal_sync()
+                .map_err(|e| HoduError::InternalError(format!("Failed to get tuple element: {:?}", e)))?;
+
+            let value_id = compiled
+                .output_mapping
+                .get(output_name)
+                .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
+            let dtype = compiled
+                .value_dtypes
+                .get(value_id)
+                .copied()
+                .unwrap_or(crate::types::DType::F32);
+
+            let tensor = literal_to_tensor(&element_literal, dtype)?;
+            outputs.insert(output_name.clone(), tensor);
+        }
+    }
+
+    Ok(outputs)
+}
+
+/// Build XLA computation graph from compiled module
+/// This is separated from execution to enable caching
+fn build_xla_computation(compiled: &CompiledModule) -> HoduResult<hodu_xla::XlaComputation> {
     let builder = XlaBuilder::new("computation");
     let mut xla_ops = HashMap::new();
 
@@ -43,10 +198,6 @@ pub fn build_and_execute_xla(
 
     for (i, input_name) in input_names.iter().enumerate() {
         if let Some(&value_id) = compiled.input_mapping.get(input_name) {
-            let _tensor = inputs
-                .get(input_name.as_str())
-                .ok_or_else(|| HoduError::MissingInput(input_name.clone()))?;
-
             // Get layout and dtype
             let layout = compiled
                 .value_layouts
@@ -142,63 +293,5 @@ pub fn build_and_execute_xla(
         tuple_op.build()?
     };
 
-    // Compile and execute
-    let executable = client.compile(&computation)?;
-
-    // Convert inputs to literals
-    let input_literals: Vec<_> = input_names
-        .iter()
-        .filter_map(|name| {
-            inputs
-                .get(name.as_str())
-                .and_then(|tensor| tensor_to_literal(tensor).ok())
-        })
-        .collect();
-
-    // Execute
-    let result_buffers = executable.execute::<hodu_xla::Literal>(&input_literals)?;
-
-    // Convert results back to tensors
-    let mut outputs = HashMap::new();
-
-    if output_names.len() == 1 {
-        let result_literal = result_buffers[0][0]
-            .to_literal_sync()
-            .map_err(|e| HoduError::InternalError(format!("Failed to get result literal: {:?}", e)))?;
-
-        let output_name = &output_names[0];
-        let value_id = compiled
-            .output_mapping
-            .get(output_name)
-            .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
-        let dtype = compiled
-            .value_dtypes
-            .get(value_id)
-            .copied()
-            .unwrap_or(crate::types::DType::F32);
-
-        let tensor = literal_to_tensor(&result_literal, dtype)?;
-        outputs.insert(output_name.clone(), tensor);
-    } else {
-        for (i, output_name) in output_names.iter().enumerate() {
-            let element_literal = result_buffers[0][i]
-                .to_literal_sync()
-                .map_err(|e| HoduError::InternalError(format!("Failed to get tuple element: {:?}", e)))?;
-
-            let value_id = compiled
-                .output_mapping
-                .get(output_name)
-                .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
-            let dtype = compiled
-                .value_dtypes
-                .get(value_id)
-                .copied()
-                .unwrap_or(crate::types::DType::F32);
-
-            let tensor = literal_to_tensor(&element_literal, dtype)?;
-            outputs.insert(output_name.clone(), tensor);
-        }
-    }
-
-    Ok(outputs)
+    Ok(computation)
 }
