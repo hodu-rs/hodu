@@ -53,7 +53,6 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 >
 > **Current Development Status**:
 > - CUDA GPU support is not yet fully implemented and is under active development
-> - SIMD optimizations are not yet implemented and are under active development
 
 ## Get started
 

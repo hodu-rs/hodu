@@ -37,7 +37,28 @@ OBJ_FILES = $(patsubst $(KERNEL_DIR)/%.c,$(OUTPUT_DIR)/%.o,$(SOURCES))
 # Compiler settings
 CC = clang
 AR = ar
-CFLAGS = -I $(INCLUDE_DIR) -std=c11 -O3 -Wall -Wextra -fPIC
+# Base flags
+CFLAGS = -I $(INCLUDE_DIR) -std=c11 -Wall -Wextra -fPIC
+
+# Optimization flags
+OPT_FLAGS = -O3 -funroll-loops
+# Auto-vectorization hints
+OPT_FLAGS += -fvectorize -fslp-vectorize
+# Safe fast math (preserve NaN/Inf)
+OPT_FLAGS += -fno-math-errno -fno-trapping-math
+
+# Platform-specific optimizations (use DISABLE_NATIVE=1 to disable)
+ifndef DISABLE_NATIVE
+    OPT_FLAGS += -march=native -mtune=native
+endif
+
+# SIMD feature detection (can be overridden)
+ifndef DISABLE_SIMD
+    # Compiler will use target-specific SIMD if available
+    OPT_FLAGS += -DENABLE_SIMD_AUTO
+endif
+
+CFLAGS += $(OPT_FLAGS)
 ARFLAGS = rcs
 
 # Default target

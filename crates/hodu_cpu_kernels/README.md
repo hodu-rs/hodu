@@ -81,6 +81,17 @@ High-performance CPU kernels for tensor operations, supporting a wide range of d
 - **concat**: Concatenate tensors along a dimension
 - **split**: Split tensor into multiple tensors
 
+## SIMD Supported Data Types
+
+### Floating Point Types
+- **f32**: Float32 (standard single precision)
+- **f64**: Float64 (standard double precision)
+
+## SIMD Supported Operations
+
+- **binary**: add, sub, mul, div
+- **matrix**: matmul, dot
+
 ## Architecture
 
 ### Portability

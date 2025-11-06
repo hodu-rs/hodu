@@ -1,4 +1,5 @@
 #include "ops_binary.h"
+#include "simd_utils.h"
 #include <math.h>
 
 // ============================================================================
@@ -260,13 +261,92 @@
     }
 
 // ============================================================================
-// F32 OPERATIONS
+// SIMD-OPTIMIZED F32 OPERATIONS
 // ============================================================================
 
+/// SIMD-optimized binary operations for F32
+/// Falls back to scalar if SIMD not available
+#if SIMD_F32_WIDTH > 1
+
+#define IMPL_BINARY_OP_F32_SIMD(OP_NAME, SIMD_OP, SCALAR_OP)                                       \
+    void OP_NAME##_f32(const void *lhs, const void *rhs, void *output, const size_t *metadata) {   \
+        const f32_t *l = (const f32_t *)lhs;                                                       \
+        const f32_t *r = (const f32_t *)rhs;                                                       \
+        f32_t *out = (f32_t *)output;                                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *lhs_shape = metadata + 2;                                                    \
+        const size_t *rhs_shape = metadata + 2 + num_dims;                                         \
+        const size_t *lhs_strides = metadata + 2 + 2 * num_dims;                                   \
+        const size_t *rhs_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
+                                                                                                   \
+        bool lhs_cont = is_contiguous(num_dims, lhs_shape, lhs_strides);                           \
+        bool rhs_cont = is_contiguous(num_dims, rhs_shape, rhs_strides);                           \
+                                                                                                   \
+        if (lhs_cont && rhs_cont) {                                                                \
+            /* SIMD path for contiguous data */                                                    \
+            const f32_t *lhs_data = l + lhs_offset;                                                \
+            const f32_t *rhs_data = r + rhs_offset;                                                \
+            size_t i = 0;                                                                          \
+            const size_t simd_end = (num_els / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;                   \
+                                                                                                   \
+            for (; i < simd_end; i += SIMD_F32_WIDTH) {                                            \
+                simd_f32_t va = simd_f32_load(&lhs_data[i]);                                       \
+                simd_f32_t vb = simd_f32_load(&rhs_data[i]);                                       \
+                simd_f32_t vc = SIMD_OP(va, vb);                                                   \
+                simd_f32_store(&out[i], vc);                                                       \
+            }                                                                                      \
+                                                                                                   \
+            /* Scalar remainder */                                                                 \
+            for (; i < num_els; i++) {                                                             \
+                f32_t x = lhs_data[i];                                                             \
+                f32_t y = rhs_data[i];                                                             \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        } else if (lhs_cont) {                                                                     \
+            for (size_t i = 0; i < num_els; i++) {                                                 \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
+                f32_t x = l[lhs_offset + i];                                                       \
+                f32_t y = r[rhs_i];                                                                \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        } else if (rhs_cont) {                                                                     \
+            for (size_t i = 0; i < num_els; i++) {                                                 \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
+                f32_t x = l[lhs_i];                                                                \
+                f32_t y = r[rhs_offset + i];                                                       \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        } else {                                                                                   \
+            for (size_t i = 0; i < num_els; i++) {                                                 \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
+                f32_t x = l[lhs_i];                                                                \
+                f32_t y = r[rhs_i];                                                                \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+IMPL_BINARY_OP_F32_SIMD(add, simd_f32_add, x + y)
+IMPL_BINARY_OP_F32_SIMD(sub, simd_f32_sub, x - y)
+IMPL_BINARY_OP_F32_SIMD(mul, simd_f32_mul, x *y)
+IMPL_BINARY_OP_F32_SIMD(div, simd_f32_div, x / y)
+
+#else
+// Fallback to scalar implementation
 IMPL_BINARY_OP(f32_t, f32, add, x + y)
 IMPL_BINARY_OP(f32_t, f32, sub, x - y)
 IMPL_BINARY_OP(f32_t, f32, mul, x *y)
 IMPL_BINARY_OP(f32_t, f32, div, x / y)
+#endif
 IMPL_BINARY_OP(f32_t, f32, pow, powf_opt(x, y))
 IMPL_BINARY_OP(f32_t, f32, maximum, MAXIMUM(x, y))
 IMPL_BINARY_OP(f32_t, f32, minimum, MINIMUM(x, y))
@@ -283,13 +363,88 @@ IMPL_BINARY_TO_BOOL(f32_t, f32, gt, x > y)
 IMPL_BINARY_TO_BOOL(f32_t, f32, ge, x >= y)
 
 // ============================================================================
-// F64 OPERATIONS
+// SIMD-OPTIMIZED F64 OPERATIONS
 // ============================================================================
 
+#if SIMD_F64_WIDTH > 1
+
+#define IMPL_BINARY_OP_F64_SIMD(OP_NAME, SIMD_OP, SCALAR_OP)                                       \
+    void OP_NAME##_f64(const void *lhs, const void *rhs, void *output, const size_t *metadata) {   \
+        const f64_t *l = (const f64_t *)lhs;                                                       \
+        const f64_t *r = (const f64_t *)rhs;                                                       \
+        f64_t *out = (f64_t *)output;                                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *lhs_shape = metadata + 2;                                                    \
+        const size_t *rhs_shape = metadata + 2 + num_dims;                                         \
+        const size_t *lhs_strides = metadata + 2 + 2 * num_dims;                                   \
+        const size_t *rhs_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t lhs_offset = metadata[2 + 4 * num_dims];                                      \
+        const size_t rhs_offset = metadata[2 + 4 * num_dims + 1];                                  \
+                                                                                                   \
+        bool lhs_cont = is_contiguous(num_dims, lhs_shape, lhs_strides);                           \
+        bool rhs_cont = is_contiguous(num_dims, rhs_shape, rhs_strides);                           \
+                                                                                                   \
+        if (lhs_cont && rhs_cont) {                                                                \
+            const f64_t *lhs_data = l + lhs_offset;                                                \
+            const f64_t *rhs_data = r + rhs_offset;                                                \
+            size_t i = 0;                                                                          \
+            const size_t simd_end = (num_els / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;                   \
+                                                                                                   \
+            for (; i < simd_end; i += SIMD_F64_WIDTH) {                                            \
+                simd_f64_t va = simd_f64_load(&lhs_data[i]);                                       \
+                simd_f64_t vb = simd_f64_load(&rhs_data[i]);                                       \
+                simd_f64_t vc = SIMD_OP(va, vb);                                                   \
+                simd_f64_store(&out[i], vc);                                                       \
+            }                                                                                      \
+                                                                                                   \
+            for (; i < num_els; i++) {                                                             \
+                f64_t x = lhs_data[i];                                                             \
+                f64_t y = rhs_data[i];                                                             \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        } else if (lhs_cont) {                                                                     \
+            for (size_t i = 0; i < num_els; i++) {                                                 \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
+                f64_t x = l[lhs_offset + i];                                                       \
+                f64_t y = r[rhs_i];                                                                \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        } else if (rhs_cont) {                                                                     \
+            for (size_t i = 0; i < num_els; i++) {                                                 \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
+                f64_t x = l[lhs_i];                                                                \
+                f64_t y = r[rhs_offset + i];                                                       \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        } else {                                                                                   \
+            for (size_t i = 0; i < num_els; i++) {                                                 \
+                size_t lhs_i =                                                                     \
+                    lhs_offset + get_strided_index(i, num_dims, lhs_shape, lhs_strides);           \
+                size_t rhs_i =                                                                     \
+                    rhs_offset + get_strided_index(i, num_dims, rhs_shape, rhs_strides);           \
+                f64_t x = l[lhs_i];                                                                \
+                f64_t y = r[rhs_i];                                                                \
+                out[i] = SCALAR_OP;                                                                \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+IMPL_BINARY_OP_F64_SIMD(add, simd_f64_add, x + y)
+IMPL_BINARY_OP_F64_SIMD(sub, simd_f64_sub, x - y)
+IMPL_BINARY_OP_F64_SIMD(mul, simd_f64_mul, x *y)
+IMPL_BINARY_OP_F64_SIMD(div, simd_f64_div, x / y)
+
+#else
+// Fallback to scalar
 IMPL_BINARY_OP(f64_t, f64, add, x + y)
 IMPL_BINARY_OP(f64_t, f64, sub, x - y)
 IMPL_BINARY_OP(f64_t, f64, mul, x *y)
 IMPL_BINARY_OP(f64_t, f64, div, x / y)
+#endif
 IMPL_BINARY_OP(f64_t, f64, pow, pow_opt(x, y))
 IMPL_BINARY_OP(f64_t, f64, maximum, MAXIMUM(x, y))
 IMPL_BINARY_OP(f64_t, f64, minimum, MINIMUM(x, y))
