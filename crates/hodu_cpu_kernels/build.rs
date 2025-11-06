@@ -12,6 +12,9 @@ fn main() {
         .include("kernels")
         .flag_if_supported("-std=c11")
         .flag_if_supported("-O3")
+        // SIMD optimization flags
+        .flag_if_supported("-march=native")
+        .flag_if_supported("-ftree-vectorize")
         // Embedded-friendly flags
         .flag_if_supported("-fno-exceptions")
         .flag_if_supported("-fno-rtti")
