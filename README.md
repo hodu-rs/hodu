@@ -21,16 +21,24 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 - **Embedded-First Architecture**: Full `no_std` support enables ML inference on microcontrollers and resource-constrained devices
 - **Zero-Cost Abstractions**: High-level APIs that compile down to efficient machine code without runtime overhead
 
-### Dual Backend Architecture
+### Execution Modes and Compilers
 
-- **HODU Backend**: Pure Rust implementation with `no_std` support for embedded environments
-  - CPU operations with SIMD optimization
-  - CUDA GPU acceleration (with `cuda` feature)
-  - Metal GPU support for macOS (with `metal` feature)
-- **XLA Backend**: JIT compilation via [OpenXLA/PJRT](https://github.com/openxla/xla) (requires `std`)
-  - Advanced graph-level optimizations
+**Dynamic Execution**: Immediate tensor operations for rapid prototyping
+- CPU operations
+- Metal GPU support for macOS (with `metal` feature)
+- CUDA GPU acceleration (with `cuda` feature)
+
+**Static Execution**: Compiled computation graphs with two compiler backends
+
+- **HODU Compiler**: Self implementation with `no_std` support
+  - Optimized constant caching eliminates repeated device transfers
+  - CPU, Metal, and CUDA device support
+  - Embedded-friendly for resource-constrained environments
+
+- **XLA Compiler**: JIT compilation via [OpenXLA/PJRT](https://github.com/openxla/xla) (requires `std`)
+  - Advanced graph-level optimizations with compilation caching
+  - Production-grade performance comparable to JAX
   - CPU and CUDA device support
-  - Production-grade performance for static computation graphs
 
 > [!WARNING]
 >
@@ -112,8 +120,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Provide actual data
     let a_data = Tensor::randn(&[2, 3], 0f32, 1.)?;
     let b_data = Tensor::randn(&[3, 4], 0f32, 1.)?;
-    script.add_input("a", a_data);
-    script.add_input("b", b_data);
+    script.set_input("a", a_data);
+    script.set_input("b", b_data);
 
     // Execute and get results
     let output = script.run()?;
@@ -135,7 +143,7 @@ With the `xla` feature enabled, you can use XLA in static computation graphs wit
 
 ```diff
 let mut script = builder.build()?;
-+ script.set_backend(Backend::XLA);
++ script.set_compiler(Compiler::XLA);
 ```
 
 ## Features
@@ -163,19 +171,20 @@ Building with the `xla` feature requires:
 
 ### Optional Data Type Features
 
-By default, Hodu supports these data types: `bool`, `f8e4m3`, `f8e5m2`, `bf16`, `f16`, `f32`, `f64`, `u16`, `i8`, `i32`.
+By default, Hodu supports these data types: `bool`, `f8e4m3`, `bf16`, `f16`, `f32`, `u8`, `u32`, `i8`, `i32`.
 
-Additional integer types can be enabled with feature flags to reduce compilation time:
+Additional data types can be enabled with feature flags to reduce compilation time:
 
 | Feature | Description |
 |---------|-------------|
-| `u8` | Enable unsigned 8-bit integer support |
-| `u32` | Enable unsigned 32-bit integer support |
+| `f8e5m2` | Enable 8-bit floating point (E5M2) support |
+| `f64` | Enable 64-bit floating point support |
+| `u16` | Enable unsigned 16-bit integer support |
 | `u64` | Enable unsigned 64-bit integer support |
 | `i16` | Enable signed 16-bit integer support |
 | `i64` | Enable signed 64-bit integer support |
 
-**Compilation Performance**: Disabling unused data types can reduce compilation time by up to 30-40%. If you don't need these specific integer types, consider building without these features.
+**Compilation Performance**: Disabling unused data types can reduce compilation time by up to 30-40%. If you don't need these specific data types, consider building without these features.
 
 ## Supported Platforms
 

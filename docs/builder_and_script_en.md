@@ -136,9 +136,9 @@ let mut script = builder.build()?;
 let x_data = Tensor::randn(&[2, 3], DType::F32)?;
 let y_data = Tensor::randn(&[3, 4], DType::F32)?;
 
-// Add inputs
-script.add_input("x", x_data);
-script.add_input("y", y_data);
+// Set inputs
+script.set_input("x", x_data);
+script.set_input("y", y_data);
 
 // Execute
 let outputs = script.run()?;
@@ -155,11 +155,11 @@ Script caches compilation results to improve performance on repeated executions.
 let mut script = builder.build()?;
 
 // First run() automatically compiles
-script.add_input("x", x_data);
+script.set_input("x", x_data);
 let output1 = script.run()?;  // Compile + execute
 
 // Subsequent run() uses cached compilation
-script.add_input("x", x_data2);
+script.set_input("x", x_data2);
 let output2 = script.run()?;  // Execute only
 ```
 
@@ -174,7 +174,7 @@ script.compile()?;
 println!("Compilation done!");
 
 // Subsequent run() only executes
-script.add_input("x", x_data);
+script.set_input("x", x_data);
 let output = script.run()?;  // Execute only
 ```
 
@@ -184,7 +184,7 @@ let output = script.run()?;  // Execute only
 use std::time::Instant;
 
 let mut script = builder.build()?;
-script.add_input("x", x_data);
+script.set_input("x", x_data);
 
 // Measure compilation time
 let compile_start = Instant::now();
@@ -199,32 +199,44 @@ let run_time = run_start.elapsed();
 println!("Execution: {:?}", run_time);
 ```
 
-## Backend Selection
+## Compiler Selection
 
-### HODU Backend (Default)
+Static Execution supports two compiler backends:
+
+### HODU Compiler (Default)
 
 ```rust
 let mut script = builder.build()?;
-script.set_backend(Backend::HODU);  // Default
+script.set_compiler(Compiler::HODU);  // Default
 ```
 
-### XLA Backend
+**Features**:
+- Self implementation with fast compilation speed
+- Optimized execution with constant caching (especially for Metal GPU)
+- `no_std` environment support
+
+### XLA Compiler
 
 ```rust
 #[cfg(feature = "xla")]
 {
     let mut script = builder.build()?;
-    script.set_backend(Backend::XLA);
+    script.set_compiler(Compiler::XLA);
 }
 ```
 
-**Note**: Changing the backend invalidates cached compilation.
+**Features**:
+- Advanced graph-level optimizations
+- Fast performance on repeated execution with compilation caching
+- Performance comparable to JAX
+
+**Note**: Changing the compiler invalidates the cached compilation result.
 
 ```rust
 let mut script = builder.build()?;
 script.compile()?;  // Compile with HODU
 
-script.set_backend(Backend::XLA);  // Cache invalidated!
+script.set_compiler(Compiler::XLA);  // Cache invalidated!
 // Next run() will recompile with XLA
 ```
 
@@ -304,7 +316,7 @@ script.compile()?;  // Fast compilation
 
 // Reuse multiple times
 for batch in batches {
-    script.add_input("input", batch);
+    script.set_input("input", batch);
     let result = script.run()?;  // Fast execution
 }
 ```
@@ -313,7 +325,7 @@ for batch in batches {
 
 Compilation cache is invalidated when:
 
-- `set_backend()` is called
+- `set_compiler()` is called
 - `set_device()` is called
 
 ```rust
@@ -323,6 +335,8 @@ script.compile()?;  // Compilation complete
 script.set_device(Device::CUDA(0));  // Cache invalidated!
 // Next run() will recompile
 ```
+
+**Note**: HODU compiler pre-converts constants to target device at compile time and caches them, providing very fast execution performance on Metal GPU and other devices.
 
 ### 3. Script Reuse
 
@@ -335,7 +349,7 @@ script.compile()?;  // Compile once
 for i in 0..100 {
     let input_data = generate_input(i);
     script.clear_inputs();  // Remove previous inputs
-    script.add_input("x", input_data);
+    script.set_input("x", input_data);
     let output = script.run()?;  // Fast execution
 }
 ```
@@ -347,32 +361,33 @@ for i in 0..100 {
 ```rust
 // Pre-compile at program start
 let mut script = builder.build()?;
-script.add_input("x", dummy_input);
+script.set_input("x", dummy_input);
 script.compile()?;  // Warm-up
 
 // Actual data processing is fast
 for batch in data {
-    script.add_input("x", batch);
+    script.set_input("x", batch);
     let output = script.run()?;
 }
 ```
 
-### 2. Backend Selection
+### 2. Compiler Selection
 
-- **HODU**: Fast compilation, general-purpose performance
-- **XLA**: Slow compilation, optimized execution (especially GPU)
+- **HODU**: Fast compilation, Constant caching for Metal GPU optimization
+- **XLA**: Advanced optimization, Compilation caching for fast repeated execution
 
 ```rust
-// CPU inference: HODU recommended
-script.set_backend(Backend::HODU);
+// Metal GPU: HODU recommended (constant caching)
+script.set_compiler(Compiler::HODU);
+script.set_device(Device::Metal);
 
-// GPU inference: XLA recommended (compile once, run many times)
+// CPU with XLA: XLA recommended (advanced optimization)
 #[cfg(feature = "xla")]
 {
-    script.set_backend(Backend::XLA);
-    script.set_device(Device::CUDA(0));
-    script.compile()?;  // Takes time
-    // Subsequent executions are very fast
+    script.set_compiler(Compiler::XLA);
+    script.set_device(Device::CPU);
+    script.compile()?;  // Compile once
+    // Subsequent executions have performance similar to JAX
 }
 ```
 
@@ -403,11 +418,11 @@ for epoch in 0..1000 {
 
     // Load script
     let mut loaded_script = Script::load("model.hoduscript")?;
-    loaded_script.set_backend(Backend::XLA);
+    loaded_script.set_compiler(Compiler::XLA);
     loaded_script.compile()?;
 
     // Use
-    loaded_script.add_input("x", input_data);
+    loaded_script.set_input("x", input_data);
     let output = loaded_script.run()?;
 }
 ```
@@ -417,8 +432,8 @@ for epoch in 0..1000 {
 | Item | Description |
 |------|-------------|
 | **Purpose** | Inference optimization, repeated execution of fixed graphs |
-| **Advantages** | Fast execution after compilation, backend optimization |
+| **Advantages** | Fast execution after compilation, compiler-specific optimizations (HODU: constant caching, XLA: compilation caching) |
 | **Disadvantages** | Compilation time, inefficient for large training loops |
 | **Caching** | `compile()` result automatically cached, reused on repeated runs |
-| **Invalidation** | When `set_backend()` or `set_device()` is called |
+| **Invalidation** | When `set_compiler()` or `set_device()` is called |
 | **Gradient** | Training possible but dynamic mode recommended |

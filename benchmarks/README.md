@@ -4,15 +4,9 @@ Performance benchmarks comparing Hodu against popular deep learning frameworks.
 
 ## Result of mlp benchmark
 
-Benchmarked on MacBook Air M2, v0.1.9
+Benchmarked on MacBook Air M2, v0.2.0
 
-### CPU
-
-![cpu](../assets/benchmarks/benchmark_mlp_cpu_v0.1.9.png)
-
-### Metal
-
-![metal](../assets/benchmarks/benchmark_mlp_metal_v0.1.9.png)
+![benchmark](../assets/benchmarks/benchmark_mlp_v0.2.0.png)
 
 ## Requirements
 

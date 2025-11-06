@@ -136,9 +136,9 @@ let mut script = builder.build()?;
 let x_data = Tensor::randn(&[2, 3], DType::F32)?;
 let y_data = Tensor::randn(&[3, 4], DType::F32)?;
 
-// 입력 추가
-script.add_input("x", x_data);
-script.add_input("y", y_data);
+// 입력 설정
+script.set_input("x", x_data);
+script.set_input("y", y_data);
 
 // 실행
 let outputs = script.run()?;
@@ -155,11 +155,11 @@ Script는 컴파일 결과를 캐싱하여 반복 실행 시 성능을 향상시
 let mut script = builder.build()?;
 
 // 첫 run() 호출 시 자동으로 컴파일
-script.add_input("x", x_data);
+script.set_input("x", x_data);
 let output1 = script.run()?;  // 컴파일 + 실행
 
 // 두 번째 run()부터는 캐시된 컴파일 결과 사용
-script.add_input("x", x_data2);
+script.set_input("x", x_data2);
 let output2 = script.run()?;  // 실행만
 ```
 
@@ -174,7 +174,7 @@ script.compile()?;
 println!("Compilation done!");
 
 // 이후 run()은 실행만 수행
-script.add_input("x", x_data);
+script.set_input("x", x_data);
 let output = script.run()?;  // 실행만
 ```
 
@@ -184,7 +184,7 @@ let output = script.run()?;  // 실행만
 use std::time::Instant;
 
 let mut script = builder.build()?;
-script.add_input("x", x_data);
+script.set_input("x", x_data);
 
 // 컴파일 시간 측정
 let compile_start = Instant::now();
@@ -199,32 +199,44 @@ let run_time = run_start.elapsed();
 println!("Execution: {:?}", run_time);
 ```
 
-## 백엔드 선택
+## 컴파일러 선택
 
-### HODU 백엔드 (기본)
+Static Execution은 두 가지 컴파일러를 지원합니다:
+
+### HODU 컴파일러 (기본)
 
 ```rust
 let mut script = builder.build()?;
-script.set_backend(Backend::HODU);  // 기본값
+script.set_compiler(Compiler::HODU);  // 기본값
 ```
 
-### XLA 백엔드
+**특징**:
+- 자체 구현으로 빠른 컴파일 속도
+- Constant caching으로 최적화된 실행 (특히 Metal GPU)
+- `no_std` 환경 지원
+
+### XLA 컴파일러
 
 ```rust
 #[cfg(feature = "xla")]
 {
     let mut script = builder.build()?;
-    script.set_backend(Backend::XLA);
+    script.set_compiler(Compiler::XLA);
 }
 ```
 
-**주의**: 백엔드를 변경하면 캐시된 컴파일 결과가 무효화됩니다.
+**특징**:
+- 고급 그래프 최적화
+- Compilation caching으로 반복 실행 시 빠른 성능
+- JAX와 비교 가능한 성능
+
+**주의**: 컴파일러를 변경하면 캐시된 컴파일 결과가 무효화됩니다.
 
 ```rust
 let mut script = builder.build()?;
 script.compile()?;  // HODU로 컴파일
 
-script.set_backend(Backend::XLA);  // 캐시 무효화!
+script.set_compiler(Compiler::XLA);  // 캐시 무효화!
 // 다음 run()에서 XLA로 재컴파일됨
 ```
 
@@ -304,7 +316,7 @@ script.compile()?;  // 빠른 컴파일
 
 // 여러 번 재사용
 for batch in batches {
-    script.add_input("input", batch);
+    script.set_input("input", batch);
     let result = script.run()?;  // 빠른 실행
 }
 ```
@@ -313,7 +325,7 @@ for batch in batches {
 
 다음의 경우 컴파일 캐시가 무효화됩니다:
 
-- `set_backend()` 호출
+- `set_compiler()` 호출
 - `set_device()` 호출
 
 ```rust
@@ -323,6 +335,8 @@ script.compile()?;  // 컴파일 완료
 script.set_device(Device::CUDA(0));  // 캐시 무효화!
 // 다음 run()에서 재컴파일
 ```
+
+**참고**: HODU 컴파일러는 compile time에 constant를 target device로 미리 변환하여 캐싱하므로, Metal GPU 등에서 매우 빠른 실행 성능을 제공합니다.
 
 ### 3. Script 재사용
 
@@ -335,7 +349,7 @@ script.compile()?;  // 한 번만 컴파일
 for i in 0..100 {
     let input_data = generate_input(i);
     script.clear_inputs();  // 이전 입력 제거
-    script.add_input("x", input_data);
+    script.set_input("x", input_data);
     let output = script.run()?;  // 빠른 실행
 }
 ```
@@ -347,32 +361,33 @@ for i in 0..100 {
 ```rust
 // 프로그램 시작 시 미리 컴파일
 let mut script = builder.build()?;
-script.add_input("x", dummy_input);
+script.set_input("x", dummy_input);
 script.compile()?;  // Warm-up
 
 // 실제 데이터 처리는 빠르게
 for batch in data {
-    script.add_input("x", batch);
+    script.set_input("x", batch);
     let output = script.run()?;
 }
 ```
 
-### 2. 백엔드 선택
+### 2. 컴파일러 선택
 
-- **HODU**: 빠른 컴파일, 범용적 성능
-- **XLA**: 느린 컴파일, 최적화된 실행 (특히 GPU)
+- **HODU**: 빠른 컴파일, Constant caching으로 Metal GPU 최적화
+- **XLA**: 고급 최적화, Compilation caching으로 반복 실행 시 빠른 성능
 
 ```rust
-// CPU 추론: HODU 추천
-script.set_backend(Backend::HODU);
+// Metal GPU: HODU 추천 (constant caching)
+script.set_compiler(Compiler::HODU);
+script.set_device(Device::Metal);
 
-// GPU 추론: XLA 추천 (컴파일 한 번, 여러 번 실행)
+// CPU with XLA: XLA 추천 (고급 최적화)
 #[cfg(feature = "xla")]
 {
-    script.set_backend(Backend::XLA);
-    script.set_device(Device::CUDA(0));
-    script.compile()?;  // 시간 걸림
-    // 이후 실행은 매우 빠름
+    script.set_compiler(Compiler::XLA);
+    script.set_device(Device::CPU);
+    script.compile()?;  // 한 번 컴파일
+    // 이후 실행은 JAX와 비슷한 성능
 }
 ```
 
@@ -403,11 +418,11 @@ for epoch in 0..1000 {
 
     // Script 로드
     let mut loaded_script = Script::load("model.hoduscript")?;
-    loaded_script.set_backend(Backend::XLA);
+    loaded_script.set_compiler(Compiler::XLA);
     loaded_script.compile()?;
 
     // 사용
-    loaded_script.add_input("x", input_data);
+    loaded_script.set_input("x", input_data);
     let output = loaded_script.run()?;
 }
 ```
@@ -417,8 +432,8 @@ for epoch in 0..1000 {
 | 항목 | 설명 |
 |------|------|
 | **용도** | Inference 최적화, 반복 실행되는 고정 그래프 |
-| **장점** | 컴파일 후 빠른 실행, 백엔드 최적화 |
+| **장점** | 컴파일 후 빠른 실행, 컴파일러별 최적화 (HODU: constant caching, XLA: compilation caching) |
 | **단점** | 컴파일 시간, 큰 training loop 비효율적 |
 | **캐싱** | `compile()` 결과 자동 캐싱, 반복 실행 시 재사용 |
-| **무효화** | `set_backend()`, `set_device()` 호출 시 |
+| **무효화** | `set_compiler()`, `set_device()` 호출 시 |
 | **Gradient** | Training 가능하지만 동적 모드 권장 |
