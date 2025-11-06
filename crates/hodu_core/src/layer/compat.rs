@@ -32,10 +32,10 @@ pub use std::collections::{HashMap, HashSet};
 
 // Synchronization primitives
 #[cfg(not(feature = "std"))]
-pub use alloc::sync::Arc;
+pub use alloc::sync::{Arc, Weak};
 
 #[cfg(feature = "std")]
-pub use std::sync::Arc;
+pub use std::sync::{Arc, Weak};
 
 #[cfg(not(feature = "std"))]
 pub use spin::{Lazy as LazyLock, Mutex, RwLock};

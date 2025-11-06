@@ -45,8 +45,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let params = linear.parameters();
     builder.add_output("loss", final_loss)?;
-    builder.add_output("weight", *params[0])?;
-    builder.add_output("bias", *params[1])?;
+    builder.add_output("weight", params[0].clone())?;
+    builder.add_output("bias", params[1].clone())?;
 
     builder.end()?;
 

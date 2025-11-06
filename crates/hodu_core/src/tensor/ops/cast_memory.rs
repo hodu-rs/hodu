@@ -60,7 +60,7 @@ impl Tensor {
     // memory operations
     pub fn contiguous(&self) -> HoduResult<Self> {
         if self.is_contiguous() {
-            return Ok(*self);
+            return Ok(self.clone());
         }
 
         if builder::is_builder_active() {

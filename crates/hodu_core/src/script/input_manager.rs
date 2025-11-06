@@ -47,7 +47,7 @@ impl InputManager {
 
     /// Get inputs as iterator for execution
     pub fn as_execution_inputs(&self) -> impl Iterator<Item = (&str, Tensor)> + '_ {
-        self.runtime_inputs.iter().map(|(k, v)| (k.as_str(), *v))
+        self.runtime_inputs.iter().map(|(k, v)| (k.as_str(), v.clone()))
     }
 }
 

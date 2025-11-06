@@ -26,7 +26,7 @@ impl Tensor {
         let tensor = Tensor(tensor_id);
 
         let active_builder = get_active_builder()?;
-        active_builder.add_input(name, tensor)?;
+        active_builder.add_input(name, tensor.clone())?;
 
         Ok(tensor)
     }

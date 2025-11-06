@@ -34,7 +34,7 @@ impl Builder {
         let outputs: Vec<(&'static str, Tensor)> = names
             .iter()
             .zip(tensors.iter())
-            .map(|(&name, tensor)| (name, *tensor))
+            .map(|(&name, tensor)| (name, tensor.clone()))
             .collect();
         self.with_state_mut(|s| s.graph_outputs = outputs)
             .ok_or_else(|| HoduError::BuilderNotFound(self.get_name()))

@@ -25,10 +25,10 @@ impl Tensor {
         let target_dims = target_shape.dims();
 
         if current_dims == target_dims {
-            return Ok(*self);
+            return Ok(self.clone());
         }
 
-        let mut result = *self;
+        let mut result = self.clone();
 
         // If current shape has more dimensions than target, reduce leading dimensions
         if current_dims.len() > target_dims.len() {
