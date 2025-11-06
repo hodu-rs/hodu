@@ -30,9 +30,7 @@ pub fn execute(
                             }
                         })
                         .ok_or_else(|| HoduError::InternalError("IndexSelect requires dim attribute".to_string()))?;
-                    inputs[0]
-                        .take(&inputs[1], dim)
-                        .map_err(|e| HoduError::InternalError(format!("XLA take failed: {:?}", e)))
+                    Ok(inputs[0].take(&inputs[1], dim)?)
                 },
                 IndexingOp::IndexPut => {
                     if inputs.len() != 3 {
@@ -99,19 +97,17 @@ pub fn execute(
                         .reshape(&indices_dims_plus_1)
                         .map_err(|e| HoduError::InternalError(format!("Failed to reshape: {:?}", e)))?;
 
-                    inputs[0]
-                        .scatter(
-                            &indices_reshaped,
-                            &inputs[2],
-                            update_computation,
-                            &update_window_dims,
-                            &inserted_window_dims,
-                            &scatter_dims_to_operand_dims,
-                            index_vector_dim,
-                            false,
-                            false,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA scatter failed: {:?}", e)))
+                    Ok(inputs[0].scatter(
+                        &indices_reshaped,
+                        &inputs[2],
+                        update_computation,
+                        &update_window_dims,
+                        &inserted_window_dims,
+                        &scatter_dims_to_operand_dims,
+                        index_vector_dim,
+                        false,
+                        false,
+                    )?)
                 },
                 IndexingOp::Gather => {
                     if inputs.len() != 2 {
@@ -127,9 +123,7 @@ pub fn execute(
                             }
                         })
                         .ok_or_else(|| HoduError::InternalError("Gather requires dim attribute".to_string()))?;
-                    inputs[0]
-                        .take(&inputs[1], dim)
-                        .map_err(|e| HoduError::InternalError(format!("XLA take failed: {:?}", e)))
+                    Ok(inputs[0].take(&inputs[1], dim)?)
                 },
                 IndexingOp::Scatter => {
                     if inputs.len() != 3 {
@@ -196,19 +190,17 @@ pub fn execute(
                         .reshape(&indices_dims_plus_1)
                         .map_err(|e| HoduError::InternalError(format!("Failed to reshape: {:?}", e)))?;
 
-                    inputs[0]
-                        .scatter(
-                            &indices_reshaped,
-                            &inputs[2],
-                            update_computation,
-                            &update_window_dims,
-                            &inserted_window_dims,
-                            &scatter_dims_to_operand_dims,
-                            index_vector_dim,
-                            false,
-                            false,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA scatter failed: {:?}", e)))
+                    Ok(inputs[0].scatter(
+                        &indices_reshaped,
+                        &inputs[2],
+                        update_computation,
+                        &update_window_dims,
+                        &inserted_window_dims,
+                        &scatter_dims_to_operand_dims,
+                        index_vector_dim,
+                        false,
+                        false,
+                    )?)
                 },
                 IndexingOp::ScatterAdd => {
                     if inputs.len() != 3 {
@@ -278,19 +270,17 @@ pub fn execute(
                         .reshape(&indices_dims_plus_1)
                         .map_err(|e| HoduError::InternalError(format!("Failed to reshape: {:?}", e)))?;
 
-                    inputs[0]
-                        .scatter(
-                            &indices_reshaped,
-                            &inputs[2],
-                            add_computation,
-                            &update_window_dims,
-                            &inserted_window_dims,
-                            &scatter_dims_to_operand_dims,
-                            index_vector_dim,
-                            false,
-                            false,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA scatter failed: {:?}", e)))
+                    Ok(inputs[0].scatter(
+                        &indices_reshaped,
+                        &inputs[2],
+                        add_computation,
+                        &update_window_dims,
+                        &inserted_window_dims,
+                        &scatter_dims_to_operand_dims,
+                        index_vector_dim,
+                        false,
+                        false,
+                    )?)
                 },
                 IndexingOp::ScatterMax => {
                     if inputs.len() != 3 {
@@ -360,19 +350,17 @@ pub fn execute(
                         .reshape(&indices_dims_plus_1)
                         .map_err(|e| HoduError::InternalError(format!("Failed to reshape: {:?}", e)))?;
 
-                    inputs[0]
-                        .scatter(
-                            &indices_reshaped,
-                            &inputs[2],
-                            max_computation,
-                            &update_window_dims,
-                            &inserted_window_dims,
-                            &scatter_dims_to_operand_dims,
-                            index_vector_dim,
-                            false,
-                            false,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA scatter failed: {:?}", e)))
+                    Ok(inputs[0].scatter(
+                        &indices_reshaped,
+                        &inputs[2],
+                        max_computation,
+                        &update_window_dims,
+                        &inserted_window_dims,
+                        &scatter_dims_to_operand_dims,
+                        index_vector_dim,
+                        false,
+                        false,
+                    )?)
                 },
                 IndexingOp::ScatterMin => {
                     if inputs.len() != 3 {
@@ -442,19 +430,17 @@ pub fn execute(
                         .reshape(&indices_dims_plus_1)
                         .map_err(|e| HoduError::InternalError(format!("Failed to reshape: {:?}", e)))?;
 
-                    inputs[0]
-                        .scatter(
-                            &indices_reshaped,
-                            &inputs[2],
-                            min_computation,
-                            &update_window_dims,
-                            &inserted_window_dims,
-                            &scatter_dims_to_operand_dims,
-                            index_vector_dim,
-                            false,
-                            false,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA scatter failed: {:?}", e)))
+                    Ok(inputs[0].scatter(
+                        &indices_reshaped,
+                        &inputs[2],
+                        min_computation,
+                        &update_window_dims,
+                        &inserted_window_dims,
+                        &scatter_dims_to_operand_dims,
+                        index_vector_dim,
+                        false,
+                        false,
+                    )?)
                 },
             }
         },

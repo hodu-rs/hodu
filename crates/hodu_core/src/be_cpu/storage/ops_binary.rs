@@ -18,7 +18,7 @@ pub fn call_binary(
     // Extract binary op
     let binary_op = match op {
         Op::Binary(binary_op) => binary_op,
-        _ => return Err(HoduError::InternalError("call_binary expects binary op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_binaryE expects LbinaryE op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -124,7 +124,7 @@ pub fn call_binary(
             call_kernel!(lhs, rhs, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_binary".to_string(),
             ))
         },
@@ -144,7 +144,7 @@ pub fn call_binary_logical(
     let binary_op = match op {
         Op::BinaryLogical(binary_op) => binary_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_binary_logical expects binary logical op".to_string(),
             ))
         },
@@ -252,7 +252,7 @@ pub fn call_binary_logical(
             call_kernel!(lhs, rhs, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_binary_logical".to_string(),
             ))
         },
@@ -271,7 +271,7 @@ pub fn call_cmp(
     // Extract cmp op
     let cmp_op = match op {
         Op::Cmp(cmp_op) => cmp_op,
-        _ => return Err(HoduError::InternalError("call_cmp expects cmp op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_cmpE expects LcmpE op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -376,7 +376,7 @@ pub fn call_cmp(
             call_kernel!(lhs, rhs, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_cmp".to_string(),
             ))
         },

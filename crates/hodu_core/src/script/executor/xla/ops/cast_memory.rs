@@ -57,9 +57,7 @@ pub fn execute(
                 },
             };
 
-            inputs[0]
-                .convert(target_element_type)
-                .map_err(|e| HoduError::InternalError(format!("XLA convert failed: {:?}", e)))
+            Ok(inputs[0].convert(target_element_type)?)
         },
 
         // Memory operations

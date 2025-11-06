@@ -18,7 +18,7 @@ impl VjpCompute for WindowingOp {
         match self {
             WindowingOp::ReduceWindowMax | WindowingOp::ReduceWindowMin => {
                 // Max and Min reductions are not differentiable (discrete operations)
-                Err(HoduError::InternalError(
+                Err(HoduError::GradientComputationFailed(
                     "Max and Min reductions are not differentiable (discrete operations)".to_string(),
                 ))
             },

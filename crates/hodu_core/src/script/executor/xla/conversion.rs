@@ -12,9 +12,9 @@ use hodu_xla::{ElementType, Literal, XlaBuilder, XlaOp};
 pub fn dtype_to_element_type(dtype: DType) -> HoduResult<ElementType> {
     match dtype {
         DType::BOOL => Ok(ElementType::Pred),
-        DType::F8E4M3 => Err(HoduError::InternalError("F8E4M3 not supported by XLA".to_string())),
+        DType::F8E4M3 => Err(HoduError::XlaError("f8e4m3 not supported".to_string())),
         #[cfg(feature = "f8e5m2")]
-        DType::F8E5M2 => Err(HoduError::InternalError("F8E5M2 not supported by XLA".to_string())),
+        DType::F8E5M2 => Err(HoduError::XlaError("f8e5m2 not supported".to_string())),
         DType::BF16 => Ok(ElementType::Bf16),
         DType::F16 => Ok(ElementType::F16),
         DType::F32 => Ok(ElementType::F32),

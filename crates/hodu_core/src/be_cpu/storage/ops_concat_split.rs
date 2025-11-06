@@ -34,17 +34,17 @@ pub fn call_concat(
     // Validate op
     match op {
         Op::Concat(_) => (),
-        _ => return Err(HoduError::InternalError("call_concat expects concat op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_concatE expects LconcatE op".to_string())),
     }
 
     if layouts.is_empty() {
-        return Err(HoduError::InternalError(
+        return Err(HoduError::BackendError(
             "concat requires at least one input".to_string(),
         ));
     }
 
     if storages.len() != layouts.len() {
-        return Err(HoduError::InternalError(
+        return Err(HoduError::BackendError(
             "storages and layouts length mismatch".to_string(),
         ));
     }
@@ -70,7 +70,7 @@ pub fn call_concat(
 
         let shape = layouts[i].shape();
         if shape.ndim() != ndim {
-            return Err(HoduError::InternalError(format!(
+            return Err(HoduError::BackendError(format!(
                 "all inputs must have same number of dimensions, expected {}, got {}",
                 ndim,
                 shape.ndim()
@@ -80,7 +80,7 @@ pub fn call_concat(
         // Check all dimensions except concat_dim match
         for d in 0..ndim {
             if d != dim && shape.dims()[d as usize] != first_shape.dims()[d as usize] {
-                return Err(HoduError::InternalError(format!(
+                return Err(HoduError::BackendError(format!(
                     "dimension {} mismatch: expected {}, got {}",
                     d,
                     first_shape.dims()[d as usize],
@@ -239,7 +239,7 @@ pub fn call_split(
     // Validate op
     match op {
         Op::Split(_) => (),
-        _ => return Err(HoduError::InternalError("call_split expects split op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_splitE expects LsplitE op".to_string())),
     }
 
     let input_shape = layout.shape();
@@ -253,13 +253,13 @@ pub fn call_split(
     // Validate start and size
     let dim_size = input_shape.dims()[dim as usize];
     if start >= dim_size {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "split start {} exceeds dimension size {}",
             start, dim_size
         )));
     }
     if start + size > dim_size {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "split range {}..{} exceeds dimension size {}",
             start,
             start + size,
@@ -345,7 +345,7 @@ pub fn call_split(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(input), CpuStorage::I64(out)) => call_kernel!(input, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_split".to_string(),
             ))
         },

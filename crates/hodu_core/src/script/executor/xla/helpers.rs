@@ -13,7 +13,7 @@ where
     if inputs.len() != 1 {
         return Err(HoduError::InternalError(format!("{} requires 1 input", op_name)));
     }
-    f(inputs).map_err(|e| HoduError::InternalError(format!("XLA {} failed: {:?}", op_name, e)))
+    Ok(f(inputs)?)
 }
 
 /// Helper function for binary operations with input validation
@@ -27,7 +27,7 @@ where
             op_name, expected
         )));
     }
-    f(inputs).map_err(|e| HoduError::InternalError(format!("XLA {} failed: {:?}", op_name, e)))
+    Ok(f(inputs)?)
 }
 
 /// Helper function for scalar operations
@@ -45,16 +45,14 @@ where
         return Err(HoduError::InternalError(format!("{} requires 1 input", op_name)));
     }
     let scalar = get_scalar_from_attributes(attributes)?;
-    let scalar_op = builder
-        .constant_r0(scalar)
-        .map_err(|e| HoduError::InternalError(format!("Failed to create scalar constant: {:?}", e)))?;
-    f(inputs, scalar_op).map_err(|e| HoduError::InternalError(format!("XLA {} failed: {:?}", op_name, e)))
+    let scalar_op = builder.constant_r0(scalar)?;
+    Ok(f(inputs, scalar_op)?)
 }
 
 /// Extract scalar value from attributes
 pub fn get_scalar_from_attributes(attributes: &HashMap<String, Attribute>) -> HoduResult<f32> {
     match attributes.get("scalar") {
         Some(Attribute::Scalar(scalar)) => Ok(scalar.to_f32()),
-        _ => Err(HoduError::InternalError("Missing scalar attribute".to_string())),
+        _ => Err(HoduError::MissingAttribute("scalar".to_string())),
     }
 }

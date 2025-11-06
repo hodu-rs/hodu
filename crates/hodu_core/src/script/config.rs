@@ -23,8 +23,8 @@ impl ScriptConfig {
     /// Validate compiler and device compatibility
     pub fn validate(&self) -> HoduResult<()> {
         if !self.compiler_type.is_supported(self.device) {
-            return Err(HoduError::InternalError(format!(
-                "Compiler {:?} does not support device {:?}. Available devices for {:?}: {}",
+            return Err(HoduError::CompilationError(format!(
+                "compiler {:?} does not support device {:?}. available devices for {:?}: {}",
                 self.compiler_type,
                 self.device,
                 self.compiler_type,

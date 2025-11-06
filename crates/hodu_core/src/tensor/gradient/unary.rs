@@ -257,7 +257,7 @@ impl VjpCompute for UnaryScalarOp {
                 let scalar_value = match scalar {
                     Scalar::F32(v) => {
                         if v.abs() < f32::EPSILON {
-                            return Err(HoduError::InternalError(
+                            return Err(HoduError::GradientComputationFailed(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
                         }
@@ -266,7 +266,7 @@ impl VjpCompute for UnaryScalarOp {
                     #[cfg(feature = "f64")]
                     Scalar::F64(v) => {
                         if v.abs() < f64::EPSILON {
-                            return Err(HoduError::InternalError(
+                            return Err(HoduError::GradientComputationFailed(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
                         }
@@ -274,7 +274,7 @@ impl VjpCompute for UnaryScalarOp {
                     },
                     Scalar::F16(v) => {
                         if v.abs() < half::f16::EPSILON {
-                            return Err(HoduError::InternalError(
+                            return Err(HoduError::GradientComputationFailed(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
                         }
@@ -282,7 +282,7 @@ impl VjpCompute for UnaryScalarOp {
                     },
                     Scalar::BF16(v) => {
                         if v.abs() < half::bf16::EPSILON {
-                            return Err(HoduError::InternalError(
+                            return Err(HoduError::GradientComputationFailed(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
                         }
@@ -290,7 +290,7 @@ impl VjpCompute for UnaryScalarOp {
                     },
                     Scalar::F8E4M3(v) => {
                         if v.abs() < float8::F8E4M3::EPSILON {
-                            return Err(HoduError::InternalError(
+                            return Err(HoduError::GradientComputationFailed(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
                         }
@@ -299,14 +299,14 @@ impl VjpCompute for UnaryScalarOp {
                     #[cfg(feature = "f8e5m2")]
                     Scalar::F8E5M2(v) => {
                         if v.abs() < float8::F8E5M2::EPSILON {
-                            return Err(HoduError::InternalError(
+                            return Err(HoduError::GradientComputationFailed(
                                 "Division by zero in DivScalar gradient".to_string(),
                             ));
                         }
                         Scalar::from_f32(1.0 / v.to_f32(), dtype)
                     },
                     _ => {
-                        return Err(HoduError::InternalError(
+                        return Err(HoduError::GradientComputationFailed(
                             "Unsupported scalar type in DivScalar gradient".to_string(),
                         ))
                     },

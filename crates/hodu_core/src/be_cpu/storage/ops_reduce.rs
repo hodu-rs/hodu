@@ -31,7 +31,7 @@ pub fn call_reduce(
     // Extract reduce op
     let reduce_op = match op {
         Op::Reduce(reduce_op) => reduce_op,
-        _ => return Err(HoduError::InternalError("call_reduce expects reduce op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_reduceE expects LreduceE op".to_string())),
     };
 
     let input_shape = layout.shape();
@@ -152,7 +152,7 @@ pub fn call_reduce(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(input), CpuStorage::I64(out)) => call_kernel!(input, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_reduce".to_string(),
             ))
         },

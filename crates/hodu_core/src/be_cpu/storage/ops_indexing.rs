@@ -45,7 +45,7 @@ pub fn call_index_select(
     match op {
         Op::Indexing(IndexingOp::IndexSelect) => (),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_index_select expects IndexSelect op".to_string(),
             ))
         },
@@ -128,7 +128,7 @@ pub fn call_index_select(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(input), CpuStorage::I64(out)) => call_kernel!(input, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_index_select".to_string(),
             ))
         },
@@ -179,7 +179,7 @@ pub fn call_index_put(
     match op {
         Op::Indexing(IndexingOp::IndexPut) => (),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_index_put expects IndexPut op".to_string(),
             ))
         },
@@ -317,7 +317,7 @@ pub fn call_index_put(
             call_kernel!(input, values, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_index_put".to_string(),
             ))
         },
@@ -363,7 +363,7 @@ pub fn call_gather(
     // Validate op
     match op {
         Op::Indexing(IndexingOp::Gather) => (),
-        _ => return Err(HoduError::InternalError("call_gather expects Gather op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_gatherE expects LGatherE op".to_string())),
     };
 
     let input_shape = layout.shape();
@@ -453,7 +453,7 @@ pub fn call_gather(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(input), CpuStorage::I64(out)) => call_kernel!(input, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_gather".to_string(),
             ))
         },
@@ -504,7 +504,11 @@ pub fn call_scatter(
     // Validate op
     match op {
         Op::Indexing(IndexingOp::Scatter) => (),
-        _ => return Err(HoduError::InternalError("call_scatter expects Scatter op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_scatterE expects LScatterE op".to_string(),
+            ))
+        },
     };
 
     let input_shape = layout.shape();
@@ -657,7 +661,7 @@ pub fn call_scatter(
             call_kernel!(input, values, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_scatter".to_string(),
             ))
         },

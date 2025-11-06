@@ -19,7 +19,7 @@ pub fn call_index_select(
     match op {
         Op::Indexing(_) => (),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_index_select expects indexing op".to_string(),
             ))
         },
@@ -103,7 +103,7 @@ pub fn call_index_put(
     match op {
         Op::Indexing(_) => (),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_index_put expects indexing op".to_string(),
             ))
         },
@@ -185,7 +185,11 @@ pub fn call_gather(
     // Validate op
     match op {
         Op::Indexing(_) => (),
-        _ => return Err(HoduError::InternalError("call_gather expects indexing op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_gatherE expects LindexingE op".to_string(),
+            ))
+        },
     }
 
     let input_shape = input_layout.shape();
@@ -253,7 +257,11 @@ pub fn call_scatter(
     // Validate op
     match op {
         Op::Indexing(_) => (),
-        _ => return Err(HoduError::InternalError("call_scatter expects indexing op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_scatterE expects LindexingE op".to_string(),
+            ))
+        },
     }
 
     let input_shape = input_layout.shape();

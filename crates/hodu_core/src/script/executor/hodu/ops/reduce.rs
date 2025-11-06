@@ -32,7 +32,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dims attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dims".to_string()))?;
             let keep_dim = attributes
                 .get("keep_dim")
                 .and_then(|a| if let Attribute::Bool(b) = a { Some(*b) } else { None })
@@ -57,7 +57,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing window_shape attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("window_shape".to_string()))?;
             let strides: Vec<u32> = attributes
                 .get("strides")
                 .and_then(|a| {
@@ -67,7 +67,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing strides attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("strides".to_string()))?;
             let padding: Vec<u32> = attributes
                 .get("padding")
                 .and_then(|a| {
@@ -77,7 +77,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing padding attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("padding".to_string()))?;
             inputs[0].call_reduce_window(&layouts[0], &window_shape, &strides, &padding, op.clone())
         },
 

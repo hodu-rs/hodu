@@ -49,14 +49,9 @@ pub fn execute(
             let alpha_op = builder
                 .constant_r0(alpha)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create alpha: {:?}", e)))?;
-            let cond = inputs[0]
-                .gt(&zero)
-                .map_err(|e| HoduError::InternalError(format!("XLA gt failed: {:?}", e)))?;
-            let neg_part = inputs[0]
-                .mul_(&alpha_op)
-                .map_err(|e| HoduError::InternalError(format!("XLA mul failed: {:?}", e)))?;
-            cond.select(&inputs[0], &neg_part)
-                .map_err(|e| HoduError::InternalError(format!("XLA leaky_relu failed: {:?}", e)))
+            let cond = inputs[0].gt(&zero)?;
+            let neg_part = inputs[0].mul_(&alpha_op)?;
+            Ok(cond.select(&inputs[0], &neg_part)?)
         },
         Op::UnaryScalar(UnaryScalarOp::Elu) => {
             if inputs.len() != 1 {
@@ -72,20 +67,11 @@ pub fn execute(
             let one = builder
                 .constant_r0(1.0f32)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create one: {:?}", e)))?;
-            let cond = inputs[0]
-                .gt(&zero)
-                .map_err(|e| HoduError::InternalError(format!("XLA gt failed: {:?}", e)))?;
-            let exp_x = inputs[0]
-                .exp()
-                .map_err(|e| HoduError::InternalError(format!("XLA exp failed: {:?}", e)))?;
-            let exp_minus_one = exp_x
-                .sub_(&one)
-                .map_err(|e| HoduError::InternalError(format!("XLA sub failed: {:?}", e)))?;
-            let neg_part = alpha_op
-                .mul_(&exp_minus_one)
-                .map_err(|e| HoduError::InternalError(format!("XLA mul failed: {:?}", e)))?;
-            cond.select(&inputs[0], &neg_part)
-                .map_err(|e| HoduError::InternalError(format!("XLA elu failed: {:?}", e)))
+            let cond = inputs[0].gt(&zero)?;
+            let exp_x = inputs[0].exp()?;
+            let exp_minus_one = exp_x.sub_(&one)?;
+            let neg_part = alpha_op.mul_(&exp_minus_one)?;
+            Ok(cond.select(&inputs[0], &neg_part)?)
         },
         Op::UnaryScalar(UnaryScalarOp::Prelu) => {
             if inputs.len() != 1 {
@@ -98,14 +84,9 @@ pub fn execute(
             let alpha_op = builder
                 .constant_r0(alpha)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create alpha: {:?}", e)))?;
-            let cond = inputs[0]
-                .gt(&zero)
-                .map_err(|e| HoduError::InternalError(format!("XLA gt failed: {:?}", e)))?;
-            let neg_part = inputs[0]
-                .mul_(&alpha_op)
-                .map_err(|e| HoduError::InternalError(format!("XLA mul failed: {:?}", e)))?;
-            cond.select(&inputs[0], &neg_part)
-                .map_err(|e| HoduError::InternalError(format!("XLA prelu failed: {:?}", e)))
+            let cond = inputs[0].gt(&zero)?;
+            let neg_part = inputs[0].mul_(&alpha_op)?;
+            Ok(cond.select(&inputs[0], &neg_part)?)
         },
 
         _ => Err(HoduError::InternalError(format!(

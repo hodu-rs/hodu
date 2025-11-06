@@ -30,7 +30,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dim attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             inputs[0].call_index_select(&layouts[0], &inputs[1], &layouts[1], dim, op.clone())
         },
 
@@ -49,7 +49,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dim attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             inputs[0].call_index_put(
                 &layouts[0],
                 &inputs[1],
@@ -76,7 +76,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dim attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             inputs[0].call_gather(&layouts[0], &inputs[1], &layouts[1], dim, op.clone())
         },
 
@@ -98,7 +98,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dim attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             inputs[0].call_scatter(
                 &layouts[0],
                 &inputs[1],

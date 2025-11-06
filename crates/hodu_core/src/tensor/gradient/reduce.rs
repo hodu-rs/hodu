@@ -106,7 +106,7 @@ impl VjpCompute for ReduceOp {
                 let result = derivative.mul(&broadcasted_grad)?;
                 Ok(vec![result.id()])
             },
-            _ => Err(HoduError::InternalError(format!(
+            _ => Err(HoduError::GradientComputationFailed(format!(
                 "{:?} is not differentiable - cannot compute gradients for discrete index operations",
                 self
             ))),

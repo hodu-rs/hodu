@@ -32,7 +32,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing stride attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("stride".to_string()))?;
             let padding: Vec<u32> = attributes
                 .get("padding")
                 .and_then(|a| {
@@ -42,7 +42,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing padding attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("padding".to_string()))?;
             let dilation: Vec<u32> = attributes
                 .get("dilation")
                 .and_then(|a| {
@@ -52,7 +52,7 @@ pub fn execute(
                         None
                     }
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dilation attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dilation".to_string()))?;
             inputs[0].call_conv(
                 &layouts[0],
                 &inputs[1],

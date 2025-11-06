@@ -48,7 +48,7 @@ pub fn execute(
             let scalar = attributes
                 .get("scalar")
                 .and_then(|a| if let Attribute::Scalar(s) = a { Some(*s) } else { None })
-                .ok_or_else(|| HoduError::InternalError("Missing scalar attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("scalar".to_string()))?;
             inputs[0].call_unary_scalar(&layouts[0], scalar, op.clone())
         },
 

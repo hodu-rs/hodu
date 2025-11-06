@@ -35,7 +35,7 @@ pub fn call_reduce_window(
     let windowing_op = match op {
         Op::Windowing(windowing_op) => windowing_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_reduce_window expects Windowing op".to_string(),
             ))
         },
@@ -49,7 +49,7 @@ pub fn call_reduce_window(
 
     // Validate window_shape, strides, padding dimensions
     if window_shape.len() != ndim {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "window_shape length {} does not match tensor ndim {}",
             window_shape.len(),
             ndim
@@ -57,7 +57,7 @@ pub fn call_reduce_window(
     }
 
     if strides.len() != ndim {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "strides length {} does not match tensor ndim {}",
             strides.len(),
             ndim
@@ -65,7 +65,7 @@ pub fn call_reduce_window(
     }
 
     if padding.len() != ndim * 2 {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "padding length {} does not match tensor ndim * 2 ({})",
             padding.len(),
             ndim * 2
@@ -84,7 +84,7 @@ pub fn call_reduce_window(
         // Output size formula: floor((in_size + pad_before + pad_after - window_size) / stride) + 1
         let padded_size = in_size + pad_before + pad_after;
         if padded_size < window_size {
-            return Err(HoduError::InternalError(format!(
+            return Err(HoduError::BackendError(format!(
                 "padded size {} is less than window size {} in dimension {}",
                 padded_size, window_size, i
             )));
@@ -180,7 +180,7 @@ pub fn call_reduce_window(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(input), CpuStorage::I64(out)) => call_kernel!(input, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_reduce_window".to_string(),
             ))
         },

@@ -139,15 +139,13 @@ pub fn execute(
             let padding_i64: Vec<(i64, i64)> = padding.iter().map(|&(lo, hi)| (lo as i64, hi as i64)).collect();
 
             // Apply reduce_window
-            let result = input
-                .reduce_window(
-                    init_value,
-                    reduction_comp,
-                    &window_shape_i64,
-                    &strides_i64,
-                    &padding_i64,
-                )
-                .map_err(|e| HoduError::InternalError(format!("XLA reduce_window failed: {:?}", e)))?;
+            let result = input.reduce_window(
+                init_value,
+                reduction_comp,
+                &window_shape_i64,
+                &strides_i64,
+                &padding_i64,
+            )?;
 
             // For mean, divide by window size
             if is_mean {
@@ -155,9 +153,7 @@ pub fn execute(
                 let window_size_scalar = builder
                     .constant_r0(window_size as f32)
                     .map_err(|e| HoduError::InternalError(format!("Failed to create constant: {:?}", e)))?;
-                result
-                    .div_(&window_size_scalar)
-                    .map_err(|e| HoduError::InternalError(format!("XLA div failed: {:?}", e)))
+                Ok(result.div_(&window_size_scalar)?)
             } else {
                 Ok(result)
             }

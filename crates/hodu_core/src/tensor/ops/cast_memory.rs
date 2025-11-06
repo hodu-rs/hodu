@@ -46,7 +46,7 @@ impl Tensor {
         validate_dtype_for_device(self.dtype(), device)?;
 
         if builder::is_builder_active() {
-            Err(HoduError::InternalError("dont to_device in builder".to_string()))
+            Err(HoduError::BuilderNotActive)
         } else {
             let layout = Layout::from_shape(&self.shape());
             let storage = self.with_storage(|storage| storage.to_device(&layout, device))?;

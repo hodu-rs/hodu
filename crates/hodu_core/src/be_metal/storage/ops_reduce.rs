@@ -17,7 +17,7 @@ pub fn call_reduce(
     // Extract reduce op
     let reduce_op = match op {
         Op::Reduce(reduce_op) => reduce_op,
-        _ => return Err(HoduError::InternalError("call_reduce expects reduce op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_reduceE expects LreduceE op".to_string())),
     };
 
     let input_shape = layout.shape();

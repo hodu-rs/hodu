@@ -53,7 +53,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F8E4M3 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let normal = rand_distr::Normal::new(F8E4M3::from_f32(mean), F8E4M3::from_f32(std))
-                    .map_err(|e| HoduError::InternalError(format!("normal distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("normal distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(normal.sample(&mut rng))
                 }
@@ -63,7 +63,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F8E5M2 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let normal = rand_distr::Normal::new(F8E5M2::from_f32(mean), F8E5M2::from_f32(std))
-                    .map_err(|e| HoduError::InternalError(format!("normal distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("normal distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(normal.sample(&mut rng))
                 }
@@ -72,7 +72,7 @@ impl BackendDeviceT for CpuDevice {
             DType::BF16 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let normal = rand_distr::Normal::new(bf16::from_f32(mean), bf16::from_f32(std))
-                    .map_err(|e| HoduError::InternalError(format!("normal distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("normal distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(normal.sample(&mut rng))
                 }
@@ -81,7 +81,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F16 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let normal = rand_distr::Normal::new(f16::from_f32(mean), f16::from_f32(std))
-                    .map_err(|e| HoduError::InternalError(format!("normal distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("normal distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(normal.sample(&mut rng))
                 }
@@ -90,7 +90,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F32 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let normal = rand_distr::Normal::new(mean, std)
-                    .map_err(|e| HoduError::InternalError(format!("normal distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("normal distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(normal.sample(&mut rng))
                 }
@@ -100,7 +100,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F64 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let normal = rand_distr::Normal::new(mean as f64, std as f64)
-                    .map_err(|e| HoduError::InternalError(format!("normal distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("normal distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(normal.sample(&mut rng))
                 }
@@ -123,7 +123,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F8E4M3 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let uniform = rand_distr::Uniform::new(F8E4M3::from_f32(low), F8E4M3::from_f32(high))
-                    .map_err(|e| HoduError::InternalError(format!("uniform distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("uniform distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(uniform.sample(&mut rng))
                 }
@@ -133,7 +133,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F8E5M2 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let uniform = rand_distr::Uniform::new(F8E5M2::from_f32(low), F8E5M2::from_f32(high))
-                    .map_err(|e| HoduError::InternalError(format!("uniform distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("uniform distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(uniform.sample(&mut rng))
                 }
@@ -142,7 +142,7 @@ impl BackendDeviceT for CpuDevice {
             DType::BF16 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let uniform = rand_distr::Uniform::new(bf16::from_f32(low), bf16::from_f32(high))
-                    .map_err(|e| HoduError::InternalError(format!("uniform distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("uniform distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(uniform.sample(&mut rng))
                 }
@@ -151,7 +151,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F16 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let uniform = rand_distr::Uniform::new(f16::from_f32(low), f16::from_f32(high))
-                    .map_err(|e| HoduError::InternalError(format!("uniform distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("uniform distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(uniform.sample(&mut rng))
                 }
@@ -160,7 +160,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F32 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let uniform = rand_distr::Uniform::new(low, high)
-                    .map_err(|e| HoduError::InternalError(format!("uniform distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("uniform distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(uniform.sample(&mut rng))
                 }
@@ -170,7 +170,7 @@ impl BackendDeviceT for CpuDevice {
             DType::F64 => {
                 let mut data = Vec::with_capacity(elem_count);
                 let uniform = rand_distr::Uniform::new(low as f64, high as f64)
-                    .map_err(|e| HoduError::InternalError(format!("uniform distribution error: {e}")))?;
+                    .map_err(|e| HoduError::BackendError(format!("uniform distribution error: {e}")))?;
                 for _i in 0..elem_count {
                     data.push(uniform.sample(&mut rng))
                 }

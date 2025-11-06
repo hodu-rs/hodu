@@ -30,9 +30,7 @@ pub fn execute(
                 .ok_or_else(|| HoduError::InternalError("Output layout not found".to_string()))?;
             let target_shape: Vec<i64> = output_layout.shape().dims().iter().map(|&d| d as i64).collect();
 
-            inputs[0]
-                .reshape(&target_shape)
-                .map_err(|e| HoduError::InternalError(format!("XLA reshape failed: {:?}", e)))
+            Ok(inputs[0].reshape(&target_shape)?)
         },
         Op::Shape(ShapeOp::Flatten) => {
             if inputs.is_empty() {
@@ -45,9 +43,7 @@ pub fn execute(
                 hodu_xla::Shape::Array(array_shape) => array_shape.dims().iter().product::<i64>(),
                 _ => return Err(HoduError::InternalError("Expected array shape".to_string())),
             };
-            inputs[0]
-                .reshape(&[total_size])
-                .map_err(|e| HoduError::InternalError(format!("XLA flatten failed: {:?}", e)))
+            Ok(inputs[0].reshape(&[total_size])?)
         },
         Op::Shape(ShapeOp::Squeeze) => {
             if inputs.is_empty() {
@@ -64,13 +60,9 @@ pub fn execute(
             let squeezed_dims: Vec<i64> = dims.iter().filter(|&&d| d != 1).copied().collect();
             if squeezed_dims.is_empty() {
                 // If all dimensions are 1, keep at least one
-                inputs[0]
-                    .reshape(&[1])
-                    .map_err(|e| HoduError::InternalError(format!("XLA squeeze failed: {:?}", e)))
+                Ok(inputs[0].reshape(&[1])?)
             } else {
-                inputs[0]
-                    .reshape(&squeezed_dims)
-                    .map_err(|e| HoduError::InternalError(format!("XLA squeeze failed: {:?}", e)))
+                Ok(inputs[0].reshape(&squeezed_dims)?)
             }
         },
         Op::Shape(ShapeOp::Unsqueeze) => {
@@ -85,9 +77,7 @@ pub fn execute(
                 .ok_or_else(|| HoduError::InternalError("Output layout not found".to_string()))?;
             let target_dims: Vec<i64> = output_layout.shape().dims().iter().map(|&d| d as i64).collect();
 
-            inputs[0]
-                .reshape(&target_dims)
-                .map_err(|e| HoduError::InternalError(format!("XLA unsqueeze failed: {:?}", e)))
+            Ok(inputs[0].reshape(&target_dims)?)
         },
         Op::Shape(ShapeOp::Broadcast) => {
             if inputs.is_empty() {
@@ -117,9 +107,7 @@ pub fn execute(
 
                 if input_rank <= target_rank {
                     let broadcast_dims: Vec<i64> = (target_rank - input_rank..target_rank).map(|i| i as i64).collect();
-                    inputs[0]
-                        .broadcast_in_dim(&target_i64, &broadcast_dims)
-                        .map_err(|e| HoduError::InternalError(format!("XLA broadcast failed: {:?}", e)))
+                    Ok(inputs[0].broadcast_in_dim(&target_i64, &broadcast_dims)?)
                 } else {
                     Err(HoduError::InternalError(
                         "Cannot broadcast to smaller shape".to_string(),
@@ -151,9 +139,7 @@ pub fn execute(
                 })
                 .ok_or_else(|| HoduError::InternalError("Failed to compute transpose permutation".to_string()))?;
 
-            inputs[0]
-                .transpose(&shape)
-                .map_err(|e| HoduError::InternalError(format!("XLA transpose failed: {:?}", e)))
+            Ok(inputs[0].transpose(&shape)?)
         },
         Op::Shape(ShapeOp::Permute) => {
             if inputs.is_empty() {
@@ -172,9 +158,7 @@ pub fn execute(
                 })
                 .ok_or_else(|| HoduError::InternalError("Permute requires perm attribute".to_string()))?;
 
-            inputs[0]
-                .transpose(&perm_i64)
-                .map_err(|e| HoduError::InternalError(format!("XLA permute failed: {:?}", e)))
+            Ok(inputs[0].transpose(&perm_i64)?)
         },
 
         // ShapeScalars operations
@@ -248,9 +232,7 @@ pub fn execute(
                 }
             };
 
-            inputs[0]
-                .slice_in_dim(start_idx, end_idx, stride, dim)
-                .map_err(|e| HoduError::InternalError(format!("XLA slice_in_dim failed: {:?}", e)))
+            Ok(inputs[0].slice_in_dim(start_idx, end_idx, stride, dim)?)
         },
 
         _ => Err(HoduError::InternalError(format!(

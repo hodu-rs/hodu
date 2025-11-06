@@ -21,7 +21,7 @@ pub fn call_conv(
     // Validate op
     match op {
         Op::Conv(_) => (),
-        _ => return Err(HoduError::InternalError("call_conv expects conv op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_convE expects LconvE op".to_string())),
     }
 
     let input_shape = input_layout.shape();
@@ -30,7 +30,7 @@ pub fn call_conv(
 
     // Validate conv dimensions (needs at least [N, C, ...spatial])
     if input_ndim < 3 {
-        return Err(HoduError::InternalError(
+        return Err(HoduError::BackendError(
             "conv requires at least 3D input (N, C, spatial...)".to_string(),
         ));
     }
@@ -146,7 +146,7 @@ pub fn call_conv_grad_weight(
     match op {
         Op::Conv(_) => (),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_conv_grad_weight expects conv op".to_string(),
             ))
         },

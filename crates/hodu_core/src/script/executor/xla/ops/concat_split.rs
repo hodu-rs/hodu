@@ -32,9 +32,7 @@ pub fn execute(
                 })
                 .ok_or_else(|| HoduError::InternalError("Concat requires dim attribute".to_string()))?;
 
-            inputs[0]
-                .concat_in_dim(&inputs[1..], dim)
-                .map_err(|e| HoduError::InternalError(format!("XLA concat failed: {:?}", e)))
+            Ok(inputs[0].concat_in_dim(&inputs[1..], dim)?)
         },
 
         // Split operations
@@ -97,9 +95,7 @@ pub fn execute(
             let size = sizes[output_index];
 
             // Use slice_in_dim operation
-            inputs[0]
-                .slice_in_dim(start_offset, start_offset + size, 1, dim)
-                .map_err(|e| HoduError::InternalError(format!("XLA slice_in_dim failed: {:?}", e)))
+            Ok(inputs[0].slice_in_dim(start_offset, start_offset + size, 1, dim)?)
         },
 
         _ => Err(HoduError::InternalError(format!(

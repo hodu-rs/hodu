@@ -37,7 +37,7 @@ pub fn execute(
             let target_dtype = attributes
                 .get("dtype")
                 .and_then(|a| if let Attribute::DType(dt) = a { Some(*dt) } else { None })
-                .ok_or_else(|| HoduError::InternalError("Missing dtype attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dtype".to_string()))?;
             inputs[0].to_dtype(&layouts[0], target_dtype)
         },
 

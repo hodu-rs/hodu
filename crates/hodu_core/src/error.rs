@@ -58,6 +58,34 @@ pub enum HoduError {
     // ===== Builder Errors =====
     /// Builder context is not active.
     BuilderNotActive,
+    /// Builder not found with given ID
+    BuilderNotFound(String),
+
+    // ===== Compilation Errors =====
+    /// Module compilation failed
+    CompilationError(String),
+    /// Missing required function in module
+    MissingFunction(String),
+
+    // ===== Execution Errors =====
+    /// Script execution failed
+    ExecutionError(String),
+    /// Missing required input for execution
+    MissingInput(String),
+    /// Missing required attribute
+    MissingAttribute(String),
+
+    // ===== Backend Errors =====
+    /// Backend operation failed
+    BackendError(String),
+    /// CPU kernel error
+    CpuKernelError(String),
+    /// Metal kernel error
+    #[cfg(feature = "metal")]
+    MetalKernelError(String),
+    /// XLA-specific operation failed
+    #[cfg(feature = "xla")]
+    XlaError(String),
 
     // ===== Gradient Errors =====
     /// VJP (Vector-Jacobian Product) function not found for operation.
@@ -163,6 +191,24 @@ impl fmt::Display for HoduError {
             Self::BuilderNotActive => {
                 write!(f, "builder context is not active")
             },
+            Self::BuilderNotFound(msg) => write!(f, "builder not found: {}", msg),
+
+            // Compilation Errors
+            Self::CompilationError(msg) => write!(f, "compilation error: {}", msg),
+            Self::MissingFunction(msg) => write!(f, "missing function: {}", msg),
+
+            // Execution Errors
+            Self::ExecutionError(msg) => write!(f, "execution error: {}", msg),
+            Self::MissingInput(msg) => write!(f, "missing input: {}", msg),
+            Self::MissingAttribute(msg) => write!(f, "missing attribute: {}", msg),
+
+            // Backend Errors
+            Self::BackendError(msg) => write!(f, "backend error: {}", msg),
+            Self::CpuKernelError(msg) => write!(f, "cpu kernel error: {}", msg),
+            #[cfg(feature = "metal")]
+            Self::MetalKernelError(msg) => write!(f, "metal kernel error: {}", msg),
+            #[cfg(feature = "xla")]
+            Self::XlaError(msg) => write!(f, "xla error: {}", msg),
 
             // Gradient Errors
             Self::VjpFunctionNotFound(msg) => {
@@ -238,7 +284,7 @@ impl From<bincode::error::EncodeError> for HoduError {
 // Conversion from hodu_cpu_kernels error
 impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
     fn from(e: hodu_cpu_kernels::CpuKernelError) -> Self {
-        HoduError::InternalError(format!("cpu kernel error: {}", e))
+        HoduError::CpuKernelError(format!("{:?}", e))
     }
 }
 
@@ -246,7 +292,15 @@ impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
 #[cfg(feature = "metal")]
 impl From<hodu_metal_kernels::error::MetalKernelError> for HoduError {
     fn from(e: hodu_metal_kernels::error::MetalKernelError) -> Self {
-        HoduError::InternalError(format!("metal kernel error: {}", e))
+        HoduError::MetalKernelError(format!("{:?}", e))
+    }
+}
+
+// Conversion from hodu_xla error
+#[cfg(feature = "xla")]
+impl From<hodu_xla::Error> for HoduError {
+    fn from(e: hodu_xla::Error) -> Self {
+        HoduError::XlaError(format!("{:?}", e))
     }
 }
 

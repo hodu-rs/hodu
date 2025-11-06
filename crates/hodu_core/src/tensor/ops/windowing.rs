@@ -30,34 +30,34 @@ impl Tensor {
             "sum" => WindowingOp::ReduceWindowSum,
             "min" => WindowingOp::ReduceWindowMin,
             _ => {
-                return Err(HoduError::InternalError(format!(
-                    "invalid reduction type '{}'. Must be one of: 'max', 'mean', 'sum', 'min'",
-                    reduction
-                )))
+                return Err(HoduError::InvalidLayout {
+                    reason: format!(
+                        "invalid reduction type '{}'. Must be one of: 'max', 'mean', 'sum', 'min'",
+                        reduction
+                    ),
+                })
             },
         };
 
         // Validate inputs
         if window_shape.ndim() != rank {
-            return Err(HoduError::InternalError(format!(
-                "window_shape length {} must match tensor rank {}",
-                window_shape.ndim(),
-                rank
-            )));
+            return Err(HoduError::InvalidLayout {
+                reason: format!(
+                    "window_shape length {} must match tensor rank {}",
+                    window_shape.ndim(),
+                    rank
+                ),
+            });
         }
         if strides.ndim() != rank {
-            return Err(HoduError::InternalError(format!(
-                "strides length {} must match tensor rank {}",
-                strides.ndim(),
-                rank
-            )));
+            return Err(HoduError::InvalidLayout {
+                reason: format!("strides length {} must match tensor rank {}", strides.ndim(), rank),
+            });
         }
         if padding.len() != rank as usize {
-            return Err(HoduError::InternalError(format!(
-                "padding length {} must match tensor rank {}",
-                padding.len(),
-                rank
-            )));
+            return Err(HoduError::InvalidLayout {
+                reason: format!("padding length {} must match tensor rank {}", padding.len(), rank),
+            });
         }
 
         // Validate device, dtype for device, and dtype for operation

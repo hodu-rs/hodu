@@ -24,7 +24,7 @@ impl Module {
             path.set_extension("hds.ir");
         }
 
-        std::fs::write(path, ir_text).map_err(|e| crate::error::HoduError::InternalError(e.to_string()))?;
+        std::fs::write(path, ir_text)?;
         Ok(())
     }
 
@@ -40,8 +40,7 @@ impl Module {
     /// Save module as binary (.hds.bc)
     #[cfg(all(feature = "serde", feature = "std"))]
     pub fn save_bc<P: AsRef<std::path::Path>>(&self, path: P) -> HoduResult<()> {
-        let binary_data = bincode::encode_to_vec(self, bincode::config::standard())
-            .map_err(|e| crate::error::HoduError::InternalError(format!("Serialization error: {}", e)))?;
+        let binary_data = bincode::encode_to_vec(self, bincode::config::standard())?;
 
         let mut path = path.as_ref().to_path_buf();
 
@@ -50,17 +49,16 @@ impl Module {
             path.set_extension("hds.bc");
         }
 
-        std::fs::write(path, binary_data).map_err(|e| crate::error::HoduError::InternalError(e.to_string()))?;
+        std::fs::write(path, binary_data)?;
         Ok(())
     }
 
     /// Load module from binary (.hds.bc)
     #[cfg(all(feature = "serde", feature = "std"))]
     pub fn load_bc<P: AsRef<std::path::Path>>(path: P) -> HoduResult<Self> {
-        let binary_data = std::fs::read(path).map_err(|e| crate::error::HoduError::InternalError(e.to_string()))?;
+        let binary_data = std::fs::read(path)?;
 
-        let (module, _): (Self, usize) = bincode::decode_from_slice(&binary_data, bincode::config::standard())
-            .map_err(|e| crate::error::HoduError::InternalError(format!("Deserialization error: {}", e)))?;
+        let (module, _): (Self, usize) = bincode::decode_from_slice(&binary_data, bincode::config::standard())?;
 
         Ok(module)
     }
@@ -68,15 +66,13 @@ impl Module {
     /// Serialize module to bytes (bincode)
     #[cfg(feature = "serde")]
     pub fn to_bytes(&self) -> HoduResult<Vec<u8>> {
-        bincode::encode_to_vec(self, bincode::config::standard())
-            .map_err(|e| crate::error::HoduError::InternalError(format!("Serialization error: {}", e)))
+        Ok(bincode::encode_to_vec(self, bincode::config::standard())?)
     }
 
     /// Deserialize module from bytes (bincode)
     #[cfg(feature = "serde")]
     pub fn from_bytes(data: &[u8]) -> HoduResult<Self> {
-        let (module, _): (Self, usize) = bincode::decode_from_slice(data, bincode::config::standard())
-            .map_err(|e| crate::error::HoduError::InternalError(format!("Deserialization error: {}", e)))?;
+        let (module, _): (Self, usize) = bincode::decode_from_slice(data, bincode::config::standard())?;
         Ok(module)
     }
 }

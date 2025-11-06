@@ -28,7 +28,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dim attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             let other_storages: Vec<&BackendStorage> = inputs[1..].iter().map(|s| s.as_ref()).collect();
             let other_layouts: Vec<&Layout> = layouts[1..].iter().collect();
             inputs[0].call_concat(&other_storages, &other_layouts, dim, op.clone())
@@ -49,7 +49,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing dim attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             let start = attributes
                 .get("start")
                 .and_then(|a| match a {
@@ -57,7 +57,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing start attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("start".to_string()))?;
             let size = attributes
                 .get("size")
                 .and_then(|a| match a {
@@ -65,7 +65,7 @@ pub fn execute(
                     Attribute::Scalar(s) => Some(s.to_u32()),
                     _ => None,
                 })
-                .ok_or_else(|| HoduError::InternalError("Missing size attribute".to_string()))?;
+                .ok_or_else(|| HoduError::MissingAttribute("size".to_string()))?;
             inputs[0].call_split(&layouts[0], dim, start, size, op.clone())
         },
 

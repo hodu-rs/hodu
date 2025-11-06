@@ -39,58 +39,62 @@ pub fn execute(
                 .unwrap_or_default();
 
             match reduce_op {
-                ReduceOp::Sum => if dims.is_empty() {
-                    let input_shape = inputs[0]
-                        .shape()
-                        .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
-                    let all_dims: Vec<i64> = match input_shape {
-                        hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
-                        _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
-                    };
-                    inputs[0].reduce_sum(&all_dims, keep_dim)
-                } else {
-                    inputs[0].reduce_sum(&dims, keep_dim)
-                }
-                .map_err(|e| HoduError::InternalError(format!("XLA reduce_sum failed: {:?}", e))),
-                ReduceOp::Mean => if dims.is_empty() {
-                    let input_shape = inputs[0]
-                        .shape()
-                        .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
-                    let all_dims: Vec<i64> = match input_shape {
-                        hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
-                        _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
-                    };
-                    inputs[0].reduce_mean(&all_dims, keep_dim)
-                } else {
-                    inputs[0].reduce_mean(&dims, keep_dim)
-                }
-                .map_err(|e| HoduError::InternalError(format!("XLA reduce_mean failed: {:?}", e))),
-                ReduceOp::Max => if dims.is_empty() {
-                    let input_shape = inputs[0]
-                        .shape()
-                        .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
-                    let all_dims: Vec<i64> = match input_shape {
-                        hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
-                        _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
-                    };
-                    inputs[0].reduce_max(&all_dims, keep_dim)
-                } else {
-                    inputs[0].reduce_max(&dims, keep_dim)
-                }
-                .map_err(|e| HoduError::InternalError(format!("XLA reduce_max failed: {:?}", e))),
-                ReduceOp::Min => if dims.is_empty() {
-                    let input_shape = inputs[0]
-                        .shape()
-                        .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
-                    let all_dims: Vec<i64> = match input_shape {
-                        hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
-                        _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
-                    };
-                    inputs[0].reduce_min(&all_dims, keep_dim)
-                } else {
-                    inputs[0].reduce_min(&dims, keep_dim)
-                }
-                .map_err(|e| HoduError::InternalError(format!("XLA reduce_min failed: {:?}", e))),
+                ReduceOp::Sum => {
+                    if dims.is_empty() {
+                        let input_shape = inputs[0]
+                            .shape()
+                            .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
+                        let all_dims: Vec<i64> = match input_shape {
+                            hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                            _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
+                        };
+                        Ok(inputs[0].reduce_sum(&all_dims, keep_dim)?)
+                    } else {
+                        Ok(inputs[0].reduce_sum(&dims, keep_dim)?)
+                    }
+                },
+                ReduceOp::Mean => {
+                    if dims.is_empty() {
+                        let input_shape = inputs[0]
+                            .shape()
+                            .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
+                        let all_dims: Vec<i64> = match input_shape {
+                            hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                            _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
+                        };
+                        Ok(inputs[0].reduce_mean(&all_dims, keep_dim)?)
+                    } else {
+                        Ok(inputs[0].reduce_mean(&dims, keep_dim)?)
+                    }
+                },
+                ReduceOp::Max => {
+                    if dims.is_empty() {
+                        let input_shape = inputs[0]
+                            .shape()
+                            .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
+                        let all_dims: Vec<i64> = match input_shape {
+                            hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                            _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
+                        };
+                        Ok(inputs[0].reduce_max(&all_dims, keep_dim)?)
+                    } else {
+                        Ok(inputs[0].reduce_max(&dims, keep_dim)?)
+                    }
+                },
+                ReduceOp::Min => {
+                    if dims.is_empty() {
+                        let input_shape = inputs[0]
+                            .shape()
+                            .map_err(|e| HoduError::InternalError(format!("XLA error: {:?}", e)))?;
+                        let all_dims: Vec<i64> = match input_shape {
+                            hodu_xla::Shape::Array(array_shape) => (0..array_shape.dims().len() as i64).collect(),
+                            _ => return Err(HoduError::InternalError("Expected array shape for reduce".to_string())),
+                        };
+                        Ok(inputs[0].reduce_min(&all_dims, keep_dim)?)
+                    } else {
+                        Ok(inputs[0].reduce_min(&dims, keep_dim)?)
+                    }
+                },
                 _ => Err(HoduError::InternalError(format!(
                     "Reduce operation {:?} not yet implemented",
                     reduce_op

@@ -13,13 +13,13 @@ impl Builder {
     /// Add an input tensor to the graph
     pub fn add_input(&self, name: &'static str, tensor: Tensor) -> HoduResult<()> {
         self.with_state_mut(|s| s.graph_inputs.push((name, tensor)))
-            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.get_name())))
+            .ok_or_else(|| HoduError::BuilderNotFound(self.get_name()))
     }
 
     /// Add an output tensor to the graph
     pub fn add_output(&self, name: &'static str, tensor: Tensor) -> HoduResult<()> {
         self.with_state_mut(|s| s.graph_outputs.push((name, tensor)))
-            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.get_name())))
+            .ok_or_else(|| HoduError::BuilderNotFound(self.get_name()))
     }
 
     /// Set the outputs for the graph (replaces existing outputs)
@@ -37,7 +37,7 @@ impl Builder {
             .map(|(&name, tensor)| (name, *tensor))
             .collect();
         self.with_state_mut(|s| s.graph_outputs = outputs)
-            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.get_name())))
+            .ok_or_else(|| HoduError::BuilderNotFound(self.get_name()))
     }
 
     /// Add an operation to the computation graph

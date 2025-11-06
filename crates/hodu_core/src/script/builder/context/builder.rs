@@ -49,7 +49,7 @@ impl Builder {
             s.name = name.clone();
             s.module.name = name;
         })
-        .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))
+        .ok_or_else(|| HoduError::BuilderNotFound(format!("{}", self.0 .0)))
     }
 
     /// Get the builder's state (for inspection)
@@ -74,7 +74,7 @@ impl Builder {
     pub fn start(&self) -> HoduResult<()> {
         let is_ended = self
             .with_state(|s| s.is_ended)
-            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))?;
+            .ok_or_else(|| HoduError::BuilderNotFound(format!("{}", self.0 .0)))?;
         let name = self.get_name();
 
         if is_ended {
@@ -111,7 +111,7 @@ impl Builder {
             },
             Some(_) => {
                 self.with_state_mut(|s| s.is_ended = true)
-                    .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))?;
+                    .ok_or_else(|| HoduError::BuilderNotFound(format!("{}", self.0 .0)))?;
                 *active_id = None;
                 Ok(())
             },
@@ -122,13 +122,13 @@ impl Builder {
     pub fn build(&self) -> HoduResult<crate::script::Script> {
         let module = self
             .with_state_mut(super::super::codegen::build_module)
-            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))??;
+            .ok_or_else(|| HoduError::BuilderNotFound(format!("{}", self.0 .0)))??;
         Ok(crate::script::Script::new(module))
     }
 
     /// Build the final module from the builder state (if you need the module directly)
     pub fn build_module(&self) -> HoduResult<super::Module> {
         self.with_state_mut(super::super::codegen::build_module)
-            .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.0 .0)))?
+            .ok_or_else(|| HoduError::BuilderNotFound(format!("{}", self.0 .0)))?
     }
 }

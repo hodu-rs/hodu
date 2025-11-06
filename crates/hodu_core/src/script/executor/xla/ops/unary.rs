@@ -29,8 +29,7 @@ pub fn execute(
             let one = builder
                 .constant_r0(1.0f32)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create one: {:?}", e)))?;
-            one.div_(&inputs[0])
-                .map_err(|e| HoduError::InternalError(format!("XLA recip failed: {:?}", e)))
+            Ok(one.div_(&inputs[0])?)
         },
         Op::Unary(UnaryOp::Relu) => {
             if inputs.len() != 1 {
@@ -39,9 +38,7 @@ pub fn execute(
             let zero = builder
                 .constant_r0(0.0f32)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create zero: {:?}", e)))?;
-            inputs[0]
-                .max(&zero)
-                .map_err(|e| HoduError::InternalError(format!("XLA relu failed: {:?}", e)))
+            Ok(inputs[0].max(&zero)?)
         },
         Op::Unary(UnaryOp::Sigmoid) => unary_op_check(inputs, |i| i[0].logistic(), "sigmoid"),
         Op::Unary(UnaryOp::Tanh) => unary_op_check(inputs, |i| i[0].tanh(), "tanh"),
@@ -51,15 +48,9 @@ pub fn execute(
             if inputs.len() != 1 {
                 return Err(HoduError::InternalError("Tan requires 1 input".to_string()));
             }
-            let sin_val = inputs[0]
-                .sin()
-                .map_err(|e| HoduError::InternalError(format!("XLA sin failed: {:?}", e)))?;
-            let cos_val = inputs[0]
-                .cos()
-                .map_err(|e| HoduError::InternalError(format!("XLA cos failed: {:?}", e)))?;
-            sin_val
-                .div_(&cos_val)
-                .map_err(|e| HoduError::InternalError(format!("XLA tan failed: {:?}", e)))
+            let sin_val = inputs[0].sin()?;
+            let cos_val = inputs[0].cos()?;
+            Ok(sin_val.div_(&cos_val)?)
         },
         Op::Unary(UnaryOp::Exp) => unary_op_check(inputs, |i| i[0].exp(), "exp"),
         Op::Unary(UnaryOp::Exp2) => {
@@ -69,12 +60,8 @@ pub fn execute(
             let ln2 = builder
                 .constant_r0(2.0f32.ln())
                 .map_err(|e| HoduError::InternalError(format!("Failed to create ln2: {:?}", e)))?;
-            let scaled = inputs[0]
-                .mul_(&ln2)
-                .map_err(|e| HoduError::InternalError(format!("XLA mul failed: {:?}", e)))?;
-            scaled
-                .exp()
-                .map_err(|e| HoduError::InternalError(format!("XLA exp2 failed: {:?}", e)))
+            let scaled = inputs[0].mul_(&ln2)?;
+            Ok(scaled.exp()?)
         },
         Op::Unary(UnaryOp::Exp10) => {
             if inputs.len() != 1 {
@@ -83,41 +70,29 @@ pub fn execute(
             let ln10 = builder
                 .constant_r0(10.0f32.ln())
                 .map_err(|e| HoduError::InternalError(format!("Failed to create ln10: {:?}", e)))?;
-            let scaled = inputs[0]
-                .mul_(&ln10)
-                .map_err(|e| HoduError::InternalError(format!("XLA mul failed: {:?}", e)))?;
-            scaled
-                .exp()
-                .map_err(|e| HoduError::InternalError(format!("XLA exp10 failed: {:?}", e)))
+            let scaled = inputs[0].mul_(&ln10)?;
+            Ok(scaled.exp()?)
         },
         Op::Unary(UnaryOp::Ln) => unary_op_check(inputs, |i| i[0].log(), "ln"),
         Op::Unary(UnaryOp::Log2) => {
             if inputs.len() != 1 {
                 return Err(HoduError::InternalError("Log2 requires 1 input".to_string()));
             }
-            let ln_val = inputs[0]
-                .log()
-                .map_err(|e| HoduError::InternalError(format!("XLA log failed: {:?}", e)))?;
+            let ln_val = inputs[0].log()?;
             let ln2 = builder
                 .constant_r0(2.0f32.ln())
                 .map_err(|e| HoduError::InternalError(format!("Failed to create ln2: {:?}", e)))?;
-            ln_val
-                .div_(&ln2)
-                .map_err(|e| HoduError::InternalError(format!("XLA log2 failed: {:?}", e)))
+            Ok(ln_val.div_(&ln2)?)
         },
         Op::Unary(UnaryOp::Log10) => {
             if inputs.len() != 1 {
                 return Err(HoduError::InternalError("Log10 requires 1 input".to_string()));
             }
-            let ln_val = inputs[0]
-                .log()
-                .map_err(|e| HoduError::InternalError(format!("XLA log failed: {:?}", e)))?;
+            let ln_val = inputs[0].log()?;
             let ln10 = builder
                 .constant_r0(10.0f32.ln())
                 .map_err(|e| HoduError::InternalError(format!("Failed to create ln10: {:?}", e)))?;
-            ln_val
-                .div_(&ln10)
-                .map_err(|e| HoduError::InternalError(format!("XLA log10 failed: {:?}", e)))
+            Ok(ln_val.div_(&ln10)?)
         },
         Op::Unary(UnaryOp::Gelu) => {
             if inputs.len() != 1 {
@@ -159,8 +134,7 @@ pub fn execute(
             let x_mul = inputs[0]
                 .mul_(&one_plus)
                 .map_err(|e| HoduError::InternalError(format!("Failed: {:?}", e)))?;
-            half.mul_(&x_mul)
-                .map_err(|e| HoduError::InternalError(format!("XLA gelu failed: {:?}", e)))
+            Ok(half.mul_(&x_mul)?)
         },
         Op::Unary(UnaryOp::Softplus) => {
             if inputs.len() != 1 {
@@ -170,27 +144,17 @@ pub fn execute(
             let one = builder
                 .constant_r0(1.0f32)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create one: {:?}", e)))?;
-            let exp_x = inputs[0]
-                .exp()
-                .map_err(|e| HoduError::InternalError(format!("XLA exp failed: {:?}", e)))?;
-            let one_plus_exp = one
-                .add_(&exp_x)
-                .map_err(|e| HoduError::InternalError(format!("XLA add failed: {:?}", e)))?;
-            one_plus_exp
-                .log()
-                .map_err(|e| HoduError::InternalError(format!("XLA softplus failed: {:?}", e)))
+            let exp_x = inputs[0].exp()?;
+            let one_plus_exp = one.add_(&exp_x)?;
+            Ok(one_plus_exp.log()?)
         },
         Op::Unary(UnaryOp::Silu) => {
             if inputs.len() != 1 {
                 return Err(HoduError::InternalError("Silu requires 1 input".to_string()));
             }
             // silu(x) = x * sigmoid(x)
-            let sigmoid_x = inputs[0]
-                .logistic()
-                .map_err(|e| HoduError::InternalError(format!("XLA logistic failed: {:?}", e)))?;
-            inputs[0]
-                .mul_(&sigmoid_x)
-                .map_err(|e| HoduError::InternalError(format!("XLA silu failed: {:?}", e)))
+            let sigmoid_x = inputs[0].logistic()?;
+            Ok(inputs[0].mul_(&sigmoid_x)?)
         },
         Op::Unary(UnaryOp::Mish) => {
             if inputs.len() != 1 {
@@ -200,21 +164,11 @@ pub fn execute(
             let one = builder
                 .constant_r0(1.0f32)
                 .map_err(|e| HoduError::InternalError(format!("Failed to create one: {:?}", e)))?;
-            let exp_x = inputs[0]
-                .exp()
-                .map_err(|e| HoduError::InternalError(format!("XLA exp failed: {:?}", e)))?;
-            let one_plus_exp = one
-                .add_(&exp_x)
-                .map_err(|e| HoduError::InternalError(format!("XLA add failed: {:?}", e)))?;
-            let ln_val = one_plus_exp
-                .log()
-                .map_err(|e| HoduError::InternalError(format!("XLA log failed: {:?}", e)))?;
-            let tanh_val = ln_val
-                .tanh()
-                .map_err(|e| HoduError::InternalError(format!("XLA tanh failed: {:?}", e)))?;
-            inputs[0]
-                .mul_(&tanh_val)
-                .map_err(|e| HoduError::InternalError(format!("XLA mish failed: {:?}", e)))
+            let exp_x = inputs[0].exp()?;
+            let one_plus_exp = one.add_(&exp_x)?;
+            let ln_val = one_plus_exp.log()?;
+            let tanh_val = ln_val.tanh()?;
+            Ok(inputs[0].mul_(&tanh_val)?)
         },
 
         // UnaryLogical operations

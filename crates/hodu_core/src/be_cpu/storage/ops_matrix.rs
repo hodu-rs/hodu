@@ -32,7 +32,7 @@ pub fn call_matmul(
     // Validate op
     match op {
         Op::Matrix(MatrixOp::Matmul) => (),
-        _ => return Err(HoduError::InternalError("call_matmul expects Matmul op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_matmulE expects LMatmulE op".to_string())),
     };
     let lhs_shape = lhs_layout.shape();
     let rhs_shape = rhs_layout.shape();
@@ -41,7 +41,7 @@ pub fn call_matmul(
 
     // Validate shapes for matmul
     if lhs_ndim < 2 || rhs_ndim < 2 {
-        return Err(HoduError::InternalError(
+        return Err(HoduError::BackendError(
             "matmul requires at least 2D tensors".to_string(),
         ));
     }
@@ -219,7 +219,7 @@ pub fn call_matmul(
             call_kernel!(lhs, rhs, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_matmul".to_string(),
             ))
         },
@@ -252,7 +252,7 @@ pub fn call_dot(
     // Validate op
     match op {
         Op::Matrix(MatrixOp::Dot) => (),
-        _ => return Err(HoduError::InternalError("call_dot expects Dot op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_dotE expects LDotE op".to_string())),
     };
     let lhs_shape = lhs_layout.shape();
     let rhs_shape = rhs_layout.shape();
@@ -261,7 +261,7 @@ pub fn call_dot(
 
     // Validate that both are 2D matrices
     if lhs_ndim != 2 || rhs_ndim != 2 {
-        return Err(HoduError::InternalError("dot requires exactly 2D tensors".to_string()));
+        return Err(HoduError::BackendError("dot requires exactly 2D tensors".to_string()));
     }
 
     // Extract matrix dimensions
@@ -372,7 +372,7 @@ pub fn call_dot(
             call_kernel!(lhs, rhs, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_dot".to_string(),
             ))
         },

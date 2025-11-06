@@ -19,7 +19,7 @@ pub fn call_cmp_scalar(
     let cmp_op = match op {
         Op::CmpScalar(cmp_op) => cmp_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_cmp_scalar expects cmp scalar op".to_string(),
             ))
         },
@@ -88,7 +88,7 @@ pub fn call_cmp_scalar(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(inp), CpuStorage::BOOL(out), Scalar::I64(s)) => call_kernel!(inp, out, s),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage/scalar types in call_cmp_scalar".to_string(),
             ))
         },
@@ -101,7 +101,7 @@ pub fn call_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> 
     // Extract unary op
     let unary_op = match op {
         Op::Unary(unary_op) => unary_op,
-        _ => return Err(HoduError::InternalError("call_unary expects unary op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_unaryE expects LunaryE op".to_string())),
     };
 
     let shape = input_layout.shape();
@@ -168,7 +168,7 @@ pub fn call_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> 
         #[cfg(feature = "i64")]
         (CpuStorage::I64(inp), CpuStorage::I64(out)) => call_kernel!(inp, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_unary".to_string(),
             ))
         },
@@ -182,7 +182,7 @@ pub fn call_unary_logical(input_storage: &CpuStorage, input_layout: &Layout, op:
     let unary_op = match op {
         Op::UnaryLogical(unary_op) => unary_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_unary_logical expects unary logical op".to_string(),
             ))
         },
@@ -251,7 +251,7 @@ pub fn call_unary_logical(input_storage: &CpuStorage, input_layout: &Layout, op:
         #[cfg(feature = "i64")]
         (CpuStorage::I64(inp), CpuStorage::BOOL(out)) => call_kernel!(inp, out),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage types in call_unary_logical".to_string(),
             ))
         },
@@ -270,7 +270,7 @@ pub fn call_unary_scalar(
     let unary_op = match op {
         Op::UnaryScalar(unary_op) => unary_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_unary_scalar expects unary scalar op".to_string(),
             ))
         },
@@ -340,7 +340,7 @@ pub fn call_unary_scalar(
         #[cfg(feature = "i64")]
         (CpuStorage::I64(inp), CpuStorage::I64(out), Scalar::I64(s)) => call_kernel!(inp, out, s),
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched storage/scalar types in call_unary_scalar".to_string(),
             ))
         },

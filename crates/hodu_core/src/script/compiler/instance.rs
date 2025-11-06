@@ -22,7 +22,7 @@ pub trait CompilerT: Send + Sync {
     /// Validate that the module can be compiled
     fn validate(&self, module: &Module) -> HoduResult<()> {
         if module.functions.is_empty() {
-            return Err(HoduError::InternalError("Module has no functions".to_string()));
+            return Err(HoduError::MissingFunction("module has no functions".to_string()));
         }
         Ok(())
     }
@@ -50,8 +50,8 @@ impl CompilerInstance {
     /// Create a compiler based on Compiler type and device
     pub fn new(compiler: Compiler, device: Device) -> HoduResult<Self> {
         if !compiler.is_supported(device) {
-            return Err(HoduError::InternalError(format!(
-                "Compiler {:?} does not support device {:?}",
+            return Err(HoduError::CompilationError(format!(
+                "compiler {:?} does not support device {:?}",
                 compiler, device
             )));
         }

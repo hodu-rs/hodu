@@ -55,23 +55,21 @@ pub fn execute(
                         })
                         .unwrap_or(1);
 
-                    inputs[0]
-                        .conv_general_dilated(
-                            &inputs[1],
-                            &[stride],
-                            &[(padding, padding)],
-                            &[],
-                            &[dilation],
-                            0,
-                            1,
-                            &[2],
-                            1,
-                            0,
-                            &[2],
-                            1,
-                            1,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA conv1d failed: {:?}", e)))
+                    Ok(inputs[0].conv_general_dilated(
+                        &inputs[1],
+                        &[stride],
+                        &[(padding, padding)],
+                        &[],
+                        &[dilation],
+                        0,
+                        1,
+                        &[2],
+                        1,
+                        0,
+                        &[2],
+                        1,
+                        1,
+                    )?)
                 },
                 ConvOp::Conv2d => {
                     let stride = attributes
@@ -105,23 +103,21 @@ pub fn execute(
                         })
                         .unwrap_or(1);
 
-                    inputs[0]
-                        .conv_general_dilated(
-                            &inputs[1],
-                            &[stride, stride],
-                            &[(padding, padding), (padding, padding)],
-                            &[],
-                            &[dilation, dilation],
-                            0,
-                            1,
-                            &[2, 3],
-                            1,
-                            0,
-                            &[2, 3],
-                            1,
-                            1,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA conv2d failed: {:?}", e)))
+                    Ok(inputs[0].conv_general_dilated(
+                        &inputs[1],
+                        &[stride, stride],
+                        &[(padding, padding), (padding, padding)],
+                        &[],
+                        &[dilation, dilation],
+                        0,
+                        1,
+                        &[2, 3],
+                        1,
+                        0,
+                        &[2, 3],
+                        1,
+                        1,
+                    )?)
                 },
                 ConvOp::Conv3d => {
                     let stride = attributes
@@ -155,23 +151,21 @@ pub fn execute(
                         })
                         .unwrap_or(1);
 
-                    inputs[0]
-                        .conv_general_dilated(
-                            &inputs[1],
-                            &[stride, stride, stride],
-                            &[(padding, padding), (padding, padding), (padding, padding)],
-                            &[],
-                            &[dilation, dilation, dilation],
-                            0,
-                            1,
-                            &[2, 3, 4],
-                            1,
-                            0,
-                            &[2, 3, 4],
-                            1,
-                            1,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA conv3d failed: {:?}", e)))
+                    Ok(inputs[0].conv_general_dilated(
+                        &inputs[1],
+                        &[stride, stride, stride],
+                        &[(padding, padding), (padding, padding), (padding, padding)],
+                        &[],
+                        &[dilation, dilation, dilation],
+                        0,
+                        1,
+                        &[2, 3, 4],
+                        1,
+                        0,
+                        &[2, 3, 4],
+                        1,
+                        1,
+                    )?)
                 },
                 ConvOp::ConvTranspose1d => {
                     let kernel_size = attributes
@@ -241,28 +235,24 @@ pub fn execute(
                     let kernel_op = if use_lhs_dilation {
                         &inputs[1]
                     } else {
-                        &inputs[1]
-                            .rev(&[2])
-                            .map_err(|e| HoduError::InternalError(format!("XLA rev failed: {:?}", e)))?
+                        &inputs[1].rev(&[2])?
                     };
 
-                    inputs[0]
-                        .conv_general_dilated(
-                            kernel_op,
-                            &[1],
-                            &[(xla_padding_low, xla_padding_high)],
-                            &xla_lhs_dilation,
-                            &[dilation],
-                            0,
-                            1,
-                            &[2],
-                            0,
-                            1,
-                            &[2],
-                            1,
-                            1,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA conv_transpose1d failed: {:?}", e)))
+                    Ok(inputs[0].conv_general_dilated(
+                        kernel_op,
+                        &[1],
+                        &[(xla_padding_low, xla_padding_high)],
+                        &xla_lhs_dilation,
+                        &[dilation],
+                        0,
+                        1,
+                        &[2],
+                        0,
+                        1,
+                        &[2],
+                        1,
+                        1,
+                    )?)
                 },
                 ConvOp::ConvTranspose2d => {
                     let kernel_height = attributes
@@ -354,31 +344,27 @@ pub fn execute(
                     let kernel_op = if use_lhs_dilation {
                         &inputs[1]
                     } else {
-                        &inputs[1]
-                            .rev(&[2, 3])
-                            .map_err(|e| HoduError::InternalError(format!("XLA rev failed: {:?}", e)))?
+                        &inputs[1].rev(&[2, 3])?
                     };
 
-                    inputs[0]
-                        .conv_general_dilated(
-                            kernel_op,
-                            &[1, 1],
-                            &[
-                                (xla_padding_h_low, xla_padding_h_high),
-                                (xla_padding_w_low, xla_padding_w_high),
-                            ],
-                            &xla_lhs_dilation,
-                            &[dilation, dilation],
-                            0,
-                            1,
-                            &[2, 3],
-                            0,
-                            1,
-                            &[2, 3],
-                            1,
-                            1,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA conv_transpose2d failed: {:?}", e)))
+                    Ok(inputs[0].conv_general_dilated(
+                        kernel_op,
+                        &[1, 1],
+                        &[
+                            (xla_padding_h_low, xla_padding_h_high),
+                            (xla_padding_w_low, xla_padding_w_high),
+                        ],
+                        &xla_lhs_dilation,
+                        &[dilation, dilation],
+                        0,
+                        1,
+                        &[2, 3],
+                        0,
+                        1,
+                        &[2, 3],
+                        1,
+                        1,
+                    )?)
                 },
                 ConvOp::ConvTranspose3d => {
                     let kernel_depth = attributes
@@ -504,32 +490,28 @@ pub fn execute(
                     let kernel_op = if use_lhs_dilation {
                         &inputs[1]
                     } else {
-                        &inputs[1]
-                            .rev(&[2, 3, 4])
-                            .map_err(|e| HoduError::InternalError(format!("XLA rev failed: {:?}", e)))?
+                        &inputs[1].rev(&[2, 3, 4])?
                     };
 
-                    inputs[0]
-                        .conv_general_dilated(
-                            kernel_op,
-                            &[1, 1, 1],
-                            &[
-                                (xla_padding_d_low, xla_padding_d_high),
-                                (xla_padding_h_low, xla_padding_h_high),
-                                (xla_padding_w_low, xla_padding_w_high),
-                            ],
-                            &xla_lhs_dilation,
-                            &[dilation, dilation, dilation],
-                            0,
-                            1,
-                            &[2, 3, 4],
-                            0,
-                            1,
-                            &[2, 3, 4],
-                            1,
-                            1,
-                        )
-                        .map_err(|e| HoduError::InternalError(format!("XLA conv_transpose3d failed: {:?}", e)))
+                    Ok(inputs[0].conv_general_dilated(
+                        kernel_op,
+                        &[1, 1, 1],
+                        &[
+                            (xla_padding_d_low, xla_padding_d_high),
+                            (xla_padding_h_low, xla_padding_h_high),
+                            (xla_padding_w_low, xla_padding_w_high),
+                        ],
+                        &xla_lhs_dilation,
+                        &[dilation, dilation, dilation],
+                        0,
+                        1,
+                        &[2, 3, 4],
+                        0,
+                        1,
+                        &[2, 3, 4],
+                        1,
+                        1,
+                    )?)
                 },
                 _ => Err(HoduError::InternalError(format!(
                     "Conv operation {:?} not yet implemented",

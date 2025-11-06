@@ -36,7 +36,7 @@ pub fn call_conv(
     // Validate op
     let conv_op = match op {
         Op::Conv(conv_op) => conv_op,
-        _ => return Err(HoduError::InternalError("call_conv expects Conv op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_convE expects LConvE op".to_string())),
     };
 
     // Validate dtypes match
@@ -56,17 +56,13 @@ pub fn call_conv(
         ConvOp::Conv1d | ConvOp::ConvTranspose1d => 1,
         ConvOp::Conv2d | ConvOp::ConvTranspose2d => 2,
         ConvOp::Conv3d | ConvOp::ConvTranspose3d => 3,
-        _ => {
-            return Err(HoduError::InternalError(
-                "call_conv expects forward conv op".to_string(),
-            ))
-        },
+        _ => return Err(HoduError::BackendError("call_conv expects forward conv op".to_string())),
     };
 
     // Validate input shape: [batch, in_channels, spatial...]
     let input_ndim = input_shape.ndim();
     if input_ndim != (2 + spatial_dims) {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "input must have {} dimensions, got {}",
             2 + spatial_dims,
             input_ndim
@@ -76,7 +72,7 @@ pub fn call_conv(
     // Validate weight shape: [out_channels, in_channels, kernel...]
     let weight_ndim = weight_shape.ndim();
     if weight_ndim != (2 + spatial_dims) {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "weight must have {} dimensions, got {}",
             2 + spatial_dims,
             weight_ndim
@@ -89,7 +85,7 @@ pub fn call_conv(
 
     // Validate in_channels match
     if weight_shape.dims()[1] != in_channels {
-        return Err(HoduError::InternalError(format!(
+        return Err(HoduError::BackendError(format!(
             "weight in_channels {} does not match input in_channels {}",
             weight_shape.dims()[1],
             in_channels
@@ -287,7 +283,7 @@ pub fn call_conv(
             call_kernel!(input, weight, out)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched or unsupported storage types in call_conv".to_string(),
             ))
         },
@@ -327,7 +323,7 @@ pub fn call_conv_grad_weight(
     let conv_op = match op {
         Op::Conv(conv_op) => conv_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_conv_grad_weight expects Conv op".to_string(),
             ))
         },
@@ -351,7 +347,7 @@ pub fn call_conv_grad_weight(
         ConvOp::Conv2dGradWeight | ConvOp::ConvTranspose2dGradWeight => 2,
         ConvOp::Conv3dGradWeight | ConvOp::ConvTranspose3dGradWeight => 3,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_conv_grad_weight expects grad weight op".to_string(),
             ))
         },
@@ -522,7 +518,7 @@ pub fn call_conv_grad_weight(
             call_kernel!(input, grad_out, grad_w)
         },
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "mismatched or unsupported storage types in call_conv_grad_weight".to_string(),
             ))
         },

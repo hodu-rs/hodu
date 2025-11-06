@@ -21,11 +21,9 @@ pub fn build_and_execute_xla(
 ) -> HoduResult<ExecutionOutputs> {
     // Create XLA client
     let client = match device {
-        Device::CPU => PjRtClient::cpu()
-            .map_err(|e| HoduError::InternalError(format!("Failed to create XLA CPU client: {:?}", e)))?,
+        Device::CPU => PjRtClient::cpu()?,
         #[cfg(feature = "cuda")]
-        Device::CUDA(_) => PjRtClient::gpu(0.95, true)
-            .map_err(|e| HoduError::InternalError(format!("Failed to create XLA GPU client: {:?}", e)))?,
+        Device::CUDA(_) => PjRtClient::gpu(0.95, true)?,
         #[cfg(any(feature = "cuda", feature = "metal"))]
         _ => {
             return Err(HoduError::InternalError(format!(
@@ -47,13 +45,13 @@ pub fn build_and_execute_xla(
         if let Some(&value_id) = compiled.input_mapping.get(input_name) {
             let _tensor = inputs
                 .get(input_name.as_str())
-                .ok_or_else(|| HoduError::InternalError(format!("Missing input: {}", input_name)))?;
+                .ok_or_else(|| HoduError::MissingInput(input_name.clone()))?;
 
             // Get layout and dtype
             let layout = compiled
                 .value_layouts
                 .get(&value_id)
-                .ok_or_else(|| HoduError::InternalError(format!("Missing layout for input: {}", input_name)))?;
+                .ok_or_else(|| HoduError::ExecutionError(format!("missing layout for input: {}", input_name)))?;
             let dtype = compiled
                 .value_dtypes
                 .get(&value_id)
@@ -64,9 +62,7 @@ pub fn build_and_execute_xla(
             let element_type = dtype_to_element_type(dtype)?;
             let dims: Vec<i64> = layout.shape().dims().iter().map(|&d| d as i64).collect();
 
-            let param = builder
-                .parameter(i as i64, element_type, &dims, &format!("input_{}", i))
-                .map_err(|e| HoduError::InternalError(format!("Failed to create parameter: {:?}", e)))?;
+            let param = builder.parameter(i as i64, element_type, &dims, &format!("input_{}", i))?;
 
             xla_ops.insert(value_id, param);
         }
@@ -119,13 +115,11 @@ pub fn build_and_execute_xla(
         let value_id = compiled
             .output_mapping
             .get(output_name)
-            .ok_or_else(|| HoduError::InternalError(format!("Missing output mapping: {}", output_name)))?;
+            .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
         let output_op = xla_ops
             .get(value_id)
-            .ok_or_else(|| HoduError::InternalError(format!("Missing output op for: {}", output_name)))?;
-        output_op
-            .build()
-            .map_err(|e| HoduError::InternalError(format!("Failed to build XLA computation: {:?}", e)))?
+            .ok_or_else(|| HoduError::ExecutionError(format!("missing output op for: {}", output_name)))?;
+        output_op.build()?
     } else {
         // Multiple outputs - create tuple
         let output_ops: Vec<_> = output_names
@@ -145,15 +139,11 @@ pub fn build_and_execute_xla(
         let tuple_op = builder
             .tuple(&output_ops)
             .map_err(|e| HoduError::InternalError(format!("Failed to create tuple: {:?}", e)))?;
-        tuple_op
-            .build()
-            .map_err(|e| HoduError::InternalError(format!("Failed to build XLA computation: {:?}", e)))?
+        tuple_op.build()?
     };
 
     // Compile and execute
-    let executable = client
-        .compile(&computation)
-        .map_err(|e| HoduError::InternalError(format!("Failed to compile XLA computation: {:?}", e)))?;
+    let executable = client.compile(&computation)?;
 
     // Convert inputs to literals
     let input_literals: Vec<_> = input_names
@@ -166,9 +156,7 @@ pub fn build_and_execute_xla(
         .collect();
 
     // Execute
-    let result_buffers = executable
-        .execute::<hodu_xla::Literal>(&input_literals)
-        .map_err(|e| HoduError::InternalError(format!("Failed to execute XLA computation: {:?}", e)))?;
+    let result_buffers = executable.execute::<hodu_xla::Literal>(&input_literals)?;
 
     // Convert results back to tensors
     let mut outputs = HashMap::new();
@@ -182,7 +170,7 @@ pub fn build_and_execute_xla(
         let value_id = compiled
             .output_mapping
             .get(output_name)
-            .ok_or_else(|| HoduError::InternalError(format!("Missing output mapping: {}", output_name)))?;
+            .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
         let dtype = compiled
             .value_dtypes
             .get(value_id)
@@ -200,7 +188,7 @@ pub fn build_and_execute_xla(
             let value_id = compiled
                 .output_mapping
                 .get(output_name)
-                .ok_or_else(|| HoduError::InternalError(format!("Missing output mapping: {}", output_name)))?;
+                .ok_or_else(|| HoduError::ExecutionError(format!("missing output mapping: {}", output_name)))?;
             let dtype = compiled
                 .value_dtypes
                 .get(value_id)

@@ -32,7 +32,7 @@ impl CompilerT for HoduCompiler {
 
         // Find the main function (forward or first function ending with _main)
         let function = base::find_main_function(module)
-            .ok_or_else(|| HoduError::InternalError("No main function found in module".to_string()))?;
+            .ok_or_else(|| HoduError::MissingFunction("no main function found in module".to_string()))?;
 
         // Build value to tensor mapping
         let mut value_to_tensor = HashMap::new();

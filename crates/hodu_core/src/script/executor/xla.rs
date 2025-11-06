@@ -38,7 +38,7 @@ impl ExecutorT for XlaExecutor {
         // Validate inputs
         for name in compiled.input_mapping.keys() {
             if !inputs.contains_key(name.as_str()) {
-                return Err(HoduError::InternalError(format!("Missing required input: {}", name)));
+                return Err(HoduError::MissingInput(name.clone()));
             }
         }
 

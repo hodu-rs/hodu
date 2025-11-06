@@ -19,7 +19,7 @@ pub fn call_reduce_window(
     let windowing_op = match op {
         Op::Windowing(windowing_op) => windowing_op,
         _ => {
-            return Err(HoduError::InternalError(
+            return Err(HoduError::BackendError(
                 "call_reduce_window expects windowing op".to_string(),
             ))
         },
@@ -34,7 +34,7 @@ pub fn call_reduce_window(
         || strides.len() != spatial_dims as usize
         || padding.len() != spatial_dims as usize
     {
-        return Err(HoduError::InternalError(
+        return Err(HoduError::BackendError(
             "window_shape, strides, and padding must match spatial dimensions".to_string(),
         ));
     }

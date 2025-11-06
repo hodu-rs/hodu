@@ -25,7 +25,7 @@ pub fn execute(device: Device, compiled: &CompiledModule, inputs: ExecutionInput
     for (name, value_id) in &compiled.input_mapping {
         let tensor = inputs
             .get(name.as_str())
-            .ok_or_else(|| HoduError::InternalError(format!("Missing input: {}", name)))?;
+            .ok_or_else(|| HoduError::MissingInput(name.clone()))?;
 
         let storage = tensor.with_storage(|s| Ok(Arc::new(s.clone())))?;
 
@@ -104,12 +104,12 @@ pub fn execute(device: Device, compiled: &CompiledModule, inputs: ExecutionInput
     for (name, value_id) in &compiled.output_mapping {
         let storage = value_storage
             .get(value_id)
-            .ok_or_else(|| HoduError::InternalError(format!("Missing output: {}", name)))?;
+            .ok_or_else(|| HoduError::ExecutionError(format!("missing output: {}", name)))?;
 
         let layout = compiled
             .value_layouts
             .get(value_id)
-            .ok_or_else(|| HoduError::InternalError(format!("Missing layout for output: {}", name)))?
+            .ok_or_else(|| HoduError::ExecutionError(format!("missing layout for output: {}", name)))?
             .clone();
 
         let tensor = from_storage((**storage).clone(), layout, true, false);
@@ -123,7 +123,7 @@ pub fn execute(device: Device, compiled: &CompiledModule, inputs: ExecutionInput
 pub fn validate_inputs(compiled: &CompiledModule, inputs: &ExecutionInputs<'_>) -> HoduResult<()> {
     for name in compiled.input_mapping.keys() {
         if !inputs.contains_key(name.as_str()) {
-            return Err(HoduError::InternalError(format!("Missing required input: {}", name)));
+            return Err(HoduError::MissingInput(name.clone()));
         }
     }
     Ok(())
