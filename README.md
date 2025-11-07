@@ -56,6 +56,30 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 
 ## Get started
 
+### Requirements
+
+**Required**
+- Rust 1.90.0 or later (latest stable version recommended)
+
+**Optional**
+- **OpenBLAS 0.3.30+** (recommended) - For optimized linear algebra operations on CPU
+  - macOS: `brew install openblas`
+  - Linux: `sudo apt install libopenblas-dev`
+  - Windows: Install via vcpkg or MinGW
+
+- **LLVM/Clang** - Required when building with the `xla` feature
+  - macOS: `brew install llvm`
+  - Linux: `sudo apt install llvm clang`
+  - Windows: Install from LLVM releases
+
+- **CUDA Toolkit** - Required when using the `cuda` feature
+  - Download from [NVIDIA CUDA Toolkit](https://developer.nvidia.com/cuda-downloads)
+
+- **Xcode Command Line Tools** - Required when using the `metal` feature on macOS
+  - `xcode-select --install`
+
+### Examples
+
 Here are some examples that demonstrate matrix multiplication using both dynamic execution and static computation graphs.
 
 ### Dynamic Execution
@@ -210,6 +234,49 @@ Additional data types can be enabled with feature flags to reduce compilation ti
 ### Embedded Environments
 
 🧪 **Experimental**: Embedded platforms (ARM Cortex-M, RISC-V, Embedded Linux) are supported via `no_std` feature but are experimental and not extensively tested in production environments.
+
+> **Note**: Development should be done in a standard (std) host environment. Cross-compilation for embedded targets is supported.
+
+#### ARM Cortex-M
+
+**Basic Build**
+
+```bash
+rustup target add thumbv7em-none-eabihf
+cargo build --target thumbv7em-none-eabihf --no-default-features
+```
+
+**With OpenBLAS (Optional)**
+
+For better performance, you can cross-compile OpenBLAS for ARM on your host machine:
+
+1. Build OpenBLAS for ARM on host (e.g., macOS/Linux):
+```bash
+# Install ARM cross-compiler
+# macOS: brew install arm-none-eabi-gcc
+# Linux: sudo apt install gcc-arm-none-eabi
+
+# Clone and build OpenBLAS
+git clone https://github.com/xianyi/OpenBLAS.git
+cd OpenBLAS
+make CC=arm-none-eabi-gcc TARGET=ARMV7 NO_SHARED=1 NO_LAPACK=1
+make install PREFIX=/opt/arm-cortex-m-openblas
+```
+
+2. Build Hodu with the cross-compiled OpenBLAS:
+```bash
+# The OpenBLAS binaries are on host filesystem but built for ARM
+export OPENBLAS_DIR=/opt/arm-cortex-m-openblas
+cargo build --target thumbv7em-none-eabihf --no-default-features
+```
+
+> **Note**: The build script runs on the host machine and accesses OpenBLAS from the host filesystem, even though the resulting binaries are for the target ARM architecture.
+
+**Environment Variables**
+- `OPENBLAS_DIR`, `OPENBLAS_INCLUDE_DIR`, `OPENBLAS_LIB_DIR` - OpenBLAS paths for cross-compilation
+- `HODU_DISABLE_BLAS` - Force disable OpenBLAS
+- `HODU_DISABLE_NATIVE` - Disable native CPU optimizations
+- `HODU_DISABLE_SIMD` - Disable SIMD auto-detection
 
 ## Docs
 
