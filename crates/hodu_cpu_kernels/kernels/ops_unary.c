@@ -1,4 +1,5 @@
 #include "ops_unary.h"
+#include "simd_utils.h"
 #include <math.h>
 
 #ifdef USE_BLAS
@@ -336,15 +337,256 @@
 // F32 OPERATIONS
 // ============================================================================
 // Basic arithmetic operations
-IMPL_UNARY_OP(f32_t, f32, neg, -x)
-IMPL_UNARY_OP(f32_t, f32, abs, fabsf(x))
+// SIMD-optimized neg_f32
+void neg_f32(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f32_t *in = (const f32_t *)input;
+    f32_t *out = (f32_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F32_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+            simd_f32_t v = simd_f32_load(&in[i]);
+            simd_f32_store(&out[i], simd_f32_neg(v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = -in[i];
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = -in[i];
+        }
+#endif
+    } else {
+        // Fallback for non-contiguous or offset cases
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = -in[offset + i];
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = -out[i];
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f32_t x = in ? in[strided_i] : out[i];
+                out[i] = -x;
+            }
+        }
+    }
+}
+
+// SIMD-optimized abs_f32
+void abs_f32(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f32_t *in = (const f32_t *)input;
+    f32_t *out = (f32_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F32_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+            simd_f32_t v = simd_f32_load(&in[i]);
+            simd_f32_store(&out[i], simd_f32_abs(v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = fabsf(in[i]);
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = fabsf(in[i]);
+        }
+#endif
+    } else {
+        // Fallback
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = fabsf(in[offset + i]);
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = fabsf(out[i]);
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f32_t x = in ? in[strided_i] : out[i];
+                out[i] = fabsf(x);
+            }
+        }
+    }
+}
+
 IMPL_UNARY_OP(f32_t, f32, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f))
-IMPL_UNARY_OP(f32_t, f32, square, x *x)
-IMPL_UNARY_OP(f32_t, f32, sqrt, sqrtf(x))
+
+// SIMD-optimized square_f32
+void square_f32(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f32_t *in = (const f32_t *)input;
+    f32_t *out = (f32_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F32_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+            simd_f32_t v = simd_f32_load(&in[i]);
+            simd_f32_store(&out[i], simd_f32_mul(v, v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = in[i] * in[i];
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = in[i] * in[i];
+        }
+#endif
+    } else {
+        // Fallback
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f32_t x = in[offset + i];
+                    out[i] = x * x;
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = out[i] * out[i];
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f32_t x = in ? in[strided_i] : out[i];
+                out[i] = x * x;
+            }
+        }
+    }
+}
+
+// SIMD-optimized sqrt_f32
+void sqrt_f32(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f32_t *in = (const f32_t *)input;
+    f32_t *out = (f32_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F32_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+            simd_f32_t v = simd_f32_load(&in[i]);
+            simd_f32_store(&out[i], simd_f32_sqrt(v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = sqrtf(in[i]);
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = sqrtf(in[i]);
+        }
+#endif
+    } else {
+        // Fallback
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = sqrtf(in[offset + i]);
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    out[i] = sqrtf(out[i]);
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f32_t x = in ? in[strided_i] : out[i];
+                out[i] = sqrtf(x);
+            }
+        }
+    }
+}
+
 IMPL_UNARY_OP(f32_t, f32, recip, 1.0f / x)
 
 // Activation functions
-IMPL_UNARY_OP(f32_t, f32, relu, (x > 0.0f) ? x : 0.0f)
+// SIMD-optimized relu_f32
+void relu_f32(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f32_t *in = (const f32_t *)input;
+    f32_t *out = (f32_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F32_WIDTH > 1
+        simd_f32_t vzero = simd_f32_set1(0.0f);
+        const size_t simd_end = (num_els / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+            simd_f32_t v = simd_f32_load(&in[i]);
+            simd_f32_store(&out[i], simd_f32_max(v, vzero));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            f32_t x = in[i];
+            out[i] = (x > 0.0f) ? x : 0.0f;
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            f32_t x = in[i];
+            out[i] = (x > 0.0f) ? x : 0.0f;
+        }
+#endif
+    } else {
+        // Fallback
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f32_t x = in[offset + i];
+                    out[i] = (x > 0.0f) ? x : 0.0f;
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    f32_t x = out[i];
+                    out[i] = (x > 0.0f) ? x : 0.0f;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f32_t x = in ? in[strided_i] : out[i];
+                out[i] = (x > 0.0f) ? x : 0.0f;
+            }
+        }
+    }
+}
 IMPL_UNARY_OP(f32_t, f32, sigmoid, 1.0f / (1.0f + expf(-x)))
 IMPL_UNARY_OP(f32_t, f32, tanh, tanhf(x))
 IMPL_UNARY_OP(f32_t, f32, gelu, gelu_helper_f32(x))
@@ -441,14 +683,264 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(f32_t, f32, ge_scalar, x >= const_val)
 // F64 OPERATIONS
 // ============================================================================
 
-IMPL_UNARY_OP(f64_t, f64, neg, -x)
-IMPL_UNARY_OP(f64_t, f64, abs, fabs(x))
+// neg_f64: SIMD-optimized version
+void neg_f64(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f64_t *in = (const f64_t *)input;
+    f64_t *out = (f64_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F64_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+            simd_f64_t v = simd_f64_load(&in[i]);
+            simd_f64_store(&out[i], simd_f64_neg(v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = -in[i];
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = -in[i];
+        }
+#endif
+    } else {
+        // Fallback for non-contiguous or offset cases
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = in[offset + i];
+                    out[i] = -x;
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = out[i];
+                    out[i] = -x;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f64_t x = in ? in[strided_i] : out[i];
+                out[i] = -x;
+            }
+        }
+    }
+}
+
+// abs_f64: SIMD-optimized version
+void abs_f64(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f64_t *in = (const f64_t *)input;
+    f64_t *out = (f64_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F64_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+            simd_f64_t v = simd_f64_load(&in[i]);
+            simd_f64_store(&out[i], simd_f64_abs(v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = fabs(in[i]);
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = fabs(in[i]);
+        }
+#endif
+    } else {
+        // Fallback for non-contiguous or offset cases
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = in[offset + i];
+                    out[i] = fabs(x);
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = out[i];
+                    out[i] = fabs(x);
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f64_t x = in ? in[strided_i] : out[i];
+                out[i] = fabs(x);
+            }
+        }
+    }
+}
+
 IMPL_UNARY_OP(f64_t, f64, sign, (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0))
-IMPL_UNARY_OP(f64_t, f64, square, x *x)
-IMPL_UNARY_OP(f64_t, f64, sqrt, sqrt(x))
+
+// square_f64: SIMD-optimized version
+void square_f64(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f64_t *in = (const f64_t *)input;
+    f64_t *out = (f64_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F64_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+            simd_f64_t v = simd_f64_load(&in[i]);
+            simd_f64_store(&out[i], simd_f64_mul(v, v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            f64_t x = in[i];
+            out[i] = x * x;
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            f64_t x = in[i];
+            out[i] = x * x;
+        }
+#endif
+    } else {
+        // Fallback for non-contiguous or offset cases
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = in[offset + i];
+                    out[i] = x * x;
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = out[i];
+                    out[i] = x * x;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f64_t x = in ? in[strided_i] : out[i];
+                out[i] = x * x;
+            }
+        }
+    }
+}
+
+// sqrt_f64: SIMD-optimized version
+void sqrt_f64(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f64_t *in = (const f64_t *)input;
+    f64_t *out = (f64_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F64_WIDTH > 1
+        const size_t simd_end = (num_els / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+            simd_f64_t v = simd_f64_load(&in[i]);
+            simd_f64_store(&out[i], simd_f64_sqrt(v));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            out[i] = sqrt(in[i]);
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            out[i] = sqrt(in[i]);
+        }
+#endif
+    } else {
+        // Fallback for non-contiguous or offset cases
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = in[offset + i];
+                    out[i] = sqrt(x);
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = out[i];
+                    out[i] = sqrt(x);
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f64_t x = in ? in[strided_i] : out[i];
+                out[i] = sqrt(x);
+            }
+        }
+    }
+}
+
 IMPL_UNARY_OP(f64_t, f64, recip, 1.0 / x)
 
-IMPL_UNARY_OP(f64_t, f64, relu, (x > 0.0) ? x : 0.0)
+// relu_f64: SIMD-optimized version
+void relu_f64(const void *input, void *output, const size_t *metadata) {
+    const size_t num_els = metadata[0];
+    const size_t num_dims = metadata[1];
+    const f64_t *in = (const f64_t *)input;
+    f64_t *out = (f64_t *)output;
+    const size_t *dims = metadata + 2;
+    const size_t *strides = metadata ? metadata + 2 + num_dims : NULL;
+    const size_t offset = (metadata && num_dims > 0) ? metadata[2 + 2 * num_dims] : 0;
+    bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
+
+    if (contiguous && in && offset == 0) {
+#if SIMD_F64_WIDTH > 1
+        simd_f64_t vzero = simd_f64_set1(0.0);
+        const size_t simd_end = (num_els / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+        for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+            simd_f64_t v = simd_f64_load(&in[i]);
+            simd_f64_store(&out[i], simd_f64_max(v, vzero));
+        }
+        for (size_t i = simd_end; i < num_els; i++) {
+            f64_t x = in[i];
+            out[i] = (x > 0.0) ? x : 0.0;
+        }
+#else
+        for (size_t i = 0; i < num_els; i++) {
+            f64_t x = in[i];
+            out[i] = (x > 0.0) ? x : 0.0;
+        }
+#endif
+    } else {
+        // Fallback for non-contiguous or offset cases
+        if (contiguous) {
+            if (in) {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = in[offset + i];
+                    out[i] = (x > 0.0) ? x : 0.0;
+                }
+            } else {
+                for (size_t i = 0; i < num_els; i++) {
+                    f64_t x = out[i];
+                    out[i] = (x > 0.0) ? x : 0.0;
+                }
+            }
+        } else {
+            for (size_t i = 0; i < num_els; i++) {
+                size_t strided_i = offset + get_strided_index(i, num_dims, dims, strides);
+                f64_t x = in ? in[strided_i] : out[i];
+                out[i] = (x > 0.0) ? x : 0.0;
+            }
+        }
+    }
+}
 IMPL_UNARY_OP(f64_t, f64, sigmoid, 1.0 / (1.0 + exp(-x)))
 IMPL_UNARY_OP(f64_t, f64, tanh, tanh(x))
 IMPL_UNARY_OP(f64_t, f64, gelu, gelu_helper_f64(x))

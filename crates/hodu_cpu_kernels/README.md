@@ -87,10 +87,47 @@ High-performance CPU kernels for tensor operations, supporting a wide range of d
 - **f32**: Float32 (standard single precision)
 - **f64**: Float64 (standard double precision)
 
+### Supported SIMD Architectures
+- **x86_64 AVX2**: 256-bit SIMD (8 x f32 or 4 x f64 per operation)
+- **x86_64 SSE2**: 128-bit SIMD (4 x f32 or 2 x f64 per operation)
+- **ARM NEON**: 128-bit SIMD (4 x f32 or 2 x f64 per operation)
+- **Fallback**: Scalar implementation for unsupported platforms
+
 ## SIMD Supported Operations
 
-- **binary**: add, sub, mul, div
-- **matrix**: matmul, dot
+### Unary Operations
+- **neg**: Negation (f32, f64)
+- **abs**: Absolute value (f32, f64)
+- **square**: Squaring (f32, f64)
+- **sqrt**: Square root (f32, f64)
+- **relu**: ReLU activation (f32, f64)
+
+### Binary Operations
+- **add, sub, mul, div**: Arithmetic operations (f32, f64)
+
+### Reduce Operations
+- **sum**: Sum reduction (f32, f64)
+- **max**: Maximum reduction (f32, f64)
+- **min**: Minimum reduction (f32, f64)
+- **norm**: L2 norm (f32, f64)
+- **var**: Variance (f32, f64)
+
+### Matrix Operations
+- **matmul**: Matrix multiplication (f32, f64)
+- **dot**: Dot product (f32, f64)
+
+## OpenBLAS Supported Operations
+
+### Matrix Operations
+- **matmul**: Matrix multiplication with GEMM (f32, f64)
+- **dot**: Dot product (f32, f64)
+
+### Convolution Operations
+- **conv2d**: 2D convolution using im2col + GEMM (f32, f64)
+- **conv2d_grad_weight**: 2D convolution gradient for weights (f32, f64)
+
+### Unary Operations
+- **mul_scalar**: Scalar multiplication using BLAS SCAL (f32, f64)
 
 ## Architecture
 
@@ -101,6 +138,13 @@ High-performance CPU kernels for tensor operations, supporting a wide range of d
 - Supports both contiguous and strided tensor layouts
 
 ### Performance Features
+- **SIMD Vectorization**: Automatic SIMD acceleration for f32/f64 operations on contiguous tensors
+  - Compile-time CPU architecture detection (AVX2/SSE2/ARM NEON)
+  - Vectorized loops with scalar remainder handling
+  - Fallback to scalar code for non-contiguous or strided layouts
+- **OpenBLAS Integration**: High-performance BLAS routines for matrix multiplication and convolution
+  - im2col + GEMM approach for convolution operations
+  - Automatic detection and fallback when OpenBLAS is not available
 - Optimized for contiguous memory layouts
 - Efficient strided access support
 - Type conversion handled transparently
@@ -115,6 +159,7 @@ kernels/
 ├── math_utils.h         # Math helper functions
 ├── utils.h              # Tensor utilities (striding, contiguity checks)
 ├── atomic.h             # Atomic operations for thread safety
+├── simd_utils.h         # SIMD abstractions for AVX2/SSE2/NEON
 ├── ops_unary.h/c        # Unary operations
 ├── ops_binary.h/c       # Binary operations
 ├── ops_reduce.h/c       # Reduction operations

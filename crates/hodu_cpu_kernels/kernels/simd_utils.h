@@ -94,6 +94,42 @@ static inline simd_f32_t simd_f32_max(simd_f32_t a, simd_f32_t b) { return _mm25
 
 static inline simd_f32_t simd_f32_min(simd_f32_t a, simd_f32_t b) { return _mm256_min_ps(a, b); }
 
+// Horizontal max for reduction
+static inline float simd_f32_reduce_max(simd_f32_t v) {
+    __m128 low = _mm256_castps256_ps128(v);
+    __m128 high = _mm256_extractf128_ps(v, 1);
+    __m128 max128 = _mm_max_ps(low, high);
+    __m128 shuf = _mm_shuffle_ps(max128, max128, _MM_SHUFFLE(2, 3, 0, 1));
+    __m128 maxs = _mm_max_ps(max128, shuf);
+    shuf = _mm_movehl_ps(shuf, maxs);
+    maxs = _mm_max_ss(maxs, shuf);
+    return _mm_cvtss_f32(maxs);
+}
+
+// Horizontal min for reduction
+static inline float simd_f32_reduce_min(simd_f32_t v) {
+    __m128 low = _mm256_castps256_ps128(v);
+    __m128 high = _mm256_extractf128_ps(v, 1);
+    __m128 min128 = _mm_min_ps(low, high);
+    __m128 shuf = _mm_shuffle_ps(min128, min128, _MM_SHUFFLE(2, 3, 0, 1));
+    __m128 mins = _mm_min_ps(min128, shuf);
+    shuf = _mm_movehl_ps(shuf, mins);
+    mins = _mm_min_ss(mins, shuf);
+    return _mm_cvtss_f32(mins);
+}
+
+// Additional unary operations
+static inline simd_f32_t simd_f32_abs(simd_f32_t v) {
+    __m256 sign_mask = _mm256_set1_ps(-0.0f);
+    return _mm256_andnot_ps(sign_mask, v);
+}
+
+static inline simd_f32_t simd_f32_neg(simd_f32_t v) {
+    return _mm256_sub_ps(_mm256_setzero_ps(), v);
+}
+
+static inline simd_f32_t simd_f32_sqrt(simd_f32_t v) { return _mm256_sqrt_ps(v); }
+
 #elif defined(SIMD_SSE2)
 #define SIMD_F32_WIDTH 4
 typedef __m128 simd_f32_t;
@@ -128,6 +164,34 @@ static inline float simd_f32_reduce_add(simd_f32_t v) {
 static inline simd_f32_t simd_f32_max(simd_f32_t a, simd_f32_t b) { return _mm_max_ps(a, b); }
 
 static inline simd_f32_t simd_f32_min(simd_f32_t a, simd_f32_t b) { return _mm_min_ps(a, b); }
+
+// Horizontal max for reduction
+static inline float simd_f32_reduce_max(simd_f32_t v) {
+    __m128 shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1));
+    __m128 maxs = _mm_max_ps(v, shuf);
+    shuf = _mm_movehl_ps(shuf, maxs);
+    maxs = _mm_max_ss(maxs, shuf);
+    return _mm_cvtss_f32(maxs);
+}
+
+// Horizontal min for reduction
+static inline float simd_f32_reduce_min(simd_f32_t v) {
+    __m128 shuf = _mm_shuffle_ps(v, v, _MM_SHUFFLE(2, 3, 0, 1));
+    __m128 mins = _mm_min_ps(v, shuf);
+    shuf = _mm_movehl_ps(shuf, mins);
+    mins = _mm_min_ss(mins, shuf);
+    return _mm_cvtss_f32(mins);
+}
+
+// Additional unary operations
+static inline simd_f32_t simd_f32_abs(simd_f32_t v) {
+    __m128 sign_mask = _mm_set1_ps(-0.0f);
+    return _mm_andnot_ps(sign_mask, v);
+}
+
+static inline simd_f32_t simd_f32_neg(simd_f32_t v) { return _mm_sub_ps(_mm_setzero_ps(), v); }
+
+static inline simd_f32_t simd_f32_sqrt(simd_f32_t v) { return _mm_sqrt_ps(v); }
 
 #elif defined(SIMD_ARM_NEON)
 #define SIMD_F32_WIDTH 4
@@ -164,6 +228,19 @@ static inline float simd_f32_reduce_add(simd_f32_t v) {
 static inline simd_f32_t simd_f32_max(simd_f32_t a, simd_f32_t b) { return vmaxq_f32(a, b); }
 
 static inline simd_f32_t simd_f32_min(simd_f32_t a, simd_f32_t b) { return vminq_f32(a, b); }
+
+// Horizontal max for reduction
+static inline float simd_f32_reduce_max(simd_f32_t v) { return vmaxvq_f32(v); }
+
+// Horizontal min for reduction
+static inline float simd_f32_reduce_min(simd_f32_t v) { return vminvq_f32(v); }
+
+// Additional unary operations
+static inline simd_f32_t simd_f32_abs(simd_f32_t v) { return vabsq_f32(v); }
+
+static inline simd_f32_t simd_f32_neg(simd_f32_t v) { return vnegq_f32(v); }
+
+static inline simd_f32_t simd_f32_sqrt(simd_f32_t v) { return vsqrtq_f32(v); }
 
 #else
 #define SIMD_F32_WIDTH 1
@@ -216,6 +293,38 @@ static inline simd_f64_t simd_f64_max(simd_f64_t a, simd_f64_t b) { return _mm25
 
 static inline simd_f64_t simd_f64_min(simd_f64_t a, simd_f64_t b) { return _mm256_min_pd(a, b); }
 
+// Horizontal max for reduction
+static inline double simd_f64_reduce_max(simd_f64_t v) {
+    __m128d low = _mm256_castpd256_pd128(v);
+    __m128d high = _mm256_extractf128_pd(v, 1);
+    __m128d max128 = _mm_max_pd(low, high);
+    __m128d shuf = _mm_shuffle_pd(max128, max128, 1);
+    max128 = _mm_max_sd(max128, shuf);
+    return _mm_cvtsd_f64(max128);
+}
+
+// Horizontal min for reduction
+static inline double simd_f64_reduce_min(simd_f64_t v) {
+    __m128d low = _mm256_castpd256_pd128(v);
+    __m128d high = _mm256_extractf128_pd(v, 1);
+    __m128d min128 = _mm_min_pd(low, high);
+    __m128d shuf = _mm_shuffle_pd(min128, min128, 1);
+    min128 = _mm_min_sd(min128, shuf);
+    return _mm_cvtsd_f64(min128);
+}
+
+// Additional unary operations for f64
+static inline simd_f64_t simd_f64_abs(simd_f64_t v) {
+    __m256d sign_mask = _mm256_set1_pd(-0.0);
+    return _mm256_andnot_pd(sign_mask, v);
+}
+
+static inline simd_f64_t simd_f64_neg(simd_f64_t v) {
+    return _mm256_sub_pd(_mm256_setzero_pd(), v);
+}
+
+static inline simd_f64_t simd_f64_sqrt(simd_f64_t v) { return _mm256_sqrt_pd(v); }
+
 #elif defined(SIMD_SSE2)
 #define SIMD_F64_WIDTH 2
 typedef __m128d simd_f64_t;
@@ -249,6 +358,30 @@ static inline simd_f64_t simd_f64_max(simd_f64_t a, simd_f64_t b) { return _mm_m
 
 static inline simd_f64_t simd_f64_min(simd_f64_t a, simd_f64_t b) { return _mm_min_pd(a, b); }
 
+// Horizontal max for reduction
+static inline double simd_f64_reduce_max(simd_f64_t v) {
+    __m128d shuf = _mm_shuffle_pd(v, v, 1);
+    __m128d max = _mm_max_sd(v, shuf);
+    return _mm_cvtsd_f64(max);
+}
+
+// Horizontal min for reduction
+static inline double simd_f64_reduce_min(simd_f64_t v) {
+    __m128d shuf = _mm_shuffle_pd(v, v, 1);
+    __m128d min = _mm_min_sd(v, shuf);
+    return _mm_cvtsd_f64(min);
+}
+
+// Additional unary operations for f64
+static inline simd_f64_t simd_f64_abs(simd_f64_t v) {
+    __m128d sign_mask = _mm_set1_pd(-0.0);
+    return _mm_andnot_pd(sign_mask, v);
+}
+
+static inline simd_f64_t simd_f64_neg(simd_f64_t v) { return _mm_sub_pd(_mm_setzero_pd(), v); }
+
+static inline simd_f64_t simd_f64_sqrt(simd_f64_t v) { return _mm_sqrt_pd(v); }
+
 #elif defined(SIMD_ARM_NEON)
 #define SIMD_F64_WIDTH 2
 typedef float64x2_t simd_f64_t;
@@ -277,6 +410,17 @@ static inline double simd_f64_reduce_add(simd_f64_t v) { return vaddvq_f64(v); }
 static inline simd_f64_t simd_f64_max(simd_f64_t a, simd_f64_t b) { return vmaxq_f64(a, b); }
 
 static inline simd_f64_t simd_f64_min(simd_f64_t a, simd_f64_t b) { return vminq_f64(a, b); }
+
+// Horizontal max for reduction
+static inline double simd_f64_reduce_max(simd_f64_t v) { return vmaxvq_f64(v); }
+
+// Horizontal min for reduction
+static inline double simd_f64_reduce_min(simd_f64_t v) { return vminvq_f64(v); }
+
+// Additional unary operations for f64
+static inline simd_f64_t simd_f64_abs(simd_f64_t v) { return vabsq_f64(v); }
+static inline simd_f64_t simd_f64_neg(simd_f64_t v) { return vnegq_f64(v); }
+static inline simd_f64_t simd_f64_sqrt(simd_f64_t v) { return vsqrtq_f64(v); }
 
 #else
 #define SIMD_F64_WIDTH 1

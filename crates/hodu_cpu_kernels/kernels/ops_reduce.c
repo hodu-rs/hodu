@@ -1,4 +1,5 @@
 #include "ops_reduce.h"
+#include "simd_utils.h"
 #include "types.h"
 #include <float.h>
 #include <math.h>
@@ -126,8 +127,220 @@ REDUCE_OP(f8e4m3_t, f8e4m3_t, sum_f8e4m3, 0, acc += val)
 REDUCE_OP(f8e5m2_t, f8e5m2_t, sum_f8e5m2, 0, acc += val)
 REDUCE_OP(bf16_t, bf16_t, sum_bf16, 0, acc += val)
 REDUCE_OP(f16_t, f16_t, sum_f16, 0, acc += val)
-REDUCE_OP(f32_t, f32_t, sum_f32, 0.0f, acc += val)
-REDUCE_OP(f64_t, f64_t, sum_f64, 0.0, acc += val)
+
+// SIMD-optimized sum_f32
+void sum_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f32_t *input = (const f32_t *)input_ptr;
+    f32_t *output = (f32_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f32_t acc = 0.0f;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F32_WIDTH > 1
+        // SIMD path: Check if we're reducing contiguous data (last dimension with stride 1)
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F32_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f32_t vacc = simd_f32_set1(0.0f);
+            const size_t simd_end = (reduce_size / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+                simd_f32_t v = simd_f32_load(&input[flat_base + i]);
+                vacc = simd_f32_add(vacc, v);
+            }
+            acc = simd_f32_reduce_add(vacc);
+
+            // Handle remainder
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                acc += input[flat_base + i];
+            }
+        } else
+#endif
+        {
+            // Fallback path
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f32_t val = input[flat_index];
+                acc += val;
+            }
+        }
+
+        output[output_idx] = acc;
+    }
+}
+
+// SIMD-optimized sum_f64
+void sum_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f64_t *input = (const f64_t *)input_ptr;
+    f64_t *output = (f64_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f64_t acc = 0.0;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F64_WIDTH > 1
+        // SIMD path: Check if we're reducing contiguous data (last dimension with stride 1)
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F64_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f64_t vacc = simd_f64_set1(0.0);
+            const size_t simd_end = (reduce_size / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+                simd_f64_t v = simd_f64_load(&input[flat_base + i]);
+                vacc = simd_f64_add(vacc, v);
+            }
+            acc = simd_f64_reduce_add(vacc);
+
+            // Handle remainder
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                acc += input[flat_base + i];
+            }
+        } else
+#endif
+        {
+            // Fallback path
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f64_t val = input[flat_index];
+                acc += val;
+            }
+        }
+
+        output[output_idx] = acc;
+    }
+}
 REDUCE_OP(int8_t, int8_t, sum_i8, 0, acc += val)
 REDUCE_OP(int16_t, int16_t, sum_i16, 0, acc += val)
 REDUCE_OP(int32_t, int32_t, sum_i32, 0, acc += val)
@@ -142,8 +355,216 @@ REDUCE_OP(f8e4m3_t, f8e4m3_t, max_f8e4m3, -INFINITY, acc = MAX(acc, val))
 REDUCE_OP(f8e5m2_t, f8e5m2_t, max_f8e5m2, -INFINITY, acc = MAX(acc, val))
 REDUCE_OP(bf16_t, bf16_t, max_bf16, -INFINITY, acc = MAX(acc, val))
 REDUCE_OP(f16_t, f16_t, max_f16, -INFINITY, acc = MAX(acc, val))
-REDUCE_OP(f32_t, f32_t, max_f32, -INFINITY, acc = MAX(acc, val))
-REDUCE_OP(f64_t, f64_t, max_f64, -INFINITY, acc = MAX(acc, val))
+
+// SIMD-optimized max_f32
+void max_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f32_t *input = (const f32_t *)input_ptr;
+    f32_t *output = (f32_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f32_t acc = -INFINITY;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F32_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F32_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f32_t vmax = simd_f32_set1(-INFINITY);
+            const size_t simd_end = (reduce_size / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+                simd_f32_t v = simd_f32_load(&input[flat_base + i]);
+                vmax = simd_f32_max(vmax, v);
+            }
+            acc = simd_f32_reduce_max(vmax);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f32_t val = input[flat_base + i];
+                acc = MAX(acc, val);
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f32_t val = input[flat_index];
+                acc = MAX(acc, val);
+            }
+        }
+
+        output[output_idx] = acc;
+    }
+}
+
+// SIMD-optimized max_f64
+void max_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f64_t *input = (const f64_t *)input_ptr;
+    f64_t *output = (f64_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f64_t acc = -INFINITY;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F64_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F64_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f64_t vmax = simd_f64_set1(-INFINITY);
+            const size_t simd_end = (reduce_size / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+                simd_f64_t v = simd_f64_load(&input[flat_base + i]);
+                vmax = simd_f64_max(vmax, v);
+            }
+            acc = simd_f64_reduce_max(vmax);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f64_t val = input[flat_base + i];
+                acc = MAX(acc, val);
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f64_t val = input[flat_index];
+                acc = MAX(acc, val);
+            }
+        }
+
+        output[output_idx] = acc;
+    }
+}
 REDUCE_OP(int8_t, int8_t, max_i8, INT8_MIN, acc = MAX(acc, val))
 REDUCE_OP(int16_t, int16_t, max_i16, INT16_MIN, acc = MAX(acc, val))
 REDUCE_OP(int32_t, int32_t, max_i32, INT32_MIN, acc = MAX(acc, val))
@@ -158,8 +579,216 @@ REDUCE_OP(f8e4m3_t, f8e4m3_t, min_f8e4m3, INFINITY, acc = MIN(acc, val))
 REDUCE_OP(f8e5m2_t, f8e5m2_t, min_f8e5m2, INFINITY, acc = MIN(acc, val))
 REDUCE_OP(bf16_t, bf16_t, min_bf16, INFINITY, acc = MIN(acc, val))
 REDUCE_OP(f16_t, f16_t, min_f16, INFINITY, acc = MIN(acc, val))
-REDUCE_OP(f32_t, f32_t, min_f32, INFINITY, acc = MIN(acc, val))
-REDUCE_OP(f64_t, f64_t, min_f64, INFINITY, acc = MIN(acc, val))
+
+// SIMD-optimized min_f32
+void min_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f32_t *input = (const f32_t *)input_ptr;
+    f32_t *output = (f32_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f32_t acc = INFINITY;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F32_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F32_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f32_t vmin = simd_f32_set1(INFINITY);
+            const size_t simd_end = (reduce_size / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+                simd_f32_t v = simd_f32_load(&input[flat_base + i]);
+                vmin = simd_f32_min(vmin, v);
+            }
+            acc = simd_f32_reduce_min(vmin);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f32_t val = input[flat_base + i];
+                acc = MIN(acc, val);
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f32_t val = input[flat_index];
+                acc = MIN(acc, val);
+            }
+        }
+
+        output[output_idx] = acc;
+    }
+}
+
+// SIMD-optimized min_f64
+void min_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f64_t *input = (const f64_t *)input_ptr;
+    f64_t *output = (f64_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f64_t acc = INFINITY;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F64_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F64_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f64_t vmin = simd_f64_set1(INFINITY);
+            const size_t simd_end = (reduce_size / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+                simd_f64_t v = simd_f64_load(&input[flat_base + i]);
+                vmin = simd_f64_min(vmin, v);
+            }
+            acc = simd_f64_reduce_min(vmin);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f64_t val = input[flat_base + i];
+                acc = MIN(acc, val);
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f64_t val = input[flat_index];
+                acc = MIN(acc, val);
+            }
+        }
+
+        output[output_idx] = acc;
+    }
+}
 REDUCE_OP(int8_t, int8_t, min_i8, INT8_MAX, acc = MIN(acc, val))
 REDUCE_OP(int16_t, int16_t, min_i16, INT16_MAX, acc = MIN(acc, val))
 REDUCE_OP(int32_t, int32_t, min_i32, INT32_MAX, acc = MIN(acc, val))
@@ -387,8 +1016,230 @@ REDUCE_VAR_OP(f8e4m3_t, f8e4m3)
 REDUCE_VAR_OP(f8e5m2_t, f8e5m2)
 REDUCE_VAR_OP(bf16_t, bf16)
 REDUCE_VAR_OP(f16_t, f16)
-REDUCE_VAR_OP(f32_t, f32)
-REDUCE_VAR_OP(f64_t, f64)
+
+// SIMD-optimized var_f32 (variance: E[X^2] - E[X]^2)
+void var_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f32_t *input = (const f32_t *)input_ptr;
+    f32_t *output = (f32_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f32_t sum = 0.0f;
+        f32_t sum_squares = 0.0f;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F32_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F32_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f32_t vsum = simd_f32_set1(0.0f);
+            simd_f32_t vsum_sq = simd_f32_set1(0.0f);
+            const size_t simd_end = (reduce_size / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+                simd_f32_t v = simd_f32_load(&input[flat_base + i]);
+                vsum = simd_f32_add(vsum, v);
+                vsum_sq = simd_f32_fmadd(v, v, vsum_sq); // v*v + vsum_sq
+            }
+            sum = simd_f32_reduce_add(vsum);
+            sum_squares = simd_f32_reduce_add(vsum_sq);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f32_t val = input[flat_base + i];
+                sum += val;
+                sum_squares += val * val;
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f32_t val = input[flat_index];
+                sum += val;
+                sum_squares += val * val;
+            }
+        }
+
+        f32_t mean = sum / (f32_t)reduce_size;
+        output[output_idx] = (sum_squares / (f32_t)reduce_size) - (mean * mean);
+    }
+}
+
+// SIMD-optimized var_f64 (variance: E[X^2] - E[X]^2)
+void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f64_t *input = (const f64_t *)input_ptr;
+    f64_t *output = (f64_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f64_t sum = 0.0;
+        f64_t sum_squares = 0.0;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F64_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F64_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f64_t vsum = simd_f64_set1(0.0);
+            simd_f64_t vsum_sq = simd_f64_set1(0.0);
+            const size_t simd_end = (reduce_size / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+                simd_f64_t v = simd_f64_load(&input[flat_base + i]);
+                vsum = simd_f64_add(vsum, v);
+                vsum_sq = simd_f64_fmadd(v, v, vsum_sq); // v*v + vsum_sq
+            }
+            sum = simd_f64_reduce_add(vsum);
+            sum_squares = simd_f64_reduce_add(vsum_sq);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f64_t val = input[flat_base + i];
+                sum += val;
+                sum_squares += val * val;
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f64_t val = input[flat_index];
+                sum += val;
+                sum_squares += val * val;
+            }
+        }
+
+        f64_t mean = sum / (f64_t)reduce_size;
+        output[output_idx] = (sum_squares / (f64_t)reduce_size) - (mean * mean);
+    }
+}
 
 // ============================================================================
 // MEAN REDUCTION
@@ -523,8 +1374,216 @@ REDUCE_NORM_OP(f8e4m3_t, f8e4m3)
 REDUCE_NORM_OP(f8e5m2_t, f8e5m2)
 REDUCE_NORM_OP(bf16_t, bf16)
 REDUCE_NORM_OP(f16_t, f16)
-REDUCE_NORM_OP(f32_t, f32)
-REDUCE_NORM_OP(f64_t, f64)
+
+// SIMD-optimized norm_f32 (L2 norm: sqrt(sum(x^2)))
+void norm_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f32_t *input = (const f32_t *)input_ptr;
+    f32_t *output = (f32_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f32_t sum_squares = 0.0f;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F32_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F32_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f32_t vsum_sq = simd_f32_set1(0.0f);
+            const size_t simd_end = (reduce_size / SIMD_F32_WIDTH) * SIMD_F32_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F32_WIDTH) {
+                simd_f32_t v = simd_f32_load(&input[flat_base + i]);
+                vsum_sq = simd_f32_fmadd(v, v, vsum_sq); // v*v + vsum_sq
+            }
+            sum_squares = simd_f32_reduce_add(vsum_sq);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f32_t val = input[flat_base + i];
+                sum_squares += val * val;
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f32_t val = input[flat_index];
+                sum_squares += val * val;
+            }
+        }
+
+        output[output_idx] = sqrtf(sum_squares);
+    }
+}
+
+// SIMD-optimized norm_f64 (L2 norm: sqrt(sum(x^2)))
+void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+    const f64_t *input = (const f64_t *)input_ptr;
+    f64_t *output = (f64_t *)output_ptr;
+
+    const size_t num_dims = metadata[0];
+    const size_t *dims = metadata + 1;
+    const size_t *strides = metadata + 1 + num_dims;
+    const size_t offset = metadata[1 + 2 * num_dims];
+    const size_t output_shape_len = metadata[2 + 2 * num_dims];
+    const size_t *output_shape = metadata + 3 + 2 * num_dims;
+    const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];
+    const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;
+    const size_t keep_dim_val = metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];
+    const bool keep_dim = (keep_dim_val != 0);
+    const size_t reduce_size = metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];
+
+    size_t num_els = 1;
+    for (size_t i = 0; i < output_shape_len; i++) {
+        num_els *= output_shape[i];
+    }
+
+    for (size_t output_idx = 0; output_idx < num_els; output_idx++) {
+        f64_t sum_squares = 0.0;
+
+        size_t output_indices[16];
+        size_t temp = output_idx;
+        for (int d = (int)output_shape_len - 1; d >= 0; d--) {
+            output_indices[d] = temp % output_shape[d];
+            temp /= output_shape[d];
+        }
+
+        size_t input_indices[16];
+        if (keep_dim) {
+            for (size_t i = 0; i < num_dims; i++) {
+                input_indices[i] = output_indices[i];
+            }
+        } else {
+            size_t out_idx = 0;
+            for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {
+                bool is_reduced = false;
+                for (size_t r = 0; r < num_reduce_dims; r++) {
+                    if (reduce_dims[r] == in_dim) {
+                        is_reduced = true;
+                        break;
+                    }
+                }
+                if (is_reduced) {
+                    input_indices[in_dim] = 0;
+                } else {
+                    input_indices[in_dim] =
+                        (out_idx < output_shape_len) ? output_indices[out_idx] : 0;
+                    out_idx++;
+                }
+            }
+        }
+
+#if SIMD_F64_WIDTH > 1
+        bool use_simd = (num_reduce_dims == 1) && (reduce_dims[0] == num_dims - 1) &&
+                        (strides[num_dims - 1] == 1) && (reduce_size >= SIMD_F64_WIDTH);
+
+        if (use_simd) {
+            size_t flat_base = offset;
+            for (size_t i = 0; i < num_dims - 1; i++) {
+                flat_base += input_indices[i] * strides[i];
+            }
+
+            simd_f64_t vsum_sq = simd_f64_set1(0.0);
+            const size_t simd_end = (reduce_size / SIMD_F64_WIDTH) * SIMD_F64_WIDTH;
+
+            for (size_t i = 0; i < simd_end; i += SIMD_F64_WIDTH) {
+                simd_f64_t v = simd_f64_load(&input[flat_base + i]);
+                vsum_sq = simd_f64_fmadd(v, v, vsum_sq); // v*v + vsum_sq
+            }
+            sum_squares = simd_f64_reduce_add(vsum_sq);
+
+            for (size_t i = simd_end; i < reduce_size; i++) {
+                f64_t val = input[flat_base + i];
+                sum_squares += val * val;
+            }
+        } else
+#endif
+        {
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {
+                size_t temp_reduced = reduced_idx;
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {
+                    size_t dim = reduce_dims[i];
+                    input_indices[dim] = temp_reduced % dims[dim];
+                    temp_reduced /= dims[dim];
+                }
+
+                size_t flat_index = offset;
+                for (size_t i = 0; i < num_dims; i++) {
+                    flat_index += input_indices[i] * strides[i];
+                }
+
+                f64_t val = input[flat_index];
+                sum_squares += val * val;
+            }
+        }
+
+        output[output_idx] = sqrt(sum_squares);
+    }
+}
 
 // ============================================================================
 // ARGMAX REDUCTION
