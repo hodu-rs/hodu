@@ -194,30 +194,27 @@ impl Tensor {
     }
 
     pub fn shape(&self) -> Shape {
-        let layout = self.layout();
-        layout.shape().clone()
+        with_tensor(self.0, |t| t.layout.shape().clone()).unwrap_or_else(|| Shape::scalar())
     }
 
     pub fn strides(&self) -> Vec<u32> {
-        let layout = self.layout();
-        layout.strides().to_vec()
+        with_tensor(self.0, |t| t.layout.strides().to_vec()).unwrap_or_else(|| Vec::new())
     }
 
     pub fn offset(&self) -> u32 {
-        let layout = self.layout();
-        layout.offset()
+        with_tensor(self.0, |t| t.layout.offset()).unwrap_or(0)
     }
 
     pub fn ndim(&self) -> u32 {
-        self.shape().ndim()
+        with_tensor(self.0, |t| t.layout.shape().ndim()).unwrap_or(0)
     }
 
     pub fn dim(&self, index: u32) -> Option<u32> {
-        self.shape().dim(index)
+        with_tensor(self.0, |t| t.layout.shape().dim(index)).unwrap_or(None)
     }
 
     pub fn size(&self) -> u32 {
-        self.shape().size()
+        with_tensor(self.0, |t| t.layout.shape().size()).unwrap_or(1)
     }
 
     pub fn device(&self) -> Device {
