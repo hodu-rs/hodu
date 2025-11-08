@@ -194,11 +194,11 @@ impl Tensor {
     }
 
     pub fn shape(&self) -> Shape {
-        with_tensor(self.0, |t| t.layout.shape().clone()).unwrap_or_else(|| Shape::scalar())
+        with_tensor(self.0, |t| t.layout.shape().clone()).unwrap_or_else(Shape::scalar)
     }
 
     pub fn strides(&self) -> Vec<u32> {
-        with_tensor(self.0, |t| t.layout.strides().to_vec()).unwrap_or_else(|| Vec::new())
+        with_tensor(self.0, |t| t.layout.strides().to_vec()).unwrap_or_else(Vec::new)
     }
 
     pub fn offset(&self) -> u32 {
