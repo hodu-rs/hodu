@@ -312,12 +312,5 @@ impl<T> From<std::sync::PoisonError<T>> for HoduError {
     }
 }
 
-// Conversion from ug::Error
-impl From<ug::Error> for HoduError {
-    fn from(e: ug::Error) -> Self {
-        HoduError::InternalError(format!("ug error: {:?}", e))
-    }
-}
-
 /// Result type alias for hodu_core_v2 operations.
 pub type HoduResult<T> = Result<T, HoduError>;
