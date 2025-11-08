@@ -6,6 +6,8 @@ using namespace metal;
 // Matrix multiplication operations for tensors
 // Supports both batched matmul with broadcasting and tiled 2D dot product
 
+#define TILE_SIZE 16
+
 // ============================================================================
 // BATCHED MATRIX MULTIPLICATION (MATMUL)
 // ============================================================================
@@ -35,8 +37,9 @@ using namespace metal;
     kernel void FN_NAME(                                                                           \
         const device TYPENAME *lhs [[buffer(0)]], const device TYPENAME *rhs [[buffer(1)]],        \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
-        uint thread_index [[thread_position_in_grid]],                                             \
-        uint threads_per_grid [[threads_per_grid]]) {                                              \
+        uint3 thread_position_in_threadgroup [[thread_position_in_threadgroup]],                   \
+        uint3 threadgroup_position_in_grid [[threadgroup_position_in_grid]],                       \
+        uint3 threads_per_threadgroup [[threads_per_threadgroup]]) {                               \
                                                                                                    \
         const size_t num_els = metadata[0];                                                        \
         const size_t lhs_ndim = metadata[1];                                                       \
@@ -54,62 +57,96 @@ using namespace metal;
         const size_t K = *(rhs_strides + rhs_ndim + 3);                                            \
         const size_t N = *(rhs_strides + rhs_ndim + 4);                                            \
                                                                                                    \
-        /* Grid-stride loop for better GPU utilization */                                          \
-        for (uint idx = thread_index; idx < num_els; idx += threads_per_grid) {                    \
+        /* Shared memory for tiles */                                                              \
+        threadgroup TYPENAME lhs_tile[TILE_SIZE][TILE_SIZE];                                       \
+        threadgroup TYPENAME rhs_tile[TILE_SIZE][TILE_SIZE];                                       \
                                                                                                    \
-            /* Calculate output position: batch_idx, i, j */                                       \
-            size_t mn = idx % (M * N);                                                             \
-            size_t batch_idx = idx / (M * N);                                                      \
-            size_t i = mn / N;                                                                     \
-            size_t j = mn % N;                                                                     \
+        /* Calculate global row, column, and batch index */                                        \
+        size_t batch_idx = threadgroup_position_in_grid.z;                                         \
+        size_t row =                                                                               \
+            threadgroup_position_in_grid.y * TILE_SIZE + thread_position_in_threadgroup.y;         \
+        size_t col =                                                                               \
+            threadgroup_position_in_grid.x * TILE_SIZE + thread_position_in_threadgroup.x;         \
                                                                                                    \
-            /* Compute batch indices from flat batch_idx */                                        \
-            size_t batch_indices[16];                                                              \
-            size_t temp = batch_idx;                                                               \
-            for (int d = (int)batch_ndim - 1; d >= 0; d--) {                                       \
-                batch_indices[d] = temp % batch_shape[d];                                          \
-                temp /= batch_shape[d];                                                            \
+        /* Compute batch indices from flat batch_idx */                                            \
+        size_t batch_indices[16];                                                                  \
+        size_t temp = batch_idx;                                                                   \
+        for (int d = (int)batch_ndim - 1; d >= 0; d--) {                                           \
+            batch_indices[d] = temp % batch_shape[d];                                              \
+            temp /= batch_shape[d];                                                                \
+        }                                                                                          \
+                                                                                                   \
+        /* Map batch indices to lhs indices (with broadcasting) */                                 \
+        size_t lhs_batch_ndim = lhs_ndim - 2;                                                      \
+        size_t lhs_batch_indices[16];                                                              \
+        for (size_t d = 0; d < lhs_batch_ndim; d++) {                                              \
+            size_t batch_dim_idx = batch_ndim - lhs_batch_ndim + d;                                \
+            lhs_batch_indices[d] = (lhs_shape[d] == 1) ? 0 : batch_indices[batch_dim_idx];         \
+        }                                                                                          \
+                                                                                                   \
+        /* Map batch indices to rhs indices (with broadcasting) */                                 \
+        size_t rhs_batch_ndim = rhs_ndim - 2;                                                      \
+        size_t rhs_batch_indices[16];                                                              \
+        for (size_t d = 0; d < rhs_batch_ndim; d++) {                                              \
+            size_t batch_dim_idx = batch_ndim - rhs_batch_ndim + d;                                \
+            rhs_batch_indices[d] = (rhs_shape[d] == 1) ? 0 : batch_indices[batch_dim_idx];         \
+        }                                                                                          \
+                                                                                                   \
+        /* Calculate base offsets for this batch */                                                \
+        size_t lhs_base_offset = lhs_offset;                                                       \
+        for (size_t d = 0; d < lhs_batch_ndim; d++) {                                              \
+            lhs_base_offset += lhs_batch_indices[d] * lhs_strides[d];                              \
+        }                                                                                          \
+                                                                                                   \
+        size_t rhs_base_offset = rhs_offset;                                                       \
+        for (size_t d = 0; d < rhs_batch_ndim; d++) {                                              \
+            rhs_base_offset += rhs_batch_indices[d] * rhs_strides[d];                              \
+        }                                                                                          \
+                                                                                                   \
+        TYPENAME sum = 0;                                                                          \
+                                                                                                   \
+        /* Loop over tiles */                                                                      \
+        size_t num_tiles = (K + TILE_SIZE - 1) / TILE_SIZE;                                        \
+        for (size_t tile = 0; tile < num_tiles; tile++) {                                          \
+            /* Load LHS tile */                                                                    \
+            size_t lhs_k = tile * TILE_SIZE + thread_position_in_threadgroup.x;                    \
+            if (row < M && lhs_k < K) {                                                            \
+                size_t lhs_idx = lhs_base_offset + row * lhs_strides[lhs_ndim - 2] +               \
+                                 lhs_k * lhs_strides[lhs_ndim - 1];                                \
+                lhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] =     \
+                    lhs[lhs_idx];                                                                  \
+            } else {                                                                               \
+                lhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] = 0;  \
             }                                                                                      \
                                                                                                    \
-            /* Map batch indices to lhs indices (with broadcasting) */                             \
-            size_t lhs_batch_ndim = lhs_ndim - 2;                                                  \
-            size_t lhs_batch_indices[16];                                                          \
-            for (size_t d = 0; d < lhs_batch_ndim; d++) {                                          \
-                size_t batch_dim_idx = batch_ndim - lhs_batch_ndim + d;                            \
-                lhs_batch_indices[d] = (lhs_shape[d] == 1) ? 0 : batch_indices[batch_dim_idx];     \
+            /* Load RHS tile */                                                                    \
+            size_t rhs_k = tile * TILE_SIZE + thread_position_in_threadgroup.y;                    \
+            if (rhs_k < K && col < N) {                                                            \
+                size_t rhs_idx = rhs_base_offset + rhs_k * rhs_strides[rhs_ndim - 2] +             \
+                                 col * rhs_strides[rhs_ndim - 1];                                  \
+                rhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] =     \
+                    rhs[rhs_idx];                                                                  \
+            } else {                                                                               \
+                rhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] = 0;  \
             }                                                                                      \
                                                                                                    \
-            /* Map batch indices to rhs indices (with broadcasting) */                             \
-            size_t rhs_batch_ndim = rhs_ndim - 2;                                                  \
-            size_t rhs_batch_indices[16];                                                          \
-            for (size_t d = 0; d < rhs_batch_ndim; d++) {                                          \
-                size_t batch_dim_idx = batch_ndim - rhs_batch_ndim + d;                            \
-                rhs_batch_indices[d] = (rhs_shape[d] == 1) ? 0 : batch_indices[batch_dim_idx];     \
+            /* Synchronize to ensure tiles are loaded */                                           \
+            threadgroup_barrier(mem_flags::mem_threadgroup);                                       \
+                                                                                                   \
+            /* Compute partial dot product for this tile */                                        \
+            for (size_t k = 0; k < TILE_SIZE; k++) {                                               \
+                sum += lhs_tile[thread_position_in_threadgroup.y][k] *                             \
+                       rhs_tile[k][thread_position_in_threadgroup.x];                              \
             }                                                                                      \
                                                                                                    \
-            /* Compute matrix multiplication for this output element */                            \
-            TYPENAME sum = 0;                                                                      \
-            for (size_t k = 0; k < K; k++) {                                                       \
-                /* Calculate lhs index: batch_indices + [i, k] */                                  \
-                size_t lhs_idx = lhs_offset;                                                       \
-                for (size_t d = 0; d < lhs_batch_ndim; d++) {                                      \
-                    lhs_idx += lhs_batch_indices[d] * lhs_strides[d];                              \
-                }                                                                                  \
-                lhs_idx += i * lhs_strides[lhs_ndim - 2];                                          \
-                lhs_idx += k * lhs_strides[lhs_ndim - 1];                                          \
+            /* Synchronize before loading next tile */                                             \
+            threadgroup_barrier(mem_flags::mem_threadgroup);                                       \
+        }                                                                                          \
                                                                                                    \
-                /* Calculate rhs index: batch_indices + [k, j] */                                  \
-                size_t rhs_idx = rhs_offset;                                                       \
-                for (size_t d = 0; d < rhs_batch_ndim; d++) {                                      \
-                    rhs_idx += rhs_batch_indices[d] * rhs_strides[d];                              \
-                }                                                                                  \
-                rhs_idx += k * rhs_strides[rhs_ndim - 2];                                          \
-                rhs_idx += j * rhs_strides[rhs_ndim - 1];                                          \
-                                                                                                   \
-                sum += lhs[lhs_idx] * rhs[rhs_idx];                                                \
-            }                                                                                      \
-                                                                                                   \
-            output[idx] = sum;                                                                     \
+        /* Write result */                                                                         \
+        if (row < M && col < N) {                                                                  \
+            size_t output_idx = batch_idx * (M * N) + row * N + col;                               \
+            output[output_idx] = sum;                                                              \
         }                                                                                          \
     }
 
@@ -151,7 +188,12 @@ MATMUL_OP(uint64_t, matmul_u64)
 // - metadata[7]: lhs_offset (starting offset in lhs buffer)
 // - metadata[8]: rhs_offset (starting offset in rhs buffer)
 
-#define TILE_SIZE 16
+// Optimized DOT with register blocking, loop unrolling, and larger tiles
+// Each thread computes a 4x4 block of output elements
+#define BLOCK_M 4
+#define BLOCK_N 4
+#define DOT_TILE_SIZE 32
+#define THREADS_PER_TILE (DOT_TILE_SIZE / BLOCK_M)
 
 #define DOT_OP(TYPENAME, FN_NAME)                                                                  \
     kernel void FN_NAME(                                                                           \
@@ -172,57 +214,98 @@ MATMUL_OP(uint64_t, matmul_u64)
         const size_t lhs_offset = metadata[7];                                                     \
         const size_t rhs_offset = metadata[8];                                                     \
                                                                                                    \
-        /* Shared memory for tiles */                                                              \
-        threadgroup TYPENAME lhs_tile[TILE_SIZE][TILE_SIZE];                                       \
-        threadgroup TYPENAME rhs_tile[TILE_SIZE][TILE_SIZE];                                       \
+        /* Shared memory for larger tiles */                                                       \
+        threadgroup TYPENAME lhs_tile[DOT_TILE_SIZE][DOT_TILE_SIZE];                               \
+        threadgroup TYPENAME rhs_tile[DOT_TILE_SIZE][DOT_TILE_SIZE];                               \
                                                                                                    \
-        /* Calculate global row and column */                                                      \
-        size_t row =                                                                               \
-            threadgroup_position_in_grid.y * TILE_SIZE + thread_position_in_threadgroup.y;         \
-        size_t col =                                                                               \
-            threadgroup_position_in_grid.x * TILE_SIZE + thread_position_in_threadgroup.x;         \
+        /* Each thread computes a BLOCK_M x BLOCK_N sub-block */                                   \
+        size_t base_row = threadgroup_position_in_grid.y * DOT_TILE_SIZE +                         \
+                          thread_position_in_threadgroup.y * BLOCK_M;                              \
+        size_t base_col = threadgroup_position_in_grid.x * DOT_TILE_SIZE +                         \
+                          thread_position_in_threadgroup.x * BLOCK_N;                              \
                                                                                                    \
-        TYPENAME sum = 0;                                                                          \
+        /* Register blocking: accumulate 4x4 block */                                              \
+        TYPENAME sums[BLOCK_M][BLOCK_N];                                                           \
+        for (size_t i = 0; i < BLOCK_M; i++) {                                                     \
+            for (size_t j = 0; j < BLOCK_N; j++) {                                                 \
+                sums[i][j] = 0;                                                                    \
+            }                                                                                      \
+        }                                                                                          \
                                                                                                    \
         /* Loop over tiles */                                                                      \
-        size_t num_tiles = (K + TILE_SIZE - 1) / TILE_SIZE;                                        \
+        size_t num_tiles = (K + DOT_TILE_SIZE - 1) / DOT_TILE_SIZE;                                \
         for (size_t tile = 0; tile < num_tiles; tile++) {                                          \
-            /* Load LHS tile */                                                                    \
-            size_t lhs_k = tile * TILE_SIZE + thread_position_in_threadgroup.x;                    \
-            if (row < M && lhs_k < K) {                                                            \
-                size_t lhs_idx = lhs_offset + row * lhs_stride_m + lhs_k * lhs_stride_k;           \
-                lhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] =     \
-                    lhs[lhs_idx];                                                                  \
-            } else {                                                                               \
-                lhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] = 0;  \
+            /* Load LHS tile: each thread loads 4x4 elements */                                    \
+            for (size_t i = 0; i < BLOCK_M; i++) {                                                 \
+                for (size_t j = 0; j < BLOCK_N; j++) {                                             \
+                    size_t row = thread_position_in_threadgroup.y * BLOCK_M + i;                   \
+                    size_t col = thread_position_in_threadgroup.x * BLOCK_N + j;                   \
+                    size_t global_row = base_row + i;                                              \
+                    size_t k_idx = tile * DOT_TILE_SIZE + col;                                     \
+                    if (global_row < M && k_idx < K) {                                             \
+                        size_t lhs_idx =                                                           \
+                            lhs_offset + global_row * lhs_stride_m + k_idx * lhs_stride_k;         \
+                        lhs_tile[row][col] = lhs[lhs_idx];                                         \
+                    } else {                                                                       \
+                        lhs_tile[row][col] = 0;                                                    \
+                    }                                                                              \
+                }                                                                                  \
             }                                                                                      \
                                                                                                    \
-            /* Load RHS tile */                                                                    \
-            size_t rhs_k = tile * TILE_SIZE + thread_position_in_threadgroup.y;                    \
-            if (rhs_k < K && col < N) {                                                            \
-                size_t rhs_idx = rhs_offset + rhs_k * rhs_stride_k + col * rhs_stride_n;           \
-                rhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] =     \
-                    rhs[rhs_idx];                                                                  \
-            } else {                                                                               \
-                rhs_tile[thread_position_in_threadgroup.y][thread_position_in_threadgroup.x] = 0;  \
+            /* Load RHS tile: each thread loads 4x4 elements */                                    \
+            for (size_t i = 0; i < BLOCK_M; i++) {                                                 \
+                for (size_t j = 0; j < BLOCK_N; j++) {                                             \
+                    size_t row = thread_position_in_threadgroup.y * BLOCK_M + i;                   \
+                    size_t col = thread_position_in_threadgroup.x * BLOCK_N + j;                   \
+                    size_t k_idx = tile * DOT_TILE_SIZE + row;                                     \
+                    size_t global_col = base_col + j;                                              \
+                    if (k_idx < K && global_col < N) {                                             \
+                        size_t rhs_idx =                                                           \
+                            rhs_offset + k_idx * rhs_stride_k + global_col * rhs_stride_n;         \
+                        rhs_tile[row][col] = rhs[rhs_idx];                                         \
+                    } else {                                                                       \
+                        rhs_tile[row][col] = 0;                                                    \
+                    }                                                                              \
+                }                                                                                  \
             }                                                                                      \
                                                                                                    \
             /* Synchronize to ensure tiles are loaded */                                           \
             threadgroup_barrier(mem_flags::mem_threadgroup);                                       \
                                                                                                    \
-            /* Compute partial dot product for this tile */                                        \
-            for (size_t k = 0; k < TILE_SIZE; k++) {                                               \
-                sum += lhs_tile[thread_position_in_threadgroup.y][k] *                             \
-                       rhs_tile[k][thread_position_in_threadgroup.x];                              \
+            /* Compute partial dot product with loop unrolling */                                  \
+            _Pragma("unroll") for (size_t k = 0; k < DOT_TILE_SIZE; k++) {                         \
+                TYPENAME lhs_vals[BLOCK_M];                                                        \
+                TYPENAME rhs_vals[BLOCK_N];                                                        \
+                                                                                                   \
+                /* Load values into registers */                                                   \
+                _Pragma("unroll") for (size_t i = 0; i < BLOCK_M; i++) {                           \
+                    lhs_vals[i] = lhs_tile[thread_position_in_threadgroup.y * BLOCK_M + i][k];     \
+                }                                                                                  \
+                _Pragma("unroll") for (size_t j = 0; j < BLOCK_N; j++) {                           \
+                    rhs_vals[j] = rhs_tile[k][thread_position_in_threadgroup.x * BLOCK_N + j];     \
+                }                                                                                  \
+                                                                                                   \
+                /* Outer product */                                                                \
+                _Pragma("unroll") for (size_t i = 0; i < BLOCK_M; i++) {                           \
+                    _Pragma("unroll") for (size_t j = 0; j < BLOCK_N; j++) {                       \
+                        sums[i][j] += lhs_vals[i] * rhs_vals[j];                                   \
+                    }                                                                              \
+                }                                                                                  \
             }                                                                                      \
                                                                                                    \
             /* Synchronize before loading next tile */                                             \
             threadgroup_barrier(mem_flags::mem_threadgroup);                                       \
         }                                                                                          \
                                                                                                    \
-        /* Write result */                                                                         \
-        if (row < M && col < N) {                                                                  \
-            output[row * N + col] = sum;                                                           \
+        /* Write results */                                                                        \
+        for (size_t i = 0; i < BLOCK_M; i++) {                                                     \
+            for (size_t j = 0; j < BLOCK_N; j++) {                                                 \
+                size_t global_row = base_row + i;                                                  \
+                size_t global_col = base_col + j;                                                  \
+                if (global_row < M && global_col < N) {                                            \
+                    output[global_row * N + global_col] = sums[i][j];                              \
+                }                                                                                  \
+            }                                                                                      \
         }                                                                                          \
     }
 

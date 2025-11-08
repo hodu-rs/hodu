@@ -5,7 +5,7 @@ use crate::{
     metal::{Buffer, ComputeCommandEncoder, Device},
     set_params,
     source::Source,
-    utils::{linear_split, BufferOffset, EncoderProvider},
+    utils::{BufferOffset, EncoderProvider},
 };
 use objc2_metal::{MTLResourceUsage, MTLSize};
 
@@ -76,8 +76,6 @@ pub fn call_matmul(
 ) -> Result<(), MetalKernelError> {
     let pipeline = kernels.load_pipeline(device, Source::Matrix, kernel_name.0)?;
 
-    let num_els = metadata[0];
-
     let encoder = ep.encoder();
     let encoder: &ComputeCommandEncoder = encoder.as_ref();
     encoder.set_compute_pipeline_state(&pipeline);
@@ -87,8 +85,41 @@ pub fn call_matmul(
     encoder.use_resource(rhs.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);
 
-    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
-    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+    // Extract M, N, and batch info from metadata
+    let lhs_ndim = metadata[1];
+    let rhs_ndim = metadata[2];
+    let batch_ndim = metadata[3];
+
+    let metadata_base = 4 + lhs_ndim + rhs_ndim + batch_ndim + lhs_ndim + rhs_ndim;
+    let m = metadata[metadata_base + 2];
+    let n = metadata[metadata_base + 4];
+
+    // Calculate total number of batches
+    let num_batches = if batch_ndim == 0 {
+        1
+    } else {
+        let batch_shape = &metadata[4 + lhs_ndim + rhs_ndim..4 + lhs_ndim + rhs_ndim + batch_ndim];
+        batch_shape.iter().product()
+    };
+
+    // Use 3D tiled dispatch (similar to DOT kernel but with batch dimension)
+    const TILE_SIZE: usize = 16;
+    let threadgroup_size = MTLSize {
+        width: TILE_SIZE,
+        height: TILE_SIZE,
+        depth: 1,
+    };
+
+    let grid_width = (n + TILE_SIZE - 1) / TILE_SIZE;
+    let grid_height = (m + TILE_SIZE - 1) / TILE_SIZE;
+
+    let threadgroup_count = MTLSize {
+        width: grid_width,
+        height: grid_height,
+        depth: num_batches,
+    };
+
+    encoder.dispatch_thread_groups(threadgroup_count, threadgroup_size);
 
     Ok(())
 }
@@ -172,16 +203,20 @@ pub fn call_dot(
     encoder.use_resource(rhs.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);
 
-    // For tiled dot product, use 2D thread groups (16x16 tiles)
-    const TILE_SIZE: usize = 16;
+    // Optimized dot product with register blocking (4x4 per thread)
+    // Tile size is 32x32, with 8x8 threadgroups (each thread handles 4x4 block)
+    const DOT_TILE_SIZE: usize = 32;
+    const BLOCK_SIZE: usize = 4;
+    const THREADS_PER_DIM: usize = DOT_TILE_SIZE / BLOCK_SIZE; // 8
+
     let threadgroup_size = MTLSize {
-        width: TILE_SIZE,
-        height: TILE_SIZE,
+        width: THREADS_PER_DIM,
+        height: THREADS_PER_DIM,
         depth: 1,
     };
 
-    let grid_width = (n + TILE_SIZE - 1).div_ceil(TILE_SIZE);
-    let grid_height = (m + TILE_SIZE - 1).div_ceil(TILE_SIZE);
+    let grid_width = (n + DOT_TILE_SIZE - 1) / DOT_TILE_SIZE;
+    let grid_height = (m + DOT_TILE_SIZE - 1) / DOT_TILE_SIZE;
 
     let threadgroup_count = MTLSize {
         width: grid_width,
