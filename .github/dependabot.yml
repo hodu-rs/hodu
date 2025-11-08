@@ -6,6 +6,8 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     rebase-strategy: "auto"
+    labels:
+      - "c-dependencies"
     groups:
       burn-dependencies:
         patterns:
