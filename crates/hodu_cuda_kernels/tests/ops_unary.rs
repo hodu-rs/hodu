@@ -34,7 +34,7 @@ fn run_unary<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T])
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_unary::<T, T>(kernel, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_unary::<T, T>(kernel, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut result = vec![unsafe { core::mem::zeroed() }; input.len()];
     stream.memcpy_dtoh(&output, &mut result).unwrap();
@@ -62,7 +62,7 @@ fn run_unary_scalar<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_unary_scalar::<T, T>(kernel, &device, &input_dev, &mut output, &metadata, scalar).unwrap();
+    call_ops_unary_scalar::<T, T>(kernel, &kernels, &device, &input_dev, &mut output, &metadata, scalar).unwrap();
 
     let mut result = vec![unsafe { core::mem::zeroed() }; input.len()];
     stream.memcpy_dtoh(&output, &mut result).unwrap();
@@ -90,7 +90,7 @@ fn run_unary_logical<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, inpu
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_unary_scalar::<T, bool>(kernel, &device, &input_dev, &mut output, &metadata, scalar).unwrap();
+    call_ops_unary_scalar::<T, bool>(kernel, &kernels, &device, &input_dev, &mut output, &metadata, scalar).unwrap();
 
     let mut result = vec![false; input.len()];
     stream.memcpy_dtoh(&output, &mut result).unwrap();

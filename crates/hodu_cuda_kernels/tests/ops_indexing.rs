@@ -4,6 +4,10 @@ fn device() -> std::sync::Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
 }
 
+fn kernels() -> Kernels {
+    Kernels::new()
+}
+
 #[allow(clippy::too_many_arguments)]
 fn run_index_select<T, I>(input: &[T], indices: &[I], input_shape: &[usize], dim: usize, kernel: Kernel) -> Vec<T>
 where
