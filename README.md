@@ -228,46 +228,73 @@ Additional data types can be enabled with feature flags to reduce compilation ti
 
 ### Embedded Environments
 
-🧪 **Experimental**: Embedded platforms (ARM Cortex-M, RISC-V, Embedded Linux) are supported via `no_std` feature but are experimental and not extensively tested in production environments.
+🧪 **Experimental**: Embedded platforms are supported but are experimental and not extensively tested in production environments.
 
 > **Note**: Development should be done in a standard (std) host environment. Cross-compilation for embedded targets is supported.
 
-#### ARM Cortex-M
+| Target Triple | Backend | Device | Features | Status |
+|--------------|---------|--------|----------|--------|
+| thumbv7em-none-eabihf | HODU | CPU | (no default) | 🧪 Experimental |
+| aarch64-unknown-none | HODU | CPU | (no default) | 🧪 Experimental |
+| | HODU | CUDA | `cuda` | 🧪 Experimental (Jetson) |
+| armv7a-none-eabi | HODU | CPU | (no default) | 🧪 Experimental |
 
-**Basic Build**
+For bare-metal and RTOS environments on ARM processors.
 
 ```bash
+# example 1
+# ARM Cortex-M (microcontrollers)
 rustup target add thumbv7em-none-eabihf
 cargo build --target thumbv7em-none-eabihf --no-default-features
+
+# example 2
+# ARM Cortex-A 32-bit (application processors)
+rustup target add armv7a-none-eabi
+cargo build --target armv7a-none-eabi --no-default-features
 ```
 
 **With OpenBLAS (Optional)**
 
-For better performance, you can cross-compile OpenBLAS for ARM on your host machine:
+For better performance, you can cross-compile OpenBLAS. Here's an example for ARM Cortex-M:
 
-1. Build OpenBLAS for ARM on host (e.g., macOS/Linux):
 ```bash
 # Install ARM cross-compiler
 # macOS: brew install arm-none-eabi-gcc
 # Linux: sudo apt install gcc-arm-none-eabi
 
-# Clone and build OpenBLAS
+# Clone and build OpenBLAS (example for ARMV7)
 git clone https://github.com/xianyi/OpenBLAS.git
 cd OpenBLAS
 make CC=arm-none-eabi-gcc TARGET=ARMV7 NO_SHARED=1 NO_LAPACK=1
-make install PREFIX=/opt/arm-cortex-m-openblas
-```
+make install PREFIX=/opt/arm-openblas
 
-2. Build Hodu with the cross-compiled OpenBLAS:
-```bash
-# The OpenBLAS binaries are on host filesystem but built for ARM
-export OPENBLAS_DIR=/opt/arm-cortex-m-openblas
+# Build Hodu with OpenBLAS
+export OPENBLAS_DIR=/opt/arm-openblas
 cargo build --target thumbv7em-none-eabihf --no-default-features
 ```
 
-> **Note**: The build script runs on the host machine and accesses OpenBLAS from the host filesystem, even though the resulting binaries are for the target ARM architecture.
+> **Note**: Adjust the compiler, target, and build flags according to your specific ARM platform.
 
-**Environment Variables**
+#### NVIDIA Jetson Series
+
+Jetson devices (Nano, Xavier NX, AGX Xavier, Orin series) are ARM Cortex-A based systems with integrated NVIDIA GPUs.
+
+> **Note**: CUDA feature works without standard library (`no_std`) for embedded deployment.
+
+```bash
+# Build with CUDA support for Jetson
+rustup target add aarch64-unknown-none
+cargo build --target aarch64-unknown-none --no-default-features --features cuda
+```
+
+**Requirements**:
+- CUDA toolkit (from JetPack SDK or standalone)
+- CUDA Compute Capability 5.3+ (Jetson Nano and newer)
+
+#### Environment Variables
+
+Common environment variables for cross-compilation:
+
 - `OPENBLAS_DIR`, `OPENBLAS_INCLUDE_DIR`, `OPENBLAS_LIB_DIR` - OpenBLAS paths for cross-compilation
 - `HODU_DISABLE_BLAS` - Force disable OpenBLAS
 - `HODU_DISABLE_NATIVE` - Disable native CPU optimizations

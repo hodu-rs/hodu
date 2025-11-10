@@ -12,7 +12,7 @@ Items may be added at any time.
 **Backend:** (🔴 Critical)
 - [x] CPU SIMD support
 - [x] CPU parallelization support
-- [ ] CUDA support
+- [x] CUDA support
 - [x] Metal support
 
 **Scripting:** (🟢 Nice-to-have)
