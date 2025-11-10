@@ -211,14 +211,14 @@ cargo test
 Run specific test suites:
 
 ```bash
-cargo test --test unary
-cargo test --test binary
-cargo test --test reduce
-cargo test --test matrix
-cargo test --test conv
-cargo test --test windowing
-cargo test --test indexing
-cargo test --test concat_split
+cargo test --test ops_unary
+cargo test --test ops_binary
+cargo test --test ops_reduce
+cargo test --test ops_matrix
+cargo test --test ops_conv
+cargo test --test ops_windowing
+cargo test --test ops_indexing
+cargo test --test ops_concat_split
 ```
 
 ## Notes
