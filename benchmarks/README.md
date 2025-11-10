@@ -2,11 +2,30 @@
 
 Performance benchmarks comparing Hodu against popular deep learning frameworks.
 
-## Result of mlp benchmark
+## MLP Benchmark Results
 
-Benchmarked on MacBook Air M2(16gb), v0.2.1
+### Configuration 1: MacBook Air M2
+- **Hardware**: MacBook Air M2 (16GB RAM)
+- **Device**: CPU, Metal
+- **Compiler**: HODU, XLA
+- **Version**: v0.2.2
 
-![benchmark](../assets/benchmarks/benchmark_mlp_v0.2.1.png)
+![benchmark](../assets/benchmarks/benchmark_mlp_1_v0.2.2.png)
+
+---
+
+### Configuration 2: Cloud GPU Instance
+- **Hardware**:
+  - GPU: 24GB VRAM (896.5 GB/s bandwidth, 81.8 TFLOPS)
+  - CPU: AMD EPYC 7742 64-Core Processor (32/256 cores, 129.0 GB RAM)
+  - Storage: KINGSTON SFYRD4000G (5974.0 MB/s, 32GB)
+  - Motherboard: ROME2D32GM-2T (PCIe 4.0 x16, 21.4 GB/s)
+- **Device**: CPU, CUDA
+- **Compiler**: HODU, XLA
+- **CUDA Version**: Max 12.6
+- **Version**: v0.2.2
+
+![benchmark](../assets/benchmarks/benchmark_mlp_2_v0.2.2.png)
 
 ## Requirements
 
@@ -20,8 +39,20 @@ Benchmarked on MacBook Air M2(16gb), v0.2.1
 pip3 install -r requirements.txt
 
 # Setup benchmark environments (JAX, TensorFlow, PyTorch, etc.)
+# For CPU-only or macOS (Metal):
 python3 setup.py
+
+# For CUDA 12 support (includes JAX with CUDA 12):
+python3 setup.py --cuda12
+
+# For CUDA 13 support (includes JAX with CUDA 13):
+python3 setup.py --cuda13
 ```
+
+**Note**:
+- On macOS, JAX with Metal support is installed automatically
+- On Linux, use `--cuda12` or `--cuda13` to enable JAX CUDA support for GPU benchmarks
+- Without CUDA flags, only CPU-only JAX will be installed on Linux
 
 ## Running Benchmarks
 

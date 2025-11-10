@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
+import json
+import re
 import subprocess
 import sys
-import re
-import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # --- Colors (ANSI escape codes) ---
 GREEN = "\033[0;32m"
@@ -519,8 +519,8 @@ def save_results_json(bench_type, all_results, output_path):
 def plot_results(json_path, save_plot=False):
     """Generate plots from benchmark results JSON."""
     try:
-        import pandas as pd
         import matplotlib.pyplot as plt
+        import pandas as pd
     except ImportError:
         print_color(RED, "Error: pandas and matplotlib are required for plotting")
         print_color(YELLOW, "Install with: pip install pandas matplotlib")
