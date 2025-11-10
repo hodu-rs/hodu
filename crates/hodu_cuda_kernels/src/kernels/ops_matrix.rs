@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -37,6 +37,7 @@ ops!(matmul, dot);
 /// - metadata[4+2*lhs_ndim+2*rhs_ndim+batch_ndim+4]: N (cols of B)
 pub fn call_ops_matmul<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     lhs: &CudaSlice<T>,
     rhs: &CudaSlice<T>,
@@ -46,7 +47,6 @@ pub fn call_ops_matmul<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsMatrix, kernel.0)?;
 
     // Extract M, N, and batch info from metadata
@@ -118,6 +118,7 @@ where
 /// - metadata[8]: rhs_offset (starting offset in rhs buffer)
 pub fn call_ops_dot<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     lhs: &CudaSlice<T>,
     rhs: &CudaSlice<T>,
@@ -127,7 +128,6 @@ pub fn call_ops_dot<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsMatrix, kernel.0)?;
 
     // Extract matrix dimensions from metadata

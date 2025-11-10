@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
@@ -10,6 +14,8 @@ fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
 }
 
 fn run_unary<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T]) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -36,6 +42,8 @@ fn run_unary<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T])
 }
 
 fn run_unary_scalar<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T], scalar: T) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -62,6 +70,8 @@ fn run_unary_scalar<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input
 }
 
 fn run_unary_logical<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T], scalar: T) -> Vec<bool> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 

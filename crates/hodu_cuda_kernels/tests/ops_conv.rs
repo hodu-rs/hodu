@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -17,6 +21,8 @@ fn run_conv1d<T: cudarc::driver::DeviceRepr + Clone>(
     padding: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -45,7 +51,16 @@ fn run_conv1d<T: cudarc::driver::DeviceRepr + Clone>(
         0, // weight_offset
     ];
 
-    call_ops_conv(kernel, &device, &input_dev, &weight_dev, &mut output, &metadata).unwrap();
+    call_ops_conv(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &weight_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -69,6 +84,8 @@ fn run_conv2d<T: cudarc::driver::DeviceRepr + Clone>(
     padding_w: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -105,7 +122,16 @@ fn run_conv2d<T: cudarc::driver::DeviceRepr + Clone>(
         0, // weight_offset
     ];
 
-    call_ops_conv(kernel, &device, &input_dev, &weight_dev, &mut output, &metadata).unwrap();
+    call_ops_conv(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &weight_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -133,6 +159,8 @@ fn run_conv3d<T: cudarc::driver::DeviceRepr + Clone>(
     padding_w: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -177,7 +205,16 @@ fn run_conv3d<T: cudarc::driver::DeviceRepr + Clone>(
         0, // weight_offset
     ];
 
-    call_ops_conv(kernel, &device, &input_dev, &weight_dev, &mut output, &metadata).unwrap();
+    call_ops_conv(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &weight_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -198,6 +235,8 @@ fn run_conv_transpose1d<T: cudarc::driver::DeviceRepr + Clone>(
     output_padding: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -227,7 +266,16 @@ fn run_conv_transpose1d<T: cudarc::driver::DeviceRepr + Clone>(
         0, // weight_offset
     ];
 
-    call_ops_conv(kernel, &device, &input_dev, &weight_dev, &mut output, &metadata).unwrap();
+    call_ops_conv(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &weight_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -253,6 +301,8 @@ fn run_conv_transpose2d<T: cudarc::driver::DeviceRepr + Clone>(
     output_padding_w: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -292,7 +342,16 @@ fn run_conv_transpose2d<T: cudarc::driver::DeviceRepr + Clone>(
         0, // weight_offset
     ];
 
-    call_ops_conv(kernel, &device, &input_dev, &weight_dev, &mut output, &metadata).unwrap();
+    call_ops_conv(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &weight_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -323,6 +382,8 @@ fn run_conv_transpose3d<T: cudarc::driver::DeviceRepr + Clone>(
     output_padding_w: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -371,7 +432,16 @@ fn run_conv_transpose3d<T: cudarc::driver::DeviceRepr + Clone>(
         0, // weight_offset
     ];
 
-    call_ops_conv(kernel, &device, &input_dev, &weight_dev, &mut output, &metadata).unwrap();
+    call_ops_conv(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &weight_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -918,6 +988,8 @@ fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
     padding: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -945,6 +1017,7 @@ fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 
     call_ops_conv_grad_weight(
         kernel,
+        &kernels,
         &device,
         &input_dev,
         &grad_output_dev,
@@ -977,6 +1050,8 @@ fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
     padding_w: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -1009,6 +1084,7 @@ fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 
     call_ops_conv_grad_weight(
         kernel,
+        &kernels,
         &device,
         &input_dev,
         &grad_output_dev,
@@ -1046,6 +1122,8 @@ fn run_conv3d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
     padding_w: usize,
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -1084,6 +1162,7 @@ fn run_conv3d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 
     call_ops_conv_grad_weight(
         kernel,
+        &kernels,
         &device,
         &input_dev,
         &grad_output_dev,

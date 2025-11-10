@@ -193,7 +193,7 @@ impl Tensor {
         } else {
             let storage = lhs_broadcasted.with_storage(|lhs_storage| {
                 rhs_broadcasted.with_storage(|rhs_storage| {
-                    lhs_storage.call_matmul(
+                    lhs_storage.call_ops_matmul(
                         rhs_storage,
                         &lhs_broadcasted.layout(),
                         &rhs_broadcasted.layout(),
@@ -333,7 +333,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|lhs_storage| {
                 other.with_storage(|rhs_storage| {
-                    lhs_storage.call_dot(rhs_storage, &self.layout(), &other.layout(), Op::Matrix(MatrixOp::Dot))
+                    lhs_storage.call_ops_dot(rhs_storage, &self.layout(), &other.layout(), Op::Matrix(MatrixOp::Dot))
                 })
             })?;
 

@@ -49,7 +49,7 @@ macro_rules! binary_op {
             } else {
                 let storage = lhs.with_storage(|lhs_storage| {
                     rhs.with_storage(|rhs_storage| {
-                        lhs_storage.call_binary(
+                        lhs_storage.call_ops_binary(
                             rhs_storage,
                             &lhs.layout(),
                             &rhs.layout(),
@@ -101,7 +101,7 @@ macro_rules! binary_logical_op {
             } else {
                 let storage = lhs.with_storage(|lhs_storage| {
                     rhs.with_storage(|rhs_storage| {
-                        lhs_storage.call_binary_logical(
+                        lhs_storage.call_ops_binary_logical(
                             rhs_storage,
                             &lhs.layout(),
                             &rhs.layout(),

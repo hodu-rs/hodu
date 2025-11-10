@@ -7,7 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
-pub fn call_reduce_window(
+pub fn call_ops_reduce_window(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     window_shape: &[u32],
@@ -20,7 +20,7 @@ pub fn call_reduce_window(
         Op::Windowing(windowing_op) => windowing_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_reduce_window expects windowing op".to_string(),
+                "call_ops_reduce_window expects windowing op".to_string(),
             ))
         },
     };
@@ -53,39 +53,45 @@ pub fn call_reduce_window(
     }
 
     let output_shape = Shape::new(&output_shape_vec);
-    let num_els = output_shape.size();
+    let output_size = output_shape.size();
 
-    // Build metadata array
+    // Build metadata: [output_size, num_dims, input_shape..., input_strides..., input_offset, window_shape..., strides..., padding..., output_shape...]
     let mut metadata = Vec::new();
-    metadata.push(num_els as usize);
+    metadata.push(output_size as usize);
     metadata.push(input_ndim as usize);
-    metadata.push(spatial_dims as usize);
 
     // Add input shape
     for &d in input_shape.dims() {
         metadata.push(d as usize);
     }
 
-    // Add output shape
-    for &d in &output_shape_vec {
-        metadata.push(d as usize);
-    }
-
-    // Add input strides and offset
+    // Add input strides
     for &s in input_layout.strides() {
         metadata.push(s as usize);
     }
+
+    // Add input offset
     metadata.push(input_layout.offset() as usize);
 
-    // Add window parameters
+    // Add window shape
     for &w in window_shape {
         metadata.push(w as usize);
     }
+
+    // Add strides
     for &s in strides {
         metadata.push(s as usize);
     }
+
+    // Add padding (need to expand to before/after pairs)
     for &p in padding {
-        metadata.push(p as usize);
+        metadata.push(p as usize); // pad_before
+        metadata.push(p as usize); // pad_after
+    }
+
+    // Add output shape
+    for &d in &output_shape_vec {
+        metadata.push(d as usize);
     }
 
     let dtype = input_storage.dtype();
@@ -104,11 +110,11 @@ pub fn call_reduce_window(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_reduce_window(
+    kernels::call_ops_reduce_window(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         &output_buffer,
         &metadata,
@@ -117,7 +123,7 @@ pub fn call_reduce_window(
     Ok(MetalStorage::new(
         output_buffer,
         device.clone(),
-        num_els as usize,
+        output_size as usize,
         dtype,
     ))
 }

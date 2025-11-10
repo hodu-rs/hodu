@@ -8,7 +8,7 @@ use crate::{
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
 #[allow(clippy::too_many_arguments)]
-pub fn call_conv(
+pub fn call_ops_conv(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     weight_storage: &MetalStorage,
@@ -21,7 +21,7 @@ pub fn call_conv(
     // Validate op
     match op {
         Op::Conv(_) => (),
-        _ => return Err(HoduError::BackendError("Lcall_convE expects LconvE op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_ops_convE expects LconvE op".to_string())),
     }
 
     let input_shape = input_layout.shape();
@@ -111,11 +111,11 @@ pub fn call_conv(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_conv(
+    kernels::call_ops_conv(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         weight_offset,
         &output_buffer,
@@ -131,7 +131,7 @@ pub fn call_conv(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn call_conv_grad_weight(
+pub fn call_ops_conv_grad_weight(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     grad_output_storage: &MetalStorage,
@@ -147,7 +147,7 @@ pub fn call_conv_grad_weight(
         Op::Conv(_) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_conv_grad_weight expects conv op".to_string(),
+                "call_ops_conv_grad_weight expects conv op".to_string(),
             ))
         },
     }
@@ -217,11 +217,11 @@ pub fn call_conv_grad_weight(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_conv_grad_weight(
+    kernels::call_ops_conv_grad_weight(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         grad_output_offset,
         &output_buffer,

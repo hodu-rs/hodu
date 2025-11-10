@@ -7,7 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
-pub fn call_reduce(
+pub fn call_ops_reduce(
     storage: &MetalStorage,
     layout: &Layout,
     dims: &[u32],
@@ -17,7 +17,11 @@ pub fn call_reduce(
     // Extract reduce op
     let reduce_op = match op {
         Op::Reduce(reduce_op) => reduce_op,
-        _ => return Err(HoduError::BackendError("Lcall_reduceE expects LreduceE op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_ops_reduceE expects LreduceE op".to_string(),
+            ))
+        },
     };
 
     let input_shape = layout.shape();
@@ -70,29 +74,37 @@ pub fn call_reduce(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Convert to usize for kernel call
-    let shape_usize: Vec<usize> = input_shape.dims().iter().map(|&d| d as usize).collect();
-    let strides_usize: Vec<usize> = layout.strides().iter().map(|&s| s as usize).collect();
-    let reduce_dims_usize: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+    // Build metadata
+    // Layout: [num_dims, shape..., strides..., offset, output_shape_len, output_shape..., num_reduce_dims, reduce_dims..., keep_dim, reduce_size]
+    let num_dims = input_ndim as usize;
+    let output_shape_len = output_shape_vec.len();
+    let num_reduce_dims = dims.len();
+
+    let mut metadata = Vec::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
+    metadata.push(num_dims);
+    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
+    metadata.extend(layout.strides().iter().map(|&s| s as usize));
+    metadata.push(layout.offset() as usize);
+    metadata.push(output_shape_len);
+    metadata.extend(output_shape_vec.iter().map(|&d| d as usize));
+    metadata.push(num_reduce_dims);
+    metadata.extend(dims.iter().map(|&d| d as usize));
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size as usize);
 
     // Create buffer offset for input
     let input_offset = BufferOffset::zero_offset(storage.buffer());
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_reduce(
+    kernels::call_ops_reduce(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
-        &shape_usize,
         input_offset,
-        &strides_usize,
-        layout.offset() as usize,
-        &reduce_dims_usize,
-        reduce_size as usize,
-        keep_dim,
         &output_buffer,
+        &metadata,
     )?;
 
     Ok(MetalStorage::new(

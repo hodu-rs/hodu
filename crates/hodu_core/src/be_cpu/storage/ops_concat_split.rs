@@ -21,7 +21,7 @@ use core::ffi::c_void;
 ///
 /// # Returns
 /// Output storage containing the concatenated tensor
-pub fn call_concat(
+pub fn call_ops_concat(
     first: &CpuStorage,
     others: &[&CpuStorage],
     layouts: &[&Layout],
@@ -180,7 +180,7 @@ pub fn call_concat(
             match &mut output {
                 CpuStorage::$variant(out) => {
                     let out_ptr = out.as_mut_ptr() as *mut c_void;
-                    hodu_cpu_kernels::concat_split::call_concat(kernel, input_ptr, out_ptr, &metadata)?;
+                    hodu_cpu_kernels::call_ops_concat(kernel, input_ptr, out_ptr, &metadata)?;
                 },
                 _ => unreachable!(),
             }
@@ -228,7 +228,7 @@ pub fn call_concat(
 ///
 /// # Returns
 /// Output storage containing the extracted slice
-pub fn call_split(
+pub fn call_ops_split(
     storage: &CpuStorage,
     layout: &Layout,
     dim: u32,
@@ -318,7 +318,7 @@ pub fn call_split(
             let input_ptr = $input_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::concat_split::call_split(kernel, input_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_split(kernel, input_ptr, out_ptr, &metadata)?;
         }};
     }
 

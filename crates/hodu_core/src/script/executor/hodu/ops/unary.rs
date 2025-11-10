@@ -23,7 +23,7 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            inputs[0].call_unary(&layouts[0], op.clone())
+            inputs[0].call_ops_unary(&layouts[0], op.clone())
         },
 
         Op::UnaryLogical(_) => {
@@ -34,7 +34,7 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            inputs[0].call_unary_logical(&layouts[0], op.clone())
+            inputs[0].call_ops_unary_logical(&layouts[0], op.clone())
         },
 
         Op::UnaryScalar(_) => {
@@ -49,7 +49,7 @@ pub fn execute(
                 .get("scalar")
                 .and_then(|a| if let Attribute::Scalar(s) = a { Some(*s) } else { None })
                 .ok_or_else(|| HoduError::MissingAttribute("scalar".to_string()))?;
-            inputs[0].call_unary_scalar(&layouts[0], scalar, op.clone())
+            inputs[0].call_ops_unary_scalar(&layouts[0], scalar, op.clone())
         },
 
         _ => Err(HoduError::InternalError(format!(

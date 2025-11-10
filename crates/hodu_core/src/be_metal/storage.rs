@@ -18,7 +18,7 @@ use crate::{
     types::{DType, Device, Layout, Shape},
 };
 use hodu_metal_kernels::{
-    kernels::{call_cast, call_const_set, call_contiguous, const_set, contiguous},
+    kernels::{call_const_set, call_ops_cast, call_ops_contiguous, const_set, contiguous, Kernel},
     metal::Buffer,
     utils::BufferOffset,
 };
@@ -167,10 +167,10 @@ impl BackendStorageT for MetalStorage {
         macro_rules! call_kernel {
             ($scalar_variant:ident, $kernel_variant:ident, $val:expr) => {
                 call_const_set(
+                    const_set::$kernel_variant,
+                    self.device.kernels(),
                     self.device.device(),
                     &command_buffer,
-                    self.device.kernels(),
-                    const_set::$kernel_variant,
                     &self.buffer,
                     &metadata,
                     $val,
@@ -206,61 +206,73 @@ impl BackendStorageT for MetalStorage {
         Ok(())
     }
 
-    fn call_binary(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
-        ops_binary::call_binary(self, rhs_storage, lhs_layout, rhs_layout, op)
-    }
-
-    fn call_binary_logical(
+    fn call_ops_binary(
         &self,
         rhs_storage: &Self,
         lhs_layout: &Layout,
         rhs_layout: &Layout,
         op: Op,
     ) -> HoduResult<Self> {
-        ops_binary::call_binary_logical(self, rhs_storage, lhs_layout, rhs_layout, op)
+        ops_binary::call_ops_binary(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_cmp(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
-        ops_binary::call_cmp(self, rhs_storage, lhs_layout, rhs_layout, op)
+    fn call_ops_binary_logical(
+        &self,
+        rhs_storage: &Self,
+        lhs_layout: &Layout,
+        rhs_layout: &Layout,
+        op: Op,
+    ) -> HoduResult<Self> {
+        ops_binary::call_ops_binary_logical(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
-        ops_unary::call_cmp_scalar(self, layout, scalar, op)
+    fn call_ops_cmp(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_binary::call_ops_cmp(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
-        ops_unary::call_unary(self, layout, op)
+    fn call_ops_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
+        ops_unary::call_ops_cmp_scalar(self, layout, scalar, op)
     }
 
-    fn call_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
-        ops_unary::call_unary_logical(self, layout, op)
+    fn call_ops_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_unary::call_ops_unary(self, layout, op)
     }
 
-    fn call_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
-        ops_unary::call_unary_scalar(self, layout, scalar, op)
+    fn call_ops_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_unary::call_ops_unary_logical(self, layout, op)
     }
 
-    fn call_matmul(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
-        ops_matrix::call_matmul(self, rhs_storage, lhs_layout, rhs_layout, op)
+    fn call_ops_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
+        ops_unary::call_ops_unary_scalar(self, layout, scalar, op)
     }
 
-    fn call_dot(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
-        ops_matrix::call_dot(self, rhs_storage, lhs_layout, rhs_layout, op)
+    fn call_ops_matmul(
+        &self,
+        rhs_storage: &Self,
+        lhs_layout: &Layout,
+        rhs_layout: &Layout,
+        op: Op,
+    ) -> HoduResult<Self> {
+        ops_matrix::call_ops_matmul(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
-        ops_reduce::call_reduce(self, layout, dims, keep_dim, op)
+    fn call_ops_dot(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
+        ops_matrix::call_ops_dot(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
-        ops_concat_split::call_concat(self, others, layouts, dim, op)
+    fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
+        ops_reduce::call_ops_reduce(self, layout, dims, keep_dim, op)
     }
 
-    fn call_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
-        ops_concat_split::call_split(self, layout, dim, start, size, op)
+    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
+        ops_concat_split::call_ops_concat(self, others, layouts, dim, op)
     }
 
-    fn call_index_select(
+    fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
+        ops_concat_split::call_ops_split(self, layout, dim, start, size, op)
+    }
+
+    fn call_ops_index_select(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -268,10 +280,10 @@ impl BackendStorageT for MetalStorage {
         dim: u32,
         op: Op,
     ) -> HoduResult<Self> {
-        ops_indexing::call_index_select(self, layout, indices_storage, indices_layout, dim, op)
+        ops_indexing::call_ops_index_select(self, layout, indices_storage, indices_layout, dim, op)
     }
 
-    fn call_put(
+    fn call_ops_index_put(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -281,7 +293,7 @@ impl BackendStorageT for MetalStorage {
         dim: u32,
         op: Op,
     ) -> HoduResult<Self> {
-        ops_indexing::call_index_put(
+        ops_indexing::call_ops_index_put(
             self,
             layout,
             indices_storage,
@@ -293,7 +305,7 @@ impl BackendStorageT for MetalStorage {
         )
     }
 
-    fn call_gather(
+    fn call_ops_gather(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -301,10 +313,10 @@ impl BackendStorageT for MetalStorage {
         dim: u32,
         op: Op,
     ) -> HoduResult<Self> {
-        ops_indexing::call_gather(self, layout, indices_storage, indices_layout, dim, op)
+        ops_indexing::call_ops_gather(self, layout, indices_storage, indices_layout, dim, op)
     }
 
-    fn call_scatter(
+    fn call_ops_scatter(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -314,7 +326,7 @@ impl BackendStorageT for MetalStorage {
         dim: u32,
         op: Op,
     ) -> HoduResult<Self> {
-        ops_indexing::call_scatter(
+        ops_indexing::call_ops_scatter(
             self,
             layout,
             indices_storage,
@@ -326,7 +338,7 @@ impl BackendStorageT for MetalStorage {
         )
     }
 
-    fn call_conv(
+    fn call_ops_conv(
         &self,
         layout: &Layout,
         weight_storage: &Self,
@@ -336,7 +348,7 @@ impl BackendStorageT for MetalStorage {
         dilation: &[u32],
         op: Op,
     ) -> HoduResult<Self> {
-        ops_conv::call_conv(
+        ops_conv::call_ops_conv(
             self,
             layout,
             weight_storage,
@@ -348,7 +360,7 @@ impl BackendStorageT for MetalStorage {
         )
     }
 
-    fn call_conv_grad_weight(
+    fn call_ops_conv_grad_weight(
         &self,
         layout: &Layout,
         grad_output_storage: &Self,
@@ -359,7 +371,7 @@ impl BackendStorageT for MetalStorage {
         dilation: &[u32],
         op: Op,
     ) -> HoduResult<Self> {
-        ops_conv::call_conv_grad_weight(
+        ops_conv::call_ops_conv_grad_weight(
             self,
             layout,
             grad_output_storage,
@@ -372,7 +384,7 @@ impl BackendStorageT for MetalStorage {
         )
     }
 
-    fn call_reduce_window(
+    fn call_ops_reduce_window(
         &self,
         layout: &Layout,
         window_shape: &[u32],
@@ -380,7 +392,7 @@ impl BackendStorageT for MetalStorage {
         padding: &[u32],
         op: Op,
     ) -> HoduResult<Self> {
-        ops_windowing::call_reduce_window(self, layout, window_shape, strides, padding, op)
+        ops_windowing::call_ops_reduce_window(self, layout, window_shape, strides, padding, op)
     }
 
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {
@@ -419,12 +431,13 @@ impl BackendStorageT for MetalStorage {
         // Build kernel name: cast_<src>_to_<dst>
         let kernel_name = format!("cast_{}_to_{}", self.dtype, target_dtype);
         let kernel_name_str = Box::leak(kernel_name.into_boxed_str());
+        let kernel = Kernel(kernel_name_str);
 
-        call_cast(
+        call_ops_cast(
+            kernel,
+            self.device.kernels(),
             self.device.device(),
             &command_buffer,
-            self.device.kernels(),
-            kernel_name_str,
             input,
             &output_buffer,
             &metadata,
@@ -474,11 +487,11 @@ impl BackendStorageT for MetalStorage {
         // Call appropriate contiguous kernel based on dtype
         macro_rules! call_kernel {
             ($kernel_variant:ident) => {
-                call_contiguous(
+                call_ops_contiguous(
+                    contiguous::$kernel_variant,
+                    self.device.kernels(),
                     self.device.device(),
                     &command_buffer,
-                    self.device.kernels(),
-                    contiguous::$kernel_variant,
                     input,
                     &output_buffer,
                     &metadata,

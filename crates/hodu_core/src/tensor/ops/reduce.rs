@@ -209,7 +209,7 @@ impl Tensor {
             Ok(result_tensor)
         } else {
             let storage = self.with_storage(|storage| {
-                storage.call_reduce(&self.layout(), &reduce_dims, keep_dim, Op::Reduce(reduce_op))
+                storage.call_ops_reduce(&self.layout(), &reduce_dims, keep_dim, Op::Reduce(reduce_op))
             })?;
 
             let requires_grad = self.is_requires_grad() && validate_requires_grad;

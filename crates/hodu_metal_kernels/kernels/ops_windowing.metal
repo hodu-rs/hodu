@@ -32,10 +32,10 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
         const constant size_t *input_shape = metadata + 2;                                         \
         const constant size_t *input_strides = metadata + 2 + num_dims;                            \
         const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
-        const constant size_t *window_shape = metadata + 2 + 2 * num_dims + 1;                     \
-        const constant size_t *strides = metadata + 2 + 3 * num_dims + 1;                          \
-        const constant size_t *padding = metadata + 2 + 4 * num_dims + 1;                          \
-        const constant size_t *output_shape = metadata + 2 + 6 * num_dims + 1;                     \
+        const constant size_t *window_shape = metadata + 3 + 2 * num_dims;                         \
+        const constant size_t *strides = metadata + 3 + 3 * num_dims;                              \
+        const constant size_t *padding = metadata + 3 + 4 * num_dims;                              \
+        const constant size_t *output_shape = metadata + 3 + 6 * num_dims;                         \
                                                                                                    \
         for (uint out_idx = thread_index; out_idx < num_els; out_idx += threads_per_grid) {        \
                                                                                                    \
@@ -118,10 +118,10 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
         const constant size_t *input_shape = metadata + 2;                                         \
         const constant size_t *input_strides = metadata + 2 + num_dims;                            \
         const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
-        const constant size_t *window_shape = metadata + 2 + 2 * num_dims + 1;                     \
-        const constant size_t *strides = metadata + 2 + 3 * num_dims + 1;                          \
-        const constant size_t *padding = metadata + 2 + 4 * num_dims + 1;                          \
-        const constant size_t *output_shape = metadata + 2 + 6 * num_dims + 1;                     \
+        const constant size_t *window_shape = metadata + 3 + 2 * num_dims;                         \
+        const constant size_t *strides = metadata + 3 + 3 * num_dims;                              \
+        const constant size_t *padding = metadata + 3 + 4 * num_dims;                              \
+        const constant size_t *output_shape = metadata + 3 + 6 * num_dims;                         \
                                                                                                    \
         for (uint out_idx = thread_index; out_idx < num_els; out_idx += threads_per_grid) {        \
                                                                                                    \

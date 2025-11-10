@@ -22,7 +22,7 @@ use core::ffi::c_void;
 ///
 /// # Returns
 /// Output storage containing the result of the matrix multiplication
-pub fn call_matmul(
+pub fn call_ops_matmul(
     lhs_storage: &CpuStorage,
     rhs_storage: &CpuStorage,
     lhs_layout: &Layout,
@@ -165,7 +165,7 @@ pub fn call_matmul(
             let rhs_ptr = $rhs_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::matrix::call_matmul(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_matmul(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -242,7 +242,7 @@ pub fn call_matmul(
 ///
 /// # Returns
 /// Output storage containing the result of the matrix multiplication
-pub fn call_dot(
+pub fn call_ops_dot(
     lhs_storage: &CpuStorage,
     rhs_storage: &CpuStorage,
     lhs_layout: &Layout,
@@ -318,7 +318,7 @@ pub fn call_dot(
             let rhs_ptr = $rhs_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::matrix::call_dot(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_dot(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
         }};
     }
 

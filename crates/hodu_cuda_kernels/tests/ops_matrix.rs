@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
@@ -11,6 +15,8 @@ fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
 
 #[test]
 fn dot_f32_simple() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -32,7 +38,7 @@ fn dot_f32_simple() {
     // [M, K, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset]
     let metadata = vec![m, k, n, 3, 1, 2, 1, 0, 0];
 
-    call_ops_dot(dot::F32, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
+    call_ops_dot(dot::F32, &kernels, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; m * n];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -43,6 +49,8 @@ fn dot_f32_simple() {
 
 #[test]
 fn matmul_f32_2d() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -75,7 +83,16 @@ fn matmul_f32_2d() {
         m, k, n, // M, K, N
     ];
 
-    call_ops_matmul(matmul::F32, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
+    call_ops_matmul(
+        matmul::F32,
+        &kernels,
+        &device,
+        &lhs_dev,
+        &rhs_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![0.0f32; num_els];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -84,6 +101,8 @@ fn matmul_f32_2d() {
 
 #[test]
 fn matmul_f32_square() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -108,7 +127,16 @@ fn matmul_f32_square() {
         num_els, lhs_ndim, rhs_ndim, batch_ndim, m, k, k, n, k, 1, n, 1, 0, 0, m, k, n,
     ];
 
-    call_ops_matmul(matmul::F32, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
+    call_ops_matmul(
+        matmul::F32,
+        &kernels,
+        &device,
+        &lhs_dev,
+        &rhs_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![0.0f32; num_els];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -123,6 +151,8 @@ fn matmul_f32_square() {
 
 #[test]
 fn dot_f32_identity() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -138,7 +168,16 @@ fn dot_f32_identity() {
 
     let metadata = vec![m, k, n, 3, 1, 3, 1, 0, 0];
 
-    call_ops_dot(dot::F32, &device, &identity_dev, &identity_dev, &mut output, &metadata).unwrap();
+    call_ops_dot(
+        dot::F32,
+        &kernels,
+        &device,
+        &identity_dev,
+        &identity_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![0.0f32; m * n];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -147,6 +186,8 @@ fn dot_f32_identity() {
 
 #[test]
 fn matmul_f32_batch() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -196,7 +237,16 @@ fn matmul_f32_batch() {
         n, // M, K, N
     ];
 
-    call_ops_matmul(matmul::F32, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
+    call_ops_matmul(
+        matmul::F32,
+        &kernels,
+        &device,
+        &lhs_dev,
+        &rhs_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![0.0f32; num_els];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

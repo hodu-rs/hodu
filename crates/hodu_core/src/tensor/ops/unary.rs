@@ -37,7 +37,7 @@ macro_rules! unary_op {
                 Ok(result_tensor)
             } else {
                 let storage =
-                    self.with_storage(|storage| storage.call_unary(&self.layout(), Op::Unary(UnaryOp::$op_name)))?;
+                    self.with_storage(|storage| storage.call_ops_unary(&self.layout(), Op::Unary(UnaryOp::$op_name)))?;
 
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
                 let layout = Layout::from_shape(&self.shape());
@@ -77,7 +77,7 @@ macro_rules! unary_logical_op {
                 Ok(result_tensor)
             } else {
                 let storage = self.with_storage(|storage| {
-                    storage.call_unary_logical(&self.layout(), Op::UnaryLogical(UnaryLogicalOp::$op_name))
+                    storage.call_ops_unary_logical(&self.layout(), Op::UnaryLogical(UnaryLogicalOp::$op_name))
                 })?;
 
                 let layout = Layout::from_shape(&self.shape());
@@ -128,7 +128,7 @@ macro_rules! unary_scalar_op {
                 Ok(result_tensor)
             } else {
                 let storage = self.with_storage(|storage| {
-                    storage.call_unary_scalar(
+                    storage.call_ops_unary_scalar(
                         &self.layout(),
                         scalar_value,
                         Op::UnaryScalar(UnaryScalarOp::$op_name),

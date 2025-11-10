@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -14,6 +18,8 @@ fn run_reduce_window<T: cudarc::driver::DeviceRepr + Clone>(
     output_shape: &[usize],
     kernel: hodu_cuda_kernels::kernels::Kernel,
 ) -> Vec<T> {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -40,7 +46,7 @@ fn run_reduce_window<T: cudarc::driver::DeviceRepr + Clone>(
     metadata.extend_from_slice(padding);
     metadata.extend_from_slice(output_shape);
 
-    call_ops_reduce_window(kernel, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce_window(kernel, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

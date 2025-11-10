@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 fn approx_f64(v: Vec<f64>, digits: i32) -> Vec<f64> {
@@ -14,6 +18,7 @@ where
     T: cudarc::driver::DeviceRepr + Clone,
     O: cudarc::driver::DeviceRepr + Clone,
 {
+    let kernels = kernels();
     let device = device();
     let stream = device.default_stream();
 
@@ -33,7 +38,7 @@ where
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_cast(kernel, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_cast(kernel, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; input.len()];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

@@ -18,10 +18,10 @@ ops!(const_set);
 /// leaving gaps in strided buffers untouched.
 ///
 /// # Arguments
+/// * `kernel` - Const set kernel (e.g., const_set::F32)
+/// * `kernels` - Kernel cache
 /// * `device` - Metal device to execute on
 /// * `ep` - Encoder provider (command buffer)
-/// * `kernels` - Kernel cache
-/// * `kernel_name` - Const set kernel (e.g., const_set::F32)
 /// * `output` - Output buffer (will be filled with const_val)
 /// * `metadata` - Metadata describing tensor shape, strides, and offset
 /// * `const_val` - Constant value to fill the tensor with
@@ -67,15 +67,15 @@ ops!(const_set);
 ///                &output, &metadata, 9.0f32)?;
 /// ```
 pub fn call_const_set<T: EncoderParam>(
+    kernel: Kernel,
+    kernels: &Kernels,
     device: &Device,
     ep: impl EncoderProvider,
-    kernels: &Kernels,
-    kernel_name: Kernel,
     output: &Buffer,
     metadata: &[usize],
     const_val: T,
 ) -> Result<(), MetalKernelError> {
-    let pipeline = kernels.load_pipeline(device, Source::Storage, kernel_name.0)?;
+    let pipeline = kernels.load_pipeline(device, Source::Storage, kernel.0)?;
 
     let num_els = metadata[0];
 

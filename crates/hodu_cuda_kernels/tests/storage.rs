@@ -1,13 +1,19 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 fn run_const_set<T>(shape: &[usize], strides: &[usize], offset: usize, const_val: T, kernel: Kernel) -> Vec<T>
 where
     T: cudarc::driver::DeviceRepr + Clone,
 {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 

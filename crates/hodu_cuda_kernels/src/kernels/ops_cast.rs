@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -13,6 +13,7 @@ ops!(cast);
 ///
 /// # Arguments
 /// * `kernel` - The cast kernel (e.g., cast::F32_I32 to cast from f32 to i32)
+/// * `kernels` - Kernel cache for managing compiled kernels
 /// * `device` - CUDA device to execute on
 /// * `input` - Input tensor device slice
 /// * `output` - Output tensor device slice (different type than input)
@@ -26,6 +27,7 @@ ops!(cast);
 /// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
 pub fn call_ops_cast<I, O>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<I>,
     output: &mut CudaSlice<O>,
@@ -35,7 +37,6 @@ where
     I: cudarc::driver::DeviceRepr,
     O: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsCast, kernel.0)?;
 
     let num_els = metadata[0];

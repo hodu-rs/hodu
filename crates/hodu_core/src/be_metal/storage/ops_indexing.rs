@@ -7,7 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
-pub fn call_index_select(
+pub fn call_ops_index_select(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     indices_storage: &MetalStorage,
@@ -20,7 +20,7 @@ pub fn call_index_select(
         Op::Indexing(_) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_index_select expects indexing op".to_string(),
+                "call_ops_index_select expects indexing op".to_string(),
             ))
         },
     }
@@ -55,9 +55,16 @@ pub fn call_index_select(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Convert to usize for kernel call
-    let shape_usize: Vec<usize> = input_shape.dims().iter().map(|&d| d as usize).collect();
-    let input_strides_usize: Vec<usize> = input_layout.strides().iter().map(|&s| s as usize).collect();
+    // Build metadata: [num_els, num_dims, input_shape..., input_strides..., input_offset, dim, num_indices]
+    let num_dims = input_ndim as usize;
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 3);
+    metadata.push(num_els as usize);
+    metadata.push(num_dims);
+    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
+    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
+    metadata.push(input_layout.offset() as usize);
+    metadata.push(dim as usize);
+    metadata.push(num_indices as usize);
 
     // Create buffer offsets
     let input_offset_buf = BufferOffset::zero_offset(input_storage.buffer());
@@ -65,19 +72,15 @@ pub fn call_index_select(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_index_select(
+    kernels::call_ops_index_select(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
-        &shape_usize,
         input_offset_buf,
-        &input_strides_usize,
-        input_layout.offset() as usize,
         indices_offset_buf,
-        dim as usize,
-        num_indices as usize,
         &output_buffer,
+        &metadata,
     )?;
 
     Ok(MetalStorage::new(
@@ -89,7 +92,7 @@ pub fn call_index_select(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn call_index_put(
+pub fn call_ops_index_put(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     indices_storage: &MetalStorage,
@@ -104,7 +107,7 @@ pub fn call_index_put(
         Op::Indexing(_) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_index_put expects indexing op".to_string(),
+                "call_ops_index_put expects indexing op".to_string(),
             ))
         },
     }
@@ -137,10 +140,18 @@ pub fn call_index_put(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Convert to usize for kernel call
-    let input_shape_usize: Vec<usize> = input_shape.dims().iter().map(|&d| d as usize).collect();
-    let input_strides_usize: Vec<usize> = input_layout.strides().iter().map(|&s| s as usize).collect();
-    let values_strides_usize: Vec<usize> = values_layout.strides().iter().map(|&s| s as usize).collect();
+    // Build metadata: [num_els, num_dims, input_shape..., input_strides..., values_strides..., input_offset, values_offset, dim, num_indices]
+    let num_dims = input_shape.ndim() as usize;
+    let mut metadata = Vec::with_capacity(2 + num_dims * 3 + 4);
+    metadata.push(num_els as usize);
+    metadata.push(num_dims);
+    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
+    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
+    metadata.extend(values_layout.strides().iter().map(|&s| s as usize));
+    metadata.push(input_layout.offset() as usize);
+    metadata.push(values_layout.offset() as usize);
+    metadata.push(dim as usize);
+    metadata.push(num_indices as usize);
 
     // Create buffer offsets
     let input_offset_buf = BufferOffset::zero_offset(input_storage.buffer());
@@ -148,22 +159,16 @@ pub fn call_index_put(
     let values_offset_buf = BufferOffset::zero_offset(values_storage.buffer());
 
     // Call kernel
-    kernels::call_index_put(
+    kernels::call_ops_index_put(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
-        &input_shape_usize,
         input_offset_buf,
-        &input_strides_usize,
-        input_layout.offset() as usize,
         indices_offset_buf,
         values_offset_buf,
-        &values_strides_usize,
-        values_layout.offset() as usize,
-        dim as usize,
-        num_indices as usize,
         &output_buffer,
+        &metadata,
     )?;
 
     Ok(MetalStorage::new(
@@ -174,7 +179,7 @@ pub fn call_index_put(
     ))
 }
 
-pub fn call_gather(
+pub fn call_ops_gather(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     indices_storage: &MetalStorage,
@@ -187,7 +192,7 @@ pub fn call_gather(
         Op::Indexing(_) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "Lcall_gatherE expects LindexingE op".to_string(),
+                "Lcall_ops_gatherE expects LindexingE op".to_string(),
             ))
         },
     }
@@ -208,10 +213,19 @@ pub fn call_gather(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Convert to usize for kernel call
-    let input_shape_usize: Vec<usize> = input_shape.dims().iter().map(|&d| d as usize).collect();
-    let input_strides_usize: Vec<usize> = input_layout.strides().iter().map(|&s| s as usize).collect();
-    let indices_strides_usize: Vec<usize> = indices_layout.strides().iter().map(|&s| s as usize).collect();
+    // Build metadata: [num_els, num_dims, input_shape..., input_strides..., indices_strides..., input_offset, indices_offset, dim, num_indices]
+    let num_dims = input_shape.ndim() as usize;
+    let num_indices = indices_shape.size() as usize;
+    let mut metadata = Vec::with_capacity(2 + num_dims * 3 + 4);
+    metadata.push(num_els as usize);
+    metadata.push(num_dims);
+    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
+    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
+    metadata.extend(indices_layout.strides().iter().map(|&s| s as usize));
+    metadata.push(input_layout.offset() as usize);
+    metadata.push(indices_layout.offset() as usize);
+    metadata.push(dim as usize);
+    metadata.push(num_indices);
 
     // Create buffer offsets
     let input_offset_buf = BufferOffset::zero_offset(input_storage.buffer());
@@ -219,20 +233,15 @@ pub fn call_gather(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_gather(
+    kernels::call_ops_gather(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
-        &input_shape_usize,
         input_offset_buf,
-        &input_strides_usize,
-        input_layout.offset() as usize,
         indices_offset_buf,
-        &indices_strides_usize,
-        indices_layout.offset() as usize,
-        dim as usize,
         &output_buffer,
+        &metadata,
     )?;
 
     Ok(MetalStorage::new(
@@ -244,7 +253,7 @@ pub fn call_gather(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn call_scatter(
+pub fn call_ops_scatter(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     indices_storage: &MetalStorage,
@@ -259,7 +268,7 @@ pub fn call_scatter(
         Op::Indexing(_) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "Lcall_scatterE expects LindexingE op".to_string(),
+                "Lcall_ops_scatterE expects LindexingE op".to_string(),
             ))
         },
     }
@@ -291,12 +300,21 @@ pub fn call_scatter(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Convert to usize for kernel call
-    let input_shape_usize: Vec<usize> = input_shape.dims().iter().map(|&d| d as usize).collect();
-    let input_strides_usize: Vec<usize> = input_layout.strides().iter().map(|&s| s as usize).collect();
-    let src_shape_usize: Vec<usize> = src_shape.dims().iter().map(|&d| d as usize).collect();
-    let src_strides_usize: Vec<usize> = src_layout.strides().iter().map(|&s| s as usize).collect();
-    let indices_strides_usize: Vec<usize> = indices_layout.strides().iter().map(|&s| s as usize).collect();
+    // Build metadata: [num_els, num_dims, input_shape..., input_strides..., src_shape..., src_strides..., indices_strides..., input_offset, src_offset, indices_offset, dim]
+    let num_dims = input_shape.ndim() as usize;
+    let num_src_els = src_shape.size() as usize;
+    let mut metadata = Vec::with_capacity(2 + num_dims * 5 + 4);
+    metadata.push(num_src_els); // scatter processes src elements
+    metadata.push(num_dims);
+    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
+    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
+    metadata.extend(src_shape.dims().iter().map(|&d| d as usize));
+    metadata.extend(src_layout.strides().iter().map(|&s| s as usize));
+    metadata.extend(indices_layout.strides().iter().map(|&s| s as usize));
+    metadata.push(input_layout.offset() as usize);
+    metadata.push(src_layout.offset() as usize);
+    metadata.push(indices_layout.offset() as usize);
+    metadata.push(dim as usize);
 
     // Create buffer offsets
     let input_offset_buf = BufferOffset::zero_offset(input_storage.buffer());
@@ -304,24 +322,16 @@ pub fn call_scatter(
     let src_offset_buf = BufferOffset::zero_offset(src_storage.buffer());
 
     // Call kernel
-    kernels::call_scatter(
+    kernels::call_ops_scatter(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
-        &input_shape_usize,
         input_offset_buf,
-        &input_strides_usize,
-        input_layout.offset() as usize,
         indices_offset_buf,
-        &indices_strides_usize,
-        indices_layout.offset() as usize,
         src_offset_buf,
-        &src_shape_usize,
-        &src_strides_usize,
-        src_layout.offset() as usize,
-        dim as usize,
         &output_buffer,
+        &metadata,
     )?;
 
     Ok(MetalStorage::new(

@@ -8,7 +8,7 @@ use crate::{
 };
 use core::ffi::c_void;
 
-pub fn call_binary(
+pub fn call_ops_binary(
     lhs_storage: &CpuStorage,
     rhs_storage: &CpuStorage,
     lhs_layout: &Layout,
@@ -67,7 +67,7 @@ pub fn call_binary(
             let rhs_ptr = $rhs_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::binary::call_binary(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_binary(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -133,7 +133,7 @@ pub fn call_binary(
     Ok(output)
 }
 
-pub fn call_binary_logical(
+pub fn call_ops_binary_logical(
     lhs_storage: &CpuStorage,
     rhs_storage: &CpuStorage,
     lhs_layout: &Layout,
@@ -195,7 +195,7 @@ pub fn call_binary_logical(
             let rhs_ptr = $rhs_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::binary::call_binary(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_binary(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -261,7 +261,7 @@ pub fn call_binary_logical(
     Ok(output)
 }
 
-pub fn call_cmp(
+pub fn call_ops_cmp(
     lhs_storage: &CpuStorage,
     rhs_storage: &CpuStorage,
     lhs_layout: &Layout,
@@ -319,7 +319,7 @@ pub fn call_cmp(
             let rhs_ptr = $rhs_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::binary::call_binary(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_binary(kernel, lhs_ptr, rhs_ptr, out_ptr, &metadata)?;
         }};
     }
 

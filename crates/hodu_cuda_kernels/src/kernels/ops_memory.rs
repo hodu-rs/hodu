@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -26,6 +26,7 @@ ops!(contiguous, copy);
 /// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
 pub fn call_ops_contiguous<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -34,7 +35,6 @@ pub fn call_ops_contiguous<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsMemory, kernel.0)?;
 
     let num_els = metadata[0];
@@ -79,6 +79,7 @@ where
 /// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
 pub fn call_ops_copy<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -87,7 +88,6 @@ pub fn call_ops_copy<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsMemory, kernel.0)?;
 
     let num_els = metadata[0];

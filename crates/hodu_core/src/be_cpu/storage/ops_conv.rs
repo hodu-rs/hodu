@@ -23,7 +23,7 @@ use core::ffi::c_void;
 /// # Returns
 /// Output storage containing the convolution result
 #[allow(clippy::too_many_arguments)]
-pub fn call_conv(
+pub fn call_ops_conv(
     input_storage: &CpuStorage,
     input_layout: &Layout,
     weight_storage: &CpuStorage,
@@ -257,7 +257,7 @@ pub fn call_conv(
             let weight_ptr = $weight_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::conv::call_conv(kernel, input_ptr, weight_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_conv(kernel, input_ptr, weight_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -308,7 +308,7 @@ pub fn call_conv(
 /// # Returns
 /// Output storage containing the gradient weights
 #[allow(clippy::too_many_arguments)]
-pub fn call_conv_grad_weight(
+pub fn call_ops_conv_grad_weight(
     input_storage: &CpuStorage,
     input_layout: &Layout,
     grad_output_storage: &CpuStorage,
@@ -486,7 +486,7 @@ pub fn call_conv_grad_weight(
             let grad_output_ptr = $grad_output_data.as_ptr() as *const c_void;
             let grad_weight_ptr = $grad_weight_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::conv::call_conv_grad_weight(
+            hodu_cpu_kernels::call_ops_conv_grad_weight(
                 kernel,
                 input_ptr,
                 grad_output_ptr,

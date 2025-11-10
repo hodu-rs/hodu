@@ -17,7 +17,7 @@ pub fn execute(inputs: &[Arc<BackendStorage>], layouts: &[Layout], op: &Op) -> H
                     layouts.len()
                 )));
             }
-            inputs[0].call_matmul(&inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_matmul(&inputs[1], &layouts[0], &layouts[1], op.clone())
         },
 
         Op::Matrix(MatrixOp::Dot) => {
@@ -28,7 +28,7 @@ pub fn execute(inputs: &[Arc<BackendStorage>], layouts: &[Layout], op: &Op) -> H
                     layouts.len()
                 )));
             }
-            inputs[0].call_dot(&inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_dot(&inputs[1], &layouts[0], &layouts[1], op.clone())
         },
 
         _ => Err(HoduError::InternalError(format!(

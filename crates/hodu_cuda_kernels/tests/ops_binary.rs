@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
@@ -11,6 +15,7 @@ fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
 
 fn run_binary<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, lhs: &[T], rhs: &[T]) -> Vec<T> {
     assert_eq!(lhs.len(), rhs.len());
+    let kernels = kernels();
     let device = device();
     let stream = device.default_stream();
 
@@ -33,7 +38,7 @@ fn run_binary<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, lhs: &[T], 
     metadata.push(0); // lhs_offset
     metadata.push(0); // rhs_offset
 
-    call_ops_binary::<T, T>(kernel, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
+    call_ops_binary::<T, T>(kernel, &kernels, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
 
     let mut result = vec![unsafe { core::mem::zeroed() }; lhs.len()];
     stream.memcpy_dtoh(&output, &mut result).unwrap();
@@ -46,6 +51,7 @@ fn run_binary_logical<T: cudarc::driver::DeviceRepr + Clone, O: cudarc::driver::
     rhs: &[T],
 ) -> Vec<O> {
     assert_eq!(lhs.len(), rhs.len());
+    let kernels = kernels();
     let device = device();
     let stream = device.default_stream();
 
@@ -68,7 +74,7 @@ fn run_binary_logical<T: cudarc::driver::DeviceRepr + Clone, O: cudarc::driver::
     metadata.push(0); // lhs_offset
     metadata.push(0); // rhs_offset
 
-    call_ops_binary::<T, O>(kernel, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
+    call_ops_binary::<T, O>(kernel, &kernels, &device, &lhs_dev, &rhs_dev, &mut output, &metadata).unwrap();
 
     let mut result = vec![unsafe { core::mem::zeroed() }; lhs.len()];
     stream.memcpy_dtoh(&output, &mut result).unwrap();

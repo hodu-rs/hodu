@@ -25,41 +25,68 @@ pub trait BackendStorageT: Sized {
 
     fn const_set(&mut self, _: Scalar, _: &Layout) -> HoduResult<()>;
 
-    fn call_binary(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_binary(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_binary_logical(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_binary_logical(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_cmp(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_cmp(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_cmp_scalar(&self, _: &Layout, _: Scalar, _: Op) -> HoduResult<Self>;
+    fn call_ops_cmp_scalar(&self, _: &Layout, _: Scalar, _: Op) -> HoduResult<Self>;
 
-    fn call_unary(&self, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_unary(&self, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_unary_logical(&self, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_unary_logical(&self, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_unary_scalar(&self, _: &Layout, _: Scalar, _: Op) -> HoduResult<Self>;
+    fn call_ops_unary_scalar(&self, _: &Layout, _: Scalar, _: Op) -> HoduResult<Self>;
 
-    fn call_matmul(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_matmul(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_dot(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
+    fn call_ops_dot(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_reduce(&self, _: &Layout, _: &[u32], _: bool, _: Op) -> HoduResult<Self>;
+    fn call_ops_reduce(&self, _: &Layout, _: &[u32], _: bool, _: Op) -> HoduResult<Self>;
 
-    fn call_concat(&self, _: &[&Self], _: &[&Layout], _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_concat(&self, _: &[&Self], _: &[&Layout], _: u32, _: Op) -> HoduResult<Self>;
 
-    fn call_split(&self, _: &Layout, _: u32, _: u32, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_split(&self, _: &Layout, _: u32, _: u32, _: u32, _: Op) -> HoduResult<Self>;
 
-    fn call_index_select(&self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_index_select(&self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
 
-    fn call_put(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_index_put(
+        &self,
+        _: &Layout,
+        _: &Self,
+        _: &Layout,
+        _: &Self,
+        _: &Layout,
+        _: u32,
+        _: Op,
+    ) -> HoduResult<Self>;
 
-    fn call_gather(&self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_gather(&self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
 
-    fn call_scatter(&self, _: &Layout, _: &Self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_scatter(
+        &self,
+        _: &Layout,
+        _: &Self,
+        _: &Layout,
+        _: &Self,
+        _: &Layout,
+        _: u32,
+        _: Op,
+    ) -> HoduResult<Self>;
 
-    fn call_conv(&self, _: &Layout, _: &Self, _: &Layout, _: &[u32], _: &[u32], _: &[u32], _: Op) -> HoduResult<Self>;
+    fn call_ops_conv(
+        &self,
+        _: &Layout,
+        _: &Self,
+        _: &Layout,
+        _: &[u32],
+        _: &[u32],
+        _: &[u32],
+        _: Op,
+    ) -> HoduResult<Self>;
 
-    fn call_conv_grad_weight(
+    fn call_ops_conv_grad_weight(
         &self,
         _: &Layout,
         _: &Self,
@@ -71,7 +98,7 @@ pub trait BackendStorageT: Sized {
         _: Op,
     ) -> HoduResult<Self>;
 
-    fn call_reduce_window(&self, _: &Layout, _: &[u32], _: &[u32], _: &[u32], _: Op) -> HoduResult<Self>;
+    fn call_ops_reduce_window(&self, _: &Layout, _: &[u32], _: &[u32], _: &[u32], _: Op) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
@@ -131,7 +158,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_binary(
+    pub(crate) fn call_ops_binary(
         &self,
         rhs_storage: &Self,
         lhs_layout: &Layout,
@@ -148,14 +175,14 @@ impl BackendStorage {
         }
 
         match (self, rhs_storage) {
-            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_binary(
+            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_ops_binary(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_binary(
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_binary(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
@@ -169,7 +196,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_binary_logical(
+    pub(crate) fn call_ops_binary_logical(
         &self,
         rhs_storage: &Self,
         lhs_layout: &Layout,
@@ -186,19 +213,16 @@ impl BackendStorage {
         }
 
         match (self, rhs_storage) {
-            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_binary_logical(
+            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_ops_binary_logical(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_binary_logical(
-                rhs_storage,
-                lhs_layout,
-                rhs_layout,
-                op,
-            )?)),
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(
+                lhs_storage.call_ops_binary_logical(rhs_storage, lhs_layout, rhs_layout, op)?,
+            )),
             #[cfg(feature = "metal")]
             _ => Err(HoduError::DeviceMismatch {
                 expected: lhs_device,
@@ -207,7 +231,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_cmp(
+    pub(crate) fn call_ops_cmp(
         &self,
         rhs_storage: &Self,
         lhs_layout: &Layout,
@@ -224,14 +248,14 @@ impl BackendStorage {
         }
 
         match (self, rhs_storage) {
-            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_cmp(
+            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_ops_cmp(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_cmp(
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_cmp(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
@@ -245,39 +269,39 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_cmp_scalar(layout, scalar, op)?)),
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_cmp_scalar(layout, scalar, op)?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_cmp_scalar(layout, scalar, op)?)),
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_cmp_scalar(layout, scalar, op)?)),
         }
     }
 
-    pub(crate) fn call_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_unary(layout, op)?)),
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_unary(layout, op)?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_unary(layout, op)?)),
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_unary(layout, op)?)),
         }
     }
 
-    pub(crate) fn call_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_unary_logical(layout, op)?)),
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_unary_logical(layout, op)?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_unary_logical(layout, op)?)),
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_unary_logical(layout, op)?)),
         }
     }
 
-    pub(crate) fn call_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_unary_scalar(layout, scalar, op)?)),
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_unary_scalar(layout, scalar, op)?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_unary_scalar(layout, scalar, op)?)),
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_unary_scalar(layout, scalar, op)?)),
         }
     }
 
-    pub(crate) fn call_matmul(
+    pub(crate) fn call_ops_matmul(
         &self,
         rhs_storage: &Self,
         lhs_layout: &Layout,
@@ -294,14 +318,14 @@ impl BackendStorage {
         }
 
         match (self, rhs_storage) {
-            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_matmul(
+            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_ops_matmul(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_matmul(
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_matmul(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
@@ -315,7 +339,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_dot(
+    pub(crate) fn call_ops_dot(
         &self,
         rhs_storage: &Self,
         lhs_layout: &Layout,
@@ -332,14 +356,14 @@ impl BackendStorage {
         }
 
         match (self, rhs_storage) {
-            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_dot(
+            (Self::CPU(lhs_storage), Self::CPU(rhs_storage)) => Ok(Self::CPU(lhs_storage.call_ops_dot(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_dot(
+            (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_dot(
                 rhs_storage,
                 lhs_layout,
                 rhs_layout,
@@ -353,15 +377,15 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_reduce(layout, dims, keep_dim, op)?)),
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_reduce(layout, dims, keep_dim, op)?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_reduce(layout, dims, keep_dim, op)?)),
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_reduce(layout, dims, keep_dim, op)?)),
         }
     }
 
-    pub(crate) fn call_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
         // Check all storages are on the same device
         let device = self.device();
         for other in others {
@@ -384,7 +408,7 @@ impl BackendStorage {
                         _ => unreachable!("Device mismatch already checked"),
                     })
                     .collect();
-                Ok(Self::CPU(storage.call_concat(&others_cpu, layouts, dim, op)?))
+                Ok(Self::CPU(storage.call_ops_concat(&others_cpu, layouts, dim, op)?))
             },
             #[cfg(feature = "metal")]
             Self::Metal(storage) => {
@@ -395,20 +419,20 @@ impl BackendStorage {
                         _ => unreachable!("Device mismatch already checked"),
                     })
                     .collect();
-                Ok(Self::Metal(storage.call_concat(&others_metal, layouts, dim, op)?))
+                Ok(Self::Metal(storage.call_ops_concat(&others_metal, layouts, dim, op)?))
             },
         }
     }
 
-    pub(crate) fn call_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_split(layout, dim, start, size, op)?)),
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_split(layout, dim, start, size, op)?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_split(layout, dim, start, size, op)?)),
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_split(layout, dim, start, size, op)?)),
         }
     }
 
-    pub(crate) fn call_index_select(
+    pub(crate) fn call_ops_index_select(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -427,7 +451,7 @@ impl BackendStorage {
         }
 
         match (self, indices_storage) {
-            (Self::CPU(storage), Self::CPU(indices)) => Ok(Self::CPU(storage.call_index_select(
+            (Self::CPU(storage), Self::CPU(indices)) => Ok(Self::CPU(storage.call_ops_index_select(
                 layout,
                 indices,
                 indices_layout,
@@ -435,7 +459,7 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_index_select(
+            (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_ops_index_select(
                 layout,
                 indices,
                 indices_layout,
@@ -450,7 +474,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_index_put(
+    pub(crate) fn call_ops_index_put(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -479,7 +503,7 @@ impl BackendStorage {
         }
 
         match (self, indices_storage, values_storage) {
-            (Self::CPU(storage), Self::CPU(indices), Self::CPU(values)) => Ok(Self::CPU(storage.call_put(
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(values)) => Ok(Self::CPU(storage.call_ops_index_put(
                 layout,
                 indices,
                 indices_layout,
@@ -489,15 +513,9 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(storage), Self::Metal(indices), Self::Metal(values)) => Ok(Self::Metal(storage.call_put(
-                layout,
-                indices,
-                indices_layout,
-                values,
-                values_layout,
-                dim,
-                op,
-            )?)),
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(values)) => Ok(Self::Metal(
+                storage.call_ops_index_put(layout, indices, indices_layout, values, values_layout, dim, op)?,
+            )),
             #[cfg(feature = "metal")]
             _ => {
                 if device != indices_device {
@@ -515,7 +533,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_gather(
+    pub(crate) fn call_ops_gather(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -534,7 +552,7 @@ impl BackendStorage {
         }
 
         match (self, indices_storage) {
-            (Self::CPU(storage), Self::CPU(indices)) => Ok(Self::CPU(storage.call_gather(
+            (Self::CPU(storage), Self::CPU(indices)) => Ok(Self::CPU(storage.call_ops_gather(
                 layout,
                 indices,
                 indices_layout,
@@ -542,7 +560,7 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_gather(
+            (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_ops_gather(
                 layout,
                 indices,
                 indices_layout,
@@ -557,7 +575,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_scatter(
+    pub(crate) fn call_ops_scatter(
         &self,
         layout: &Layout,
         indices_storage: &Self,
@@ -586,7 +604,7 @@ impl BackendStorage {
         }
 
         match (self, indices_storage, src_storage) {
-            (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => Ok(Self::CPU(storage.call_scatter(
+            (Self::CPU(storage), Self::CPU(indices), Self::CPU(src)) => Ok(Self::CPU(storage.call_ops_scatter(
                 layout,
                 indices,
                 indices_layout,
@@ -596,15 +614,9 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => Ok(Self::Metal(storage.call_scatter(
-                layout,
-                indices,
-                indices_layout,
-                src,
-                src_layout,
-                dim,
-                op,
-            )?)),
+            (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => Ok(Self::Metal(
+                storage.call_ops_scatter(layout, indices, indices_layout, src, src_layout, dim, op)?,
+            )),
             #[cfg(feature = "metal")]
             _ => {
                 if device != indices_device {
@@ -622,7 +634,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_conv(
+    pub(crate) fn call_ops_conv(
         &self,
         layout: &Layout,
         weight_storage: &Self,
@@ -643,7 +655,7 @@ impl BackendStorage {
         }
 
         match (self, weight_storage) {
-            (Self::CPU(storage), Self::CPU(weight)) => Ok(Self::CPU(storage.call_conv(
+            (Self::CPU(storage), Self::CPU(weight)) => Ok(Self::CPU(storage.call_ops_conv(
                 layout,
                 weight,
                 weight_layout,
@@ -653,7 +665,7 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(storage), Self::Metal(weight)) => Ok(Self::Metal(storage.call_conv(
+            (Self::Metal(storage), Self::Metal(weight)) => Ok(Self::Metal(storage.call_ops_conv(
                 layout,
                 weight,
                 weight_layout,
@@ -670,7 +682,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_conv_grad_weight(
+    pub(crate) fn call_ops_conv_grad_weight(
         &self,
         layout: &Layout,
         grad_output_storage: &Self,
@@ -692,7 +704,7 @@ impl BackendStorage {
         }
 
         match (self, grad_output_storage) {
-            (Self::CPU(storage), Self::CPU(grad_output)) => Ok(Self::CPU(storage.call_conv_grad_weight(
+            (Self::CPU(storage), Self::CPU(grad_output)) => Ok(Self::CPU(storage.call_ops_conv_grad_weight(
                 layout,
                 grad_output,
                 grad_output_layout,
@@ -703,7 +715,7 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            (Self::Metal(storage), Self::Metal(grad_output)) => Ok(Self::Metal(storage.call_conv_grad_weight(
+            (Self::Metal(storage), Self::Metal(grad_output)) => Ok(Self::Metal(storage.call_ops_conv_grad_weight(
                 layout,
                 grad_output,
                 grad_output_layout,
@@ -721,7 +733,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_reduce_window(
+    pub(crate) fn call_ops_reduce_window(
         &self,
         layout: &Layout,
         window_shape: &[u32],
@@ -730,7 +742,7 @@ impl BackendStorage {
         op: Op,
     ) -> HoduResult<Self> {
         match self {
-            Self::CPU(storage) => Ok(Self::CPU(storage.call_reduce_window(
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_reduce_window(
                 layout,
                 window_shape,
                 strides,
@@ -738,7 +750,7 @@ impl BackendStorage {
                 op,
             )?)),
             #[cfg(feature = "metal")]
-            Self::Metal(storage) => Ok(Self::Metal(storage.call_reduce_window(
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_reduce_window(
                 layout,
                 window_shape,
                 strides,

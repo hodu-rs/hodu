@@ -1,25 +1,25 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 #![allow(clippy::too_many_arguments)]
 
-pub mod binary;
-pub mod concat_split;
-pub mod conv;
-pub mod indexing;
 pub mod macros;
-pub mod matrix;
-pub mod reduce;
-pub mod unary;
-pub mod windowing;
+pub mod ops_binary;
+pub mod ops_concat_split;
+pub mod ops_conv;
+pub mod ops_indexing;
+pub mod ops_matrix;
+pub mod ops_reduce;
+pub mod ops_unary;
+pub mod ops_windowing;
 
 // Re-export the Kernel type
 pub use macros::Kernel;
 
 // Re-export all operations
-pub use binary::*;
-pub use concat_split::*;
-pub use conv::*;
-pub use indexing::*;
-pub use matrix::*;
-pub use reduce::*;
-pub use unary::*;
-pub use windowing::*;
+pub use ops_binary::*;
+pub use ops_concat_split::*;
+pub use ops_conv::*;
+pub use ops_indexing::*;
+pub use ops_matrix::*;
+pub use ops_reduce::*;
+pub use ops_unary::*;
+pub use ops_windowing::*;

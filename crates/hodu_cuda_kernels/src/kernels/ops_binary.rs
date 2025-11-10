@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -34,6 +34,7 @@ ops!(
 ///
 /// # Arguments
 /// * `kernel` - The binary operation to perform (e.g., "add::F32", "mul::I32")
+/// * `kernels` - Kernel cache for managing compiled kernels
 /// * `device` - CUDA device to execute on
 /// * `lhs` - Left-hand side tensor device slice
 /// * `rhs` - Right-hand side tensor device slice
@@ -53,6 +54,7 @@ ops!(
 /// Total metadata length: `2 + num_dims * 4 + 2`
 pub fn call_ops_binary<I, O>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     lhs: &CudaSlice<I>,
     rhs: &CudaSlice<I>,
@@ -63,7 +65,6 @@ where
     I: cudarc::driver::DeviceRepr,
     O: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsBinary, kernel.0)?;
 
     let num_els = metadata[0];

@@ -8,7 +8,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
-pub fn call_cmp_scalar(
+pub fn call_ops_cmp_scalar(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     scalar: Scalar,
@@ -19,7 +19,7 @@ pub fn call_cmp_scalar(
         Op::CmpScalar(cmp_op) => cmp_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_cmp_scalar expects cmp scalar op".to_string(),
+                "call_ops_cmp_scalar expects cmp scalar op".to_string(),
             ))
         },
     };
@@ -64,13 +64,13 @@ pub fn call_cmp_scalar(
     // Get command buffer and call kernel with scalar
     let command_buffer = device.command_buffer()?;
 
-    macro_rules! call_kernel_scalar {
+    macro_rules! call_ops_kernel_scalar {
         ($scalar_val:expr) => {{
-            kernels::call_unary_scalar(
+            kernels::call_ops_unary_scalar(
+                kernel,
+                device.kernels(),
                 device.device(),
                 &command_buffer,
-                device.kernels(),
-                kernel,
                 input_offset,
                 &output_buffer,
                 &metadata,
@@ -80,22 +80,22 @@ pub fn call_cmp_scalar(
     }
 
     match scalar {
-        Scalar::BOOL(s) => call_kernel_scalar!(s),
-        Scalar::BF16(s) => call_kernel_scalar!(s),
-        Scalar::F16(s) => call_kernel_scalar!(s),
-        Scalar::F32(s) => call_kernel_scalar!(s),
-        Scalar::U8(s) => call_kernel_scalar!(s),
+        Scalar::BOOL(s) => call_ops_kernel_scalar!(s),
+        Scalar::BF16(s) => call_ops_kernel_scalar!(s),
+        Scalar::F16(s) => call_ops_kernel_scalar!(s),
+        Scalar::F32(s) => call_ops_kernel_scalar!(s),
+        Scalar::U8(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "u16")]
-        Scalar::U16(s) => call_kernel_scalar!(s),
-        Scalar::U32(s) => call_kernel_scalar!(s),
+        Scalar::U16(s) => call_ops_kernel_scalar!(s),
+        Scalar::U32(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "u64")]
-        Scalar::U64(s) => call_kernel_scalar!(s),
-        Scalar::I8(s) => call_kernel_scalar!(s),
+        Scalar::U64(s) => call_ops_kernel_scalar!(s),
+        Scalar::I8(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "i16")]
-        Scalar::I16(s) => call_kernel_scalar!(s),
-        Scalar::I32(s) => call_kernel_scalar!(s),
+        Scalar::I16(s) => call_ops_kernel_scalar!(s),
+        Scalar::I32(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "i64")]
-        Scalar::I64(s) => call_kernel_scalar!(s),
+        Scalar::I64(s) => call_ops_kernel_scalar!(s),
         _ => {
             return Err(HoduError::UnsupportedDTypeForDevice {
                 dtype,
@@ -112,11 +112,15 @@ pub fn call_cmp_scalar(
     ))
 }
 
-pub fn call_unary(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -> HoduResult<MetalStorage> {
+pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -> HoduResult<MetalStorage> {
     // Extract unary op
     let unary_op = match op {
         Op::Unary(unary_op) => unary_op,
-        _ => return Err(HoduError::BackendError("Lcall_unaryE expects LunaryE op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_ops_unaryE expects LunaryE op".to_string(),
+            ))
+        },
     };
 
     let shape = input_layout.shape();
@@ -157,11 +161,11 @@ pub fn call_unary(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_unary(
+    kernels::call_ops_unary(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         &output_buffer,
         &metadata,
@@ -175,13 +179,13 @@ pub fn call_unary(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -
     ))
 }
 
-pub fn call_unary_logical(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -> HoduResult<MetalStorage> {
+pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -> HoduResult<MetalStorage> {
     // Extract unary logical op
     let unary_op = match op {
         Op::UnaryLogical(unary_op) => unary_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_unary_logical expects unary logical op".to_string(),
+                "call_ops_unary_logical expects unary logical op".to_string(),
             ))
         },
     };
@@ -225,11 +229,11 @@ pub fn call_unary_logical(input_storage: &MetalStorage, input_layout: &Layout, o
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_unary(
+    kernels::call_ops_unary(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         &output_buffer,
         &metadata,
@@ -243,7 +247,7 @@ pub fn call_unary_logical(input_storage: &MetalStorage, input_layout: &Layout, o
     ))
 }
 
-pub fn call_unary_scalar(
+pub fn call_ops_unary_scalar(
     input_storage: &MetalStorage,
     input_layout: &Layout,
     scalar: Scalar,
@@ -254,7 +258,7 @@ pub fn call_unary_scalar(
         Op::UnaryScalar(unary_op) => unary_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_unary_scalar expects unary scalar op".to_string(),
+                "call_ops_unary_scalar expects unary scalar op".to_string(),
             ))
         },
     };
@@ -298,13 +302,13 @@ pub fn call_unary_scalar(
     // Get command buffer and call kernel with scalar
     let command_buffer = device.command_buffer()?;
 
-    macro_rules! call_kernel_scalar {
+    macro_rules! call_ops_kernel_scalar {
         ($scalar_val:expr) => {{
-            kernels::call_unary_scalar(
+            kernels::call_ops_unary_scalar(
+                kernel,
+                device.kernels(),
                 device.device(),
                 &command_buffer,
-                device.kernels(),
-                kernel,
                 input_offset,
                 &output_buffer,
                 &metadata,
@@ -314,22 +318,22 @@ pub fn call_unary_scalar(
     }
 
     match scalar {
-        Scalar::BOOL(s) => call_kernel_scalar!(s),
-        Scalar::BF16(s) => call_kernel_scalar!(s),
-        Scalar::F16(s) => call_kernel_scalar!(s),
-        Scalar::F32(s) => call_kernel_scalar!(s),
-        Scalar::U8(s) => call_kernel_scalar!(s),
+        Scalar::BOOL(s) => call_ops_kernel_scalar!(s),
+        Scalar::BF16(s) => call_ops_kernel_scalar!(s),
+        Scalar::F16(s) => call_ops_kernel_scalar!(s),
+        Scalar::F32(s) => call_ops_kernel_scalar!(s),
+        Scalar::U8(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "u16")]
-        Scalar::U16(s) => call_kernel_scalar!(s),
-        Scalar::U32(s) => call_kernel_scalar!(s),
+        Scalar::U16(s) => call_ops_kernel_scalar!(s),
+        Scalar::U32(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "u64")]
-        Scalar::U64(s) => call_kernel_scalar!(s),
-        Scalar::I8(s) => call_kernel_scalar!(s),
+        Scalar::U64(s) => call_ops_kernel_scalar!(s),
+        Scalar::I8(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "i16")]
-        Scalar::I16(s) => call_kernel_scalar!(s),
-        Scalar::I32(s) => call_kernel_scalar!(s),
+        Scalar::I16(s) => call_ops_kernel_scalar!(s),
+        Scalar::I32(s) => call_ops_kernel_scalar!(s),
         #[cfg(feature = "i64")]
-        Scalar::I64(s) => call_kernel_scalar!(s),
+        Scalar::I64(s) => call_ops_kernel_scalar!(s),
         _ => {
             return Err(HoduError::UnsupportedDTypeForDevice {
                 dtype,

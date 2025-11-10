@@ -1,11 +1,17 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
 }
 
+fn kernels() -> Kernels {
+    Kernels::new()
+}
+
 #[test]
 fn concat_f32_dim0() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -44,7 +50,7 @@ fn concat_f32_dim0() {
     metadata.extend(&input_offsets);
     metadata.extend(&input_buffer_offsets);
 
-    call_ops_concat(concat::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_concat(concat::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; 8];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -53,6 +59,8 @@ fn concat_f32_dim0() {
 
 #[test]
 fn concat_f32_dim1() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -86,7 +94,7 @@ fn concat_f32_dim1() {
     metadata.extend(&input_offsets);
     metadata.extend(&input_buffer_offsets);
 
-    call_ops_concat(concat::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_concat(concat::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; 8];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -95,6 +103,8 @@ fn concat_f32_dim1() {
 
 #[test]
 fn split_f32_dim0() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -123,7 +133,7 @@ fn split_f32_dim0() {
     metadata.push(output_size_on_dim);
     metadata.push(split_offset);
 
-    call_ops_split(split::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_split(split::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; 4];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -132,6 +142,8 @@ fn split_f32_dim0() {
 
 #[test]
 fn split_f32_dim0_offset() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -159,7 +171,7 @@ fn split_f32_dim0_offset() {
     metadata.push(output_size_on_dim);
     metadata.push(split_offset);
 
-    call_ops_split(split::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_split(split::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; 4];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -168,6 +180,8 @@ fn split_f32_dim0_offset() {
 
 #[test]
 fn split_f32_dim1() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -195,7 +209,7 @@ fn split_f32_dim1() {
     metadata.push(output_size_on_dim);
     metadata.push(split_offset);
 
-    call_ops_split(split::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_split(split::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; 4];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

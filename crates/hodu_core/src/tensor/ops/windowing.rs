@@ -142,7 +142,7 @@ impl Tensor {
             Ok(result_tensor)
         } else {
             let storage = self.with_storage(|input_storage| {
-                input_storage.call_reduce_window(
+                input_storage.call_ops_reduce_window(
                     &self.layout(),
                     window_shape_u32,
                     strides_u32,

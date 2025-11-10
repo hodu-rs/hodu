@@ -7,7 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
-pub fn call_binary(
+pub fn call_ops_binary(
     lhs_storage: &MetalStorage,
     rhs_storage: &MetalStorage,
     lhs_layout: &Layout,
@@ -17,7 +17,11 @@ pub fn call_binary(
     // Extract binary op
     let binary_op = match op {
         Op::Binary(binary_op) => binary_op,
-        _ => return Err(HoduError::BackendError("Lcall_binaryE expects LbinaryE op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_ops_binaryE expects LbinaryE op".to_string(),
+            ))
+        },
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -67,11 +71,11 @@ pub fn call_binary(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_binary(
+    kernels::call_ops_binary(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         lhs_offset,
         rhs_offset,
         &output_buffer,
@@ -86,7 +90,7 @@ pub fn call_binary(
     ))
 }
 
-pub fn call_binary_logical(
+pub fn call_ops_binary_logical(
     lhs_storage: &MetalStorage,
     rhs_storage: &MetalStorage,
     lhs_layout: &Layout,
@@ -98,7 +102,7 @@ pub fn call_binary_logical(
         Op::BinaryLogical(binary_op) => binary_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_binary_logical expects binary logical op".to_string(),
+                "call_ops_binary_logical expects binary logical op".to_string(),
             ))
         },
     };
@@ -151,11 +155,11 @@ pub fn call_binary_logical(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_binary(
+    kernels::call_ops_binary(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         lhs_offset,
         rhs_offset,
         &output_buffer,
@@ -170,7 +174,7 @@ pub fn call_binary_logical(
     ))
 }
 
-pub fn call_cmp(
+pub fn call_ops_cmp(
     lhs_storage: &MetalStorage,
     rhs_storage: &MetalStorage,
     lhs_layout: &Layout,
@@ -180,7 +184,7 @@ pub fn call_cmp(
     // Extract cmp op
     let cmp_op = match op {
         Op::Cmp(cmp_op) => cmp_op,
-        _ => return Err(HoduError::BackendError("Lcall_cmpE expects LcmpE op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_ops_cmpE expects LcmpE op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -231,11 +235,11 @@ pub fn call_cmp(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_binary(
+    kernels::call_ops_binary(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         lhs_offset,
         rhs_offset,
         &output_buffer,

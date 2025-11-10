@@ -1,11 +1,17 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
 }
 
+fn kernels() -> Kernels {
+    Kernels::new()
+}
+
 #[test]
 fn copy_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -25,7 +31,7 @@ fn copy_f32() {
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_copy(copy::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_copy(copy::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; input.len()];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -34,6 +40,8 @@ fn copy_f32() {
 
 #[test]
 fn copy_i32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -52,7 +60,7 @@ fn copy_i32() {
     metadata.extend(&strides);
     metadata.push(0);
 
-    call_ops_copy(copy::I32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_copy(copy::I32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0i32; input.len()];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -61,6 +69,8 @@ fn copy_i32() {
 
 #[test]
 fn contiguous_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -82,7 +92,7 @@ fn contiguous_f32() {
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_contiguous(contiguous::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_contiguous(contiguous::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; input.len()];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -91,6 +101,8 @@ fn contiguous_f32() {
 
 #[test]
 fn contiguous_transposed_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -113,7 +125,7 @@ fn contiguous_transposed_f32() {
     metadata.extend(&strides);
     metadata.push(0); // offset
 
-    call_ops_contiguous(contiguous::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_contiguous(contiguous::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; input.len()];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -123,6 +135,8 @@ fn contiguous_transposed_f32() {
 
 #[test]
 fn contiguous_3d_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -143,7 +157,7 @@ fn contiguous_3d_f32() {
     metadata.extend(&strides);
     metadata.push(0);
 
-    call_ops_contiguous(contiguous::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_contiguous(contiguous::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; input.len()];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

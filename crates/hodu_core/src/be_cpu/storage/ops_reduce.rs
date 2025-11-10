@@ -21,7 +21,7 @@ use core::ffi::c_void;
 ///
 /// # Returns
 /// Output storage containing the reduced tensor
-pub fn call_reduce(
+pub fn call_ops_reduce(
     storage: &CpuStorage,
     layout: &Layout,
     dims: &[u32],
@@ -126,7 +126,7 @@ pub fn call_reduce(
             let input_ptr = $input_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::reduce::call_reduce(kernel, input_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_reduce(kernel, input_ptr, out_ptr, &metadata)?;
         }};
     }
 

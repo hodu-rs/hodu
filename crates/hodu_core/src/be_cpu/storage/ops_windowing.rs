@@ -23,7 +23,7 @@ use core::ffi::c_void;
 ///
 /// # Returns
 /// Output storage containing the reduced windows
-pub fn call_reduce_window(
+pub fn call_ops_reduce_window(
     storage: &CpuStorage,
     layout: &Layout,
     window_shape: &[u32],
@@ -153,7 +153,7 @@ pub fn call_reduce_window(
             let input_ptr = $input_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::windowing::call_reduce_window(kernel, input_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_reduce_window(kernel, input_ptr, out_ptr, &metadata)?;
         }};
     }
 

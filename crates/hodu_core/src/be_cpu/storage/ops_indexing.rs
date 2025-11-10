@@ -20,7 +20,7 @@ use core::ffi::c_void;
 ///
 /// # Returns
 /// Output storage containing selected elements
-pub fn call_index_select(
+pub fn call_ops_index_select(
     storage: &CpuStorage,
     layout: &Layout,
     indices_storage: &CpuStorage,
@@ -101,7 +101,7 @@ pub fn call_index_select(
             let indices_ptr = indices.as_ptr();
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::indexing::call_index_select(kernel, input_ptr, indices_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_index_select(kernel, input_ptr, indices_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -152,7 +152,7 @@ pub fn call_index_select(
 /// # Returns
 /// Output storage with values written at indices
 #[allow(clippy::too_many_arguments)]
-pub fn call_index_put(
+pub fn call_ops_index_put(
     storage: &CpuStorage,
     layout: &Layout,
     indices_storage: &CpuStorage,
@@ -260,7 +260,7 @@ pub fn call_index_put(
             let values_ptr = $values_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::indexing::call_index_put(kernel, input_ptr, indices_ptr, values_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_index_put(kernel, input_ptr, indices_ptr, values_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -338,7 +338,7 @@ pub fn call_index_put(
 ///
 /// # Returns
 /// Output storage containing gathered elements
-pub fn call_gather(
+pub fn call_ops_gather(
     storage: &CpuStorage,
     layout: &Layout,
     indices_storage: &CpuStorage,
@@ -426,7 +426,7 @@ pub fn call_gather(
             let indices_ptr = indices.as_ptr();
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::indexing::call_gather(kernel, input_ptr, indices_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_gather(kernel, input_ptr, indices_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -477,7 +477,7 @@ pub fn call_gather(
 /// # Returns
 /// Output storage with scattered values
 #[allow(clippy::too_many_arguments)]
-pub fn call_scatter(
+pub fn call_ops_scatter(
     storage: &CpuStorage,
     layout: &Layout,
     indices_storage: &CpuStorage,
@@ -604,7 +604,7 @@ pub fn call_scatter(
             let values_ptr = $values_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::indexing::call_scatter(kernel, input_ptr, indices_ptr, values_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_scatter(kernel, input_ptr, indices_ptr, values_ptr, out_ptr, &metadata)?;
         }};
     }
 

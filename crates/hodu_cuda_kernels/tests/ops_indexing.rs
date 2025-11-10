@@ -1,4 +1,4 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> std::sync::Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
@@ -10,6 +10,8 @@ where
     T: cudarc::driver::DeviceRepr + Clone,
     I: cudarc::driver::DeviceRepr + Clone,
 {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -41,7 +43,16 @@ where
     metadata.push(dim);
     metadata.push(num_indices);
 
-    call_ops_index_select(kernel, &device, &input_dev, &indices_dev, &mut output, &metadata).unwrap();
+    call_ops_index_select(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &indices_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -61,6 +72,8 @@ where
     T: cudarc::driver::DeviceRepr + Clone,
     I: cudarc::driver::DeviceRepr + Clone,
 {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -102,6 +115,7 @@ where
 
     call_ops_index_put(
         kernel,
+        &kernels,
         &device,
         &input_dev,
         &indices_dev,
@@ -129,6 +143,8 @@ where
     T: cudarc::driver::DeviceRepr + Clone,
     I: cudarc::driver::DeviceRepr + Clone,
 {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -165,7 +181,16 @@ where
     metadata.push(dim);
     metadata.push(num_indices);
 
-    call_ops_gather(kernel, &device, &input_dev, &indices_dev, &mut output, &metadata).unwrap();
+    call_ops_gather(
+        kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &indices_dev,
+        &mut output,
+        &metadata,
+    )
+    .unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -186,6 +211,8 @@ where
     T: cudarc::driver::DeviceRepr + Clone,
     I: cudarc::driver::DeviceRepr + Clone,
 {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -232,6 +259,7 @@ where
 
     call_ops_scatter(
         kernel,
+        &kernels,
         &device,
         &input_dev,
         &indices_dev,

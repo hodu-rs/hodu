@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -58,6 +58,7 @@ ops!(const_set);
 /// - The output buffer has sufficient capacity
 pub fn call_const_set<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
@@ -66,7 +67,6 @@ pub fn call_const_set<T>(
 where
     T: cudarc::driver::DeviceRepr + Clone,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::Storage, kernel.0)?;
 
     let num_els = metadata[0];
@@ -98,6 +98,7 @@ where
 /// Synchronous version that automatically syncs the device after launch
 pub fn call_const_set_sync<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
@@ -106,7 +107,7 @@ pub fn call_const_set_sync<T>(
 where
     T: cudarc::driver::DeviceRepr + Clone,
 {
-    call_const_set(kernel, device, output, metadata, const_val)?;
+    call_const_set(kernel, kernels, device, output, metadata, const_val)?;
     device
         .synchronize()
         .map_err(|e| CudaKernelError::LaunchError(format!("Failed to synchronize: {:?}", e)))?;

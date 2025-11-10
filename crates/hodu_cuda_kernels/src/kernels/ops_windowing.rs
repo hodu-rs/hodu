@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -44,6 +44,7 @@ ops!(
 ///    - max: -infinity, min: +infinity, sum/mean: 0
 pub fn call_ops_reduce_window<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -52,7 +53,6 @@ pub fn call_ops_reduce_window<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsWindowing, kernel.0)?;
 
     let num_els = metadata[0];

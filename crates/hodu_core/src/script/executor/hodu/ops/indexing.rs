@@ -31,7 +31,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
-            inputs[0].call_index_select(&layouts[0], &inputs[1], &layouts[1], dim, op.clone())
+            inputs[0].call_ops_index_select(&layouts[0], &inputs[1], &layouts[1], dim, op.clone())
         },
 
         Op::Indexing(IndexingOp::IndexPut) => {
@@ -50,7 +50,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
-            inputs[0].call_index_put(
+            inputs[0].call_ops_index_put(
                 &layouts[0],
                 &inputs[1],
                 &layouts[1],
@@ -77,7 +77,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
-            inputs[0].call_gather(&layouts[0], &inputs[1], &layouts[1], dim, op.clone())
+            inputs[0].call_ops_gather(&layouts[0], &inputs[1], &layouts[1], dim, op.clone())
         },
 
         Op::Indexing(IndexingOp::Scatter)
@@ -99,7 +99,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
-            inputs[0].call_scatter(
+            inputs[0].call_ops_scatter(
                 &layouts[0],
                 &inputs[1],
                 &layouts[1],

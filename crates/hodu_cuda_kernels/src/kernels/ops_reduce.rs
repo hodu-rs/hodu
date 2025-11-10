@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -33,6 +33,7 @@ ops!(sum, max, min, prod, mean, norm, argmax, argmin, all, any);
 /// - If keep_dim=false: reduced dimensions are squeezed out of output
 pub fn call_ops_reduce<T, O>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<O>,
@@ -42,7 +43,6 @@ where
     T: cudarc::driver::DeviceRepr,
     O: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsReduce, kernel.0)?;
 
     // Calculate num_els from output_shape in metadata

@@ -1,17 +1,5 @@
 use crate::{compat::*, cuda::*, error::CudaKernelError, source::Source};
 
-/// Global kernel cache shared across all threads and processes
-///
-/// This cache is automatically used when creating new `Kernels` instances.
-/// In std mode, uses `LazyLock` for efficient initialization.
-/// In no-std mode, uses `spin::Lazy` for compatibility.
-static GLOBAL_KERNELS: Lazy<Arc<Kernels>> = Lazy::new(|| Arc::new(Kernels::new_inner()));
-
-/// Get the global kernel cache instance
-pub fn get_global_kernels() -> &'static Kernels {
-    &GLOBAL_KERNELS
-}
-
 #[derive(Debug, Clone)]
 pub enum KernelName {
     Ref(&'static str),
@@ -83,17 +71,18 @@ pub struct Kernels {
     functions: RwLock<Functions>,
 }
 
-impl Kernels {
-    /// Create a new Kernels instance that uses the global cache
-    ///
-    /// This returns a reference to the global cache, ensuring all Kernels instances
-    /// share the same compiled PTX and modules across the entire program.
-    pub fn new() -> &'static Self {
-        get_global_kernels()
+impl Default for Kernels {
+    fn default() -> Self {
+        Self::new()
     }
+}
 
-    /// Internal constructor for creating the actual Kernels instance
-    fn new_inner() -> Self {
+impl Kernels {
+    /// Create a new Kernels instance for managing CUDA kernel compilation and caching
+    ///
+    /// Each instance maintains its own cache of compiled PTX, modules, and functions.
+    /// For multi-device scenarios, create separate Kernels instances per device.
+    pub fn new() -> Self {
         let ptxs = RwLock::new(Ptxs::new());
         let modules = RwLock::new(Modules::new());
         let functions = RwLock::new(Functions::new());

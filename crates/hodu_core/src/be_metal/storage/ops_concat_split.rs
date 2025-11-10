@@ -8,7 +8,7 @@ use crate::{
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
 #[allow(clippy::needless_range_loop)]
-pub fn call_concat(
+pub fn call_ops_concat(
     first: &MetalStorage,
     others: &[&MetalStorage],
     layouts: &[&Layout],
@@ -22,7 +22,11 @@ pub fn call_concat(
     // Validate op
     match op {
         Op::Concat(_) => (),
-        _ => return Err(HoduError::BackendError("Lcall_concatE expects LconcatE op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_ops_concatE expects LconcatE op".to_string(),
+            ))
+        },
     }
 
     if layouts.is_empty() {
@@ -171,11 +175,11 @@ pub fn call_concat(
 
     let input_offset = BufferOffset::zero_offset(&temp_input_buffer);
 
-    kernels::call_concat(
+    kernels::call_ops_concat(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         &output_buffer,
         &metadata,
@@ -189,7 +193,7 @@ pub fn call_concat(
     ))
 }
 
-pub fn call_split(
+pub fn call_ops_split(
     storage: &MetalStorage,
     layout: &Layout,
     dim: u32,
@@ -200,7 +204,11 @@ pub fn call_split(
     // Validate op
     match op {
         Op::Split(_) => (),
-        _ => return Err(HoduError::BackendError("Lcall_splitE expects LsplitE op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_ops_splitE expects LsplitE op".to_string(),
+            ))
+        },
     }
 
     let input_shape = layout.shape();
@@ -268,11 +276,11 @@ pub fn call_split(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_split(
+    kernels::call_ops_split(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         input_offset,
         &output_buffer,
         &metadata,

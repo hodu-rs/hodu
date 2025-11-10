@@ -53,7 +53,7 @@ pub fn execute(
                     }
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dilation".to_string()))?;
-            inputs[0].call_conv(
+            inputs[0].call_ops_conv(
                 &layouts[0],
                 &inputs[1],
                 &layouts[1],

@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -13,6 +13,7 @@ ops!(concat, split, chunk);
 ///
 /// # Arguments
 /// * `kernel` - Concat operation kernel (e.g., concat::F32)
+/// * `kernels` - Kernel cache for managing compiled kernels
 /// * `device` - CUDA device to execute on
 /// * `input` - Combined input buffer containing all input tensors
 /// * `output` - Output buffer for concatenated result
@@ -33,6 +34,7 @@ ops!(concat, split, chunk);
 /// Total metadata length: `2 + num_dims + 2 + num_inputs * (2 * num_dims + 2)`
 pub fn call_ops_concat<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -41,7 +43,6 @@ pub fn call_ops_concat<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsConcatSplit, kernel.0)?;
 
     let num_els = metadata[0];
@@ -73,6 +74,7 @@ where
 ///
 /// # Arguments
 /// * `kernel` - Split operation kernel (e.g., split::F32)
+/// * `kernels` - Kernel cache for managing compiled kernels
 /// * `device` - CUDA device to execute on
 /// * `input` - Input tensor buffer
 /// * `output` - Output buffer for extracted portion
@@ -92,6 +94,7 @@ where
 /// Total metadata length: `2 + num_dims * 2 + 4`
 pub fn call_ops_split<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -100,7 +103,6 @@ pub fn call_ops_split<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsConcatSplit, kernel.0)?;
 
     let num_els = metadata[0];

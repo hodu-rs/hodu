@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -26,6 +26,7 @@ ops!(
 /// Note: For production use, consider using cuDNN for optimal performance
 pub fn call_ops_conv<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     weight: &CudaSlice<T>,
@@ -35,7 +36,6 @@ pub fn call_ops_conv<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsConv, kernel.0)?;
 
     let num_els = metadata[0];
@@ -66,6 +66,7 @@ where
 /// Execute a convolution weight gradient operation for backpropagation
 pub fn call_ops_conv_grad_weight<T>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     grad_output: &CudaSlice<T>,
@@ -75,7 +76,6 @@ pub fn call_ops_conv_grad_weight<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsConv, kernel.0)?;
 
     let num_els = metadata[0];

@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -35,6 +35,7 @@ ops!(
 #[allow(clippy::too_many_arguments)]
 pub fn call_ops_index_select<T, I>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
@@ -45,7 +46,6 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
 
     let stream = device.default_stream();
@@ -94,6 +94,7 @@ where
 #[allow(clippy::too_many_arguments)]
 pub fn call_ops_index_put<T, I>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
@@ -105,7 +106,6 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
 
     let stream = device.default_stream();
@@ -154,6 +154,7 @@ where
 #[allow(clippy::too_many_arguments)]
 pub fn call_ops_gather<T, I>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
@@ -164,7 +165,6 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
 
     let stream = device.default_stream();
@@ -215,6 +215,7 @@ where
 #[allow(clippy::too_many_arguments)]
 pub fn call_ops_scatter<T, I>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
@@ -226,7 +227,6 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
 
     let stream = device.default_stream();

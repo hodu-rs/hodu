@@ -30,7 +30,7 @@ fn run_const_set<T: Clone + EncoderParam>(
     strides: &[usize],
     offset: usize,
     const_val: T,
-    name: Kernel,
+    kernel: Kernel,
 ) -> Vec<T> {
     let device = device();
     let kernels = Kernels::new();
@@ -63,7 +63,16 @@ fn run_const_set<T: Clone + EncoderParam>(
     metadata.extend_from_slice(strides);
     metadata.push(offset);
 
-    call_const_set(&device, &command_buffer, &kernels, name, &output, &metadata, const_val).unwrap();
+    call_const_set(
+        kernel,
+        &kernels,
+        &device,
+        &command_buffer,
+        &output,
+        &metadata,
+        const_val,
+    )
+    .unwrap();
 
     command_buffer.commit();
     command_buffer.wait_until_completed();

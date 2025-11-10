@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
-    kernel::get_global_kernels,
+    kernel::Kernels,
     kernels::macros::ops,
     source::Source,
 };
@@ -66,6 +66,7 @@ ops!(
 /// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
 pub fn call_ops_unary<I, O>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<I>,
     output: &mut CudaSlice<O>,
@@ -75,7 +76,6 @@ where
     I: cudarc::driver::DeviceRepr,
     O: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsUnary, kernel.0)?;
 
     let num_els = metadata[0];
@@ -121,6 +121,7 @@ where
 /// - metadata[2+2*num_dims]: offset (starting offset in input buffer)
 pub fn call_ops_unary_scalar<I, O>(
     kernel: crate::kernels::macros::Kernel,
+    kernels: &Kernels,
     device: &Arc<CudaDevice>,
     input: &CudaSlice<I>,
     output: &mut CudaSlice<O>,
@@ -131,7 +132,6 @@ where
     I: cudarc::driver::DeviceRepr + Clone,
     O: cudarc::driver::DeviceRepr,
 {
-    let kernels = get_global_kernels();
     let func = kernels.load_function(device, Source::OpsUnary, kernel.0)?;
 
     let num_els = metadata[0];

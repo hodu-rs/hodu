@@ -36,7 +36,7 @@ macro_rules! cmp_op {
             } else {
                 let storage = lhs.with_storage(|lhs_storage| {
                     rhs.with_storage(|rhs_storage| {
-                        lhs_storage.call_cmp(
+                        lhs_storage.call_ops_cmp(
                             rhs_storage,
                             &lhs.layout(),
                             &rhs.layout(),
@@ -80,7 +80,7 @@ macro_rules! cmp_scalar_op {
                 Ok(result_tensor)
             } else {
                 let storage = self.with_storage(|storage| {
-                    storage.call_cmp_scalar(&self.layout(), scalar, Op::CmpScalar(CmpScalarOp::$op_name))
+                    storage.call_ops_cmp_scalar(&self.layout(), scalar, Op::CmpScalar(CmpScalarOp::$op_name))
                 })?;
 
                 let layout = Layout::from_shape(&self.shape());

@@ -110,7 +110,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
-                    input_storage.call_conv(
+                    input_storage.call_ops_conv(
                         &self.layout(),
                         weight_storage,
                         &weight.layout(),
@@ -246,7 +246,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
-                    input_storage.call_conv(
+                    input_storage.call_ops_conv(
                         &self.layout(),
                         weight_storage,
                         &weight.layout(),
@@ -389,7 +389,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
-                    input_storage.call_conv(
+                    input_storage.call_ops_conv(
                         &self.layout(),
                         weight_storage,
                         &weight.layout(),
@@ -533,7 +533,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
-                    input_storage.call_conv(
+                    input_storage.call_ops_conv(
                         &self.layout(),
                         weight_storage,
                         &weight.layout(),
@@ -680,7 +680,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
-                    input_storage.call_conv(
+                    input_storage.call_ops_conv(
                         &self.layout(),
                         weight_storage,
                         &weight.layout(),
@@ -835,7 +835,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
-                    input_storage.call_conv(
+                    input_storage.call_ops_conv(
                         &self.layout(),
                         weight_storage,
                         &weight.layout(),
@@ -946,7 +946,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 grad_output.with_storage(|grad_output_storage| {
-                    input_storage.call_conv_grad_weight(
+                    input_storage.call_ops_conv_grad_weight(
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
@@ -1038,7 +1038,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 grad_output.with_storage(|grad_output_storage| {
-                    input_storage.call_conv_grad_weight(
+                    input_storage.call_ops_conv_grad_weight(
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
@@ -1131,7 +1131,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 grad_output.with_storage(|grad_output_storage| {
-                    input_storage.call_conv_grad_weight(
+                    input_storage.call_ops_conv_grad_weight(
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
@@ -1222,7 +1222,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 grad_output.with_storage(|grad_output_storage| {
-                    input_storage.call_conv_grad_weight(
+                    input_storage.call_ops_conv_grad_weight(
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
@@ -1314,7 +1314,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 grad_output.with_storage(|grad_output_storage| {
-                    input_storage.call_conv_grad_weight(
+                    input_storage.call_ops_conv_grad_weight(
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
@@ -1407,7 +1407,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|input_storage| {
                 grad_output.with_storage(|grad_output_storage| {
-                    input_storage.call_conv_grad_weight(
+                    input_storage.call_ops_conv_grad_weight(
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),

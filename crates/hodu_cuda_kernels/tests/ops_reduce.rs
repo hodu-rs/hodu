@@ -1,7 +1,11 @@
-use hodu_cuda_kernels::{compat::*, kernels::*};
+use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
+}
+
+fn kernels() -> Kernels {
+    Kernels::new()
 }
 
 fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
@@ -11,6 +15,8 @@ fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
 
 #[test]
 fn reduce_sum_f32_simple() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -56,7 +62,7 @@ fn reduce_sum_f32_simple() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(sum::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(sum::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -66,6 +72,8 @@ fn reduce_sum_f32_simple() {
 
 #[test]
 fn reduce_mean_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -107,7 +115,7 @@ fn reduce_mean_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(mean::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(mean::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -117,6 +125,8 @@ fn reduce_mean_f32() {
 
 #[test]
 fn reduce_max_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -158,7 +168,7 @@ fn reduce_max_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(max::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(max::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -167,6 +177,8 @@ fn reduce_max_f32() {
 
 #[test]
 fn reduce_min_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -208,7 +220,7 @@ fn reduce_min_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(min::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(min::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -217,6 +229,8 @@ fn reduce_min_f32() {
 
 #[test]
 fn reduce_prod_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -258,7 +272,7 @@ fn reduce_prod_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(prod::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(prod::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -268,6 +282,8 @@ fn reduce_prod_f32() {
 
 #[test]
 fn reduce_norm_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -309,7 +325,7 @@ fn reduce_norm_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(norm::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(norm::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0.0f32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -319,6 +335,8 @@ fn reduce_norm_f32() {
 
 #[test]
 fn reduce_argmax_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -360,7 +378,7 @@ fn reduce_argmax_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(argmax::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(argmax::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0i32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -370,6 +388,8 @@ fn reduce_argmax_f32() {
 
 #[test]
 fn reduce_argmin_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -411,7 +431,7 @@ fn reduce_argmin_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(argmin::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(argmin::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![0i32; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -421,6 +441,8 @@ fn reduce_argmin_f32() {
 
 #[test]
 fn reduce_any_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -462,7 +484,7 @@ fn reduce_any_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(any::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(any::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![false; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();
@@ -472,6 +494,8 @@ fn reduce_any_f32() {
 
 #[test]
 fn reduce_all_f32() {
+    let kernels = kernels();
+
     let device = device();
     let stream = device.default_stream();
 
@@ -513,7 +537,7 @@ fn reduce_all_f32() {
     metadata.push(if keep_dim { 1 } else { 0 });
     metadata.push(reduce_size);
 
-    call_ops_reduce(all::F32, &device, &input_dev, &mut output, &metadata).unwrap();
+    call_ops_reduce(all::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
 
     let mut results = vec![false; output_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

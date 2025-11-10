@@ -96,7 +96,7 @@ impl Tensor {
             let first_storage = &all_storages[0];
             let other_refs: Vec<_> = all_storages[1..].iter().collect();
             let storage =
-                first_storage.call_concat(&other_refs, &layout_refs, dim_u32, Op::Concat(ConcatOp::Concat))?;
+                first_storage.call_ops_concat(&other_refs, &layout_refs, dim_u32, Op::Concat(ConcatOp::Concat))?;
 
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
@@ -215,7 +215,7 @@ impl Tensor {
 
             for (output_index, &size) in sizes.iter().enumerate() {
                 let storage = self.with_storage(|storage| {
-                    storage.call_split(&self.layout(), dim_u32, start, size as u32, Op::Split(SplitOp::Split))
+                    storage.call_ops_split(&self.layout(), dim_u32, start, size as u32, Op::Split(SplitOp::Split))
                 })?;
 
                 let mut result_dims = shape_dims.to_vec();

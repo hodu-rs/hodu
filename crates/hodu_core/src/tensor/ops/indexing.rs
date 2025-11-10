@@ -67,7 +67,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
-                    storage.call_index_select(
+                    storage.call_ops_index_select(
                         &self.layout(),
                         indices_storage,
                         &indices.layout(),
@@ -144,7 +144,7 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     values.with_storage(|values_storage| {
-                        storage.call_index_put(
+                        storage.call_ops_index_put(
                             &self.layout(),
                             indices_storage,
                             &indices.layout(),
@@ -223,7 +223,7 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
-                    storage.call_gather(
+                    storage.call_ops_gather(
                         &self.layout(),
                         indices_storage,
                         &indices.layout(),
@@ -301,7 +301,7 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.call_scatter(
+                        storage.call_ops_scatter(
                             &self.layout(),
                             indices_storage,
                             &indices.layout(),
@@ -381,7 +381,7 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.call_scatter(
+                        storage.call_ops_scatter(
                             &self.layout(),
                             indices_storage,
                             &indices.layout(),
@@ -461,7 +461,7 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.call_scatter(
+                        storage.call_ops_scatter(
                             &self.layout(),
                             indices_storage,
                             &indices.layout(),
@@ -541,7 +541,7 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
-                        storage.call_scatter(
+                        storage.call_ops_scatter(
                             &self.layout(),
                             indices_storage,
                             &indices.layout(),

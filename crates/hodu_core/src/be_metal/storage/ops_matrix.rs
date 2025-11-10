@@ -7,7 +7,7 @@ use crate::{
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
-pub fn call_matmul(
+pub fn call_ops_matmul(
     lhs_storage: &MetalStorage,
     rhs_storage: &MetalStorage,
     lhs_layout: &Layout,
@@ -17,7 +17,11 @@ pub fn call_matmul(
     // Validate op
     match op {
         Op::Matrix(MatrixOp::Matmul) => (),
-        _ => return Err(HoduError::BackendError("Lcall_matmulE expects LMatmulE op".to_string())),
+        _ => {
+            return Err(HoduError::BackendError(
+                "Lcall_ops_matmulE expects LMatmulE op".to_string(),
+            ))
+        },
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -150,11 +154,11 @@ pub fn call_matmul(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_matmul(
+    kernels::call_ops_matmul(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         lhs_offset,
         rhs_offset,
         &output_buffer,
@@ -169,7 +173,7 @@ pub fn call_matmul(
     ))
 }
 
-pub fn call_dot(
+pub fn call_ops_dot(
     lhs_storage: &MetalStorage,
     rhs_storage: &MetalStorage,
     lhs_layout: &Layout,
@@ -179,7 +183,7 @@ pub fn call_dot(
     // Validate op
     match op {
         Op::Matrix(MatrixOp::Dot) => (),
-        _ => return Err(HoduError::BackendError("Lcall_dotE expects LDotE op".to_string())),
+        _ => return Err(HoduError::BackendError("Lcall_ops_dotE expects LDotE op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -248,11 +252,11 @@ pub fn call_dot(
 
     // Get command buffer and call kernel
     let command_buffer = device.command_buffer()?;
-    kernels::call_dot(
+    kernels::call_ops_dot(
+        kernel,
+        device.kernels(),
         device.device(),
         &command_buffer,
-        device.kernels(),
-        kernel,
         lhs_offset,
         rhs_offset,
         &output_buffer,

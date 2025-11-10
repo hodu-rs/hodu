@@ -23,7 +23,7 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            inputs[0].call_binary(&inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_binary(&inputs[1], &layouts[0], &layouts[1], op.clone())
         },
 
         Op::BinaryLogical(_) => {
@@ -34,7 +34,7 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            inputs[0].call_binary_logical(&inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_binary_logical(&inputs[1], &layouts[0], &layouts[1], op.clone())
         },
 
         Op::Cmp(_) => {
@@ -45,7 +45,7 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            inputs[0].call_cmp(&inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_cmp(&inputs[1], &layouts[0], &layouts[1], op.clone())
         },
 
         Op::CmpScalar(_) => {
@@ -60,7 +60,7 @@ pub fn execute(
                 .get("scalar")
                 .and_then(|a| if let Attribute::Scalar(s) = a { Some(*s) } else { None })
                 .ok_or_else(|| HoduError::MissingAttribute("scalar".to_string()))?;
-            inputs[0].call_cmp_scalar(&layouts[0], scalar, op.clone())
+            inputs[0].call_ops_cmp_scalar(&layouts[0], scalar, op.clone())
         },
 
         _ => Err(HoduError::InternalError(format!(

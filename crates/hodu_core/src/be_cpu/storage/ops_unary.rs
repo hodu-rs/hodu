@@ -9,7 +9,7 @@ use crate::{
 };
 use core::ffi::c_void;
 
-pub fn call_cmp_scalar(
+pub fn call_ops_cmp_scalar(
     input_storage: &CpuStorage,
     input_layout: &Layout,
     scalar: Scalar,
@@ -61,7 +61,7 @@ pub fn call_cmp_scalar(
             let in_ptr = $in_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::unary::call_unary_scalar(kernel, in_ptr, out_ptr, &metadata, $scalar_val)?;
+            hodu_cpu_kernels::call_ops_unary_scalar(kernel, in_ptr, out_ptr, &metadata, $scalar_val)?;
         }};
     }
 
@@ -97,7 +97,7 @@ pub fn call_cmp_scalar(
     Ok(output)
 }
 
-pub fn call_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> HoduResult<CpuStorage> {
+pub fn call_ops_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> HoduResult<CpuStorage> {
     // Extract unary op
     let unary_op = match op {
         Op::Unary(unary_op) => unary_op,
@@ -141,7 +141,7 @@ pub fn call_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> 
             let in_ptr = $in_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::unary::call_unary(kernel, in_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_unary(kernel, in_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -177,7 +177,7 @@ pub fn call_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> 
     Ok(output)
 }
 
-pub fn call_unary_logical(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> HoduResult<CpuStorage> {
+pub fn call_ops_unary_logical(input_storage: &CpuStorage, input_layout: &Layout, op: Op) -> HoduResult<CpuStorage> {
     // Extract unary logical op
     let unary_op = match op {
         Op::UnaryLogical(unary_op) => unary_op,
@@ -224,7 +224,7 @@ pub fn call_unary_logical(input_storage: &CpuStorage, input_layout: &Layout, op:
             let in_ptr = $in_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::unary::call_unary(kernel, in_ptr, out_ptr, &metadata)?;
+            hodu_cpu_kernels::call_ops_unary(kernel, in_ptr, out_ptr, &metadata)?;
         }};
     }
 
@@ -260,7 +260,7 @@ pub fn call_unary_logical(input_storage: &CpuStorage, input_layout: &Layout, op:
     Ok(output)
 }
 
-pub fn call_unary_scalar(
+pub fn call_ops_unary_scalar(
     input_storage: &CpuStorage,
     input_layout: &Layout,
     scalar: Scalar,
@@ -313,7 +313,7 @@ pub fn call_unary_scalar(
             let in_ptr = $in_data.as_ptr() as *const c_void;
             let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
 
-            hodu_cpu_kernels::unary::call_unary_scalar(kernel, in_ptr, out_ptr, &metadata, $scalar_val)?;
+            hodu_cpu_kernels::call_ops_unary_scalar(kernel, in_ptr, out_ptr, &metadata, $scalar_val)?;
         }};
     }
 
