@@ -99,12 +99,11 @@ pub fn build_and_execute_xla(
                 Device::CPU => PjRtClient::cpu()?,
                 #[cfg(feature = "cuda")]
                 Device::CUDA(_) => PjRtClient::gpu(0.95, true)?,
-                #[cfg(any(feature = "cuda", feature = "metal"))]
-                _ => {
-                    return Err(HoduError::InternalError(format!(
-                        "Device {:?} not supported for XLA",
-                        device
-                    )))
+                #[cfg(feature = "metal")]
+                Device::Metal => {
+                    return Err(HoduError::InternalError(
+                        "Metal device is not supported for XLA".to_string(),
+                    ))
                 },
             };
 
