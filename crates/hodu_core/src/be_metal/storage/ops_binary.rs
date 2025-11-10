@@ -17,11 +17,7 @@ pub fn call_ops_binary(
     // Extract binary op
     let binary_op = match op {
         Op::Binary(binary_op) => binary_op,
-        _ => {
-            return Err(HoduError::BackendError(
-                "Lcall_ops_binaryE expects LbinaryE op".to_string(),
-            ))
-        },
+        _ => return Err(HoduError::BackendError("call_ops_binary expects binary op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();

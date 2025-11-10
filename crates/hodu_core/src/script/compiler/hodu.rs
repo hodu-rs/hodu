@@ -34,13 +34,13 @@ impl HoduCompiler {
             // Convert to target device
             let storage = match device {
                 Device::CPU => BackendStorage::CPU(cpu_storage),
+                #[cfg(feature = "cuda")]
+                Device::CUDA(device_id) => BackendStorage::CUDA(
+                    crate::be_cuda::storage::CudaStorage::from_cpu_storage(&cpu_storage, device_id)?,
+                ),
                 #[cfg(feature = "metal")]
                 Device::Metal => {
                     BackendStorage::Metal(crate::be_metal::storage::MetalStorage::from_cpu_storage(&cpu_storage)?)
-                },
-                #[cfg(feature = "cuda")]
-                Device::CUDA(_) => {
-                    return Err(HoduError::UnsupportedDevice(device));
                 },
                 #[allow(unreachable_patterns)]
                 _ => return Err(HoduError::UnsupportedDevice(device)),

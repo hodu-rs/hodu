@@ -67,7 +67,7 @@ i16 = ["hodu_internal/i16"]
 i64 = ["hodu_internal/i64"]
 
 cuda = ["hodu_internal/cuda"]
-metal = ["hodu_internal/metal"]
+metal = ["std", "hodu_internal/metal"]
 
 xla = ["std", "hodu_internal/xla"]
 

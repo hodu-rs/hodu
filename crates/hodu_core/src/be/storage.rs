@@ -111,6 +111,8 @@ pub trait BackendStorageT: Sized {
 #[derive(Debug, Clone)]
 pub enum BackendStorage {
     CPU(CpuStorage),
+    #[cfg(feature = "cuda")]
+    CUDA(crate::be_cuda::storage::CudaStorage),
     #[cfg(feature = "metal")]
     Metal(crate::be_metal::storage::MetalStorage),
 }
@@ -119,6 +121,8 @@ impl BackendStorage {
     pub fn dtype(&self) -> DType {
         match self {
             Self::CPU(storage) => storage.dtype(),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => storage.dtype(),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => storage.dtype(),
         }
@@ -127,6 +131,8 @@ impl BackendStorage {
     pub fn device(&self) -> Device {
         match self {
             Self::CPU(storage) => storage.device(),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => storage.device(),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => storage.device(),
         }
@@ -136,6 +142,8 @@ impl BackendStorage {
     pub fn backend_device(&self) -> BackendDevice {
         match self {
             Self::CPU(storage) => BackendDevice::CPU(storage.backend_device().clone()),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => BackendDevice::CUDA(storage.backend_device().clone()),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => BackendDevice::Metal(storage.backend_device().clone()),
         }
@@ -145,6 +153,8 @@ impl BackendStorage {
     pub fn to_cpu_storage(&self) -> HoduResult<CpuStorage> {
         match self {
             Self::CPU(storage) => Ok(storage.clone()),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => storage.to_cpu_storage(),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => storage.to_cpu_storage(),
         }
@@ -153,6 +163,8 @@ impl BackendStorage {
     pub(crate) fn const_set(&mut self, scalar: Scalar, layout: &Layout) -> HoduResult<()> {
         match self {
             Self::CPU(storage) => storage.const_set(scalar, layout),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => storage.const_set(scalar, layout),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => storage.const_set(scalar, layout),
         }
@@ -181,6 +193,13 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(lhs_storage), Self::CUDA(rhs_storage)) => Ok(Self::CUDA(lhs_storage.call_ops_binary(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_binary(
                 rhs_storage,
@@ -188,7 +207,7 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: lhs_device,
                 got: rhs_device,
@@ -219,11 +238,18 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(lhs_storage), Self::CUDA(rhs_storage)) => Ok(Self::CUDA(lhs_storage.call_ops_binary_logical(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(
                 lhs_storage.call_ops_binary_logical(rhs_storage, lhs_layout, rhs_layout, op)?,
             )),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: lhs_device,
                 got: rhs_device,
@@ -254,6 +280,13 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(lhs_storage), Self::CUDA(rhs_storage)) => Ok(Self::CUDA(lhs_storage.call_ops_cmp(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_cmp(
                 rhs_storage,
@@ -261,7 +294,7 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: lhs_device,
                 got: rhs_device,
@@ -272,6 +305,8 @@ impl BackendStorage {
     pub(crate) fn call_ops_cmp_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_cmp_scalar(layout, scalar, op)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_cmp_scalar(layout, scalar, op)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_cmp_scalar(layout, scalar, op)?)),
         }
@@ -280,6 +315,8 @@ impl BackendStorage {
     pub(crate) fn call_ops_unary(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_unary(layout, op)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_unary(layout, op)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_unary(layout, op)?)),
         }
@@ -288,6 +325,8 @@ impl BackendStorage {
     pub(crate) fn call_ops_unary_logical(&self, layout: &Layout, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_unary_logical(layout, op)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_unary_logical(layout, op)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_unary_logical(layout, op)?)),
         }
@@ -296,6 +335,8 @@ impl BackendStorage {
     pub(crate) fn call_ops_unary_scalar(&self, layout: &Layout, scalar: Scalar, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_unary_scalar(layout, scalar, op)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_unary_scalar(layout, scalar, op)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_unary_scalar(layout, scalar, op)?)),
         }
@@ -324,6 +365,13 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(lhs_storage), Self::CUDA(rhs_storage)) => Ok(Self::CUDA(lhs_storage.call_ops_matmul(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_matmul(
                 rhs_storage,
@@ -331,7 +379,7 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: lhs_device,
                 got: rhs_device,
@@ -362,6 +410,13 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(lhs_storage), Self::CUDA(rhs_storage)) => Ok(Self::CUDA(lhs_storage.call_ops_dot(
+                rhs_storage,
+                lhs_layout,
+                rhs_layout,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(lhs_storage), Self::Metal(rhs_storage)) => Ok(Self::Metal(lhs_storage.call_ops_dot(
                 rhs_storage,
@@ -369,7 +424,7 @@ impl BackendStorage {
                 rhs_layout,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: lhs_device,
                 got: rhs_device,
@@ -380,6 +435,8 @@ impl BackendStorage {
     pub(crate) fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_reduce(layout, dims, keep_dim, op)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_reduce(layout, dims, keep_dim, op)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_reduce(layout, dims, keep_dim, op)?)),
         }
@@ -404,11 +461,21 @@ impl BackendStorage {
                     .iter()
                     .map(|s| match s {
                         Self::CPU(cpu) => cpu,
-                        #[cfg(feature = "metal")]
                         _ => unreachable!("Device mismatch already checked"),
                     })
                     .collect();
                 Ok(Self::CPU(storage.call_ops_concat(&others_cpu, layouts, dim, op)?))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let others_cuda: Vec<&crate::be_cuda::storage::CudaStorage> = others
+                    .iter()
+                    .map(|s| match s {
+                        Self::CUDA(cuda) => cuda,
+                        _ => unreachable!("Device mismatch already checked"),
+                    })
+                    .collect();
+                Ok(Self::CUDA(storage.call_ops_concat(&others_cuda, layouts, dim, op)?))
             },
             #[cfg(feature = "metal")]
             Self::Metal(storage) => {
@@ -427,6 +494,8 @@ impl BackendStorage {
     pub(crate) fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_split(layout, dim, start, size, op)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_split(layout, dim, start, size, op)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_split(layout, dim, start, size, op)?)),
         }
@@ -458,6 +527,14 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(storage), Self::CUDA(indices)) => Ok(Self::CUDA(storage.call_ops_index_select(
+                layout,
+                indices,
+                indices_layout,
+                dim,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_ops_index_select(
                 layout,
@@ -466,7 +543,7 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: device,
                 got: indices_device,
@@ -512,11 +589,15 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(storage), Self::CUDA(indices), Self::CUDA(values)) => Ok(Self::CUDA(
+                storage.call_ops_index_put(layout, indices, indices_layout, values, values_layout, dim, op)?,
+            )),
             #[cfg(feature = "metal")]
             (Self::Metal(storage), Self::Metal(indices), Self::Metal(values)) => Ok(Self::Metal(
                 storage.call_ops_index_put(layout, indices, indices_layout, values, values_layout, dim, op)?,
             )),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => {
                 if device != indices_device {
                     Err(HoduError::DeviceMismatch {
@@ -559,6 +640,14 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(storage), Self::CUDA(indices)) => Ok(Self::CUDA(storage.call_ops_gather(
+                layout,
+                indices,
+                indices_layout,
+                dim,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(storage), Self::Metal(indices)) => Ok(Self::Metal(storage.call_ops_gather(
                 layout,
@@ -567,7 +656,7 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: device,
                 got: indices_device,
@@ -613,11 +702,21 @@ impl BackendStorage {
                 dim,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(storage), Self::CUDA(indices), Self::CUDA(src)) => Ok(Self::CUDA(storage.call_ops_scatter(
+                layout,
+                indices,
+                indices_layout,
+                src,
+                src_layout,
+                dim,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(storage), Self::Metal(indices), Self::Metal(src)) => Ok(Self::Metal(
                 storage.call_ops_scatter(layout, indices, indices_layout, src, src_layout, dim, op)?,
             )),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => {
                 if device != indices_device {
                     Err(HoduError::DeviceMismatch {
@@ -664,6 +763,16 @@ impl BackendStorage {
                 dilation,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(storage), Self::CUDA(weight)) => Ok(Self::CUDA(storage.call_ops_conv(
+                layout,
+                weight,
+                weight_layout,
+                stride,
+                padding,
+                dilation,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(storage), Self::Metal(weight)) => Ok(Self::Metal(storage.call_ops_conv(
                 layout,
@@ -674,7 +783,7 @@ impl BackendStorage {
                 dilation,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: device,
                 got: weight_device,
@@ -714,6 +823,17 @@ impl BackendStorage {
                 dilation,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            (Self::CUDA(storage), Self::CUDA(grad_output)) => Ok(Self::CUDA(storage.call_ops_conv_grad_weight(
+                layout,
+                grad_output,
+                grad_output_layout,
+                weight_shape,
+                stride,
+                padding,
+                dilation,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             (Self::Metal(storage), Self::Metal(grad_output)) => Ok(Self::Metal(storage.call_ops_conv_grad_weight(
                 layout,
@@ -725,7 +845,7 @@ impl BackendStorage {
                 dilation,
                 op,
             )?)),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "cuda", feature = "metal"))]
             _ => Err(HoduError::DeviceMismatch {
                 expected: device,
                 got: grad_output_device,
@@ -749,6 +869,14 @@ impl BackendStorage {
                 padding,
                 op,
             )?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_reduce_window(
+                layout,
+                window_shape,
+                strides,
+                padding,
+                op,
+            )?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_reduce_window(
                 layout,
@@ -766,6 +894,11 @@ impl BackendStorage {
                 let converted_storage = storage.to_dtype(layout, target_dtype)?;
                 Ok(Self::CPU(converted_storage))
             },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let converted_storage = storage.to_dtype(layout, target_dtype)?;
+                Ok(Self::CUDA(converted_storage))
+            },
             #[cfg(feature = "metal")]
             Self::Metal(storage) => {
                 let converted_storage = storage.to_dtype(layout, target_dtype)?;
@@ -781,11 +914,49 @@ impl BackendStorage {
                     let contiguous_storage = storage.contiguous(layout)?;
                     Ok(Self::CPU(contiguous_storage))
                 },
+                #[cfg(feature = "cuda")]
+                Device::CUDA(device_id) => {
+                    use crate::be_cuda::storage::CudaStorage;
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    let converted_storage = CudaStorage::from_cpu_storage(&contiguous_storage, device_id)?;
+                    Ok(Self::CUDA(converted_storage))
+                },
                 #[cfg(feature = "metal")]
                 Device::Metal => {
                     use crate::be_metal::storage::MetalStorage;
                     let contiguous_storage = storage.contiguous(layout)?;
                     let converted_storage = MetalStorage::from_cpu_storage(&contiguous_storage)?;
+                    Ok(Self::Metal(converted_storage))
+                },
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => match target_device {
+                Device::CPU => {
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    let converted_storage = contiguous_storage.to_cpu_storage()?;
+                    Ok(Self::CPU(converted_storage))
+                },
+                #[cfg(feature = "cuda")]
+                Device::CUDA(device_id) => {
+                    if storage.device_id() == device_id {
+                        // Same device - just make contiguous
+                        let contiguous_storage = storage.contiguous(layout)?;
+                        Ok(Self::CUDA(contiguous_storage))
+                    } else {
+                        // Different device - transfer via CPU
+                        let contiguous_storage = storage.contiguous(layout)?;
+                        let cpu_storage = contiguous_storage.to_cpu_storage()?;
+                        let converted_storage =
+                            crate::be_cuda::storage::CudaStorage::from_cpu_storage(&cpu_storage, device_id)?;
+                        Ok(Self::CUDA(converted_storage))
+                    }
+                },
+                #[cfg(feature = "metal")]
+                Device::Metal => {
+                    use crate::be_metal::storage::MetalStorage;
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    let cpu_storage = contiguous_storage.to_cpu_storage()?;
+                    let converted_storage = MetalStorage::from_cpu_storage(&cpu_storage)?;
                     Ok(Self::Metal(converted_storage))
                 },
             },
@@ -796,6 +967,15 @@ impl BackendStorage {
                     let converted_storage = contiguoused_storage.to_cpu_storage()?;
                     Ok(Self::CPU(converted_storage))
                 },
+                #[cfg(feature = "cuda")]
+                Device::CUDA(device_id) => {
+                    use crate::be_cuda::storage::CudaStorage;
+                    let contiguous_storage = storage.contiguous(layout)?;
+                    let cpu_storage = contiguous_storage.to_cpu_storage()?;
+                    let converted_storage = CudaStorage::from_cpu_storage(&cpu_storage, device_id)?;
+                    Ok(Self::CUDA(converted_storage))
+                },
+                #[cfg(feature = "metal")]
                 Device::Metal => {
                     let contiguous_storage = storage.contiguous(layout)?;
                     Ok(Self::Metal(contiguous_storage))
@@ -809,6 +989,11 @@ impl BackendStorage {
             Self::CPU(storage) => {
                 let contiguous_storage = storage.contiguous(layout)?;
                 Ok(Self::CPU(contiguous_storage))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let contiguous_storage = storage.contiguous(layout)?;
+                Ok(Self::CUDA(contiguous_storage))
             },
             #[cfg(feature = "metal")]
             Self::Metal(storage) => {

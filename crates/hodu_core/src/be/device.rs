@@ -21,6 +21,9 @@ pub trait BackendDeviceT: Sized {
 pub enum BackendDevice {
     #[allow(dead_code)]
     CPU(CpuDevice),
+    #[cfg(feature = "cuda")]
+    #[allow(dead_code)]
+    CUDA(crate::be_cuda::device::CudaDevice),
     #[cfg(feature = "metal")]
     #[allow(dead_code)]
     Metal(crate::be_metal::device::MetalDevice),
@@ -30,6 +33,13 @@ impl BackendDevice {
     pub fn storage_from_flatten<T: IntoFlattened>(data: T, device: Device) -> HoduResult<BackendStorage> {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(data.to_cpu_storage())),
+            #[cfg(feature = "cuda")]
+            Device::CUDA(device_id) => {
+                let cpu_storage = data.to_cpu_storage();
+                Ok(BackendStorage::CUDA(
+                    crate::be_cuda::storage::CudaStorage::from_cpu_storage(&cpu_storage, device_id)?,
+                ))
+            },
             #[cfg(feature = "metal")]
             Device::Metal => {
                 let cpu_storage = data.to_cpu_storage();
@@ -45,6 +55,13 @@ impl BackendDevice {
     pub(crate) fn zeros(shape: &Shape, device: Device, dtype: DType) -> HoduResult<BackendStorage> {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::zeros(shape, dtype)?)),
+            #[cfg(feature = "cuda")]
+            Device::CUDA(device_id) => {
+                let cpu_storage = CpuDevice::zeros(shape, dtype)?;
+                Ok(BackendStorage::CUDA(
+                    crate::be_cuda::storage::CudaStorage::from_cpu_storage(&cpu_storage, device_id)?,
+                ))
+            },
             #[cfg(feature = "metal")]
             Device::Metal => {
                 let cpu_storage = CpuDevice::zeros(shape, dtype)?;
@@ -66,6 +83,13 @@ impl BackendDevice {
     ) -> HoduResult<BackendStorage> {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::randn(shape, dtype, mean, std)?)),
+            #[cfg(feature = "cuda")]
+            Device::CUDA(device_id) => {
+                let cpu_storage = CpuDevice::randn(shape, dtype, mean, std)?;
+                Ok(BackendStorage::CUDA(
+                    crate::be_cuda::storage::CudaStorage::from_cpu_storage(&cpu_storage, device_id)?,
+                ))
+            },
             #[cfg(feature = "metal")]
             Device::Metal => {
                 let cpu_storage = CpuDevice::randn(shape, dtype, mean, std)?;
@@ -87,6 +111,13 @@ impl BackendDevice {
     ) -> HoduResult<BackendStorage> {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::rand_uniform(shape, dtype, low, high)?)),
+            #[cfg(feature = "cuda")]
+            Device::CUDA(device_id) => {
+                let cpu_storage = CpuDevice::rand_uniform(shape, dtype, low, high)?;
+                Ok(BackendStorage::CUDA(
+                    crate::be_cuda::storage::CudaStorage::from_cpu_storage(&cpu_storage, device_id)?,
+                ))
+            },
             #[cfg(feature = "metal")]
             Device::Metal => {
                 let cpu_storage = CpuDevice::rand_uniform(shape, dtype, low, high)?;

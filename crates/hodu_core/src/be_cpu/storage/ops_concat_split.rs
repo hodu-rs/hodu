@@ -4,7 +4,7 @@ use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::Op,
-    types::{Layout, Shape},
+    types::{DType, Layout, Shape},
 };
 use core::ffi::c_void;
 
@@ -188,27 +188,27 @@ pub fn call_ops_concat(
     }
 
     match dtype {
-        crate::types::DType::F8E4M3 => concat_impl!(F8E4M3, float8::F8E4M3),
+        DType::BOOL => concat_impl!(BOOL, bool),
+        DType::F8E4M3 => concat_impl!(F8E4M3, float8::F8E4M3),
         #[cfg(feature = "f8e5m2")]
-        crate::types::DType::F8E5M2 => concat_impl!(F8E5M2, float8::F8E5M2),
-        crate::types::DType::BF16 => concat_impl!(BF16, half::bf16),
-        crate::types::DType::F16 => concat_impl!(F16, half::f16),
-        crate::types::DType::F32 => concat_impl!(F32, f32),
+        DType::F8E5M2 => concat_impl!(F8E5M2, float8::F8E5M2),
+        DType::BF16 => concat_impl!(BF16, half::bf16),
+        DType::F16 => concat_impl!(F16, half::f16),
+        DType::F32 => concat_impl!(F32, f32),
         #[cfg(feature = "f64")]
-        crate::types::DType::F64 => concat_impl!(F64, f64),
-        crate::types::DType::U8 => concat_impl!(U8, u8),
+        DType::F64 => concat_impl!(F64, f64),
+        DType::U8 => concat_impl!(U8, u8),
         #[cfg(feature = "u16")]
-        crate::types::DType::U16 => concat_impl!(U16, u16),
-        crate::types::DType::U32 => concat_impl!(U32, u32),
+        DType::U16 => concat_impl!(U16, u16),
+        DType::U32 => concat_impl!(U32, u32),
         #[cfg(feature = "u64")]
-        crate::types::DType::U64 => concat_impl!(U64, u64),
-        crate::types::DType::I8 => concat_impl!(I8, i8),
+        DType::U64 => concat_impl!(U64, u64),
+        DType::I8 => concat_impl!(I8, i8),
         #[cfg(feature = "i16")]
-        crate::types::DType::I16 => concat_impl!(I16, i16),
-        crate::types::DType::I32 => concat_impl!(I32, i32),
+        DType::I16 => concat_impl!(I16, i16),
+        DType::I32 => concat_impl!(I32, i32),
         #[cfg(feature = "i64")]
-        crate::types::DType::I64 => concat_impl!(I64, i64),
-        crate::types::DType::BOOL => concat_impl!(BOOL, bool),
+        DType::I64 => concat_impl!(I64, i64),
     }
 
     Ok(output)

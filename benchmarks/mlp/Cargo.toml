@@ -29,6 +29,6 @@ hodu = { path = "../../", version = "0.2.1", optional = true }
 default = []
 hodu-bench = ["hodu"]
 metal = ["candle-core/metal", "hodu?/metal"]
-cuda = ["burn-tch", "candle-core/cuda"]
+cuda = ["burn-tch", "candle-core/cuda", "hodu?/cuda"]
 xla = ["hodu?/xla"]
 wgpu = ["burn-wgpu"]

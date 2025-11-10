@@ -80,6 +80,9 @@ pub enum HoduError {
     BackendError(String),
     /// CPU kernel error
     CpuKernelError(String),
+    /// CUDA kernel error
+    #[cfg(feature = "cuda")]
+    CudaKernelError(String),
     /// Metal kernel error
     #[cfg(feature = "metal")]
     MetalKernelError(String),
@@ -205,6 +208,8 @@ impl fmt::Display for HoduError {
             // Backend Errors
             Self::BackendError(msg) => write!(f, "backend error: {}", msg),
             Self::CpuKernelError(msg) => write!(f, "cpu kernel error: {}", msg),
+            #[cfg(feature = "cuda")]
+            Self::CudaKernelError(msg) => write!(f, "cuda kernel error: {}", msg),
             #[cfg(feature = "metal")]
             Self::MetalKernelError(msg) => write!(f, "metal kernel error: {}", msg),
             #[cfg(feature = "xla")]
@@ -285,6 +290,14 @@ impl From<bincode::error::EncodeError> for HoduError {
 impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
     fn from(e: hodu_cpu_kernels::CpuKernelError) -> Self {
         HoduError::CpuKernelError(format!("{:?}", e))
+    }
+}
+
+// Conversion from hodu_cuda_kernels error
+#[cfg(feature = "cuda")]
+impl From<hodu_cuda_kernels::error::CudaKernelError> for HoduError {
+    fn from(e: hodu_cuda_kernels::error::CudaKernelError) -> Self {
+        HoduError::CudaKernelError(format!("{:?}", e))
     }
 }
 

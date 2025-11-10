@@ -9,8 +9,8 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
-default = ["cudarc/no-std"]
-std = ["cudarc/std"]
+default = ["cudarc/no-std", "float8/cuda"]
+std = ["cudarc/std", "float8/cuda"]
 
 [dependencies]
 cudarc = { workspace = true }
