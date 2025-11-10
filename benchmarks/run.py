@@ -142,6 +142,8 @@ def run_hodu_benchmark(bench_type, mode):
         run_cmd.insert(3, "--features=metal,hodu-bench")
     elif "xla" in mode:
         run_cmd.insert(3, "--features=xla,hodu-bench")
+    elif "cuda" in mode:
+        run_cmd.insert(3, "--features=cuda,hodu-bench")
     else:
         run_cmd.insert(3, "--features=hodu-bench")
     run_cmd.append(mode)
@@ -248,7 +250,9 @@ def get_ratio_color(ratio):
         return WHITE
 
 
-def print_comparison_table(bench_type, all_results, cpu_baseline, gpu_baseline):
+def print_comparison_table(
+    bench_type, all_results, cpu_baseline, gpu_baseline, gpu_type=None
+):
     """Print a unified comparison table with CPU and GPU sections."""
     if not all_results:
         print_color(RED, "No results to display")
@@ -399,15 +403,18 @@ def print_comparison_table(bench_type, all_results, cpu_baseline, gpu_baseline):
 
     # Print GPU results
     if gpu_results:
-        # Determine GPU type from results
-        gpu_type_header = "GPU"
-        for impl_name in gpu_results.keys():
-            if "Metal" in impl_name or "metal" in impl_name:
-                gpu_type_header = "Metal"
-                break
-            elif "CUDA" in impl_name or "cuda" in impl_name:
-                gpu_type_header = "CUDA"
-                break
+        # Determine GPU type from results or provided gpu_type
+        if gpu_type:
+            gpu_type_header = gpu_type
+        else:
+            gpu_type_header = "GPU"
+            for impl_name in gpu_results.keys():
+                if "Metal" in impl_name or "metal" in impl_name:
+                    gpu_type_header = "Metal"
+                    break
+                elif "CUDA" in impl_name or "cuda" in impl_name:
+                    gpu_type_header = "CUDA"
+                    break
 
         print(f"\n{gpu_type_header} Results:\n")
 
@@ -1086,8 +1093,17 @@ def main():
                 gpu_baseline = key
                 break
 
+    # Determine GPU type based on enabled flags
+    gpu_type = None
+    if enable_metal:
+        gpu_type = "Metal"
+    elif enable_cuda:
+        gpu_type = "CUDA"
+
     # Print unified comparison table
-    print_comparison_table(bench_type, all_results, cpu_baseline, gpu_baseline)
+    print_comparison_table(
+        bench_type, all_results, cpu_baseline, gpu_baseline, gpu_type
+    )
 
     # Handle save and plot
     if enable_save or enable_plot:

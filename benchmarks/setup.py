@@ -12,42 +12,65 @@ GREEN = "\033[0;32m"
 NC = "\033[0m"  # No Color
 
 
-# Configuration: Define packages for each virtual environment
-VENV_CONFIGS = [
-    {
-        "name": ".venvs/1",
-        "packages": (
-            [
-                "numpy==2.3.4",
-                "torch",
-                "jax-metal",
-                "jaxlib",
-            ]
-            if platform.system() == "Darwin"
-            else [
-                "numpy==2.3.4",
-                "torch",
-                "jax",
-                "jaxlib",
-            ]
-        ),
-    },
-    {
-        "name": ".venvs/2",
-        "packages": (
-            [
-                "numpy==1.26.4",
-                "tensorflow-macos",
-                "tensorflow-metal",
-            ]
-            if platform.system() == "Darwin"
-            else [
-                "numpy==1.26.4",
-                "tensorflow",
-            ]
-        ),
-    },
-]
+def get_venv_configs(cuda_version=None):
+    """Get virtual environment configurations based on platform and CUDA version
+
+    Args:
+        cuda_version: None, "12", or "13" for CUDA support
+    """
+    if platform.system() == "Darwin":
+        # macOS: use Metal for JAX
+        venv1_packages = [
+            "numpy==2.3.4",
+            "torch",
+            "jax-metal",
+            "jaxlib",
+        ]
+    elif cuda_version == "12":
+        # Linux with CUDA 12: install JAX with CUDA 12 support
+        venv1_packages = [
+            "numpy==2.3.4",
+            "torch",
+            "jax[cuda12]",
+        ]
+    elif cuda_version == "13":
+        # Linux with CUDA 13: install JAX with CUDA 13 support
+        venv1_packages = [
+            "numpy==2.3.4",
+            "torch",
+            "jax[cuda13]",
+        ]
+    else:
+        # Linux without CUDA: CPU-only JAX
+        venv1_packages = [
+            "numpy==2.3.4",
+            "torch",
+            "jax",
+            "jaxlib",
+        ]
+
+    if platform.system() == "Darwin":
+        venv2_packages = [
+            "numpy==1.26.4",
+            "tensorflow-macos",
+            "tensorflow-metal",
+        ]
+    else:
+        venv2_packages = [
+            "numpy==1.26.4",
+            "tensorflow",
+        ]
+
+    return [
+        {
+            "name": ".venvs/1",
+            "packages": venv1_packages,
+        },
+        {
+            "name": ".venvs/2",
+            "packages": venv2_packages,
+        },
+    ]
 
 
 def check_python():
@@ -99,6 +122,13 @@ def get_activate_command(venv_name):
 
 
 def main():
+    # Parse command-line arguments
+    cuda_version = None
+    if "--cuda12" in sys.argv:
+        cuda_version = "12"
+    elif "--cuda13" in sys.argv:
+        cuda_version = "13"
+
     # 1. Check if python exists
     version = check_python()
     if version is None:
@@ -107,6 +137,10 @@ def main():
         sys.exit(1)
 
     print(f"{GREEN}Found Python {version}{NC}")
+    if cuda_version:
+        print(
+            f"{YELLOW}CUDA {cuda_version} support enabled - will install JAX with CUDA{NC}"
+        )
 
     # 2. Check if version is 3.11.x
     major, minor, patch = parse_version(version)
@@ -122,7 +156,8 @@ def main():
 
     # 3. Create virtual environments and install packages
     base_path = Path(__file__).parent
-    for config in VENV_CONFIGS:
+    venv_configs = get_venv_configs(cuda_version)
+    for config in venv_configs:
         venv_name = config["name"]
         packages = [pkg for pkg in config["packages"] if pkg is not None]
 

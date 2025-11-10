@@ -222,14 +222,12 @@ fn benchmark_dynamic_tch(
         let _ = mlp.forward(x.clone());
     }
 
-    // Synchronize before benchmarking
-    tch::Cuda::synchronize();
-
     // Benchmark
     let start = Instant::now();
     for i in 0..iterations {
-        let _ = mlp.forward(x.clone());
-        tch::Cuda::synchronize();
+        let c = mlp.forward(x.clone());
+        // Force synchronization by reading a value
+        let _ = c.clone().into_data();
 
         // Check timeout after each iteration
         let elapsed = start.elapsed();
