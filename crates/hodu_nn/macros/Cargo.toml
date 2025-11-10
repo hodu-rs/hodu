@@ -1,6 +1,6 @@
 [package]
 name = "hodu_nn_macros"
-version = "0.2.1"
+version = "0.2.2"
 description = "hodu nn macros"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -16,7 +16,7 @@ std = []
 serde = []
 
 [dependencies]
-hodu_macro_utils = { path = "../../hodu_macro_utils", version = "0.2.1" }
+hodu_macro_utils = { path = "../../hodu_macro_utils", version = "0.2.2" }
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full"] }
