@@ -2,6 +2,8 @@ use hodu::{nn::SGD, prelude::*};
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    #[cfg(feature = "cuda")]
+    set_runtime_device(Device::CUDA(0));
     #[cfg(feature = "metal")]
     set_runtime_device(Device::Metal);
 

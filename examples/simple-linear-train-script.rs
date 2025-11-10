@@ -54,6 +54,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut script = builder.build()?;
 
     // Set device
+    #[cfg(feature = "cuda")]
+    script.set_device(Device::CUDA(0));
     #[cfg(feature = "metal")]
     script.set_device(Device::Metal);
 

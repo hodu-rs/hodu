@@ -5,9 +5,13 @@ use std::time::Instant;
 #[derive(Debug, Clone, Copy)]
 enum BenchMode {
     DynamicCPU,
+    #[cfg(feature = "cuda")]
+    DynamicCUDA,
     #[cfg(feature = "metal")]
     DynamicMetal,
     StaticCPU,
+    #[cfg(feature = "cuda")]
+    StaticCUDA,
     #[cfg(feature = "metal")]
     StaticMetal,
     #[cfg(feature = "xla")]
@@ -18,9 +22,13 @@ impl BenchMode {
     fn from_str(s: &str) -> Option<Self> {
         match s {
             "dynamic-cpu" => Some(Self::DynamicCPU),
+            #[cfg(feature = "cuda")]
+            "dynamic-cuda" => Some(Self::DynamicCUDA),
             #[cfg(feature = "metal")]
             "dynamic-metal" => Some(Self::DynamicMetal),
             "static-cpu" => Some(Self::StaticCPU),
+            #[cfg(feature = "cuda")]
+            "static-cuda" => Some(Self::StaticCUDA),
             #[cfg(feature = "metal")]
             "static-metal" => Some(Self::StaticMetal),
             #[cfg(feature = "xla")]
@@ -32,9 +40,13 @@ impl BenchMode {
     fn name(&self) -> &str {
         match self {
             Self::DynamicCPU => "Dynamic CPU",
+            #[cfg(feature = "cuda")]
+            Self::DynamicCUDA => "Dynamic CUDA",
             #[cfg(feature = "metal")]
             Self::DynamicMetal => "Dynamic Metal",
             Self::StaticCPU => "Static CPU",
+            #[cfg(feature = "cuda")]
+            Self::StaticCUDA => "Static CUDA",
             #[cfg(feature = "metal")]
             Self::StaticMetal => "Static Metal",
             #[cfg(feature = "xla")]
@@ -108,6 +120,10 @@ fn benchmark_dynamic(
         BenchMode::DynamicCPU => {
             set_runtime_device(Device::CPU);
         },
+        #[cfg(feature = "cuda")]
+        BenchMode::DynamicCUDA => {
+            set_runtime_device(Device::CUDA(0));
+        },
         #[cfg(feature = "metal")]
         BenchMode::DynamicMetal => {
             set_runtime_device(Device::Metal);
@@ -168,6 +184,10 @@ fn benchmark_static(
     match mode {
         BenchMode::StaticCPU => {
             script.set_device(Device::CPU);
+        },
+        #[cfg(feature = "cuda")]
+        BenchMode::StaticCUDA => {
+            script.set_device(Device::CUDA(0));
         },
         #[cfg(feature = "metal")]
         BenchMode::StaticMetal => {
@@ -240,6 +260,16 @@ fn run_benchmark(
                 warmup,
                 iterations,
             ),
+            #[cfg(feature = "cuda")]
+            BenchMode::DynamicCUDA => benchmark_dynamic(
+                mode,
+                *batch_size,
+                *in_features,
+                *hidden_features,
+                *out_features,
+                warmup,
+                iterations,
+            ),
             #[cfg(feature = "metal")]
             BenchMode::DynamicMetal => benchmark_dynamic(
                 mode,
@@ -251,6 +281,16 @@ fn run_benchmark(
                 iterations,
             ),
             BenchMode::StaticCPU => benchmark_static(
+                mode,
+                *batch_size,
+                *in_features,
+                *hidden_features,
+                *out_features,
+                warmup,
+                iterations,
+            ),
+            #[cfg(feature = "cuda")]
+            BenchMode::StaticCUDA => benchmark_static(
                 mode,
                 *batch_size,
                 *in_features,
@@ -310,9 +350,13 @@ fn print_usage() {
     println!("Usage: bench <mode>");
     println!("\nAvailable modes:");
     println!("  dynamic-cpu     - Dynamic execution on CPU");
+    #[cfg(feature = "cuda")]
+    println!("  dynamic-cuda    - Dynamic execution on CUDA");
     #[cfg(feature = "metal")]
     println!("  dynamic-metal   - Dynamic execution on Metal");
     println!("  static-cpu      - Static computation graph on CPU");
+    #[cfg(feature = "cuda")]
+    println!("  static-cuda     - Static computation graph on CUDA");
     #[cfg(feature = "metal")]
     println!("  static-metal    - Static computation graph on Metal");
     #[cfg(feature = "xla")]

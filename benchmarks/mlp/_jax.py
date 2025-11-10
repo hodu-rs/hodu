@@ -7,16 +7,20 @@ import time
 
 class BenchMode:
     DYNAMIC_CPU = "dynamic-cpu"
+    DYNAMIC_CUDA = "dynamic-cuda"
     DYNAMIC_METAL = "dynamic-metal"
     STATIC_CPU = "static-cpu"
+    STATIC_CUDA = "static-cuda"
     STATIC_METAL = "static-metal"
 
     @staticmethod
     def get_name(mode):
         names = {
             BenchMode.DYNAMIC_CPU: "Dynamic CPU",
+            BenchMode.DYNAMIC_CUDA: "Dynamic CUDA",
             BenchMode.DYNAMIC_METAL: "Dynamic Metal",
             BenchMode.STATIC_CPU: "Static CPU",
+            BenchMode.STATIC_CUDA: "Static CUDA",
             BenchMode.STATIC_METAL: "Static Metal",
         }
         return names.get(mode, mode)
@@ -26,6 +30,17 @@ class BenchMode:
         """Set JAX default device based on mode"""
         if "cpu" in mode:
             jax.config.update("jax_default_device", jax.devices("cpu")[0])
+        elif "cuda" in mode:
+            # Try to get CUDA device
+            all_devices = jax.devices()
+            cuda_devices = [d for d in all_devices if d.platform == "gpu"]
+
+            if not cuda_devices:
+                print("Error: CUDA mode requested but no CUDA device detected")
+                print(f"Available devices: {all_devices}")
+                raise RuntimeError("CUDA not available for JAX")
+
+            jax.config.update("jax_default_device", cuda_devices[0])
         elif "metal" in mode:
             # Try to get Metal device
             all_devices = jax.devices()
@@ -206,8 +221,10 @@ def main():
         print("Usage: python _jax.py <mode>")
         print("\nAvailable modes:")
         print("  dynamic-cpu     - Dynamic execution on CPU")
+        print("  dynamic-cuda    - Dynamic execution on CUDA")
         print("  dynamic-metal   - Dynamic execution on Metal")
         print("  static-cpu      - JIT compiled on CPU")
+        print("  static-cuda     - JIT compiled on CUDA")
         print("  static-metal    - JIT compiled on Metal")
         sys.exit(1)
 

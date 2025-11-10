@@ -399,6 +399,18 @@ def print_comparison_table(bench_type, all_results, cpu_baseline, gpu_baseline):
 
     # Print GPU results
     if gpu_results:
+        # Determine GPU type from results
+        gpu_type_header = "GPU"
+        for impl_name in gpu_results.keys():
+            if "Metal" in impl_name or "metal" in impl_name:
+                gpu_type_header = "Metal"
+                break
+            elif "CUDA" in impl_name or "cuda" in impl_name:
+                gpu_type_header = "CUDA"
+                break
+
+        print(f"\n{gpu_type_header} Results:\n")
+
         gpu_baseline_results = all_results.get(gpu_baseline, {})
         impl_names = sorted(gpu_results.keys())
 
@@ -948,8 +960,8 @@ def main():
                 ("static-cuda", "CUDA"),
             ]
         )
-        # Note: Hodu CUDA support would need to be added here
-        # hodu_modes.extend(["dynamic-cuda", "static-cuda"])
+        hodu_modes.extend(["dynamic-cuda", "static-cuda"])
+        jax_modes.extend([("dynamic-cuda", "CUDA"), ("static-cuda", "CUDA")])
 
     # Add XLA mode if requested (requires CPU to be enabled)
     if enable_xla and enable_cpu:
