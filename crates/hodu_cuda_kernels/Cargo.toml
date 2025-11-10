@@ -1,0 +1,20 @@
+[package]
+name = "hodu_cuda_kernels"
+version = "0.2.1"
+description = "hodu cuda kernels"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu"
+
+[features]
+default = ["cudarc/no-std"]
+std = ["cudarc/std"]
+
+[dependencies]
+cudarc = { workspace = true }
+float8 = { workspace = true }
+half = { workspace = true, default-features = false }
+paste = { workspace = true }
+spin = { workspace = true }

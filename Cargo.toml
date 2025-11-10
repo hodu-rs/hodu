@@ -18,6 +18,16 @@ categories = ["science"]
 
 [workspace.dependencies]
 bincode = "2.0.1"
+cudarc = { version = "0.17.7", default-features = false, features = [
+    "f8",
+    "f16",
+    "cublas",
+    "cublaslt",
+    "cuda-version-from-build-system",
+    "driver",
+    "dynamic-linking",
+    "nvrtc"
+] }
 dashmap = "6.1.0"
 flate2 = "1.1.2"
 float8 = { version = "0.4.2", default-features = false, features = [

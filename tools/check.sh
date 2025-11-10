@@ -33,11 +33,14 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Check if metal is in additional features
+HAS_CUDA=false
 HAS_METAL=false
 for feature in "${ADDITIONAL_FEATURES[@]}"; do
+    if [ "$feature" = "cuda" ]; then
+        HAS_CUDA=true
+    fi
     if [ "$feature" = "metal" ]; then
         HAS_METAL=true
-        break
     fi
 done
 
@@ -82,46 +85,97 @@ fi
 
 echo ""
 
-# Check Metal kernel syntax
-echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Metal] Checking kernel syntax...${NC}"
-if ! command -v xcrun &> /dev/null
-then
-    echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} xcrun is not available"
-    echo -e "${DIM}   Skipping Metal syntax check (macOS only)${NC}\n"
-else
-    # Counter for checked files
-    metal_count=0
-    metal_failed=0
-
-    # Find and check all .metal files recursively from current directory
-    while IFS= read -r -d '' file
-    do
-        filename=$(basename "$file")
-        kernel_dir=$(dirname "$file")
-
-        # Check syntax
-        if xcrun -sdk macosx metal -I "$kernel_dir" -fsyntax-only "$file" 2>&1 | grep -q "error:"; then
-            echo -e "  ${BRIGHT_RED}✗${NC} ${filename}"
-            ((metal_failed++))
-        else
-            echo -e "  ${CYAN}→${NC} ${DIM}${filename}${NC}"
-        fi
-        ((metal_count++))
-    done < <(find . -type f -name "*.metal" -print0)
-
-    if [ $metal_count -eq 0 ]; then
-        echo -e "${DIM}  No .metal files found${NC}"
+# Check CUDA kernel syntax
+if [ "$HAS_CUDA" = true ]; then
+    echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[CUDA] Checking kernel syntax...${NC}"
+    if ! command -v nvcc &> /dev/null
+    then
+        echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} nvcc is not available"
+        echo -e "${DIM}   Skipping CUDA syntax check (requires CUDA Toolkit)${NC}\n"
     else
-        if [ $metal_failed -eq 0 ]; then
-            echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${metal_count}${NC} Metal file(s)"
+        # Counter for checked files
+        cuda_count=0
+        cuda_failed=0
+
+        # Find and check all .cu and .cuh files recursively
+        while IFS= read -r -d '' file
+        do
+            filename=$(basename "$file")
+            kernel_dir=$(dirname "$file")
+
+            # Check syntax
+            if nvcc -I "$kernel_dir" --cuda --device-c -x cu "$file" -o /dev/null 2>&1 | grep -q "error:"; then
+                echo -e "  ${BRIGHT_RED}✗${NC} ${filename}"
+                ((cuda_failed++))
+            else
+                echo -e "  ${CYAN}→${NC} ${DIM}${filename}${NC}"
+            fi
+            ((cuda_count++))
+        done < <(find . -type f \( -name "*.cu" -o -name "*.cuh" \) -not -path "*/target/*" -not -path "*/.*" -not -path "*/libs/*" -print0)
+
+        if [ $cuda_count -eq 0 ]; then
+            echo -e "${DIM}  No CUDA files found${NC}"
         else
-            echo -e "${BRIGHT_RED}✗${NC} ${metal_failed}/${metal_count} Metal file(s) failed"
-            exit 1
+            if [ $cuda_failed -eq 0 ]; then
+                echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${cuda_count}${NC} CUDA file(s)"
+            else
+                echo -e "${BRIGHT_RED}✗${NC} ${cuda_failed}/${cuda_count} CUDA file(s) failed"
+                exit 1
+            fi
         fi
     fi
+
+    echo ""
+else
+    echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[CUDA] Checking kernel syntax...${NC}"
+    echo -e "${DIM}  Skipping CUDA check (cuda feature not enabled)${NC}\n"
 fi
 
-echo ""
+# Check Metal kernel syntax
+if [ "$HAS_METAL" = true ]; then
+    echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Metal] Checking kernel syntax...${NC}"
+    if ! command -v xcrun &> /dev/null
+    then
+        echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} xcrun is not available"
+        echo -e "${DIM}   Skipping Metal syntax check (macOS only)${NC}\n"
+    else
+        # Counter for checked files
+        metal_count=0
+        metal_failed=0
+
+        # Find and check all .metal files recursively from current directory
+        while IFS= read -r -d '' file
+        do
+            filename=$(basename "$file")
+            kernel_dir=$(dirname "$file")
+
+            # Check syntax
+            if xcrun -sdk macosx metal -I "$kernel_dir" -fsyntax-only "$file" 2>&1 | grep -q "error:"; then
+                echo -e "  ${BRIGHT_RED}✗${NC} ${filename}"
+                ((metal_failed++))
+            else
+                echo -e "  ${CYAN}→${NC} ${DIM}${filename}${NC}"
+            fi
+            ((metal_count++))
+        done < <(find . -type f -name "*.metal" -print0)
+
+        if [ $metal_count -eq 0 ]; then
+            echo -e "${DIM}  No .metal files found${NC}"
+        else
+            if [ $metal_failed -eq 0 ]; then
+                echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${metal_count}${NC} Metal file(s)"
+            else
+                echo -e "${BRIGHT_RED}✗${NC} ${metal_failed}/${metal_count} Metal file(s) failed"
+                exit 1
+            fi
+        fi
+    fi
+
+    echo ""
+else
+    echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Metal] Checking kernel syntax...${NC}"
+    echo -e "${DIM}  Skipping Metal check (metal feature not enabled)${NC}\n"
+fi
 
 # Test Cargo feature combinations
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Cargo] Testing feature combinations...${NC}"

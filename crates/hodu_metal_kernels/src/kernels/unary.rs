@@ -10,6 +10,12 @@ use crate::{
 use objc2_metal::MTLResourceUsage;
 
 ops!(
+    eq_scalar,
+    ne_scalar,
+    lt_scalar,
+    le_scalar,
+    gt_scalar,
+    ge_scalar,
     neg,
     abs,
     sign,
@@ -40,16 +46,9 @@ ops!(
     pow_scalar,
     maximum_scalar,
     minimum_scalar,
-    eq_scalar,
-    ne_scalar,
-    lt_scalar,
-    le_scalar,
-    gt_scalar,
-    ge_scalar,
     leaky_relu,
     elu,
-    prelu,
-    rrelu
+    prelu
 );
 
 /// Executes a unary operation on a tensor using Metal compute pipeline.

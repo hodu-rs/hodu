@@ -49,11 +49,6 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 >
 > It is recommended to use the latest version.
 
-> [!CAUTION]
->
-> **Current Development Status**:
-> - CUDA GPU support is not yet fully implemented and is under active development
-
 ## Get started
 
 ### Requirements
@@ -216,7 +211,7 @@ Additional data types can be enabled with feature flags to reduce compilation ti
 | Target Triple | Backend | Device | Features | Status |
 |--------------|---------|--------|----------|--------|
 | x86_64-unknown-linux-gnu | HODU | CPU | `std` | ✅ Stable |
-| | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
+| | HODU | CUDA | `std`, `cuda` | ✅ Stable |
 | | XLA | CPU | `std`, `xla` | ✅ Stable |
 | | XLA | CUDA | `std`, `xla`, `cuda` | 🚧 In Development |
 | aarch64-unknown-linux-gnu | HODU | CPU | `std` | ✅ Stable |
@@ -226,8 +221,8 @@ Additional data types can be enabled with feature flags to reduce compilation ti
 | aarch64-apple-darwin | HODU | CPU | `std` | ✅ Stable |
 | | HODU | Metal | `std`, `metal` | 🧪 Experimental |
 | | XLA | CPU | `std`, `xla` | ✅ Stable |
-| x86_64-pc-windows-msvc | HODU | CPU | `std` | ✅ Stable |
-| | HODU | CUDA | `std`, `cuda` | 🚧 In Development |
+| x86_64-pc-windows-msvc | HODU | CPU | `std` | 🧪 Experimental |
+| | HODU | CUDA | `std`, `cuda` | 🧪 Experimental |
 | | XLA | CPU | `std`, `xla` | 🚧 In Development |
 | | XLA | CUDA | `std`, `xla`, `cuda` | 🚧 In Development |
 
