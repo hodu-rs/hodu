@@ -93,9 +93,11 @@ def run_candle_benchmark(bench_type, mode):
     # Run benchmark (cargo run will build if needed)
     run_cmd = ["cargo", "run", "--release", "--bin", "candle", "--"]
     if "metal" in mode:
-        run_cmd.insert(3, "--features=metal")
+        run_cmd.insert(3, "--features=metal,candle-bench")
     elif "cuda" in mode:
-        run_cmd.insert(3, "--features=cuda")
+        run_cmd.insert(3, "--features=cuda,candle-bench")
+    else:
+        run_cmd.insert(3, "--features=candle-bench")
     run_cmd.append(mode)
 
     print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
@@ -116,9 +118,11 @@ def run_burn_benchmark(bench_type, mode):
     # Run benchmark (cargo run will build if needed)
     run_cmd = ["cargo", "run", "--release", "--bin", "burn", "--"]
     if "wgpu" in mode:
-        run_cmd.insert(3, "--features=wgpu")
+        run_cmd.insert(3, "--features=wgpu,burn-bench")
     elif "tch" in mode or "cuda" in mode:
-        run_cmd.insert(3, "--features=cuda")
+        run_cmd.insert(3, "--features=cuda,burn-bench")
+    else:
+        run_cmd.insert(3, "--features=burn-bench")
     run_cmd.append(mode)
 
     print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
