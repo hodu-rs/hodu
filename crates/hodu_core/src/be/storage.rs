@@ -461,6 +461,7 @@ impl BackendStorage {
                     .iter()
                     .map(|s| match s {
                         Self::CPU(cpu) => cpu,
+                        #[cfg(any(feature = "cuda", feature = "metal"))]
                         _ => unreachable!("Device mismatch already checked"),
                     })
                     .collect();
