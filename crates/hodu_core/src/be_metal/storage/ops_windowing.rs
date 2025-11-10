@@ -98,7 +98,7 @@ pub fn call_ops_reduce_window(
     let device = input_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "reduce_window_output")?;
+    let output_buffer = device.new_buffer(output_size as usize, dtype, "reduce_window_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", windowing_op, dtype);
