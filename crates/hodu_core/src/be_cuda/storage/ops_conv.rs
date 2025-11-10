@@ -8,6 +8,7 @@ use crate::{
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_ops_conv(
     input_storage: &CudaStorage,
     input_layout: &Layout,
@@ -127,6 +128,7 @@ pub fn call_ops_conv(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn call_ops_conv_grad_weight(
     input_storage: &CudaStorage,
     input_layout: &Layout,
