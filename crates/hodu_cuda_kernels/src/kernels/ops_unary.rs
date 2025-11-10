@@ -53,7 +53,7 @@ ops!(
 ///
 /// # Arguments
 /// * `kernel` - The unary operation to perform (e.g., "abs::F32", "exp::F32")
-/// * `device` - CUDA device to execute on
+/// * `context` - CUDA context to execute on
 /// * `input` - Input tensor device slice
 /// * `output` - Output tensor device slice
 /// * `metadata` - Device slice containing metadata describing tensor layout
@@ -67,7 +67,7 @@ ops!(
 pub fn call_ops_unary<I, O>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<I>,
     output: &mut CudaSlice<O>,
     metadata: &[usize],
@@ -76,7 +76,7 @@ where
     I: cudarc::driver::DeviceRepr,
     O: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsUnary, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsUnary, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -88,7 +88,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -107,7 +107,7 @@ where
 ///
 /// # Arguments
 /// * `kernel` - The unary operation to perform (e.g., "abs::F32", "exp::F32")
-/// * `device` - CUDA device to execute on
+/// * `context` - CUDA context to execute on
 /// * `input` - Input tensor device slice
 /// * `output` - Output tensor device slice
 /// * `metadata` - Device slice containing metadata describing tensor layout
@@ -122,7 +122,7 @@ where
 pub fn call_ops_unary_scalar<I, O>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<I>,
     output: &mut CudaSlice<O>,
     metadata: &[usize],
@@ -132,7 +132,7 @@ where
     I: cudarc::driver::DeviceRepr + Clone,
     O: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsUnary, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsUnary, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -144,7 +144,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;

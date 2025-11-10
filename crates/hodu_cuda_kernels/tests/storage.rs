@@ -42,7 +42,7 @@ where
     metadata.extend_from_slice(strides);
     metadata.push(offset);
 
-    call_const_set(kernel, &device, &mut output, &metadata, const_val).unwrap();
+    call_const_set(kernel, &kernels, &device, &mut output, &metadata, const_val).unwrap();
 
     let mut results = vec![unsafe { core::mem::zeroed() }; buffer_size];
     stream.memcpy_dtoh(&output, &mut results).unwrap();

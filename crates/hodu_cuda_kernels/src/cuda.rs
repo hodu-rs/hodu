@@ -6,9 +6,6 @@ pub use cudarc::driver::{
 };
 pub use cudarc::nvrtc::Ptx;
 
-// Type alias for backwards compatibility
-pub type CudaDevice = CudaContext;
-
 // Extension trait for launching kernels with backwards compatibility
 pub trait CudaFunctionExt {
     unsafe fn launch<'a, Args>(

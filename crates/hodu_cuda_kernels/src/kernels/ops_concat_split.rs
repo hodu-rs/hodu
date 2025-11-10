@@ -14,7 +14,7 @@ ops!(concat, split, chunk);
 /// # Arguments
 /// * `kernel` - Concat operation kernel (e.g., concat::F32)
 /// * `kernels` - Kernel cache for managing compiled kernels
-/// * `device` - CUDA device to execute on
+/// * `context` - CUDA context to execute on
 /// * `input` - Combined input buffer containing all input tensors
 /// * `output` - Output buffer for concatenated result
 /// * `metadata` - Metadata describing tensor shapes, strides, and offsets
@@ -35,7 +35,7 @@ ops!(concat, split, chunk);
 pub fn call_ops_concat<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
@@ -43,7 +43,7 @@ pub fn call_ops_concat<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsConcatSplit, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsConcatSplit, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -55,7 +55,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -75,7 +75,7 @@ where
 /// # Arguments
 /// * `kernel` - Split operation kernel (e.g., split::F32)
 /// * `kernels` - Kernel cache for managing compiled kernels
-/// * `device` - CUDA device to execute on
+/// * `context` - CUDA context to execute on
 /// * `input` - Input tensor buffer
 /// * `output` - Output buffer for extracted portion
 /// * `metadata` - Metadata describing tensor shape, strides, and split parameters
@@ -95,7 +95,7 @@ where
 pub fn call_ops_split<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
@@ -103,7 +103,7 @@ pub fn call_ops_split<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsConcatSplit, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsConcatSplit, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -115,7 +115,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;

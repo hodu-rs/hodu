@@ -36,7 +36,7 @@ ops!(
 pub fn call_ops_index_select<T, I>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
     output: &mut CudaSlice<T>,
@@ -46,9 +46,9 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -95,7 +95,7 @@ where
 pub fn call_ops_index_put<T, I>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
     values: &CudaSlice<T>,
@@ -106,9 +106,9 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -155,7 +155,7 @@ where
 pub fn call_ops_gather<T, I>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
     output: &mut CudaSlice<T>,
@@ -165,9 +165,9 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -216,7 +216,7 @@ where
 pub fn call_ops_scatter<T, I>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     indices: &CudaSlice<I>,
     src: &CudaSlice<T>,
@@ -227,9 +227,9 @@ where
     T: cudarc::driver::DeviceRepr,
     I: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsIndexing, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;

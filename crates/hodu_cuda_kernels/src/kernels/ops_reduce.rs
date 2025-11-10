@@ -34,7 +34,7 @@ ops!(sum, max, min, prod, mean, norm, argmax, argmin, all, any);
 pub fn call_ops_reduce<T, O>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<O>,
     metadata: &[usize],
@@ -43,7 +43,7 @@ where
     T: cudarc::driver::DeviceRepr,
     O: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsReduce, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsReduce, kernel.0)?;
 
     // Calculate num_els from output_shape in metadata
     let num_dims = metadata[0];
@@ -62,7 +62,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;

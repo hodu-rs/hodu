@@ -27,7 +27,7 @@ ops!(contiguous, copy);
 pub fn call_ops_contiguous<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
@@ -35,7 +35,7 @@ pub fn call_ops_contiguous<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsMemory, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsMemory, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -47,7 +47,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -80,7 +80,7 @@ where
 pub fn call_ops_copy<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     input: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
@@ -88,7 +88,7 @@ pub fn call_ops_copy<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsMemory, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsMemory, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -100,7 +100,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;

@@ -17,7 +17,7 @@ ops!(const_set);
 ///
 /// # Arguments
 /// * `kernel` - Const set kernel (e.g., const_set::F32)
-/// * `device` - CUDA device to execute on
+/// * `context` - CUDA context to execute on
 /// * `output` - Output device slice (will be filled with const_val)
 /// * `metadata` - Device slice containing metadata describing tensor shape, strides, and offset
 /// * `const_val` - Constant value to fill the tensor with
@@ -59,7 +59,7 @@ ops!(const_set);
 pub fn call_const_set<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
     const_val: T,
@@ -67,7 +67,7 @@ pub fn call_const_set<T>(
 where
     T: cudarc::driver::DeviceRepr + Clone,
 {
-    let func = kernels.load_function(device, Source::Storage, kernel.0)?;
+    let func = kernels.load_function(context, Source::Storage, kernel.0)?;
 
     let num_els = metadata[0];
     let block_size = 256u32;
@@ -79,7 +79,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -99,7 +99,7 @@ where
 pub fn call_const_set_sync<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     output: &mut CudaSlice<T>,
     metadata: &[usize],
     const_val: T,
@@ -107,8 +107,8 @@ pub fn call_const_set_sync<T>(
 where
     T: cudarc::driver::DeviceRepr + Clone,
 {
-    call_const_set(kernel, kernels, device, output, metadata, const_val)?;
-    device
+    call_const_set(kernel, kernels, context, output, metadata, const_val)?;
+    context
         .synchronize()
         .map_err(|e| CudaKernelError::LaunchError(format!("Failed to synchronize: {:?}", e)))?;
     Ok(())

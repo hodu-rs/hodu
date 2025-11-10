@@ -12,9 +12,9 @@ ops!(matmul, dot);
 /// Execute a batched matrix multiplication with broadcasting support
 ///
 /// # Arguments
-/// * `device` - CUDA device to execute on
+/// * `kernel` - The matmul kernel (e.g., "matmul::F32")
 /// * `kernels` - Kernel cache
-/// * `kernel_name` - The matmul kernel (e.g., "matmul_f32")
+/// * `context` - CUDA context to execute on
 /// * `lhs` - Left-hand side matrix device slice with shape [..., M, K]
 /// * `rhs` - Right-hand side matrix device slice with shape [..., K, N]
 /// * `output` - Output matrix device slice with shape [..., M, N]
@@ -38,7 +38,7 @@ ops!(matmul, dot);
 pub fn call_ops_matmul<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     lhs: &CudaSlice<T>,
     rhs: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -47,7 +47,7 @@ pub fn call_ops_matmul<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsMatrix, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsMatrix, kernel.0)?;
 
     // Extract M, N, and batch info from metadata
     let lhs_ndim = metadata[1];
@@ -78,7 +78,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
@@ -96,9 +96,9 @@ where
 /// Execute a tiled 2D matrix multiplication optimized with shared memory
 ///
 /// # Arguments
-/// * `device` - CUDA device to execute on
+/// * `kernel` - The dot kernel (e.g., "dot::F32")
 /// * `kernels` - Kernel cache
-/// * `kernel_name` - The dot kernel (e.g., "dot_f32")
+/// * `context` - CUDA context to execute on
 /// * `lhs` - Left input matrix device slice with shape [M, K]
 /// * `rhs` - Right input matrix device slice with shape [K, N]
 /// * `output` - Output matrix device slice with shape [M, N]
@@ -119,7 +119,7 @@ where
 pub fn call_ops_dot<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,
-    device: &Arc<CudaDevice>,
+    context: &Arc<CudaContext>,
     lhs: &CudaSlice<T>,
     rhs: &CudaSlice<T>,
     output: &mut CudaSlice<T>,
@@ -128,7 +128,7 @@ pub fn call_ops_dot<T>(
 where
     T: cudarc::driver::DeviceRepr,
 {
-    let func = kernels.load_function(device, Source::OpsMatrix, kernel.0)?;
+    let func = kernels.load_function(context, Source::OpsMatrix, kernel.0)?;
 
     // Extract matrix dimensions from metadata
     let m = metadata[0];
@@ -149,7 +149,7 @@ where
         shared_mem_bytes: 0,
     };
 
-    let stream = device.default_stream();
+    let stream = context.default_stream();
     let metadata_dev = stream
         .memcpy_stod(metadata)
         .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
