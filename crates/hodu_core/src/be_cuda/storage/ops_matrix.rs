@@ -3,7 +3,7 @@ use crate::{
     be_cuda::storage::{CudaStorage, CudaStorageData},
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::Op,
+    ops::{MatrixOp, Op},
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
@@ -15,9 +15,10 @@ pub fn call_ops_matmul(
     rhs_layout: &Layout,
     op: Op,
 ) -> HoduResult<CudaStorage> {
-    let matrix_op = match op {
-        Op::Matrix(matrix_op) => matrix_op,
-        _ => return Err(HoduError::BackendError("call_ops_matmul expects matrix op".to_string())),
+    // Validate op
+    match op {
+        Op::Matrix(MatrixOp::Matmul) => (),
+        _ => return Err(HoduError::BackendError("call_ops_matmul expects Matmul op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -58,7 +59,7 @@ pub fn call_ops_matmul(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("{}_{}", matrix_op, dtype);
+    let kernel_name = format!("matmul_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -114,9 +115,10 @@ pub fn call_ops_dot(
     rhs_layout: &Layout,
     op: Op,
 ) -> HoduResult<CudaStorage> {
-    let matrix_op = match op {
-        Op::Matrix(matrix_op) => matrix_op,
-        _ => return Err(HoduError::BackendError("call_ops_dot expects matrix op".to_string())),
+    // Validate op
+    match op {
+        Op::Matrix(MatrixOp::Dot) => (),
+        _ => return Err(HoduError::BackendError("call_ops_dot expects Dot op".to_string())),
     };
 
     let lhs_shape = lhs_layout.shape();
@@ -143,7 +145,7 @@ pub fn call_ops_dot(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("{}_{}", matrix_op, dtype);
+    let kernel_name = format!("dot_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

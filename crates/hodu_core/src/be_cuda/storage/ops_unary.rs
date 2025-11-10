@@ -140,10 +140,10 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
 
 pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: Op) -> HoduResult<CudaStorage> {
     let unary_op = match op {
-        Op::Unary(unary_op) => unary_op,
+        Op::UnaryLogical(unary_op) => unary_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_unary_logical expects unary op".to_string(),
+                "call_ops_unary_logical expects unary logical op".to_string(),
             ))
         },
     };
@@ -213,10 +213,10 @@ pub fn call_ops_unary_scalar(
     op: Op,
 ) -> HoduResult<CudaStorage> {
     let unary_op = match op {
-        Op::Unary(unary_op) => unary_op,
+        Op::UnaryScalar(unary_op) => unary_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_unary_scalar expects unary op".to_string(),
+                "call_ops_unary_scalar expects unary scalar op".to_string(),
             ))
         },
     };
@@ -291,10 +291,10 @@ pub fn call_ops_cmp_scalar(
     op: Op,
 ) -> HoduResult<CudaStorage> {
     let cmp_op = match op {
-        Op::Cmp(cmp_op) => cmp_op,
+        Op::CmpScalar(cmp_op) => cmp_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_cmp_scalar expects cmp op".to_string(),
+                "call_ops_cmp_scalar expects cmp scalar op".to_string(),
             ))
         },
     };

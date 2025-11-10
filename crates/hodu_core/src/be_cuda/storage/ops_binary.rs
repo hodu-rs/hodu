@@ -166,10 +166,10 @@ pub fn call_ops_binary_logical(
     op: Op,
 ) -> HoduResult<CudaStorage> {
     let binary_op = match op {
-        Op::Binary(binary_op) => binary_op,
+        Op::BinaryLogical(binary_op) => binary_op,
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_binary_logical expects binary op".to_string(),
+                "call_ops_binary_logical expects binary logical op".to_string(),
             ))
         },
     };

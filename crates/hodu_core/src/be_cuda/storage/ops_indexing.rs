@@ -3,7 +3,7 @@ use crate::{
     be_cuda::storage::{CudaStorage, CudaStorageData},
     error::{HoduError, HoduResult},
     layer::compat::*,
-    ops::Op,
+    ops::{IndexingOp, Op},
     types::{DType, Layout, Shape},
 };
 use hodu_cuda_kernels::kernels;
@@ -26,10 +26,10 @@ pub fn call_ops_index_select(
 
     // Validate op
     match op {
-        Op::Indexing(_) => (),
+        Op::Indexing(IndexingOp::IndexSelect) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_index_select expects indexing op".to_string(),
+                "call_ops_index_select expects IndexSelect op".to_string(),
             ))
         },
     }
@@ -144,10 +144,10 @@ pub fn call_ops_index_put(
 
     // Validate op
     match op {
-        Op::Indexing(_) => (),
+        Op::Indexing(IndexingOp::IndexPut) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_index_put expects indexing op".to_string(),
+                "call_ops_index_put expects IndexPut op".to_string(),
             ))
         },
     }
@@ -271,12 +271,8 @@ pub fn call_ops_gather(
 
     // Validate op
     match op {
-        Op::Indexing(_) => (),
-        _ => {
-            return Err(HoduError::BackendError(
-                "call_ops_gather expects indexing op".to_string(),
-            ))
-        },
+        Op::Indexing(IndexingOp::Gather) => (),
+        _ => return Err(HoduError::BackendError("call_ops_gather expects Gather op".to_string())),
     }
 
     let input_shape = input_layout.shape();
@@ -378,10 +374,10 @@ pub fn call_ops_scatter(
 
     // Validate op
     match op {
-        Op::Indexing(_) => (),
+        Op::Indexing(IndexingOp::Scatter) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_scatter expects indexing op".to_string(),
+                "call_ops_scatter expects Scatter op".to_string(),
             ))
         },
     }
