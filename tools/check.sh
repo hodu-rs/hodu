@@ -224,7 +224,29 @@ tests+=(
 )
 
 # ============================================================================
-# PHASE 4: Metal backend combinations (macOS only)
+# PHASE 4: CUDA backend combinations
+# ============================================================================
+if [ "$HAS_CUDA" = true ]; then
+    tests+=(
+        "std,cuda|[cuda] cuda only (std)"
+        "std,serde,cuda|[cuda] cuda + serde (std)"
+        "std,rayon,cuda|[cuda] cuda + rayon (std)"
+        "std,serde,rayon,cuda|[cuda] cuda + serde + rayon (std)"
+        "std,serde,rayon,cuda,$DTYPE_ALL|[cuda] cuda + serde + rayon + all dtypes (std)"
+    )
+
+    # CUDA + XLA combinations
+    tests+=(
+        "std,xla,cuda|[cuda+xla] xla + cuda (std)"
+        "std,serde,xla,cuda|[cuda+xla] xla + cuda + serde (std)"
+        "std,rayon,xla,cuda|[cuda+xla] xla + cuda + rayon (std)"
+        "std,serde,rayon,xla,cuda|[cuda+xla] xla + cuda + serde + rayon (std)"
+        "std,serde,rayon,xla,cuda,$DTYPE_ALL|[cuda+xla] xla + cuda + all dtypes (std)"
+    )
+fi
+
+# ============================================================================
+# PHASE 5: Metal backend combinations (macOS only)
 # ============================================================================
 if [ "$HAS_METAL" = true ]; then
     tests+=(
