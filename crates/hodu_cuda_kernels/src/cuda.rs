@@ -8,6 +8,15 @@ pub use cudarc::nvrtc::Ptx;
 
 // Extension trait for launching kernels with backwards compatibility
 pub trait CudaFunctionExt {
+    /// Launch a CUDA kernel function.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that:
+    /// - The kernel function is valid and compiled correctly
+    /// - All kernel arguments passed via `args` match the kernel's expected signature
+    /// - The launch configuration is appropriate for the device
+    /// - All pointers passed to the kernel are valid and properly aligned
     unsafe fn launch<'a, Args>(
         &'a self,
         stream: &'a Arc<CudaStream>,

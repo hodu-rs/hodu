@@ -80,7 +80,7 @@ where
 
     let num_els = metadata[0];
     let block_size = 256u32;
-    let grid_size = ((num_els as u32 + block_size - 1) / block_size).max(1);
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
 
     let cfg = LaunchConfig {
         grid_dim: (grid_size, 1, 1),
@@ -136,7 +136,7 @@ where
 
     let num_els = metadata[0];
     let block_size = 256u32;
-    let grid_size = ((num_els as u32 + block_size - 1) / block_size).max(1);
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
 
     let cfg = LaunchConfig {
         grid_dim: (grid_size, 1, 1),

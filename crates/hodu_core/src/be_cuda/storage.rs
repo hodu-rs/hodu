@@ -177,7 +177,7 @@ impl BackendStorageT for CudaStorage {
     }
 
     fn backend_device(&self) -> &CudaDevice {
-        &*self.device
+        &self.device
     }
 
     fn to_cpu_storage(&self) -> HoduResult<CpuStorage> {

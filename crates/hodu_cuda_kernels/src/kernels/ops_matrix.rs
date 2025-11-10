@@ -69,8 +69,8 @@ where
     // For matrix multiplication, we use 2D thread blocks with tiling
     const TILE_SIZE: u32 = 16;
 
-    let grid_width = ((n as u32 + TILE_SIZE - 1) / TILE_SIZE).max(1);
-    let grid_height = ((m as u32 + TILE_SIZE - 1) / TILE_SIZE).max(1);
+    let grid_width = (n as u32).div_ceil(TILE_SIZE).max(1);
+    let grid_height = (m as u32).div_ceil(TILE_SIZE).max(1);
 
     let cfg = LaunchConfig {
         grid_dim: (grid_width, grid_height, num_batches as u32),
@@ -140,8 +140,8 @@ where
     const BLOCK_SIZE: u32 = 4;
     const THREADS_PER_DIM: u32 = DOT_TILE_SIZE / BLOCK_SIZE; // 8
 
-    let grid_width = ((n as u32 + DOT_TILE_SIZE - 1) / DOT_TILE_SIZE).max(1);
-    let grid_height = ((m as u32 + DOT_TILE_SIZE - 1) / DOT_TILE_SIZE).max(1);
+    let grid_width = (n as u32).div_ceil(DOT_TILE_SIZE).max(1);
+    let grid_height = (m as u32).div_ceil(DOT_TILE_SIZE).max(1);
 
     let cfg = LaunchConfig {
         grid_dim: (grid_width, grid_height, 1),

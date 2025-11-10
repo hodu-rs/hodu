@@ -277,12 +277,10 @@ pub fn call_ops_unary_scalar(
             input_storage.device.clone(),
             CudaStorageData::I32(call_unary_scalar!(input, v, i32)),
         )),
-        _ => {
-            return Err(HoduError::DTypeMismatch {
-                expected: dtype,
-                got: scalar.dtype(),
-            })
-        },
+        _ => Err(HoduError::DTypeMismatch {
+            expected: dtype,
+            got: scalar.dtype(),
+        }),
     }
 }
 
