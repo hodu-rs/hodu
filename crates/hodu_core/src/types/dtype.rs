@@ -1,6 +1,6 @@
 use crate::layer::compat::*;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum DType {
@@ -10,6 +10,7 @@ pub enum DType {
     F8E5M2,
     BF16,
     F16,
+    #[default]
     F32,
     #[cfg(feature = "f64")]
     F64,
@@ -25,12 +26,6 @@ pub enum DType {
     I32,
     #[cfg(feature = "i64")]
     I64,
-}
-
-impl Default for DType {
-    fn default() -> Self {
-        Self::F32
-    }
 }
 
 impl fmt::Display for DType {

@@ -1,18 +1,13 @@
 use crate::layer::compat::*;
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Device {
+    #[default]
     CPU,
     #[cfg(feature = "cuda")]
     CUDA(usize),
     #[cfg(feature = "metal")]
     Metal,
-}
-
-impl Default for Device {
-    fn default() -> Self {
-        Self::CPU
-    }
 }
 
 impl fmt::Display for Device {

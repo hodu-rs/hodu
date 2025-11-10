@@ -1,16 +1,11 @@
 use crate::{layer::compat::*, types::device::Device};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Compiler {
+    #[default]
     HODU,
     #[cfg(feature = "xla")]
     XLA,
-}
-
-impl Default for Compiler {
-    fn default() -> Self {
-        Self::HODU
-    }
 }
 
 impl fmt::Display for Compiler {
