@@ -2,12 +2,33 @@
 #define HODU_CPU_KERNELS_MATH_UTILS_H
 
 #include "constants.h"
+#include "types.h"
 #include <math.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// ============================================================================
+// INFINITY CONSTANTS FOR EXOTIC FLOATING-POINT TYPES
+// ============================================================================
+
+// FP8 E4M3 infinity values (exponent=0xF)
+#define F8E4M3_NEG_INF ((f8e4m3_t)0xFF) // 1 sign | 1111 exp | 111 mant
+#define F8E4M3_POS_INF ((f8e4m3_t)0x7F) // 0 sign | 1111 exp | 111 mant
+
+// FP8 E5M2 infinity values (exponent=0x1F)
+#define F8E5M2_NEG_INF ((f8e5m2_t)0xFF) // 1 sign | 11111 exp | 11 mant
+#define F8E5M2_POS_INF ((f8e5m2_t)0x7F) // 0 sign | 11111 exp | 11 mant
+
+// BFloat16 infinity values (exponent=0xFF)
+#define BF16_NEG_INF ((bf16_t)0xFF80) // 1 sign | 11111111 exp | 0000000 mant
+#define BF16_POS_INF ((bf16_t)0x7F80) // 0 sign | 11111111 exp | 0000000 mant
+
+// Float16 infinity values (exponent=0x1F)
+#define F16_NEG_INF ((f16_t)0xFC00) // 1 sign | 11111 exp | 0000000000 mant
+#define F16_POS_INF ((f16_t)0x7C00) // 0 sign | 11111 exp | 0000000000 mant
 
 // ============================================================================
 // GENERIC MATH HELPERS

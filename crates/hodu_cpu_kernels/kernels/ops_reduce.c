@@ -1,4 +1,5 @@
 #include "ops_reduce.h"
+#include "math_utils.h"
 #include "simd_utils.h"
 #include "types.h"
 #include <float.h>
@@ -351,10 +352,10 @@ REDUCE_OP(uint32_t, uint32_t, sum_u32, 0u, acc += val)
 REDUCE_OP(uint64_t, uint64_t, sum_u64, 0u, acc += val)
 
 // Max reduction operations
-REDUCE_OP(f8e4m3_t, f8e4m3_t, max_f8e4m3, -INFINITY, acc = MAX(acc, val))
-REDUCE_OP(f8e5m2_t, f8e5m2_t, max_f8e5m2, -INFINITY, acc = MAX(acc, val))
-REDUCE_OP(bf16_t, bf16_t, max_bf16, -INFINITY, acc = MAX(acc, val))
-REDUCE_OP(f16_t, f16_t, max_f16, -INFINITY, acc = MAX(acc, val))
+REDUCE_OP(f8e4m3_t, f8e4m3_t, max_f8e4m3, F8E4M3_NEG_INF, acc = MAX(acc, val))
+REDUCE_OP(f8e5m2_t, f8e5m2_t, max_f8e5m2, F8E5M2_NEG_INF, acc = MAX(acc, val))
+REDUCE_OP(bf16_t, bf16_t, max_bf16, BF16_NEG_INF, acc = MAX(acc, val))
+REDUCE_OP(f16_t, f16_t, max_f16, F16_NEG_INF, acc = MAX(acc, val))
 
 // SIMD-optimized max_f32
 void max_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -575,10 +576,10 @@ REDUCE_OP(uint32_t, uint32_t, max_u32, 0u, acc = MAX(acc, val))
 REDUCE_OP(uint64_t, uint64_t, max_u64, 0u, acc = MAX(acc, val))
 
 // Min reduction operations
-REDUCE_OP(f8e4m3_t, f8e4m3_t, min_f8e4m3, INFINITY, acc = MIN(acc, val))
-REDUCE_OP(f8e5m2_t, f8e5m2_t, min_f8e5m2, INFINITY, acc = MIN(acc, val))
-REDUCE_OP(bf16_t, bf16_t, min_bf16, INFINITY, acc = MIN(acc, val))
-REDUCE_OP(f16_t, f16_t, min_f16, INFINITY, acc = MIN(acc, val))
+REDUCE_OP(f8e4m3_t, f8e4m3_t, min_f8e4m3, F8E4M3_POS_INF, acc = MIN(acc, val))
+REDUCE_OP(f8e5m2_t, f8e5m2_t, min_f8e5m2, F8E5M2_POS_INF, acc = MIN(acc, val))
+REDUCE_OP(bf16_t, bf16_t, min_bf16, BF16_POS_INF, acc = MIN(acc, val))
+REDUCE_OP(f16_t, f16_t, min_f16, F16_POS_INF, acc = MIN(acc, val))
 
 // SIMD-optimized min_f32
 void min_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -1622,7 +1623,7 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
-            IN_TYPE max_val;                                                                       \
+            IN_TYPE max_val = 0;                                                                   \
             int32_t max_idx = 0;                                                                   \
             bool first = true;                                                                     \
                                                                                                    \
@@ -1722,7 +1723,7 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         }                                                                                          \
                                                                                                    \
         for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
-            IN_TYPE min_val;                                                                       \
+            IN_TYPE min_val = 0;                                                                   \
             int32_t min_idx = 0;                                                                   \
             bool first = true;                                                                     \
                                                                                                    \
