@@ -13,5 +13,5 @@ std = ["hodu_core/std"]
 serde = ["hodu_core/serde"]
 
 [dependencies]
-hodu_core = { path = "../hodu_core", version = "0.2.2" }
-hodu_nn_macros = { path = "macros", version = "0.2.2" }
+hodu_core = { workspace = true }
+hodu_nn_macros = { workspace = true }

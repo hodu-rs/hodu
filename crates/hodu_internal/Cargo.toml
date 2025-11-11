@@ -26,6 +26,6 @@ metal = ["hodu_core/metal"]
 xla = ["std", "hodu_core/xla"]
 
 [dependencies]
-hodu_core = { path = "../hodu_core", version = "0.2.2" }
-hodu_nn = { path = "../hodu_nn", version = "0.2.2" }
-hodu_utils = { path = "../hodu_utils", version = "0.2.2" }
+hodu_core = { workspace = true }
+hodu_nn = { workspace = true }
+hodu_utils = { workspace = true }

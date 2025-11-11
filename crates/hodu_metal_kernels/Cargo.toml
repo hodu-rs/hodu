@@ -11,7 +11,10 @@ repository = "https://github.com/hodu-rs/hodu"
 [features]
 
 [dependencies]
-half = { workspace = true, default-features = false }
-objc2 = { workspace = true }
-objc2-foundation = { workspace = true }
-objc2-metal = { workspace = true }
+half = { version = "2.7.1", default-features = false, features = [
+    "num-traits",
+    "rand_distr",
+] }
+objc2 = "0.6.3"
+objc2-foundation = "0.3.2"
+objc2-metal = "0.3.2"

@@ -14,6 +14,18 @@ NC='\033[0m'
 # Format Rust files
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}Formatting Rust files...${NC}"
 cargo fmt --all
+
+# Format excluded crates (cuda_kernels, metal_kernels)
+if [ -d "crates/hodu_cuda_kernels" ]; then
+    echo -e "  ${CYAN}→${NC} ${DIM}crates/hodu_cuda_kernels${NC}"
+    (cd crates/hodu_cuda_kernels && cargo fmt)
+fi
+
+if [ -d "crates/hodu_metal_kernels" ]; then
+    echo -e "  ${CYAN}→${NC} ${DIM}crates/hodu_metal_kernels${NC}"
+    (cd crates/hodu_metal_kernels && cargo fmt)
+fi
+
 echo -e "${BRIGHT_GREEN}✓${NC} Rust formatting complete\n"
 
 # Format C/C++/CUDA/Metal files

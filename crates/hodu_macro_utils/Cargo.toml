@@ -9,9 +9,7 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [dependencies]
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
-toml_edit = { version = "0.23.6", default-features = false, features = [
-    "parse",
-] }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }
+toml_edit = { workspace = true }
