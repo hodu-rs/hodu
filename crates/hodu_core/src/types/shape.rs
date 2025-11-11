@@ -73,6 +73,7 @@ impl Shape {
     }
 
     /// Checks if this shape can be broadcast to the target shape.
+    #[inline]
     pub fn can_broadcast_to(&self, target: &Shape) -> bool {
         if self.ndim() > target.ndim() {
             return false;
@@ -90,6 +91,7 @@ impl Shape {
     }
 
     /// Computes the broadcast shape between two shapes.
+    #[inline]
     pub fn broadcast_shape(lhs: &Shape, rhs: &Shape) -> Option<Shape> {
         let max_ndim = lhs.ndim().max(rhs.ndim());
         let max_ndim_usize = max_ndim as usize;
@@ -112,6 +114,7 @@ impl Shape {
     }
 
     /// Normalizes a dimension index, handling negative indices.
+    #[inline]
     pub fn normalize_axis(&self, axis: i32) -> Option<u32> {
         let ndim = self.ndim() as i32;
         let normalized = if axis < 0 { ndim + axis } else { axis };

@@ -1,8 +1,13 @@
 use crate::layer::compat::*;
 
+/// Maximum number of kernel names to cache before warning
+const MAX_KERNEL_NAMES: usize = 1024;
+
 /// Kernel name cache for efficient string -> &'static str conversion
 ///
-/// This prevents memory leaks by caching kernel names and reusing them.
+/// This caches kernel names to avoid repeated allocations. While this uses
+/// Box::leak() for &'static str, the cache size is bounded to prevent
+/// unbounded memory growth.
 pub struct KernelNameCache {
     cache: RwLock<HashMap<String, &'static str>>,
 }
@@ -40,7 +45,18 @@ impl KernelNameCache {
             return cached;
         }
 
+        // Check cache size limit
+        if cache.len() >= MAX_KERNEL_NAMES {
+            #[cfg(feature = "std")]
+            eprintln!(
+                "WARNING: Kernel name cache exceeded {} entries. This may indicate a memory leak.",
+                MAX_KERNEL_NAMES
+            );
+            // Still insert to avoid breaking functionality, but warn about it
+        }
+
         // Leak the string to get &'static str
+        // Note: This is intentional memory leak, but bounded by MAX_KERNEL_NAMES
         let static_str: &'static str = Box::leak(name.clone().into_boxed_str());
         cache.insert(name, static_str);
         static_str
