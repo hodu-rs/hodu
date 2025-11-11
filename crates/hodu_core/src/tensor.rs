@@ -60,7 +60,7 @@ static TENSORS: LazyLock<DashMap<TensorId, Tensor_>> = LazyLock::new(|| {
     // Fallback to 64 if detection fails. Round up to next power of two.
     let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(64);
     let shard_count = cores.next_power_of_two();
-    DashMap::with_capacity_and_shard_amount(1 << 14, shard_count)
+    DashMap::with_capacity_and_shard_amount(1 << 16, shard_count)
 });
 
 #[cfg(not(feature = "std"))]
