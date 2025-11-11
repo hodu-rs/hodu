@@ -42,7 +42,7 @@ pub fn call_ops_reduce_window(
 
     let output_size: u32 = output_shape_vec.iter().product();
 
-    let mut metadata = Vec::new();
+    let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(output_size as usize);
     metadata.push(input_ndim as usize);
 

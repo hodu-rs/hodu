@@ -7,7 +7,7 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use core::ffi::c_void;
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 
 /// Execute concat operation to concatenate multiple tensors along a dimension
 ///
@@ -30,7 +30,7 @@ pub fn call_ops_concat(
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Collect all storages
-    let mut storages = vec![first];
+    let mut storages: SmallVec<[&CpuStorage; 8]> = smallvec![first];
     storages.extend(others.iter().copied());
     // Validate op
     match op {
@@ -157,7 +157,7 @@ pub fn call_ops_concat(
     macro_rules! concat_impl {
         ($variant:ident, $inner_type:ty) => {{
             // Extract all data vectors
-            let mut input_vecs = Vec::new();
+            let mut input_vecs = SmallVec::<[&[$inner_type]; 8]>::new();
             for storage in &storages {
                 match storage {
                     CpuStorage::$variant(data) => input_vecs.push(data.as_slice()),
@@ -171,7 +171,7 @@ pub fn call_ops_concat(
             }
 
             // Pack into contiguous buffer
-            let mut input_buffer: Vec<$inner_type> = Vec::new();
+            let mut input_buffer = SmallVec::<[$inner_type; 4096]>::new();
             for data in input_vecs {
                 input_buffer.extend_from_slice(data);
             }

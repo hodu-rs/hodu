@@ -92,7 +92,7 @@ pub fn call_ops_concat(
     // This is simpler than device-to-device copies and works for now
 
     // Build metadata for concat kernel
-    let mut metadata = Vec::new();
+    let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);
 
@@ -125,7 +125,7 @@ pub fn call_ops_concat(
 
     // Add input buffer offsets - cumulative positions in packed temp buffer (in elements)
     let mut buffer_offset_elements = 0;
-    let mut buffer_offsets = Vec::new();
+    let mut buffer_offsets = SmallVec::<[usize; 8]>::new();
     for storage in storages.iter() {
         buffer_offsets.push(buffer_offset_elements);
         buffer_offset_elements += storage.len();
@@ -140,7 +140,7 @@ pub fn call_ops_concat(
     macro_rules! impl_concat {
         ($ty:ty, $variant:ident) => {{
             // Download all storages to CPU and pack into single vector
-            let mut packed_data = Vec::new();
+            let mut packed_data = SmallVec::<[$ty; 4096]>::new();
             for storage in storages.iter() {
                 if let CudaStorageData::$variant(slice) = &storage.data {
                     let stream = device.context().default_stream();
@@ -229,7 +229,7 @@ pub fn call_ops_split(
     let num_els = output_shape.size();
 
     // Build metadata array for CUDA kernel
-    let mut metadata = Vec::new();
+    let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);
 

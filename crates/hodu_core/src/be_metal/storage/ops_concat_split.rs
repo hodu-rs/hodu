@@ -6,7 +6,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
-use smallvec::SmallVec;
+use smallvec::{smallvec, SmallVec};
 
 #[allow(clippy::needless_range_loop)]
 pub fn call_ops_concat(
@@ -17,7 +17,7 @@ pub fn call_ops_concat(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Collect all storages
-    let mut storages = vec![first];
+    let mut storages: SmallVec<[&MetalStorage; 8]> = smallvec![first];
     storages.extend(others.iter().copied());
 
     // Validate op

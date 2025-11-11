@@ -360,7 +360,7 @@ pub fn call_ops_conv_grad_weight(
 
     // Build metadata based on spatial dimensions
     // Note: Same layout as forward pass, but metadata[1] contains batch_size instead of in_channels
-    let metadata = match spatial_dims {
+    let metadata: SmallVec<[usize; 24]> = match spatial_dims {
         1 => {
             let in_width = input_shape.dims()[2];
             let kernel_width = weight_shape.dims()[2];
@@ -371,7 +371,7 @@ pub fn call_ops_conv_grad_weight(
 
             let num_els = weight_shape.size();
 
-            vec![
+            smallvec![
                 num_els as usize,
                 batch_size as usize, // metadata[1] = batch_size (instead of in_channels in forward pass)
                 out_channels as usize,
@@ -401,7 +401,7 @@ pub fn call_ops_conv_grad_weight(
 
             let num_els = weight_shape.size();
 
-            vec![
+            smallvec![
                 num_els as usize,
                 batch_size as usize, // metadata[1] = batch_size (instead of in_channels in forward pass)
                 out_channels as usize,
@@ -443,7 +443,7 @@ pub fn call_ops_conv_grad_weight(
 
             let num_els = weight_shape.size();
 
-            vec![
+            smallvec![
                 num_els as usize,
                 batch_size as usize, // metadata[1] = batch_size (instead of in_channels in forward pass)
                 out_channels as usize,

@@ -68,7 +68,7 @@ pub fn call_ops_matmul(
     let batch_ndim = lhs_batch_ndim.max(rhs_batch_ndim);
 
     // Broadcast batch dimensions
-    let mut batch_shape = Vec::with_capacity(batch_ndim as usize);
+    let mut batch_shape = SmallVec::<[u32; 24]>::with_capacity(batch_ndim as usize);
     for i in 0..batch_ndim {
         let lhs_idx = (lhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;
         let rhs_idx = (rhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;

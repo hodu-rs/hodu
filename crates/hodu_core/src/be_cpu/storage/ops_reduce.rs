@@ -49,7 +49,7 @@ pub fn call_ops_reduce(
     }
 
     // Compute output shape
-    let mut output_shape_vec = Vec::new();
+    let mut output_shape_vec = SmallVec::<[u32; 24]>::new();
     for i in 0..input_ndim {
         if dims.contains(&i) {
             if keep_dim {

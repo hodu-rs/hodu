@@ -74,7 +74,7 @@ pub fn call_ops_reduce_window(
     }
 
     // Compute output shape
-    let mut output_shape_vec = Vec::with_capacity(ndim);
+    let mut output_shape_vec = SmallVec::<[u32; 24]>::with_capacity(ndim);
     for i in 0..ndim {
         let in_size = input_shape.dims()[i];
         let window_size = window_shape[i];
