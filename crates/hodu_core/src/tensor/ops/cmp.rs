@@ -19,33 +19,30 @@ macro_rules! cmp_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
+            let lhs_layout = lhs.layout();
+            let rhs_layout = rhs.layout();
+
             if builder::is_builder_active() {
-                let result_layout = lhs.layout();
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(lhs_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::Cmp(CmpOp::$op_name),
                     None,
                     vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![lhs.layout(), rhs.layout()],
-                    vec![result_layout],
+                    vec![lhs_layout.clone(), rhs_layout],
+                    vec![lhs_layout.clone()],
                 )?;
 
                 Ok(result_tensor)
             } else {
                 let storage = lhs.with_storage(|lhs_storage| {
                     rhs.with_storage(|rhs_storage| {
-                        lhs_storage.call_ops_cmp(
-                            rhs_storage,
-                            &lhs.layout(),
-                            &rhs.layout(),
-                            Op::Cmp(CmpOp::$op_name),
-                        )
+                        lhs_storage.call_ops_cmp(rhs_storage, &lhs_layout, &rhs_layout, Op::Cmp(CmpOp::$op_name))
                     })
                 })?;
 
-                let result = from_storage(storage, lhs.layout(), true, false);
+                let result = from_storage(storage, lhs_layout.clone(), true, false);
 
                 Ok(result)
             }
@@ -60,6 +57,7 @@ macro_rules! cmp_scalar_op {
             validate_dtype_for_op(self.dtype(), Op::CmpScalar(CmpScalarOp::$op_name))?;
 
             let scalar = scalar.into();
+            let input_layout = self.layout();
 
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
@@ -73,14 +71,14 @@ macro_rules! cmp_scalar_op {
                     Some(op_params),
                     vec![self.id()],
                     vec![result_id],
-                    vec![self.layout()],
+                    vec![input_layout],
                     vec![result_layout],
                 )?;
 
                 Ok(result_tensor)
             } else {
                 let storage = self.with_storage(|storage| {
-                    storage.call_ops_cmp_scalar(&self.layout(), scalar, Op::CmpScalar(CmpScalarOp::$op_name))
+                    storage.call_ops_cmp_scalar(&input_layout, scalar, Op::CmpScalar(CmpScalarOp::$op_name))
                 })?;
 
                 let layout = Layout::from_shape(&self.shape());

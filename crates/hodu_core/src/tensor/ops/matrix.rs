@@ -171,6 +171,8 @@ impl Tensor {
         result_dims.push(rhs_dims[rhs_ndim - 1]); // N
 
         let result_layout = Layout::from_shape(&Shape::from(result_dims));
+        let lhs_layout = lhs_broadcasted.layout();
+        let rhs_layout = rhs_broadcasted.layout();
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
@@ -181,8 +183,8 @@ impl Tensor {
                 None,
                 vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
                 vec![result_id],
-                vec![lhs_broadcasted.layout(), rhs_broadcasted.layout()],
-                vec![result_layout],
+                vec![lhs_layout, rhs_layout],
+                vec![result_layout.clone()],
             )?;
 
             if requires_grad {
@@ -193,18 +195,13 @@ impl Tensor {
         } else {
             let storage = lhs_broadcasted.with_storage(|lhs_storage| {
                 rhs_broadcasted.with_storage(|rhs_storage| {
-                    lhs_storage.call_ops_matmul(
-                        rhs_storage,
-                        &lhs_broadcasted.layout(),
-                        &rhs_broadcasted.layout(),
-                        Op::Matrix(MatrixOp::Matmul),
-                    )
+                    lhs_storage.call_ops_matmul(rhs_storage, &lhs_layout, &rhs_layout, Op::Matrix(MatrixOp::Matmul))
                 })
             })?;
 
             let requires_grad = self.is_requires_grad() || other.is_requires_grad();
             let requires_grad = requires_grad && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Matrix(MatrixOp::Matmul);
@@ -312,6 +309,9 @@ impl Tensor {
         let result_layout = Layout::from_shape(&Shape::from(result_dims));
         let validate_requires_grad = validate_requires_grad_for_op(Op::Matrix(MatrixOp::Dot));
 
+        let self_layout = self.layout();
+        let other_layout = other.layout();
+
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
@@ -321,8 +321,8 @@ impl Tensor {
                 None,
                 vec![self.id(), other.id()],
                 vec![result_id],
-                vec![self.layout(), other.layout()],
-                vec![result_layout],
+                vec![self_layout, other_layout],
+                vec![result_layout.clone()],
             )?;
 
             if requires_grad {
@@ -333,13 +333,13 @@ impl Tensor {
         } else {
             let storage = self.with_storage(|lhs_storage| {
                 other.with_storage(|rhs_storage| {
-                    lhs_storage.call_ops_dot(rhs_storage, &self.layout(), &other.layout(), Op::Matrix(MatrixOp::Dot))
+                    lhs_storage.call_ops_dot(rhs_storage, &self_layout, &other_layout, Op::Matrix(MatrixOp::Dot))
                 })
             })?;
 
             let requires_grad = self.is_requires_grad() || other.is_requires_grad();
             let requires_grad = requires_grad && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Matrix(MatrixOp::Dot);

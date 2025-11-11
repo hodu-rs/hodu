@@ -190,12 +190,30 @@ impl Tensor {
         with_tensor(self.0, |t| t.is_runtime).unwrap_or(false)
     }
 
+    /// Returns a clone of the tensor's layout.
+    /// For performance-sensitive code, prefer `with_layout` to avoid cloning.
     pub fn layout(&self) -> Layout {
         with_tensor(self.0, |t| t.layout.clone()).unwrap_or_else(|| Layout::from_shape(&Shape::scalar()))
     }
 
+    /// Accesses the tensor's layout without cloning via a closure.
+    /// This is more efficient than `layout()` when you only need to read layout properties.
+    #[inline]
+    pub fn with_layout<R>(&self, f: impl FnOnce(&Layout) -> R) -> Option<R> {
+        with_tensor(self.0, |t| f(&t.layout))
+    }
+
+    /// Returns a clone of the tensor's shape.
+    /// For performance-sensitive code, prefer `with_shape` to avoid cloning.
     pub fn shape(&self) -> Shape {
         with_tensor(self.0, |t| t.layout.shape().clone()).unwrap_or_else(Shape::scalar)
+    }
+
+    /// Accesses the tensor's shape without cloning via a closure.
+    /// This is more efficient than `shape()` when you only need to read shape properties.
+    #[inline]
+    pub fn with_shape<R>(&self, f: impl FnOnce(&Shape) -> R) -> Option<R> {
+        with_tensor(self.0, |t| f(t.layout.shape()))
     }
 
     pub fn strides(&self) -> Vec<u32> {

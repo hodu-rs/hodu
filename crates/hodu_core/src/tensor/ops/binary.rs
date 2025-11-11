@@ -24,17 +24,18 @@ macro_rules! binary_op {
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
             if builder::is_builder_active() {
-                let result_layout = lhs.layout();
+                let lhs_layout = lhs.layout();
+                let rhs_layout = rhs.layout();
                 let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) = create_builder_tensor(lhs_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::Binary(BinaryOp::$op_name),
                     None,
                     vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![lhs.layout(), rhs.layout()],
-                    vec![result_layout],
+                    vec![lhs_layout.clone(), rhs_layout],
+                    vec![lhs_layout],
                 )?;
 
                 if requires_grad {
@@ -47,12 +48,15 @@ macro_rules! binary_op {
 
                 Ok(result_tensor)
             } else {
+                let lhs_layout = lhs.layout();
+                let rhs_layout = rhs.layout();
+
                 let storage = lhs.with_storage(|lhs_storage| {
                     rhs.with_storage(|rhs_storage| {
                         lhs_storage.call_ops_binary(
                             rhs_storage,
-                            &lhs.layout(),
-                            &rhs.layout(),
+                            &lhs_layout,
+                            &rhs_layout,
                             Op::Binary(BinaryOp::$op_name),
                         )
                     })
@@ -61,7 +65,7 @@ macro_rules! binary_op {
                 let requires_grad = lhs.is_requires_grad() || rhs.is_requires_grad();
                 let requires_grad = requires_grad && validate_requires_grad;
 
-                let result = from_storage(storage, lhs.layout(), true, requires_grad);
+                let result = from_storage(storage, lhs_layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
                     let op = Op::Binary(BinaryOp::$op_name);
@@ -85,32 +89,36 @@ macro_rules! binary_logical_op {
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
             if builder::is_builder_active() {
-                let result_layout = lhs.layout();
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+                let lhs_layout = lhs.layout();
+                let rhs_layout = rhs.layout();
+                let (result_id, result_tensor) = create_builder_tensor(lhs_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::BinaryLogical(BinaryLogicalOp::$op_name),
                     None,
                     vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![lhs.layout(), rhs.layout()],
-                    vec![result_layout],
+                    vec![lhs_layout.clone(), rhs_layout],
+                    vec![lhs_layout],
                 )?;
 
                 Ok(result_tensor)
             } else {
+                let lhs_layout = lhs.layout();
+                let rhs_layout = rhs.layout();
+
                 let storage = lhs.with_storage(|lhs_storage| {
                     rhs.with_storage(|rhs_storage| {
                         lhs_storage.call_ops_binary_logical(
                             rhs_storage,
-                            &lhs.layout(),
-                            &rhs.layout(),
+                            &lhs_layout,
+                            &rhs_layout,
                             Op::BinaryLogical(BinaryLogicalOp::$op_name),
                         )
                     })
                 })?;
 
-                let result = from_storage(storage, lhs.layout(), true, false);
+                let result = from_storage(storage, lhs_layout, true, false);
 
                 Ok(result)
             }

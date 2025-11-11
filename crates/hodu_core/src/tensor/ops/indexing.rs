@@ -37,6 +37,8 @@ impl Tensor {
         output_dims[dim_u32 as usize] = indices_size;
 
         let result_layout = Layout::from_shape(&crate::types::Shape::from(output_dims));
+        let self_layout = self.layout();
+        let indices_layout = indices.layout();
 
         if builder::is_builder_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
@@ -50,8 +52,8 @@ impl Tensor {
                 }),
                 vec![self.id(), indices.id()],
                 vec![result_id],
-                vec![self.layout(), indices.layout()],
-                vec![result_layout],
+                vec![self_layout.clone(), indices_layout.clone()],
+                vec![result_layout.clone()],
             )?;
 
             if requires_grad {
@@ -68,9 +70,9 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     storage.call_ops_index_select(
-                        &self.layout(),
+                        &self_layout,
                         indices_storage,
-                        &indices.layout(),
+                        &indices_layout,
                         dim_u32,
                         Op::Indexing(IndexingOp::IndexSelect),
                     )
@@ -78,7 +80,7 @@ impl Tensor {
             })?;
 
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::IndexSelect);
@@ -113,6 +115,8 @@ impl Tensor {
         let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::IndexPut));
 
         let result_layout = self.layout();
+        let indices_layout = indices.layout();
+        let values_layout = values.layout();
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
@@ -126,8 +130,8 @@ impl Tensor {
                 }),
                 vec![self.id(), indices.id(), values.id()],
                 vec![result_id],
-                vec![self.layout(), indices.layout(), values.layout()],
-                vec![result_layout],
+                vec![result_layout.clone(), indices_layout.clone(), values_layout.clone()],
+                vec![result_layout.clone()],
             )?;
 
             if requires_grad {
@@ -145,11 +149,11 @@ impl Tensor {
                 indices.with_storage(|indices_storage| {
                     values.with_storage(|values_storage| {
                         storage.call_ops_index_put(
-                            &self.layout(),
+                            &result_layout,
                             indices_storage,
-                            &indices.layout(),
+                            &indices_layout,
                             values_storage,
-                            &values.layout(),
+                            &values_layout,
                             dim_u32,
                             Op::Indexing(IndexingOp::IndexPut),
                         )
@@ -158,7 +162,7 @@ impl Tensor {
             })?;
 
             let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::IndexPut);
@@ -192,6 +196,7 @@ impl Tensor {
         let validate_requires_grad = validate_requires_grad_for_op(Op::Indexing(IndexingOp::Gather));
 
         // Output has same shape as indices
+        let self_layout = self.layout();
         let result_layout = indices.layout();
 
         if builder::is_builder_active() {
@@ -206,8 +211,8 @@ impl Tensor {
                 }),
                 vec![self.id(), indices.id()],
                 vec![result_id],
-                vec![self.layout(), indices.layout()],
-                vec![result_layout],
+                vec![self_layout.clone(), result_layout.clone()],
+                vec![result_layout.clone()],
             )?;
 
             if requires_grad {
@@ -224,9 +229,9 @@ impl Tensor {
             let storage = self.with_storage(|storage| {
                 indices.with_storage(|indices_storage| {
                     storage.call_ops_gather(
-                        &self.layout(),
+                        &self_layout,
                         indices_storage,
-                        &indices.layout(),
+                        &result_layout,
                         dim_u32,
                         Op::Indexing(IndexingOp::Gather),
                     )
@@ -234,7 +239,7 @@ impl Tensor {
             })?;
 
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::Gather);
@@ -270,6 +275,8 @@ impl Tensor {
 
         // Output has same shape as self
         let result_layout = self.layout();
+        let indices_layout = indices.layout();
+        let src_layout = src.layout();
 
         if builder::is_builder_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
@@ -283,8 +290,8 @@ impl Tensor {
                 }),
                 vec![self.id(), indices.id(), src.id()],
                 vec![result_id],
-                vec![self.layout(), indices.layout(), src.layout()],
-                vec![result_layout],
+                vec![result_layout.clone(), indices_layout.clone(), src_layout.clone()],
+                vec![result_layout.clone()],
             )?;
 
             if requires_grad {
@@ -302,11 +309,11 @@ impl Tensor {
                 indices.with_storage(|indices_storage| {
                     src.with_storage(|src_storage| {
                         storage.call_ops_scatter(
-                            &self.layout(),
+                            &result_layout,
                             indices_storage,
-                            &indices.layout(),
+                            &indices_layout,
                             src_storage,
-                            &src.layout(),
+                            &src_layout,
                             dim_u32,
                             Op::Indexing(IndexingOp::Scatter),
                         )
@@ -315,7 +322,7 @@ impl Tensor {
             })?;
 
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::Scatter);

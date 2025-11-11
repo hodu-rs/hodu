@@ -111,9 +111,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
                     input_storage.call_ops_conv(
-                        &self.layout(),
+                        &input_layout,
                         weight_storage,
-                        &weight.layout(),
+                        &weight_layout,
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -247,9 +247,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
                     input_storage.call_ops_conv(
-                        &self.layout(),
+                        &input_layout,
                         weight_storage,
-                        &weight.layout(),
+                        &weight_layout,
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -390,9 +390,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
                     input_storage.call_ops_conv(
-                        &self.layout(),
+                        &input_layout,
                         weight_storage,
-                        &weight.layout(),
+                        &weight_layout,
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -534,9 +534,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
                     input_storage.call_ops_conv(
-                        &self.layout(),
+                        &input_layout,
                         weight_storage,
-                        &weight.layout(),
+                        &weight_layout,
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -681,9 +681,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
                     input_storage.call_ops_conv(
-                        &self.layout(),
+                        &input_layout,
                         weight_storage,
-                        &weight.layout(),
+                        &weight_layout,
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -836,9 +836,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 weight.with_storage(|weight_storage| {
                     input_storage.call_ops_conv(
-                        &self.layout(),
+                        &input_layout,
                         weight_storage,
-                        &weight.layout(),
+                        &weight_layout,
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,

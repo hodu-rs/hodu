@@ -27,7 +27,8 @@ impl Tensor {
             return contiguous.reshape(&shape);
         }
 
-        let new_layout = self.layout().reshape(&shape)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.reshape(&shape)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -38,8 +39,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -69,7 +70,8 @@ impl Tensor {
             return contiguous.flatten();
         }
 
-        let new_layout = self.layout().flatten()?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.flatten()?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -80,8 +82,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -115,7 +117,8 @@ impl Tensor {
             })
             .collect();
 
-        let new_layout = self.layout().squeeze(&dims_i32)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.squeeze(&dims_i32)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -126,8 +129,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -156,7 +159,8 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
 
-        let new_layout = self.layout().unsqueeze(dim_i32)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.unsqueeze(dim_i32)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -167,8 +171,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -195,7 +199,8 @@ impl Tensor {
             return contiguous.broadcast(&target_shape);
         }
 
-        let new_layout = self.layout().broadcast_to(&target_shape)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.broadcast_to(&target_shape)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -206,8 +211,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -252,7 +257,8 @@ impl Tensor {
         let dim1_i32 = dim1_scalar.to_i32();
         let dim2_i32 = dim2_scalar.to_i32();
 
-        let new_layout = self.layout().transpose(dim1_i32, dim2_i32)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.transpose(dim1_i32, dim2_i32)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -263,8 +269,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -302,7 +308,8 @@ impl Tensor {
             })
             .collect();
 
-        let new_layout = self.layout().permute(&axes_i32)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.permute(&axes_i32)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -313,8 +320,8 @@ impl Tensor {
                 None,
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {
@@ -360,7 +367,8 @@ impl Tensor {
         let step_scalar = step.into();
         let step_i32 = step_scalar.to_i32();
 
-        let new_layout = self.layout().slice(dim_i32, start_i32, end_i32, step_i32)?;
+        let current_layout = self.layout();
+        let new_layout = current_layout.slice(dim_i32, start_i32, end_i32, step_i32)?;
         let requires_grad = self.is_requires_grad();
 
         if builder::is_builder_active() {
@@ -377,8 +385,8 @@ impl Tensor {
                 }),
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![new_layout],
+                vec![current_layout],
+                vec![new_layout.clone()],
             )?;
 
             if requires_grad {

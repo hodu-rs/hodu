@@ -6,12 +6,18 @@ use crate::{
 };
 
 pub fn broadcast_tensors2(a: &Tensor, b: &Tensor) -> HoduResult<(Tensor, Tensor)> {
-    let a_shape = a.shape();
-    let b_shape = b.shape();
-    let a_dims = a_shape.dims();
-    let b_dims = b_shape.dims();
-    let a_ndim = a_dims.len();
-    let b_ndim = b_dims.len();
+    // Avoid cloning shapes by extracting only what we need
+    let (a_dims, a_ndim, b_dims, b_ndim) = {
+        let a_dims = a
+            .with_shape(|s| s.dims().to_vec())
+            .ok_or_else(|| HoduError::TensorNotFound(a.id()))?;
+        let a_ndim = a_dims.len();
+        let b_dims = b
+            .with_shape(|s| s.dims().to_vec())
+            .ok_or_else(|| HoduError::TensorNotFound(b.id()))?;
+        let b_ndim = b_dims.len();
+        (a_dims, a_ndim, b_dims, b_ndim)
+    };
 
     let output_ndim = a_ndim.max(b_ndim);
     let mut output_dims = vec![0; output_ndim];
@@ -24,9 +30,10 @@ pub fn broadcast_tensors2(a: &Tensor, b: &Tensor) -> HoduResult<(Tensor, Tensor)
         if a_dim == 1 || b_dim == 1 || a_dim == b_dim {
             output_dims[output_ndim - 1 - i] = a_dim.max(b_dim);
         } else {
+            // Only clone shapes for error messages
             return Err(HoduError::IncompatibleShapes {
-                lhs: a_shape.clone(),
-                rhs: b_shape.clone(),
+                lhs: a.shape(),
+                rhs: b.shape(),
                 op: Op::Dummy,
             });
         }

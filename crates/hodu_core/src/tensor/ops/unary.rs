@@ -16,6 +16,8 @@ macro_rules! unary_op {
             validate_dtype_for_op(self.dtype(), Op::Unary(UnaryOp::$op_name))?;
             let validate_requires_grad = validate_requires_grad_for_op(Op::Unary(UnaryOp::$op_name));
 
+            let input_layout = self.layout();
+
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
@@ -26,7 +28,7 @@ macro_rules! unary_op {
                     None,
                     vec![self.id()],
                     vec![result_id],
-                    vec![self.layout()],
+                    vec![input_layout],
                     vec![result_layout],
                 )?;
 
@@ -37,7 +39,7 @@ macro_rules! unary_op {
                 Ok(result_tensor)
             } else {
                 let storage =
-                    self.with_storage(|storage| storage.call_ops_unary(&self.layout(), Op::Unary(UnaryOp::$op_name)))?;
+                    self.with_storage(|storage| storage.call_ops_unary(&input_layout, Op::Unary(UnaryOp::$op_name)))?;
 
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
                 let layout = Layout::from_shape(&self.shape());
@@ -61,6 +63,8 @@ macro_rules! unary_logical_op {
             validate_dtype_for_device(self.dtype(), self.device())?;
             validate_dtype_for_op(self.dtype(), Op::UnaryLogical(UnaryLogicalOp::$op_name))?;
 
+            let input_layout = self.layout();
+
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
                 let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
@@ -70,14 +74,14 @@ macro_rules! unary_logical_op {
                     None,
                     vec![self.id()],
                     vec![result_id],
-                    vec![self.layout()],
+                    vec![input_layout],
                     vec![result_layout],
                 )?;
 
                 Ok(result_tensor)
             } else {
                 let storage = self.with_storage(|storage| {
-                    storage.call_ops_unary_logical(&self.layout(), Op::UnaryLogical(UnaryLogicalOp::$op_name))
+                    storage.call_ops_unary_logical(&input_layout, Op::UnaryLogical(UnaryLogicalOp::$op_name))
                 })?;
 
                 let layout = Layout::from_shape(&self.shape());
@@ -98,6 +102,7 @@ macro_rules! unary_scalar_op {
             let validate_requires_grad = validate_requires_grad_for_op(Op::UnaryScalar(UnaryScalarOp::$op_name));
 
             let scalar_value = scalar.into();
+            let input_layout = self.layout();
 
             if builder::is_builder_active() {
                 let result_layout = Layout::from_shape(&self.shape());
@@ -112,7 +117,7 @@ macro_rules! unary_scalar_op {
                     }),
                     vec![self.id()],
                     vec![result_id],
-                    vec![self.layout()],
+                    vec![input_layout],
                     vec![result_layout],
                 )?;
 
@@ -129,7 +134,7 @@ macro_rules! unary_scalar_op {
             } else {
                 let storage = self.with_storage(|storage| {
                     storage.call_ops_unary_scalar(
-                        &self.layout(),
+                        &input_layout,
                         scalar_value,
                         Op::UnaryScalar(UnaryScalarOp::$op_name),
                     )
