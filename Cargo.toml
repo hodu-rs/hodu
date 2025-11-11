@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*", "benchmarks/*"]
-exclude = ["benchmarks/.venvs", "crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
+members = ["crates/*"]
+exclude = ["benchmarks", "crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
 
 [package]
 name = "hodu"
