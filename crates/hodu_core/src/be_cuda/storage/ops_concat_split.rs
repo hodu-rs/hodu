@@ -18,7 +18,7 @@ pub fn call_ops_concat(
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Collect all storages
-    let mut storages = smallvec![first];
+    let mut storages: SmallVec<[&CudaStorage; 8]> = smallvec![first];
     storages.extend(others.iter().copied());
 
     // Validate op
@@ -130,7 +130,7 @@ pub fn call_ops_concat(
         buffer_offsets.push(buffer_offset_elements);
         buffer_offset_elements += storage.len();
     }
-    metadata.extend(&buffer_offsets);
+    metadata.extend(buffer_offsets.iter().copied());
 
     let kernel_name = format!("concat_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
@@ -140,13 +140,13 @@ pub fn call_ops_concat(
     macro_rules! impl_concat {
         ($ty:ty, $variant:ident) => {{
             // Download all storages to CPU and pack into single vector
-            let mut packed_data = SmallVec::<[$ty; 4096]>::new();
+            let mut packed_data = Vec::new();
             for storage in storages.iter() {
                 if let CudaStorageData::$variant(slice) = &storage.data {
                     let stream = device.context().default_stream();
-                    let mut temp = smallvec![unsafe { core::mem::zeroed() }; slice.len()];
+                    let mut temp = vec![unsafe { core::mem::zeroed() }; slice.len()];
                     stream
-                        .memcpy_dtoh(slice, &mut temp)
+                        .memcpy_dtoh(&slice, &mut temp)
                         .map_err(|e| HoduError::BackendError(format!("CUDA memcpy_dtoh failed: {:?}", e)))?;
                     packed_data.extend_from_slice(&temp);
                 } else {

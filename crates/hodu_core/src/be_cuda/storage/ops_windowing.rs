@@ -30,7 +30,7 @@ pub fn call_ops_reduce_window(
     let input_ndim = input_shape.ndim();
     let spatial_dims = input_ndim - 2;
 
-    let mut output_shape_vec = smallvec![input_shape[0], input_shape[1]];
+    let mut output_shape_vec: SmallVec<[u32; 24]> = smallvec![input_shape[0], input_shape[1]];
     for i in 0..spatial_dims {
         let input_size = input_shape[2 + i];
         let window_size = window_shape[i as usize];

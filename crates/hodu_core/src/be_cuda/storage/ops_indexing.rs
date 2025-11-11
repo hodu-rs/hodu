@@ -197,7 +197,7 @@ pub fn call_ops_index_put(
         ($input:expr, $values:expr, $ty:ty, $variant:ident) => {{
             // Copy input to output first
             let stream = device.context().default_stream();
-            let mut temp = smallvec![unsafe { core::mem::zeroed() }; $input.len()];
+            let mut temp = vec![unsafe { core::mem::zeroed() }; $input.len()];
             stream
                 .memcpy_dtoh($input, &mut temp)
                 .map_err(|e| HoduError::BackendError(format!("CUDA memcpy_dtoh failed: {:?}", e)))?;
@@ -429,7 +429,7 @@ pub fn call_ops_scatter(
         ($input:expr, $src:expr, $ty:ty, $variant:ident) => {{
             // Copy input to output first
             let stream = device.context().default_stream();
-            let mut temp = smallvec![unsafe { core::mem::zeroed() }; $input.len()];
+            let mut temp = vec![unsafe { core::mem::zeroed() }; $input.len()];
             stream
                 .memcpy_dtoh($input, &mut temp)
                 .map_err(|e| HoduError::BackendError(format!("CUDA memcpy_dtoh failed: {:?}", e)))?;
