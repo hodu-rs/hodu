@@ -274,8 +274,17 @@ where
             .map_err(|e| CudaKernelError::LaunchError(format!("Failed to create cuBLAS: {:?}", e)))?;
 
         // Leading dimensions (strides of second-to-last dimension)
-        let lda = lhs_strides[lhs_ndim - 2] as i32;
-        let ldb = rhs_strides[rhs_ndim - 2] as i32;
+        let mut lda = lhs_strides[lhs_ndim - 2] as i32;
+        let mut ldb = rhs_strides[rhs_ndim - 2] as i32;
+
+        // Fix leading dimensions when they're too small
+        // For row-major contiguous matrices: lda >= K, ldb >= N
+        if lda < k as i32 {
+            lda = k as i32;
+        }
+        if ldb < n as i32 {
+            ldb = n as i32;
+        }
 
         // Batch strides (stride of first dimension if batch exists)
         let lhs_batch_stride = if batch_ndim > 0 { lhs_strides[0] as i64 } else { 0 };
@@ -486,8 +495,17 @@ where
             .map_err(|e| CudaKernelError::LaunchError(format!("Failed to create cuBLAS: {:?}", e)))?;
 
         // Leading dimensions (strides of first dimension for 2D matrices)
-        let lda = lhs_stride_m as i32;
-        let ldb = rhs_stride_k as i32;
+        let mut lda = lhs_stride_m as i32;
+        let mut ldb = rhs_stride_k as i32;
+
+        // Fix leading dimensions when they're too small
+        // For row-major contiguous matrices: lda >= K, ldb >= N
+        if lda < k as i32 {
+            lda = k as i32;
+        }
+        if ldb < n as i32 {
+            ldb = n as i32;
+        }
 
         // Offset slices
         let lhs_view = lhs.slice(lhs_offset..);

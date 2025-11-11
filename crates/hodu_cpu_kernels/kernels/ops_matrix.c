@@ -190,6 +190,24 @@ void matmul_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
         size_t ldb = rhs_row_major ? rhs_strides[rhs_ndim - 2] : rhs_strides[rhs_ndim - 1];
         size_t ldc = N;
 
+        // Fix leading dimensions when they're too small
+        // For row-major: lda >= K, ldb >= N
+        // For col-major: lda >= M, ldb >= K
+        if (trans_lhs == CblasNoTrans) {
+            if (lda < K)
+                lda = K;
+        } else {
+            if (lda < M)
+                lda = M;
+        }
+        if (trans_rhs == CblasNoTrans) {
+            if (ldb < N)
+                ldb = N;
+        } else {
+            if (ldb < K)
+                ldb = K;
+        }
+
         if (batch_ndim == 0) {
             // No batching - single BLAS call
             cblas_sgemm(CblasRowMajor, trans_lhs, trans_rhs, M, N, K, 1.0f, lhs, lda, rhs, ldb,
@@ -274,6 +292,22 @@ void matmul_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
         size_t lda = lhs_row_major ? lhs_strides[lhs_ndim - 2] : lhs_strides[lhs_ndim - 1];
         size_t ldb = rhs_row_major ? rhs_strides[rhs_ndim - 2] : rhs_strides[rhs_ndim - 1];
         size_t ldc = N;
+
+        // Fix leading dimensions when they're too small
+        if (trans_lhs == CblasNoTrans) {
+            if (lda < K)
+                lda = K;
+        } else {
+            if (lda < M)
+                lda = M;
+        }
+        if (trans_rhs == CblasNoTrans) {
+            if (ldb < N)
+                ldb = N;
+        } else {
+            if (ldb < K)
+                ldb = K;
+        }
 
         if (batch_ndim == 0) {
             // No batching - single BLAS call
@@ -521,6 +555,21 @@ void dot_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, const s
         size_t lda = lhs_row_major ? lhs_stride_m : lhs_stride_k;
         size_t ldb = rhs_row_major ? rhs_stride_k : rhs_stride_n;
 
+        if (trans_lhs == CblasNoTrans) {
+            if (lda < K)
+                lda = K;
+        } else {
+            if (lda < M)
+                lda = M;
+        }
+        if (trans_rhs == CblasNoTrans) {
+            if (ldb < N)
+                ldb = N;
+        } else {
+            if (ldb < K)
+                ldb = K;
+        }
+
         cblas_sgemm(CblasRowMajor, trans_lhs, trans_rhs, M, N, K, 1.0f, lhs, lda, rhs, ldb, 0.0f,
                     output, N);
     } else {
@@ -561,6 +610,22 @@ void dot_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, const s
 
         size_t lda = lhs_row_major ? lhs_stride_m : lhs_stride_k;
         size_t ldb = rhs_row_major ? rhs_stride_k : rhs_stride_n;
+
+        // Fix leading dimensions when they're too small
+        if (trans_lhs == CblasNoTrans) {
+            if (lda < K)
+                lda = K;
+        } else {
+            if (lda < M)
+                lda = M;
+        }
+        if (trans_rhs == CblasNoTrans) {
+            if (ldb < N)
+                ldb = N;
+        } else {
+            if (ldb < K)
+                ldb = K;
+        }
 
         cblas_dgemm(CblasRowMajor, trans_lhs, trans_rhs, M, N, K, 1.0, lhs, lda, rhs, ldb, 0.0,
                     output, N);
