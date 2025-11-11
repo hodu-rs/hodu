@@ -90,21 +90,24 @@ pub fn call_ops_reduce_window(
         }};
     }
 
+    let device_id = input_storage.device_id;
+    let device_arc = Arc::clone(&input_storage.device);
+
     match &input_storage.data {
         CudaStorageData::F32(input) => Ok(CudaStorage::new(
-            input_storage.device_id,
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F32(call_reduce_window!(input, f32)),
         )),
         #[cfg(feature = "f64")]
         CudaStorageData::F64(input) => Ok(CudaStorage::new(
-            input_storage.device_id,
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F64(call_reduce_window!(input, f64)),
         )),
         CudaStorageData::F16(input) => Ok(CudaStorage::new(
-            input_storage.device_id,
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F16(call_reduce_window!(input, half::f16)),
         )),
         _ => Err(HoduError::UnsupportedDTypeForOp {

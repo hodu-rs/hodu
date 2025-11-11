@@ -87,6 +87,8 @@ pub fn call_ops_concat(
     let num_els = output_shape.size();
 
     let device = first.get_device();
+    let device_id = first.device_id();
+    let device_arc = Arc::clone(&first.device);
 
     // Strategy: Download to CPU, pack into single buffer, upload back to GPU
     // This is simpler than device-to-device copies and works for now
@@ -171,8 +173,8 @@ pub fn call_ops_concat(
             )?;
 
             Ok(CudaStorage::new(
-                first.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};
@@ -255,6 +257,8 @@ pub fn call_ops_split(
 
     let dtype = storage.dtype();
     let device = storage.get_device();
+    let device_id = storage.device_id();
+    let device_arc = Arc::clone(&storage.device);
 
     // Get kernel name
     let kernel_name = format!("split_{}", dtype);
@@ -273,8 +277,8 @@ pub fn call_ops_split(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};

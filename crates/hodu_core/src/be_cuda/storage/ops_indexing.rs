@@ -56,6 +56,8 @@ pub fn call_ops_index_select(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     // Get kernel name
     let kernel_name = format!("index_select_{}", dtype);
@@ -92,8 +94,8 @@ pub fn call_ops_index_select(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                input_storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};
@@ -168,6 +170,8 @@ pub fn call_ops_index_put(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     // Get kernel name
     let kernel_name = format!("index_put_{}", dtype);
@@ -215,8 +219,8 @@ pub fn call_ops_index_put(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                input_storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};
@@ -283,6 +287,8 @@ pub fn call_ops_gather(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     // Get kernel name
     let kernel_name = format!("gather_{}", dtype);
@@ -322,8 +328,8 @@ pub fn call_ops_gather(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                input_storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};
@@ -397,6 +403,8 @@ pub fn call_ops_scatter(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     // Get kernel name
     let kernel_name = format!("scatter_{}", dtype);
@@ -447,8 +455,8 @@ pub fn call_ops_scatter(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                input_storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};

@@ -39,22 +39,23 @@ impl Tensor {
         validate_dtype_for_op(first.dtype(), Op::Concat(ConcatOp::Concat))?;
         let validate_requires_grad = validate_requires_grad_for_op(Op::Concat(ConcatOp::Concat));
 
-        let mut output_dims = first.shape().dims().to_vec();
-        for tensor in &tensors[1..] {
-            let shape = tensor.shape();
-            let dims = shape.dims();
+        // Collect all layouts once to minimize lock acquisitions
+        let layouts: Vec<_> = tensors.iter().map(|t| t.layout()).collect();
+        let layout_refs: Vec<_> = layouts.iter().collect();
+
+        // Compute output dimensions from layouts (avoiding repeated shape queries)
+        let mut output_dims = layouts[0].shape().dims().to_vec();
+        for layout in &layouts[1..] {
+            let dims = layout.shape().dims();
             if dims.len() != output_dims.len() {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: Shape::from(output_dims),
-                    rhs: shape.clone(),
+                    lhs: Shape::from(&output_dims),
+                    rhs: layout.shape().clone(),
                     op: Op::Concat(ConcatOp::Concat),
                 });
             }
             output_dims[dim_usize] += dims[dim_usize];
         }
-
-        let layouts: Vec<_> = tensors.iter().map(|t| t.layout()).collect();
-        let layout_refs: Vec<_> = layouts.iter().collect();
 
         if builder::is_builder_active() {
             let result_layout = Layout::from_shape(&Shape::from(output_dims));

@@ -74,6 +74,8 @@ pub fn call_ops_conv(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     let kernel_name = format!("{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
@@ -92,8 +94,8 @@ pub fn call_ops_conv(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                input_storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};
@@ -201,6 +203,8 @@ pub fn call_ops_conv_grad_weight(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     let kernel_name = format!("conv_grad_weight_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
@@ -219,8 +223,8 @@ pub fn call_ops_conv_grad_weight(
                 &metadata,
             )?;
             Ok(CudaStorage::new(
-                input_storage.device_id(),
-                device.clone(),
+                device_id,
+                Arc::clone(&device_arc),
                 CudaStorageData::$variant(output),
             ))
         }};

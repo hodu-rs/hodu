@@ -80,26 +80,29 @@ pub fn call_ops_matmul(
         }};
     }
 
+    let device_id = lhs_storage.device_id();
+    let device_arc = Arc::clone(&lhs_storage.device);
+
     match (&lhs_storage.data, &rhs_storage.data) {
         (CudaStorageData::F32(lhs), CudaStorageData::F32(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F32(call_matmul!(lhs, rhs, f32)),
         )),
         #[cfg(feature = "f64")]
         (CudaStorageData::F64(lhs), CudaStorageData::F64(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F64(call_matmul!(lhs, rhs, f64)),
         )),
         (CudaStorageData::F16(lhs), CudaStorageData::F16(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F16(call_matmul!(lhs, rhs, half::f16)),
         )),
         (CudaStorageData::BF16(lhs), CudaStorageData::BF16(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::BF16(call_matmul!(lhs, rhs, half::bf16)),
         )),
         _ => Err(HoduError::DTypeMismatch {
@@ -168,26 +171,29 @@ pub fn call_ops_dot(
         }};
     }
 
+    let device_id = lhs_storage.device_id();
+    let device_arc = Arc::clone(&lhs_storage.device);
+
     match (&lhs_storage.data, &rhs_storage.data) {
         (CudaStorageData::F32(lhs), CudaStorageData::F32(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F32(call_dot!(lhs, rhs, f32)),
         )),
         #[cfg(feature = "f64")]
         (CudaStorageData::F64(lhs), CudaStorageData::F64(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F64(call_dot!(lhs, rhs, f64)),
         )),
         (CudaStorageData::F16(lhs), CudaStorageData::F16(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F16(call_dot!(lhs, rhs, half::f16)),
         )),
         (CudaStorageData::BF16(lhs), CudaStorageData::BF16(rhs)) => Ok(CudaStorage::new(
-            lhs_storage.device_id(),
-            lhs_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::BF16(call_dot!(lhs, rhs, half::bf16)),
         )),
         _ => Err(HoduError::DTypeMismatch {

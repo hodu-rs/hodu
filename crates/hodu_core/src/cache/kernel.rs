@@ -57,8 +57,8 @@ impl KernelNameCache {
 
         // Leak the string to get &'static str
         // Note: This is intentional memory leak, but bounded by MAX_KERNEL_NAMES
-        let static_str: &'static str = Box::leak(name.clone().into_boxed_str());
-        cache.insert(name, static_str);
+        let static_str: &'static str = Box::leak(name.into_boxed_str());
+        cache.insert(static_str.to_string(), static_str);
         static_str
     }
 }

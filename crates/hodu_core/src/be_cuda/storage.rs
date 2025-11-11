@@ -226,9 +226,9 @@ impl BackendStorageT for CudaStorage {
 
         let dtype = self.dtype();
 
-        // Clone Arc references before mutable borrow to avoid borrow checker issues
-        let kernels = self.device.kernels.clone();
-        let context = self.device.context.clone();
+        // Get references before mutable borrow to avoid borrow checker issues
+        let kernels = &self.device.kernels;
+        let context = &self.device.context;
 
         let kernel_name = format!("const_set_{}", dtype);
         let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
@@ -236,7 +236,7 @@ impl BackendStorageT for CudaStorage {
 
         macro_rules! call_const_set {
             ($slice:expr, $val:expr, $ty:ty) => {{
-                hodu_cuda_kernels::kernels::call_const_set(kernel, &kernels, &context, $slice, &metadata, $val)?
+                hodu_cuda_kernels::kernels::call_const_set(kernel, kernels, context, $slice, &metadata, $val)?
             }};
         }
 

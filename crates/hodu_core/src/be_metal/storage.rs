@@ -431,8 +431,8 @@ impl BackendStorageT for MetalStorage {
 
         // Build kernel name: cast_<src>_to_<dst>
         let kernel_name = format!("cast_{}_to_{}", self.dtype, target_dtype);
-        let kernel_name_str = Box::leak(kernel_name.into_boxed_str());
-        let kernel = Kernel(kernel_name_str);
+        let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
+        let kernel = Kernel(kernel_name_static);
 
         call_ops_cast(
             kernel,

@@ -34,6 +34,8 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     let kernel_name = format!("{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
@@ -56,84 +58,84 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
 
     match &input_storage.data {
         CudaStorageData::BOOL(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::BOOL(call_unary!(input, bool)),
         )),
         CudaStorageData::F8E4M3(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F8E4M3(call_unary!(input, float8::F8E4M3)),
         )),
         #[cfg(feature = "f8e5m2")]
         CudaStorageData::F8E5M2(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F8E5M2(call_unary!(input, float8::F8E5M2)),
         )),
         CudaStorageData::BF16(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::BF16(call_unary!(input, half::bf16)),
         )),
         CudaStorageData::F16(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F16(call_unary!(input, half::f16)),
         )),
         CudaStorageData::F32(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F32(call_unary!(input, f32)),
         )),
         #[cfg(feature = "f64")]
         CudaStorageData::F64(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F64(call_unary!(input, f64)),
         )),
         CudaStorageData::U8(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::U8(call_unary!(input, u8)),
         )),
         #[cfg(feature = "u16")]
         CudaStorageData::U16(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::U16(call_unary!(input, u16)),
         )),
         CudaStorageData::U32(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::U32(call_unary!(input, u32)),
         )),
         #[cfg(feature = "u64")]
         CudaStorageData::U64(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::U64(call_unary!(input, u64)),
         )),
         CudaStorageData::I8(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::I8(call_unary!(input, i8)),
         )),
         #[cfg(feature = "i16")]
         CudaStorageData::I16(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::I16(call_unary!(input, i16)),
         )),
         CudaStorageData::I32(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::I32(call_unary!(input, i32)),
         )),
         #[cfg(feature = "i64")]
         CudaStorageData::I64(input) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::I64(call_unary!(input, i64)),
         )),
     }
@@ -187,6 +189,9 @@ pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: 
         }};
     }
 
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
+
     let output = match &input_storage.data {
         CudaStorageData::BOOL(input) => call_unary_logical!(input, bool),
         CudaStorageData::F32(input) => call_unary_logical!(input, f32),
@@ -200,11 +205,7 @@ pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: 
         },
     };
 
-    Ok(CudaStorage::new(
-        input_storage.device_id(),
-        input_storage.device.clone(),
-        CudaStorageData::BOOL(output),
-    ))
+    Ok(CudaStorage::new(device_id, device_arc, CudaStorageData::BOOL(output)))
 }
 
 pub fn call_ops_unary_scalar(
@@ -240,6 +241,8 @@ pub fn call_ops_unary_scalar(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
 
     let kernel_name = format!("{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
@@ -263,19 +266,19 @@ pub fn call_ops_unary_scalar(
 
     match (&input_storage.data, scalar) {
         (CudaStorageData::F32(input), Scalar::F32(v)) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F32(call_unary_scalar!(input, v, f32)),
         )),
         #[cfg(feature = "f64")]
         (CudaStorageData::F64(input), Scalar::F64(v)) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::F64(call_unary_scalar!(input, v, f64)),
         )),
         (CudaStorageData::I32(input), Scalar::I32(v)) => Ok(CudaStorage::new(
-            input_storage.device_id(),
-            input_storage.device.clone(),
+            device_id,
+            Arc::clone(&device_arc),
             CudaStorageData::I32(call_unary_scalar!(input, v, i32)),
         )),
         _ => Err(HoduError::DTypeMismatch {
@@ -339,6 +342,9 @@ pub fn call_ops_cmp_scalar(
         }};
     }
 
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
+
     let output = match (&input_storage.data, scalar) {
         (CudaStorageData::BOOL(input), Scalar::BOOL(v)) => call_cmp_scalar!(input, v, bool),
         (CudaStorageData::F8E4M3(input), Scalar::F8E4M3(v)) => call_cmp_scalar!(input, v, float8::F8E4M3),
@@ -369,9 +375,5 @@ pub fn call_ops_cmp_scalar(
         },
     };
 
-    Ok(CudaStorage::new(
-        input_storage.device_id(),
-        input_storage.device.clone(),
-        CudaStorageData::BOOL(output),
-    ))
+    Ok(CudaStorage::new(device_id, device_arc, CudaStorageData::BOOL(output)))
 }
