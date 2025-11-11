@@ -16,29 +16,120 @@ pub struct CpuDevice;
 impl BackendDeviceT for CpuDevice {
     type BackendStorage = CpuStorage;
 
+    #[allow(clippy::uninit_vec)]
     fn allocate(size: usize, dtype: DType) -> HoduResult<Self::BackendStorage> {
         let storage = match dtype {
-            DType::BOOL => CpuStorage::BOOL(Vec::with_capacity(size)),
-            DType::F8E4M3 => CpuStorage::F8E4M3(Vec::with_capacity(size)),
+            DType::BOOL => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::BOOL(v)
+            },
+            DType::F8E4M3 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::F8E4M3(v)
+            },
             #[cfg(feature = "f8e5m2")]
-            DType::F8E5M2 => CpuStorage::F8E5M2(Vec::with_capacity(size)),
-            DType::BF16 => CpuStorage::BF16(Vec::with_capacity(size)),
-            DType::F16 => CpuStorage::F16(Vec::with_capacity(size)),
-            DType::F32 => CpuStorage::F32(Vec::with_capacity(size)),
+            DType::F8E5M2 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::F8E5M2(v)
+            },
+            DType::BF16 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::BF16(v)
+            },
+            DType::F16 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::F16(v)
+            },
+            DType::F32 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::F32(v)
+            },
             #[cfg(feature = "f64")]
-            DType::F64 => CpuStorage::F64(Vec::with_capacity(size)),
-            DType::U8 => CpuStorage::U8(Vec::with_capacity(size)),
+            DType::F64 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::F64(v)
+            },
+            DType::U8 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::U8(v)
+            },
             #[cfg(feature = "u16")]
-            DType::U16 => CpuStorage::U16(Vec::with_capacity(size)),
-            DType::U32 => CpuStorage::U32(Vec::with_capacity(size)),
+            DType::U16 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::U16(v)
+            },
+            DType::U32 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::U32(v)
+            },
             #[cfg(feature = "u64")]
-            DType::U64 => CpuStorage::U64(Vec::with_capacity(size)),
-            DType::I8 => CpuStorage::I8(Vec::with_capacity(size)),
+            DType::U64 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::U64(v)
+            },
+            DType::I8 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::I8(v)
+            },
             #[cfg(feature = "i16")]
-            DType::I16 => CpuStorage::I16(Vec::with_capacity(size)),
-            DType::I32 => CpuStorage::I32(Vec::with_capacity(size)),
+            DType::I16 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::I16(v)
+            },
+            DType::I32 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::I32(v)
+            },
             #[cfg(feature = "i64")]
-            DType::I64 => CpuStorage::I64(Vec::with_capacity(size)),
+            DType::I64 => {
+                let mut v = Vec::with_capacity(size);
+                unsafe {
+                    v.set_len(size);
+                }
+                CpuStorage::I64(v)
+            },
         };
         Ok(storage)
     }
