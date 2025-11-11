@@ -53,5 +53,4 @@ rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
 rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
-smallvec = { workspace = true }
 spin = { workspace = true }

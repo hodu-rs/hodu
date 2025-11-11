@@ -6,7 +6,6 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
-use smallvec::{smallvec, SmallVec};
 
 #[allow(clippy::too_many_arguments)]
 pub fn call_ops_conv(
@@ -39,7 +38,7 @@ pub fn call_ops_conv(
     let spatial_dims = input_ndim - 2;
 
     // Compute output spatial dimensions
-    let mut output_shape_vec: SmallVec<[u32; 8]> = smallvec![input_shape.dims()[0], weight_shape.dims()[0]];
+    let mut output_shape_vec: Vec<u32> = vec![input_shape.dims()[0], weight_shape.dims()[0]];
 
     for i in 0..spatial_dims {
         let input_size = input_shape.dims()[(2 + i) as usize];
@@ -56,7 +55,7 @@ pub fn call_ops_conv(
     let num_els = output_shape.size();
 
     // Build metadata array
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(num_els as usize);
     metadata.push(input_ndim as usize);
     metadata.push(spatial_dims as usize);
@@ -158,7 +157,7 @@ pub fn call_ops_conv_grad_weight(
     let num_els = weight_shape.size();
 
     // Build metadata array
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(num_els as usize);
 
     let input_ndim = input_shape.ndim();

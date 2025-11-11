@@ -8,7 +8,6 @@ use crate::{
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
-use smallvec::SmallVec;
 
 pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> HoduResult<CudaStorage> {
     let unary_op = match op {
@@ -20,7 +19,7 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -155,7 +154,7 @@ pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: 
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -227,7 +226,7 @@ pub fn call_ops_unary_scalar(
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -307,7 +306,7 @@ pub fn call_ops_cmp_scalar(
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 

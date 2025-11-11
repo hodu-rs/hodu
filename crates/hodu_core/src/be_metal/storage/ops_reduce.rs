@@ -6,7 +6,6 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
-use smallvec::SmallVec;
 
 pub fn call_ops_reduce(
     storage: &MetalStorage,
@@ -39,7 +38,7 @@ pub fn call_ops_reduce(
     }
 
     // Compute output shape
-    let mut output_shape_vec = SmallVec::<[u32; 24]>::new();
+    let mut output_shape_vec = Vec::new();
     for i in 0..input_ndim {
         if dims.contains(&i) {
             if keep_dim {
@@ -81,8 +80,7 @@ pub fn call_ops_reduce(
     let output_shape_len = output_shape_vec.len();
     let num_reduce_dims = dims.len();
 
-    let mut metadata =
-        SmallVec::<[usize; 24]>::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
+    let mut metadata = Vec::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
     metadata.extend(layout.strides().iter().map(|&s| s as usize));

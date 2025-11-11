@@ -22,7 +22,6 @@ use hodu_metal_kernels::{
     metal::Buffer,
     utils::BufferOffset,
 };
-use smallvec::SmallVec;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -153,7 +152,7 @@ impl BackendStorageT for MetalStorage {
         let command_buffer = self.device.command_buffer()?;
 
         // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + shape.ndim() as usize * 2 + 1);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
         metadata.push(num_els as usize);
         metadata.push(shape.ndim() as usize);
         for i in 0..shape.ndim() {
@@ -413,7 +412,7 @@ impl BackendStorageT for MetalStorage {
         let command_buffer = self.device.command_buffer()?;
 
         // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + shape.ndim() as usize * 2 + 1);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
         metadata.push(num_els as usize);
         metadata.push(shape.ndim() as usize);
         for i in 0..shape.ndim() {
@@ -469,7 +468,7 @@ impl BackendStorageT for MetalStorage {
         let command_buffer = self.device.command_buffer()?;
 
         // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + shape.ndim() as usize * 2 + 1);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
         metadata.push(num_els as usize);
         metadata.push(shape.ndim() as usize);
         for i in 0..shape.ndim() {

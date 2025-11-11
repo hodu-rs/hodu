@@ -7,7 +7,6 @@ use crate::{
     types::{Layout, Shape},
 };
 use core::ffi::c_void;
-use smallvec::SmallVec;
 
 /// Execute reduce window operation
 ///
@@ -74,7 +73,7 @@ pub fn call_ops_reduce_window(
     }
 
     // Compute output shape
-    let mut output_shape_vec = SmallVec::<[u32; 24]>::with_capacity(ndim);
+    let mut output_shape_vec = Vec::with_capacity(ndim);
     for i in 0..ndim {
         let in_size = input_shape.dims()[i];
         let window_size = window_shape[i];
@@ -101,7 +100,7 @@ pub fn call_ops_reduce_window(
     // Build metadata array
     // Layout: output_size, num_dims, input_shape, input_strides, offset,
     //         window_shape, strides, padding, output_shape
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(3 + ndim * 7);
+    let mut metadata: Vec<usize> = Vec::with_capacity(3 + ndim * 7);
 
     metadata.push(output_size as usize);
     metadata.push(ndim);

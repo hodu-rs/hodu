@@ -7,7 +7,6 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use hodu_cuda_kernels::kernels;
-use smallvec::SmallVec;
 
 pub fn call_ops_index_select(
     input_storage: &CudaStorage,
@@ -66,7 +65,7 @@ pub fn call_ops_index_select(
 
     // Build metadata
     let num_dims = input_ndim as usize;
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + num_dims * 2 + 3);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 2 + 3);
     metadata.push(num_els as usize);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
@@ -180,7 +179,7 @@ pub fn call_ops_index_put(
 
     // Build metadata
     let num_dims = input_shape.ndim() as usize;
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + num_dims * 3 + 4);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 3 + 4);
     metadata.push(num_els as usize);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
@@ -298,7 +297,7 @@ pub fn call_ops_gather(
     // Build metadata
     let num_dims = input_shape.ndim() as usize;
     let num_indices = indices_shape.size() as usize;
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + num_dims * 3 + 4);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 3 + 4);
     metadata.push(num_els as usize);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
@@ -414,7 +413,7 @@ pub fn call_ops_scatter(
     // Build metadata
     let num_dims = input_shape.ndim() as usize;
     let num_src_els = src_shape.size() as usize;
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + num_dims * 5 + 4);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 5 + 4);
     metadata.push(num_src_els);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));

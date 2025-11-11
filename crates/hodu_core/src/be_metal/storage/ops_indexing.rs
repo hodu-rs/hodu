@@ -6,7 +6,6 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
-use smallvec::SmallVec;
 
 pub fn call_ops_index_select(
     input_storage: &MetalStorage,
@@ -58,7 +57,7 @@ pub fn call_ops_index_select(
 
     // Build metadata: [num_els, num_dims, input_shape..., input_strides..., input_offset, dim, num_indices]
     let num_dims = input_ndim as usize;
-    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + num_dims * 2 + 3);
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 3);
     metadata.push(num_els as usize);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
@@ -143,7 +142,7 @@ pub fn call_ops_index_put(
 
     // Build metadata: [num_els, num_dims, input_shape..., input_strides..., values_strides..., input_offset, values_offset, dim, num_indices]
     let num_dims = input_shape.ndim() as usize;
-    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + num_dims * 3 + 4);
+    let mut metadata = Vec::with_capacity(2 + num_dims * 3 + 4);
     metadata.push(num_els as usize);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
@@ -217,7 +216,7 @@ pub fn call_ops_gather(
     // Build metadata: [num_els, num_dims, input_shape..., input_strides..., indices_strides..., input_offset, indices_offset, dim, num_indices]
     let num_dims = input_shape.ndim() as usize;
     let num_indices = indices_shape.size() as usize;
-    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + num_dims * 3 + 4);
+    let mut metadata = Vec::with_capacity(2 + num_dims * 3 + 4);
     metadata.push(num_els as usize);
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
@@ -304,7 +303,7 @@ pub fn call_ops_scatter(
     // Build metadata: [num_els, num_dims, input_shape..., input_strides..., src_shape..., src_strides..., indices_strides..., input_offset, src_offset, indices_offset, dim]
     let num_dims = input_shape.ndim() as usize;
     let num_src_els = src_shape.size() as usize;
-    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + num_dims * 5 + 4);
+    let mut metadata = Vec::with_capacity(2 + num_dims * 5 + 4);
     metadata.push(num_src_els); // scatter processes src elements
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().map(|&d| d as usize));

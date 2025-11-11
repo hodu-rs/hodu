@@ -7,7 +7,6 @@ use crate::{
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
-use smallvec::SmallVec;
 
 pub fn call_ops_matmul(
     lhs_storage: &CudaStorage,
@@ -28,7 +27,7 @@ pub fn call_ops_matmul(
     let rhs_ndim = rhs_shape.ndim();
 
     let output_size = {
-        let mut dims = SmallVec::<[usize; 24]>::new();
+        let mut dims = Vec::new();
         for i in 0..(lhs_ndim - 2) {
             dims.push(lhs_shape[i] as usize);
         }
@@ -37,7 +36,7 @@ pub fn call_ops_matmul(
         dims.iter().map(|&x| x as u32).product::<u32>()
     };
 
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(output_size as usize);
     metadata.push(lhs_ndim as usize);
     metadata.push(rhs_ndim as usize);
@@ -132,7 +131,7 @@ pub fn call_ops_dot(
     let k = lhs_shape[1];
     let n = rhs_shape[1];
 
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(m as usize);
     metadata.push(k as usize);
     metadata.push(n as usize);

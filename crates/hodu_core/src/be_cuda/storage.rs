@@ -24,7 +24,6 @@ use float8::F8E4M3;
 use float8::F8E5M2;
 use half::{bf16, f16};
 use hodu_cuda_kernels::cuda::{CudaSlice, DeviceRepr};
-use smallvec::SmallVec;
 
 #[derive(Debug, Clone)]
 pub(crate) enum CudaStorageData {
@@ -213,7 +212,7 @@ impl BackendStorageT for CudaStorage {
         let offset = layout.offset();
         let num_els = layout.size();
 
-        let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + shape.ndim() as usize * 2 + 1);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
         metadata.push(num_els as usize);
         metadata.push(shape.ndim() as usize);
         for i in 0..shape.ndim() {
@@ -433,7 +432,7 @@ impl BackendStorageT for CudaStorage {
         let offset = layout.offset();
         let num_els = layout.size();
 
-        let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + shape.ndim() as usize * 2 + 1);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
         metadata.push(num_els as usize);
         metadata.push(shape.ndim() as usize);
         for i in 0..shape.ndim() {
@@ -526,7 +525,7 @@ impl BackendStorageT for CudaStorage {
         let offset = layout.offset();
         let num_els = layout.size();
 
-        let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + shape.ndim() as usize * 2 + 1);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
         metadata.push(num_els as usize);
         metadata.push(shape.ndim() as usize);
         for i in 0..shape.ndim() {

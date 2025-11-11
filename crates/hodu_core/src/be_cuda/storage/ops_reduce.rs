@@ -7,7 +7,6 @@ use crate::{
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
-use smallvec::SmallVec;
 
 pub fn call_ops_reduce(
     input_storage: &CudaStorage,
@@ -24,7 +23,7 @@ pub fn call_ops_reduce(
     let input_shape = layout.shape();
     let input_ndim = input_shape.ndim();
 
-    let mut output_shape_vec = SmallVec::<[usize; 24]>::new();
+    let mut output_shape_vec = Vec::new();
     for i in 0..input_ndim {
         if dims.contains(&i) {
             if keep_dim {
@@ -36,7 +35,7 @@ pub fn call_ops_reduce(
     }
     let output_size: u32 = output_shape_vec.iter().map(|&x| x as u32).product();
 
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(input_ndim as usize);
 
     for &dim in input_shape.dims() {

@@ -7,7 +7,6 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use core::ffi::c_void;
-use smallvec::{smallvec, SmallVec};
 
 /// Execute concat operation to concatenate multiple tensors along a dimension
 ///
@@ -30,7 +29,7 @@ pub fn call_ops_concat(
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Collect all storages
-    let mut storages: SmallVec<[&CpuStorage; 8]> = smallvec![first];
+    let mut storages: Vec<&CpuStorage> = vec![first];
     storages.extend(others.iter().copied());
     // Validate op
     match op {
@@ -101,7 +100,7 @@ pub fn call_ops_concat(
     // Layout: num_els, num_dims, output_shape, concat_dim, num_inputs,
     //         input_shapes (flattened), input_strides (flattened),
     //         input_offsets, input_buffer_offsets
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
+    let mut metadata: Vec<usize> = Vec::with_capacity(
         2 + ndim as usize + 1 + 1 + num_inputs * ndim as usize + num_inputs * ndim as usize + num_inputs + num_inputs,
     );
 
@@ -157,7 +156,7 @@ pub fn call_ops_concat(
     macro_rules! concat_impl {
         ($variant:ident, $inner_type:ty) => {{
             // Extract all data vectors
-            let mut input_vecs = SmallVec::<[&[$inner_type]; 8]>::new();
+            let mut input_vecs = Vec::new();
             for storage in &storages {
                 match storage {
                     CpuStorage::$variant(data) => input_vecs.push(data.as_slice()),
@@ -171,7 +170,7 @@ pub fn call_ops_concat(
             }
 
             // Pack into contiguous buffer
-            let mut input_buffer = SmallVec::<[$inner_type; 4096]>::new();
+            let mut input_buffer = Vec::new();
             for data in input_vecs {
                 input_buffer.extend_from_slice(data);
             }
@@ -277,7 +276,7 @@ pub fn call_ops_split(
     // Build metadata array for CPU kernel
     // Layout: num_els, num_dims, input_shape, input_strides, input_offset,
     //         split_dim, output_size_on_dim, split_offset
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 3);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 3);
 
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);

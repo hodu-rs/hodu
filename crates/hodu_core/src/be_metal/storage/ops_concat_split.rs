@@ -6,7 +6,6 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
-use smallvec::{smallvec, SmallVec};
 
 #[allow(clippy::needless_range_loop)]
 pub fn call_ops_concat(
@@ -17,7 +16,7 @@ pub fn call_ops_concat(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Collect all storages
-    let mut storages: SmallVec<[&MetalStorage; 8]> = smallvec![first];
+    let mut storages: Vec<&MetalStorage> = vec![first];
     storages.extend(others.iter().copied());
 
     // Validate op
@@ -128,7 +127,7 @@ pub fn call_ops_concat(
     blit.end_encoding();
 
     // Build metadata for concat kernel (same as CPU backend)
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);
 
@@ -237,7 +236,7 @@ pub fn call_ops_split(
     let num_els = output_shape.size();
 
     // Build metadata array for Metal kernel
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);
 

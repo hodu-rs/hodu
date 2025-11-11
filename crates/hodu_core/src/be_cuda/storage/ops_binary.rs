@@ -7,7 +7,6 @@ use crate::{
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
-use smallvec::SmallVec;
 
 pub fn call_ops_binary(
     lhs_storage: &CudaStorage,
@@ -26,7 +25,7 @@ pub fn call_ops_binary(
     let num_els = lhs_shape.size();
     let num_dims = lhs_shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 4 * num_dims as usize + 2);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -182,7 +181,7 @@ pub fn call_ops_binary_logical(
     let num_els = lhs_shape.size();
     let num_dims = lhs_shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 4 * num_dims as usize + 2);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -279,7 +278,7 @@ pub fn call_ops_cmp(
     let num_els = lhs_shape.size();
     let num_dims = lhs_shape.ndim();
 
-    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 4 * num_dims as usize + 2);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 

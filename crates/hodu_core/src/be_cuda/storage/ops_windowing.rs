@@ -7,7 +7,6 @@ use crate::{
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
-use smallvec::{smallvec, SmallVec};
 
 pub fn call_ops_reduce_window(
     input_storage: &CudaStorage,
@@ -30,7 +29,7 @@ pub fn call_ops_reduce_window(
     let input_ndim = input_shape.ndim();
     let spatial_dims = input_ndim - 2;
 
-    let mut output_shape_vec: SmallVec<[u32; 24]> = smallvec![input_shape[0], input_shape[1]];
+    let mut output_shape_vec: Vec<u32> = vec![input_shape[0], input_shape[1]];
     for i in 0..spatial_dims {
         let input_size = input_shape[2 + i];
         let window_size = window_shape[i as usize];
@@ -42,7 +41,7 @@ pub fn call_ops_reduce_window(
 
     let output_size: u32 = output_shape_vec.iter().product();
 
-    let mut metadata = SmallVec::<[usize; 24]>::new();
+    let mut metadata = Vec::new();
     metadata.push(output_size as usize);
     metadata.push(input_ndim as usize);
 
