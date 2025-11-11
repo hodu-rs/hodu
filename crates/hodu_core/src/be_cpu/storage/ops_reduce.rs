@@ -119,7 +119,7 @@ pub fn call_ops_reduce(
 
     // Create output storage
     let dtype = storage.dtype();
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

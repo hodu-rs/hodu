@@ -157,7 +157,7 @@ pub fn call_ops_matmul(
 
     // Create output storage
     let dtype = lhs_storage.dtype();
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -310,7 +310,7 @@ pub fn call_ops_dot(
 
     // Create output storage
     let dtype = lhs_storage.dtype();
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

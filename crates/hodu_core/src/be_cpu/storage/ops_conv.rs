@@ -249,7 +249,7 @@ pub fn call_ops_conv(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -478,7 +478,7 @@ pub fn call_ops_conv_grad_weight(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (gradient weights)
-    let mut grad_weight = CpuDevice::zeros(weight_shape, dtype)?;
+    let mut grad_weight = CpuDevice::allocate(weight_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

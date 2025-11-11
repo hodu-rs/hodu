@@ -146,7 +146,7 @@ pub fn call_ops_reduce_window(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

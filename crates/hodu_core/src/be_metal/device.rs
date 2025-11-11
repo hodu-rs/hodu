@@ -3,7 +3,7 @@ use crate::{
     be_cpu::storage::CpuStorage,
     be_metal::storage::MetalStorage,
     error::{HoduError, HoduResult},
-    types::{DType, Shape},
+    types::DType,
 };
 use hodu_metal_kernels::{
     kernel::Kernels,
@@ -187,15 +187,21 @@ fn find_available_buffer(size: usize, buffers: &BufferMap) -> Option<Arc<Buffer>
 impl BackendDeviceT for MetalDevice {
     type BackendStorage = MetalStorage;
 
-    fn zeros(_: &Shape, _: DType) -> HoduResult<MetalStorage> {
+    fn allocate(size: usize, dtype: DType) -> HoduResult<Self::BackendStorage> {
+        let device = MetalDevice::global().clone();
+        let buffer = device.new_buffer(size, dtype, "allocate")?;
+        Ok(MetalStorage::new(buffer, device, size, dtype))
+    }
+
+    fn zeros(_: usize, _: DType) -> HoduResult<MetalStorage> {
         Err(HoduError::NotImplemented("zeros on Metal device".to_string()))
     }
 
-    fn randn(_: &Shape, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
+    fn randn(_: usize, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
         Err(HoduError::NotImplemented("randn on Metal device".to_string()))
     }
 
-    fn rand_uniform(_: &Shape, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
+    fn rand_uniform(_: usize, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
         Err(HoduError::NotImplemented("rand_uniform on Metal device".to_string()))
     }
 }

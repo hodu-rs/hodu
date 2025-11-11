@@ -4,7 +4,7 @@ use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::Op,
-    types::{Layout, Shape},
+    types::Layout,
 };
 use core::ffi::c_void;
 use smallvec::SmallVec;
@@ -60,7 +60,7 @@ pub fn call_ops_binary(
 
     // Create output storage
     let dtype = lhs_storage.dtype();
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), dtype)?;
+    let mut output = CpuDevice::allocate(num_els as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -189,7 +189,7 @@ pub fn call_ops_binary_logical(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (logical ops return BOOL)
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), crate::types::DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els as usize, crate::types::DType::BOOL)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -314,7 +314,7 @@ pub fn call_ops_cmp(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (cmp ops return BOOL)
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), crate::types::DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els as usize, crate::types::DType::BOOL)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

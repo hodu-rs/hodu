@@ -151,7 +151,7 @@ pub fn call_ops_concat(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Pack all inputs into a single buffer and call kernel based on dtype
     macro_rules! concat_impl {
@@ -311,7 +311,7 @@ pub fn call_ops_split(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::zeros(&output_shape, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

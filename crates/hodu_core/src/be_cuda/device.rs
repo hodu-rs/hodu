@@ -3,7 +3,7 @@ use crate::{
     be_cuda::storage::CudaStorage,
     error::{HoduError, HoduResult},
     layer::compat::*,
-    types::{DType, Shape},
+    types::DType,
 };
 use hodu_cuda_kernels::{
     cuda::{CudaContext, CudaSlice},
@@ -114,15 +114,52 @@ impl CudaDevice {
 impl BackendDeviceT for CudaDevice {
     type BackendStorage = CudaStorage;
 
-    fn zeros(_: &Shape, _: DType) -> HoduResult<CudaStorage> {
+    fn allocate(size: usize, dtype: DType) -> HoduResult<Self::BackendStorage> {
+        use crate::be_cuda::storage::CudaStorageData;
+        use float8::F8E4M3;
+        #[cfg(feature = "f8e5m2")]
+        use float8::F8E5M2;
+        use half::{bf16, f16};
+
+        let device = CudaDevice::global()?;
+        let device_id = device.device_id();
+
+        let data = match dtype {
+            DType::BOOL => CudaStorageData::BOOL(device.new_buffer::<bool>(size)?),
+            DType::F8E4M3 => CudaStorageData::F8E4M3(device.new_buffer::<F8E4M3>(size)?),
+            #[cfg(feature = "f8e5m2")]
+            DType::F8E5M2 => CudaStorageData::F8E5M2(device.new_buffer::<F8E5M2>(size)?),
+            DType::BF16 => CudaStorageData::BF16(device.new_buffer::<bf16>(size)?),
+            DType::F16 => CudaStorageData::F16(device.new_buffer::<f16>(size)?),
+            DType::F32 => CudaStorageData::F32(device.new_buffer::<f32>(size)?),
+            #[cfg(feature = "f64")]
+            DType::F64 => CudaStorageData::F64(device.new_buffer::<f64>(size)?),
+            DType::U8 => CudaStorageData::U8(device.new_buffer::<u8>(size)?),
+            #[cfg(feature = "u16")]
+            DType::U16 => CudaStorageData::U16(device.new_buffer::<u16>(size)?),
+            DType::U32 => CudaStorageData::U32(device.new_buffer::<u32>(size)?),
+            #[cfg(feature = "u64")]
+            DType::U64 => CudaStorageData::U64(device.new_buffer::<u64>(size)?),
+            DType::I8 => CudaStorageData::I8(device.new_buffer::<i8>(size)?),
+            #[cfg(feature = "i16")]
+            DType::I16 => CudaStorageData::I16(device.new_buffer::<i16>(size)?),
+            DType::I32 => CudaStorageData::I32(device.new_buffer::<i32>(size)?),
+            #[cfg(feature = "i64")]
+            DType::I64 => CudaStorageData::I64(device.new_buffer::<i64>(size)?),
+        };
+
+        Ok(CudaStorage::new(device_id, device, data))
+    }
+
+    fn zeros(_: usize, _: DType) -> HoduResult<CudaStorage> {
         Err(HoduError::NotImplemented("zeros on CUDA device".to_string()))
     }
 
-    fn randn(_: &Shape, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
+    fn randn(_: usize, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
         Err(HoduError::NotImplemented("randn on CUDA device".to_string()))
     }
 
-    fn rand_uniform(_: &Shape, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
+    fn rand_uniform(_: usize, _: DType, _: f32, _: f32) -> HoduResult<Self::BackendStorage> {
         Err(HoduError::NotImplemented("rand_uniform on CUDA device".to_string()))
     }
 }

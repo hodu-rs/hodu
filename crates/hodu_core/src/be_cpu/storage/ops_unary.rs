@@ -5,7 +5,7 @@ use crate::{
     layer::compat::*,
     ops::Op,
     scalar::Scalar,
-    types::{DType, Layout, Shape},
+    types::{DType, Layout},
 };
 use core::ffi::c_void;
 use smallvec::SmallVec;
@@ -54,7 +54,7 @@ pub fn call_ops_cmp_scalar(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (cmp ops return BOOL)
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els as usize, DType::BOOL)?;
 
     // Get raw pointers and call kernel with scalar
     macro_rules! call_kernel {
@@ -134,7 +134,7 @@ pub fn call_ops_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op)
 
     // Create output storage
     let dtype = input_storage.dtype();
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), dtype)?;
+    let mut output = CpuDevice::allocate(num_els as usize, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -217,7 +217,7 @@ pub fn call_ops_unary_logical(input_storage: &CpuStorage, input_layout: &Layout,
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (logical ops return BOOL)
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els as usize, DType::BOOL)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -306,7 +306,7 @@ pub fn call_ops_unary_scalar(
 
     // Create output storage
     let dtype = input_storage.dtype();
-    let mut output = CpuDevice::zeros(&Shape::new(&[num_els]), dtype)?;
+    let mut output = CpuDevice::allocate(num_els as usize, dtype)?;
 
     // Get raw pointers and call kernel with scalar
     macro_rules! call_kernel {
