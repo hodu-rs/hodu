@@ -7,7 +7,7 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use hodu_cuda_kernels::kernels;
-use smallvec::{smallvec, SmallVec};
+use smallvec::SmallVec;
 
 pub fn call_ops_index_select(
     input_storage: &CudaStorage,

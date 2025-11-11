@@ -34,7 +34,7 @@ pub fn call_ops_reduce(
             output_shape_vec.push(input_shape[i] as usize);
         }
     }
-    let output_size: u32 = output_shape_vec.iter().copied().product();
+    let output_size: u32 = output_shape_vec.iter().map(|&x| x as u32).product();
 
     let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(input_ndim as usize);

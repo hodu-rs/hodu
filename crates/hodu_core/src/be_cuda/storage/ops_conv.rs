@@ -41,7 +41,7 @@ pub fn call_ops_conv(
         output_spatial_dims.push(output_size as usize);
     }
 
-    let output_size = batch_size * out_channels * output_spatial_dims.iter().copied().product::<u32>();
+    let output_size = batch_size * out_channels * output_spatial_dims.iter().map(|&x| x as u32).product::<u32>();
 
     let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(output_size as usize);

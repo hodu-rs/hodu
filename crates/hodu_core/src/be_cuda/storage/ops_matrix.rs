@@ -34,7 +34,7 @@ pub fn call_ops_matmul(
         }
         dims.push(lhs_shape[lhs_ndim - 2] as usize);
         dims.push(rhs_shape[rhs_ndim - 1] as usize);
-        dims.iter().copied().product::<u32>()
+        dims.iter().map(|&x| x as u32).product::<u32>()
     };
 
     let mut metadata = SmallVec::<[usize; 24]>::new();

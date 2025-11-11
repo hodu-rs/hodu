@@ -146,7 +146,7 @@ pub fn call_ops_concat(
                     let stream = device.context().default_stream();
                     let mut temp = vec![unsafe { core::mem::zeroed() }; slice.len()];
                     stream
-                        .memcpy_dtoh(&slice, &mut temp)
+                        .memcpy_dtoh(slice, &mut temp)
                         .map_err(|e| HoduError::BackendError(format!("CUDA memcpy_dtoh failed: {:?}", e)))?;
                     packed_data.extend_from_slice(&temp);
                 } else {
