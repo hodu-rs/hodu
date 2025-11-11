@@ -8,7 +8,7 @@ pub trait IntoFlattened: Sized {
     type Elem: Clone;
 
     fn to_flatten_vec(self) -> Vec<Self::Elem>;
-    fn get_shape(&self) -> Vec<usize>;
+    fn get_shape_vec(&self) -> Vec<usize>;
     fn get_dtype(&self) -> DType;
     fn to_cpu_storage(self) -> CpuStorage;
 }
@@ -22,7 +22,7 @@ macro_rules! into_flattened_impl {
             fn to_flatten_vec(self) -> Vec<$t> {
                 vec![self]
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![]
             }
             fn get_dtype(&self) -> DType {
@@ -40,7 +40,7 @@ macro_rules! into_flattened_impl {
             fn to_flatten_vec(self) -> Vec<$t> {
                 self
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![self.len()]
             }
             fn get_dtype(&self) -> DType {
@@ -62,7 +62,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0]
                 } else {
@@ -90,7 +90,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0]
                 } else {
@@ -120,7 +120,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0]
                 } else {
@@ -152,7 +152,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0, 0]
                 } else {
@@ -192,7 +192,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0, 0, 0]
                 } else {
@@ -221,7 +221,7 @@ macro_rules! into_flattened_impl {
             fn to_flatten_vec(self) -> Vec<$t> {
                 self.to_vec()
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![N]
             }
             fn get_dtype(&self) -> DType {
@@ -243,7 +243,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![M, N]
             }
             fn get_dtype(&self) -> DType {
@@ -267,7 +267,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![L, M, N]
             }
             fn get_dtype(&self) -> DType {
@@ -295,7 +295,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![K, L, M, N]
             }
             fn get_dtype(&self) -> DType {
@@ -325,7 +325,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![J, K, L, M, N]
             }
             fn get_dtype(&self) -> DType {
@@ -357,7 +357,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 vec![I, J, K, L, M, N]
             }
             fn get_dtype(&self) -> DType {
@@ -379,7 +379,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0]
                 } else {
@@ -407,7 +407,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0]
                 } else if self[0].is_empty() {
@@ -439,7 +439,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0]
                 } else if self[0].is_empty() {
@@ -475,7 +475,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0, 0]
                 } else if self[0].is_empty() {
@@ -521,7 +521,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0, 0, 0]
                 } else if self[0].is_empty() {
@@ -579,7 +579,7 @@ macro_rules! into_flattened_impl {
                 }
                 flat
             }
-            fn get_shape(&self) -> Vec<usize> {
+            fn get_shape_vec(&self) -> Vec<usize> {
                 if self.is_empty() {
                     vec![0, 0, 0, 0, 0, 0, 0]
                 } else if self[0].is_empty() {

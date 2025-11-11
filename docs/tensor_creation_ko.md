@@ -73,6 +73,45 @@ let t3 = Tensor::new(vec![
 - Shape은 입력 배열의 구조로부터 결정됨
 - `IntoFlattened` trait을 구현한 모든 타입 사용 가능
 
+#### Tensor::from_slice()
+
+데이터와 shape를 명시적으로 지정하여 텐서를 생성합니다:
+
+```rust
+use hodu::prelude::*;
+
+// 1D 데이터를 2D 텐서로 변환
+let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+let t = Tensor::from_slice(data, &[2, 3])?;
+println!("{}", t);
+// [[1, 2, 3],
+//  [4, 5, 6]]
+
+// 2D 데이터를 3D 텐서로 변환
+let data = vec![
+    vec![1.0, 2.0],
+    vec![3.0, 4.0],
+];
+let t = Tensor::from_slice(data, &[2, 2, 1])?;
+// Shape: [2, 2, 1]
+
+// 에러: 데이터 사이즈와 shape 사이즈가 일치하지 않음
+let data = vec![1.0, 2.0, 3.0];
+let result = Tensor::from_slice(data, &[2, 2])?;
+// Error: SizeMismatch { expected: 4, got: 3 }
+```
+
+**특징:**
+- 데이터와 shape를 별도로 지정 가능
+- 데이터 사이즈와 shape 사이즈가 일치하는지 검증
+- 사이즈가 일치하지 않으면 `HoduError::SizeMismatch` 에러 발생
+- 평탄화된 데이터를 다차원 텐서로 변환할 때 유용
+- `IntoFlattened` trait을 구현한 모든 타입 사용 가능
+
+**new()와의 차이점:**
+- `new()`: 데이터의 구조로부터 자동으로 shape를 추론
+- `from_slice()`: shape를 명시적으로 지정하고, 데이터 사이즈와 검증
+
 ### 특정 값으로 초기화
 
 #### Tensor::zeros()

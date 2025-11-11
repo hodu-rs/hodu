@@ -1,6 +1,6 @@
 use crate::{
     be::device::BackendDevice,
-    error::HoduResult,
+    error::{HoduError, HoduResult},
     into::faltten::IntoFlattened,
     layer::compat::*,
     scalar::Scalar,
@@ -53,7 +53,32 @@ impl Tensor {
         } else {
             get_runtime_device()
         };
-        let shape = Shape::from(&data.get_shape());
+        let shape = Shape::from(&data.get_shape_vec());
+        let layout = Layout::from_shape(&shape);
+        let storage = BackendDevice::storage_from_flatten(data, device)?;
+        Ok(from_storage(storage, layout, !is_builder_active(), false))
+    }
+
+    pub fn from_slice<T>(data: T, shape: impl Into<Shape>) -> HoduResult<Self>
+    where
+        T: IntoFlattened,
+    {
+        let device = if is_builder_active() {
+            Device::CPU
+        } else {
+            get_runtime_device()
+        };
+        let data_shape_vec = data.get_shape_vec();
+        let shape = shape.into();
+        let data_shape = Shape::from(&data_shape_vec);
+
+        if shape.size() != data_shape.size() {
+            return Err(HoduError::SizeMismatch {
+                expected: shape.size(),
+                got: data_shape.size(),
+            });
+        }
+
         let layout = Layout::from_shape(&shape);
         let storage = BackendDevice::storage_from_flatten(data, device)?;
         Ok(from_storage(storage, layout, !is_builder_active(), false))

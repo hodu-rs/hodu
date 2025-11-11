@@ -38,6 +38,8 @@ pub enum HoduError {
     // ===== Shape and Layout Errors =====
     /// Shape mismatch between expected and actual shapes.
     ShapeMismatch { expected: Shape, got: Shape },
+    /// Size mismatch between expected and actual sizes.
+    SizeMismatch { expected: u32, got: u32 },
     /// Incompatible shapes in a binary operation.
     IncompatibleShapes { lhs: Shape, rhs: Shape, op: Op },
     /// Invalid layout configuration.
@@ -161,6 +163,9 @@ impl fmt::Display for HoduError {
             // Shape and Layout Errors
             Self::ShapeMismatch { expected, got } => {
                 write!(f, "shape mismatch: expected {:?}, got {:?}", expected, got)
+            },
+            Self::SizeMismatch { expected, got } => {
+                write!(f, "size mismatch: expected {}, got {}", expected, got)
             },
             Self::IncompatibleShapes { lhs, rhs, op } => {
                 write!(

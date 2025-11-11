@@ -73,6 +73,45 @@ let t3 = Tensor::new(vec![
 - Shape is determined from input array structure
 - Works with any type implementing `IntoFlattened` trait
 
+#### Tensor::from_slice()
+
+Create a tensor from data with an explicitly specified shape:
+
+```rust
+use hodu::prelude::*;
+
+// 1D data reshaped to 2D tensor
+let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+let t = Tensor::from_slice(data, &[2, 3])?;
+println!("{}", t);
+// [[1, 2, 3],
+//  [4, 5, 6]]
+
+// 2D data reshaped to 3D tensor
+let data = vec![
+    vec![1.0, 2.0],
+    vec![3.0, 4.0],
+];
+let t = Tensor::from_slice(data, &[2, 2, 1])?;
+// Shape: [2, 2, 1]
+
+// Error: data size doesn't match shape size
+let data = vec![1.0, 2.0, 3.0];
+let result = Tensor::from_slice(data, &[2, 2])?;
+// Error: SizeMismatch { expected: 4, got: 3 }
+```
+
+**Features:**
+- Data and shape can be specified separately
+- Validates that data size matches shape size
+- Raises `HoduError::SizeMismatch` if sizes don't match
+- Useful for reshaping flat data into multidimensional tensors
+- Works with any type implementing `IntoFlattened` trait
+
+**Difference from new():**
+- `new()`: Shape is automatically inferred from data structure
+- `from_slice()`: Shape is explicitly specified, validated against data size
+
 ### Initialization with Specific Values
 
 #### Tensor::zeros()
