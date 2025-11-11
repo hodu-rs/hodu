@@ -7,6 +7,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_cuda_kernels::kernels;
+use smallvec::{smallvec, SmallVec};
 
 #[allow(clippy::needless_range_loop)]
 pub fn call_ops_concat(
@@ -17,7 +18,7 @@ pub fn call_ops_concat(
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Collect all storages
-    let mut storages = vec![first];
+    let mut storages = smallvec![first];
     storages.extend(others.iter().copied());
 
     // Validate op
@@ -143,7 +144,7 @@ pub fn call_ops_concat(
             for storage in storages.iter() {
                 if let CudaStorageData::$variant(slice) = &storage.data {
                     let stream = device.context().default_stream();
-                    let mut temp = vec![unsafe { core::mem::zeroed() }; slice.len()];
+                    let mut temp = smallvec![unsafe { core::mem::zeroed() }; slice.len()];
                     stream
                         .memcpy_dtoh(slice, &mut temp)
                         .map_err(|e| HoduError::BackendError(format!("CUDA memcpy_dtoh failed: {:?}", e)))?;

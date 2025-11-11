@@ -7,6 +7,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use core::ffi::c_void;
+use smallvec::SmallVec;
 
 /// Execute reduce operation along specified dimensions
 ///
@@ -75,7 +76,7 @@ pub fn call_ops_reduce(
     // Build metadata array for CPU kernel
     // Layout: shape_len, shape, strides, offset, output_shape_len, output_shape,
     //         num_reduce_dims, reduce_dims, keep_dim, reduce_size
-    let mut metadata = Vec::with_capacity(
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
         1 + input_ndim as usize + input_ndim as usize + 1 + 1 + output_shape_vec.len() + 1 + dims.len() + 1 + 1,
     );
 

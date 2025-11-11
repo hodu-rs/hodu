@@ -7,6 +7,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use core::ffi::c_void;
+use smallvec::SmallVec;
 
 /// Execute matmul operation with batched matrix multiplication
 ///
@@ -106,7 +107,7 @@ pub fn call_ops_matmul(
     // Build metadata array for CPU kernel
     // Layout: num_els, lhs_ndim, rhs_ndim, batch_ndim, lhs_shape, rhs_shape, batch_shape,
     //         lhs_strides, rhs_strides, lhs_offset, rhs_offset, M, K, N
-    let mut metadata = Vec::with_capacity(
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
         4 + lhs_ndim as usize + rhs_ndim as usize + batch_ndim as usize + lhs_ndim as usize + rhs_ndim as usize + 5,
     );
 
@@ -284,7 +285,7 @@ pub fn call_ops_dot(
 
     // Build metadata array for CPU kernel
     // Layout: M, K, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset
-    let mut metadata = Vec::with_capacity(9);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(9);
 
     metadata.push(m as usize);
     metadata.push(k_lhs as usize);

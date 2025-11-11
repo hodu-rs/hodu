@@ -8,6 +8,7 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use core::ffi::c_void;
+use smallvec::SmallVec;
 
 pub fn call_ops_cmp_scalar(
     input_storage: &CpuStorage,
@@ -30,7 +31,7 @@ pub fn call_ops_cmp_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -109,7 +110,7 @@ pub fn call_ops_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op)
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -193,7 +194,7 @@ pub fn call_ops_unary_logical(input_storage: &CpuStorage, input_layout: &Layout,
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -281,7 +282,7 @@ pub fn call_ops_unary_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 

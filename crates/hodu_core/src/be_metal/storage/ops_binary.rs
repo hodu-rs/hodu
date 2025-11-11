@@ -6,6 +6,7 @@ use crate::{
     types::{DType, Layout},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
+use smallvec::SmallVec;
 
 pub fn call_ops_binary(
     lhs_storage: &MetalStorage,
@@ -26,7 +27,7 @@ pub fn call_ops_binary(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 4 * num_dims as usize + 2);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -109,7 +110,7 @@ pub fn call_ops_binary_logical(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 4 * num_dims as usize + 2);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -189,7 +190,7 @@ pub fn call_ops_cmp(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 4 * num_dims as usize + 2);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 

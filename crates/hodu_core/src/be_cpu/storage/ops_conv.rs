@@ -7,6 +7,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use core::ffi::c_void;
+use smallvec::{smallvec, SmallVec};
 
 /// Execute convolution operation
 ///
@@ -112,7 +113,7 @@ pub fn call_ops_conv(
             let output_shape = Shape::new(&[batch_size, out_channels, out_width]);
             let num_els = output_shape.size();
 
-            let metadata = vec![
+            let metadata: SmallVec<[usize; 24]> = smallvec![
                 num_els as usize,
                 in_channels as usize,
                 out_channels as usize,
@@ -155,7 +156,7 @@ pub fn call_ops_conv(
             let output_shape = Shape::new(&[batch_size, out_channels, out_height, out_width]);
             let num_els = output_shape.size();
 
-            let metadata = vec![
+            let metadata: SmallVec<[usize; 24]> = smallvec![
                 num_els as usize,
                 in_channels as usize,
                 out_channels as usize,
@@ -211,7 +212,7 @@ pub fn call_ops_conv(
             let output_shape = Shape::new(&[batch_size, out_channels, out_depth, out_height, out_width]);
             let num_els = output_shape.size();
 
-            let metadata = vec![
+            let metadata: SmallVec<[usize; 24]> = smallvec![
                 num_els as usize,
                 in_channels as usize,
                 out_channels as usize,

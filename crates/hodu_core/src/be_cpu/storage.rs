@@ -22,6 +22,27 @@ use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
 use float8::F8E5M2;
 use half::{bf16, f16};
+#[cfg(feature = "rayon")]
+use rayon::prelude::*;
+
+/// Converts a slice to a Vec using parallel iteration when rayon is available.
+/// For small arrays (< 1024 elements), uses sequential iteration to avoid overhead.
+#[inline]
+fn par_convert<T, U, F>(storage: &[T], f: F) -> Vec<U>
+where
+    T: Sync,
+    U: Send,
+    F: Fn(&T) -> U + Sync + Send,
+{
+    #[cfg(feature = "rayon")]
+    {
+        // Only use parallelization for larger arrays to avoid overhead
+        if storage.len() >= 1024 {
+            return storage.par_iter().map(f).collect();
+        }
+    }
+    storage.iter().map(f).collect()
+}
 
 #[derive(Debug, Clone)]
 pub enum CpuStorage {
@@ -552,538 +573,438 @@ impl BackendStorageT for CpuStorage {
         let result = match (&contiguous, target_dtype) {
             // BOOL conversions
             (Self::BOOL(storage), DType::BOOL) => Self::BOOL(storage.clone()),
-            (Self::BOOL(storage), DType::F8E4M3) => Self::F8E4M3(
-                storage
-                    .iter()
-                    .map(|&v| F8E4M3::from(if v { 1.0f32 } else { 0.0f32 }))
-                    .collect(),
-            ),
+            (Self::BOOL(storage), DType::F8E4M3) => {
+                Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(if v { 1.0f32 } else { 0.0f32 })))
+            },
             #[cfg(feature = "f8e5m2")]
-            (Self::BOOL(storage), DType::F8E5M2) => Self::F8E5M2(
-                storage
-                    .iter()
-                    .map(|&v| F8E5M2::from(if v { 1.0f32 } else { 0.0f32 }))
-                    .collect(),
-            ),
-            (Self::BOOL(storage), DType::BF16) => Self::BF16(
-                storage
-                    .iter()
-                    .map(|&v| bf16::from_f32(if v { 1.0f32 } else { 0.0f32 }))
-                    .collect(),
-            ),
-            (Self::BOOL(storage), DType::F16) => Self::F16(
-                storage
-                    .iter()
-                    .map(|&v| f16::from_f32(if v { 1.0f32 } else { 0.0f32 }))
-                    .collect(),
-            ),
-            (Self::BOOL(storage), DType::F32) => {
-                Self::F32(storage.iter().map(|&v| if v { 1.0f32 } else { 0.0f32 }).collect())
+            (Self::BOOL(storage), DType::F8E5M2) => {
+                Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(if v { 1.0f32 } else { 0.0f32 })))
             },
+            (Self::BOOL(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| {
+                bf16::from_f32(if v { 1.0f32 } else { 0.0f32 })
+            })),
+            (Self::BOOL(storage), DType::F16) => Self::F16(par_convert(storage, |&v| {
+                f16::from_f32(if v { 1.0f32 } else { 0.0f32 })
+            })),
+            (Self::BOOL(storage), DType::F32) => Self::F32(par_convert(storage, |&v| if v { 1.0f32 } else { 0.0f32 })),
             #[cfg(feature = "f64")]
-            (Self::BOOL(storage), DType::F64) => {
-                Self::F64(storage.iter().map(|&v| if v { 1.0f64 } else { 0.0f64 }).collect())
-            },
-            (Self::BOOL(storage), DType::U8) => Self::U8(storage.iter().map(|&v| if v { 1u8 } else { 0u8 }).collect()),
+            (Self::BOOL(storage), DType::F64) => Self::F64(par_convert(storage, |&v| if v { 1.0f64 } else { 0.0f64 })),
+            (Self::BOOL(storage), DType::U8) => Self::U8(par_convert(storage, |&v| if v { 1u8 } else { 0u8 })),
             #[cfg(feature = "u16")]
-            (Self::BOOL(storage), DType::U16) => {
-                Self::U16(storage.iter().map(|&v| if v { 1u16 } else { 0u16 }).collect())
-            },
-            (Self::BOOL(storage), DType::U32) => {
-                Self::U32(storage.iter().map(|&v| if v { 1u32 } else { 0u32 }).collect())
-            },
+            (Self::BOOL(storage), DType::U16) => Self::U16(par_convert(storage, |&v| if v { 1u16 } else { 0u16 })),
+            (Self::BOOL(storage), DType::U32) => Self::U32(par_convert(storage, |&v| if v { 1u32 } else { 0u32 })),
             #[cfg(feature = "u64")]
-            (Self::BOOL(storage), DType::U64) => {
-                Self::U64(storage.iter().map(|&v| if v { 1u64 } else { 0u64 }).collect())
-            },
-            (Self::BOOL(storage), DType::I8) => Self::I8(storage.iter().map(|&v| if v { 1i8 } else { 0i8 }).collect()),
+            (Self::BOOL(storage), DType::U64) => Self::U64(par_convert(storage, |&v| if v { 1u64 } else { 0u64 })),
+            (Self::BOOL(storage), DType::I8) => Self::I8(par_convert(storage, |&v| if v { 1i8 } else { 0i8 })),
             #[cfg(feature = "i16")]
-            (Self::BOOL(storage), DType::I16) => {
-                Self::I16(storage.iter().map(|&v| if v { 1i16 } else { 0i16 }).collect())
-            },
-            (Self::BOOL(storage), DType::I32) => {
-                Self::I32(storage.iter().map(|&v| if v { 1i32 } else { 0i32 }).collect())
-            },
+            (Self::BOOL(storage), DType::I16) => Self::I16(par_convert(storage, |&v| if v { 1i16 } else { 0i16 })),
+            (Self::BOOL(storage), DType::I32) => Self::I32(par_convert(storage, |&v| if v { 1i32 } else { 0i32 })),
             #[cfg(feature = "i64")]
-            (Self::BOOL(storage), DType::I64) => {
-                Self::I64(storage.iter().map(|&v| if v { 1i64 } else { 0i64 }).collect())
-            },
+            (Self::BOOL(storage), DType::I64) => Self::I64(par_convert(storage, |&v| if v { 1i64 } else { 0i64 })),
 
             // F8E4M3 conversions
-            (Self::F8E4M3(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v.to_f32() != 0.0).collect()),
+            (Self::F8E4M3(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v.to_f32() != 0.0)),
             (Self::F8E4M3(storage), DType::F8E4M3) => Self::F8E4M3(storage.clone()),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E4M3(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v.to_f32())).collect())
-            },
-            (Self::F8E4M3(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v.to_f32())).collect())
-            },
-            (Self::F8E4M3(storage), DType::F16) => {
-                Self::F16(storage.iter().map(|&v| f16::from_f32(v.to_f32())).collect())
-            },
-            (Self::F8E4M3(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v.to_f32()).collect()),
+            (Self::F8E4M3(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v.to_f32()))),
+            (Self::F8E4M3(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v.to_f32()))),
+            (Self::F8E4M3(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v.to_f32()))),
+            (Self::F8E4M3(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v.to_f32())),
             #[cfg(feature = "f64")]
-            (Self::F8E4M3(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v.to_f64()).collect()),
-            (Self::F8E4M3(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v.to_f32() as u8).collect()),
+            (Self::F8E4M3(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v.to_f64())),
+            (Self::F8E4M3(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v.to_f32() as u8)),
             #[cfg(feature = "u16")]
-            (Self::F8E4M3(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v.to_f32() as u16).collect()),
-            (Self::F8E4M3(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v.to_f32() as u32).collect()),
+            (Self::F8E4M3(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v.to_f32() as u16)),
+            (Self::F8E4M3(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v.to_f32() as u32)),
             #[cfg(feature = "u64")]
-            (Self::F8E4M3(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v.to_f32() as u64).collect()),
-            (Self::F8E4M3(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v.to_f32() as i8).collect()),
+            (Self::F8E4M3(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v.to_f32() as u64)),
+            (Self::F8E4M3(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v.to_f32() as i8)),
             #[cfg(feature = "i16")]
-            (Self::F8E4M3(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v.to_f32() as i16).collect()),
-            (Self::F8E4M3(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v.to_f32() as i32).collect()),
+            (Self::F8E4M3(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v.to_f32() as i16)),
+            (Self::F8E4M3(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v.to_f32() as i32)),
             #[cfg(feature = "i64")]
-            (Self::F8E4M3(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v.to_f32() as i64).collect()),
+            (Self::F8E4M3(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v.to_f32() as i64)),
 
             // F8E5M2 conversions
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v.to_f32() != 0.0).collect()),
+            (Self::F8E5M2(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v.to_f32() != 0.0)),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v.to_f32())).collect())
-            },
+            (Self::F8E5M2(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v.to_f32()))),
             #[cfg(feature = "f8e5m2")]
             (Self::F8E5M2(storage), DType::F8E5M2) => Self::F8E5M2(storage.clone()),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v.to_f32())).collect())
-            },
+            (Self::F8E5M2(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v.to_f32()))),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F16) => {
-                Self::F16(storage.iter().map(|&v| f16::from_f32(v.to_f32())).collect())
-            },
+            (Self::F8E5M2(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v.to_f32()))),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v.to_f32()).collect()),
+            (Self::F8E5M2(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v.to_f32())),
             #[cfg(feature = "f8e5m2")]
             #[cfg(feature = "f64")]
-            (Self::F8E5M2(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v.to_f64()).collect()),
+            (Self::F8E5M2(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v.to_f64())),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v.to_f32() as u8).collect()),
+            (Self::F8E5M2(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v.to_f32() as u8)),
             #[cfg(feature = "f8e5m2")]
             #[cfg(feature = "u16")]
-            (Self::F8E5M2(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v.to_f32() as u16).collect()),
+            (Self::F8E5M2(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v.to_f32() as u16)),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v.to_f32() as u32).collect()),
+            (Self::F8E5M2(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v.to_f32() as u32)),
             #[cfg(feature = "f8e5m2")]
             #[cfg(feature = "u64")]
-            (Self::F8E5M2(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v.to_f32() as u64).collect()),
+            (Self::F8E5M2(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v.to_f32() as u64)),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v.to_f32() as i8).collect()),
+            (Self::F8E5M2(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v.to_f32() as i8)),
             #[cfg(feature = "f8e5m2")]
             #[cfg(feature = "i16")]
-            (Self::F8E5M2(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v.to_f32() as i16).collect()),
+            (Self::F8E5M2(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v.to_f32() as i16)),
             #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v.to_f32() as i32).collect()),
+            (Self::F8E5M2(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v.to_f32() as i32)),
             #[cfg(feature = "f8e5m2")]
             #[cfg(feature = "i64")]
-            (Self::F8E5M2(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v.to_f32() as i64).collect()),
+            (Self::F8E5M2(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v.to_f32() as i64)),
 
             // BF16 conversions
-            (Self::BF16(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v.to_f32() != 0.0).collect()),
-            (Self::BF16(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v.to_f32())).collect())
-            },
+            (Self::BF16(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v.to_f32() != 0.0)),
+            (Self::BF16(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v.to_f32()))),
             #[cfg(feature = "f8e5m2")]
-            (Self::BF16(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v.to_f32())).collect())
-            },
+            (Self::BF16(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v.to_f32()))),
             (Self::BF16(storage), DType::BF16) => Self::BF16(storage.clone()),
-            (Self::BF16(storage), DType::F16) => {
-                Self::F16(storage.iter().map(|&v| f16::from_f32(v.to_f32())).collect())
-            },
-            (Self::BF16(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v.to_f32()).collect()),
+            (Self::BF16(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v.to_f32()))),
+            (Self::BF16(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v.to_f32())),
             #[cfg(feature = "f64")]
-            (Self::BF16(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v.to_f64()).collect()),
-            (Self::BF16(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v.to_f32() as u8).collect()),
+            (Self::BF16(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v.to_f64())),
+            (Self::BF16(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v.to_f32() as u8)),
             #[cfg(feature = "u16")]
-            (Self::BF16(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v.to_f32() as u16).collect()),
-            (Self::BF16(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v.to_f32() as u32).collect()),
+            (Self::BF16(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v.to_f32() as u16)),
+            (Self::BF16(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v.to_f32() as u32)),
             #[cfg(feature = "u64")]
-            (Self::BF16(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v.to_f32() as u64).collect()),
-            (Self::BF16(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v.to_f32() as i8).collect()),
+            (Self::BF16(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v.to_f32() as u64)),
+            (Self::BF16(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v.to_f32() as i8)),
             #[cfg(feature = "i16")]
-            (Self::BF16(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v.to_f32() as i16).collect()),
-            (Self::BF16(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v.to_f32() as i32).collect()),
+            (Self::BF16(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v.to_f32() as i16)),
+            (Self::BF16(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v.to_f32() as i32)),
             #[cfg(feature = "i64")]
-            (Self::BF16(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v.to_f32() as i64).collect()),
+            (Self::BF16(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v.to_f32() as i64)),
 
             // F16 conversions
-            (Self::F16(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v.to_f32() != 0.0).collect()),
-            (Self::F16(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v.to_f32())).collect())
-            },
+            (Self::F16(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v.to_f32() != 0.0)),
+            (Self::F16(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v.to_f32()))),
             #[cfg(feature = "f8e5m2")]
-            (Self::F16(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v.to_f32())).collect())
-            },
-            (Self::F16(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v.to_f32())).collect())
-            },
+            (Self::F16(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v.to_f32()))),
+            (Self::F16(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v.to_f32()))),
             (Self::F16(storage), DType::F16) => Self::F16(storage.clone()),
-            (Self::F16(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v.to_f32()).collect()),
+            (Self::F16(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v.to_f32())),
             #[cfg(feature = "f64")]
-            (Self::F16(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v.to_f64()).collect()),
-            (Self::F16(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v.to_f32() as u8).collect()),
+            (Self::F16(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v.to_f64())),
+            (Self::F16(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v.to_f32() as u8)),
             #[cfg(feature = "u16")]
-            (Self::F16(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v.to_f32() as u16).collect()),
-            (Self::F16(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v.to_f32() as u32).collect()),
+            (Self::F16(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v.to_f32() as u16)),
+            (Self::F16(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v.to_f32() as u32)),
             #[cfg(feature = "u64")]
-            (Self::F16(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v.to_f32() as u64).collect()),
-            (Self::F16(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v.to_f32() as i8).collect()),
+            (Self::F16(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v.to_f32() as u64)),
+            (Self::F16(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v.to_f32() as i8)),
             #[cfg(feature = "i16")]
-            (Self::F16(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v.to_f32() as i16).collect()),
-            (Self::F16(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v.to_f32() as i32).collect()),
+            (Self::F16(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v.to_f32() as i16)),
+            (Self::F16(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v.to_f32() as i32)),
             #[cfg(feature = "i64")]
-            (Self::F16(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v.to_f32() as i64).collect()),
+            (Self::F16(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v.to_f32() as i64)),
 
             // F32 conversions
-            (Self::F32(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0.0).collect()),
-            (Self::F32(storage), DType::F8E4M3) => Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v)).collect()),
+            (Self::F32(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0.0)),
+            (Self::F32(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v))),
             #[cfg(feature = "f8e5m2")]
-            (Self::F32(storage), DType::F8E5M2) => Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v)).collect()),
-            (Self::F32(storage), DType::BF16) => Self::BF16(storage.iter().map(|&v| bf16::from_f32(v)).collect()),
-            (Self::F32(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v)).collect()),
+            (Self::F32(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v))),
+            (Self::F32(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v))),
+            (Self::F32(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v))),
             (Self::F32(storage), DType::F32) => Self::F32(storage.clone()),
             #[cfg(feature = "f64")]
-            (Self::F32(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
-            (Self::F32(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::F32(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
+            (Self::F32(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "u16")]
-            (Self::F32(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
-            (Self::F32(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::F32(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
+            (Self::F32(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "u64")]
-            (Self::F32(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
-            (Self::F32(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::F32(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
+            (Self::F32(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "i16")]
-            (Self::F32(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
-            (Self::F32(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::F32(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
+            (Self::F32(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "i64")]
-            (Self::F32(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::F32(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // F64 conversions
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0.0).collect()),
+            (Self::F64(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0.0)),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::F64(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "f64")]
             #[cfg(feature = "f8e5m2")]
-            (Self::F64(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
+            (Self::F64(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::BF16) => Self::BF16(storage.iter().map(|&v| bf16::from_f64(v)).collect()),
+            (Self::F64(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f64(v))),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f64(v)).collect()),
+            (Self::F64(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f64(v))),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::F64(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "f64")]
             (Self::F64(storage), DType::F64) => Self::F64(storage.clone()),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::F64(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "f64")]
             #[cfg(feature = "u16")]
-            (Self::F64(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
+            (Self::F64(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::F64(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "f64")]
             #[cfg(feature = "u64")]
-            (Self::F64(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
+            (Self::F64(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::F64(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "f64")]
             #[cfg(feature = "i16")]
-            (Self::F64(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
+            (Self::F64(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
             #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::F64(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "f64")]
             #[cfg(feature = "i64")]
-            (Self::F64(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::F64(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // U8 conversions
-            (Self::U8(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
-            (Self::U8(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::U8(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
+            (Self::U8(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "f8e5m2")]
-            (Self::U8(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
-            (Self::U8(storage), DType::BF16) => Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect()),
-            (Self::U8(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
-            (Self::U8(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::U8(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
+            (Self::U8(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
+            (Self::U8(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
+            (Self::U8(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "f64")]
-            (Self::U8(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
+            (Self::U8(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
             (Self::U8(storage), DType::U8) => Self::U8(storage.clone()),
             #[cfg(feature = "u16")]
-            (Self::U8(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
-            (Self::U8(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::U8(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
+            (Self::U8(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "u64")]
-            (Self::U8(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
-            (Self::U8(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::U8(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
+            (Self::U8(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "i16")]
-            (Self::U8(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
-            (Self::U8(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::U8(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
+            (Self::U8(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "i64")]
-            (Self::U8(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::U8(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // U16 conversions
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
+            (Self::U16(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::U16(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "u16")]
             #[cfg(feature = "f8e5m2")]
-            (Self::U16(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
+            (Self::U16(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect())
-            },
+            (Self::U16(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
+            (Self::U16(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::U16(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "u16")]
             #[cfg(feature = "f64")]
-            (Self::U16(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
+            (Self::U16(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::U16(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "u16")]
             (Self::U16(storage), DType::U16) => Self::U16(storage.clone()),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::U16(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "u16")]
             #[cfg(feature = "u64")]
-            (Self::U16(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
+            (Self::U16(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::U16(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "u16")]
             #[cfg(feature = "i16")]
-            (Self::U16(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
+            (Self::U16(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
             #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::U16(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "u16")]
             #[cfg(feature = "i64")]
-            (Self::U16(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::U16(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // U32 conversions
-            (Self::U32(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
-            (Self::U32(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::U32(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
+            (Self::U32(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "f8e5m2")]
-            (Self::U32(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
-            (Self::U32(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect())
-            },
-            (Self::U32(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
-            (Self::U32(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::U32(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
+            (Self::U32(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
+            (Self::U32(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
+            (Self::U32(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "f64")]
-            (Self::U32(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
-            (Self::U32(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::U32(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
+            (Self::U32(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "u16")]
-            (Self::U32(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
+            (Self::U32(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
             (Self::U32(storage), DType::U32) => Self::U32(storage.clone()),
             #[cfg(feature = "u64")]
-            (Self::U32(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
-            (Self::U32(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::U32(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
+            (Self::U32(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "i16")]
-            (Self::U32(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
-            (Self::U32(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::U32(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
+            (Self::U32(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "i64")]
-            (Self::U32(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::U32(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // U64 conversions
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
+            (Self::U64(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::U64(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "u64")]
             #[cfg(feature = "f8e5m2")]
-            (Self::U64(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
+            (Self::U64(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect())
-            },
+            (Self::U64(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
+            (Self::U64(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::U64(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "u64")]
             #[cfg(feature = "f64")]
-            (Self::U64(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
+            (Self::U64(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::U64(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "u64")]
             #[cfg(feature = "u16")]
-            (Self::U64(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
+            (Self::U64(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::U64(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "u64")]
             (Self::U64(storage), DType::U64) => Self::U64(storage.clone()),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::U64(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "u64")]
             #[cfg(feature = "i16")]
-            (Self::U64(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
+            (Self::U64(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
             #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::U64(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "u64")]
             #[cfg(feature = "i64")]
-            (Self::U64(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::U64(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // I8 conversions
-            (Self::I8(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
-            (Self::I8(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::I8(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
+            (Self::I8(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "f8e5m2")]
-            (Self::I8(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
-            (Self::I8(storage), DType::BF16) => Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect()),
-            (Self::I8(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
-            (Self::I8(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::I8(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
+            (Self::I8(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
+            (Self::I8(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
+            (Self::I8(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "f64")]
-            (Self::I8(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
-            (Self::I8(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::I8(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
+            (Self::I8(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "u16")]
-            (Self::I8(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
-            (Self::I8(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::I8(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
+            (Self::I8(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "u64")]
-            (Self::I8(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
+            (Self::I8(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
             (Self::I8(storage), DType::I8) => Self::I8(storage.clone()),
             #[cfg(feature = "i16")]
-            (Self::I8(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
-            (Self::I8(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::I8(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
+            (Self::I8(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "i64")]
-            (Self::I8(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::I8(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // I16 conversions
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
+            (Self::I16(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::I16(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "i16")]
             #[cfg(feature = "f8e5m2")]
-            (Self::I16(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
+            (Self::I16(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect())
-            },
+            (Self::I16(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
+            (Self::I16(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::I16(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "i16")]
             #[cfg(feature = "f64")]
-            (Self::I16(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
+            (Self::I16(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::I16(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "i16")]
             #[cfg(feature = "u16")]
-            (Self::I16(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
+            (Self::I16(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::I16(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "i16")]
             #[cfg(feature = "u64")]
-            (Self::I16(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
+            (Self::I16(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::I16(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "i16")]
             (Self::I16(storage), DType::I16) => Self::I16(storage.clone()),
             #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::I16(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "i16")]
             #[cfg(feature = "i64")]
-            (Self::I16(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::I16(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // I32 conversions
-            (Self::I32(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
-            (Self::I32(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::I32(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
+            (Self::I32(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "f8e5m2")]
-            (Self::I32(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
-            (Self::I32(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect())
-            },
-            (Self::I32(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
-            (Self::I32(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::I32(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
+            (Self::I32(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
+            (Self::I32(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
+            (Self::I32(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "f64")]
-            (Self::I32(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
-            (Self::I32(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::I32(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
+            (Self::I32(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "u16")]
-            (Self::I32(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
-            (Self::I32(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::I32(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
+            (Self::I32(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "u64")]
-            (Self::I32(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
-            (Self::I32(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::I32(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
+            (Self::I32(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "i16")]
-            (Self::I32(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
+            (Self::I32(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
             (Self::I32(storage), DType::I32) => Self::I32(storage.clone()),
             #[cfg(feature = "i64")]
-            (Self::I32(storage), DType::I64) => Self::I64(storage.iter().map(|&v| v as i64).collect()),
+            (Self::I32(storage), DType::I64) => Self::I64(par_convert(storage, |&v| v as i64)),
 
             // I64 conversions
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::BOOL) => Self::BOOL(storage.iter().map(|&v| v != 0).collect()),
+            (Self::I64(storage), DType::BOOL) => Self::BOOL(par_convert(storage, |&v| v != 0)),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::F8E4M3) => {
-                Self::F8E4M3(storage.iter().map(|&v| F8E4M3::from(v as f32)).collect())
-            },
+            (Self::I64(storage), DType::F8E4M3) => Self::F8E4M3(par_convert(storage, |&v| F8E4M3::from(v as f32))),
             #[cfg(feature = "i64")]
             #[cfg(feature = "f8e5m2")]
-            (Self::I64(storage), DType::F8E5M2) => {
-                Self::F8E5M2(storage.iter().map(|&v| F8E5M2::from(v as f32)).collect())
-            },
+            (Self::I64(storage), DType::F8E5M2) => Self::F8E5M2(par_convert(storage, |&v| F8E5M2::from(v as f32))),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::BF16) => {
-                Self::BF16(storage.iter().map(|&v| bf16::from_f32(v as f32)).collect())
-            },
+            (Self::I64(storage), DType::BF16) => Self::BF16(par_convert(storage, |&v| bf16::from_f32(v as f32))),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::F16) => Self::F16(storage.iter().map(|&v| f16::from_f32(v as f32)).collect()),
+            (Self::I64(storage), DType::F16) => Self::F16(par_convert(storage, |&v| f16::from_f32(v as f32))),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::F32) => Self::F32(storage.iter().map(|&v| v as f32).collect()),
+            (Self::I64(storage), DType::F32) => Self::F32(par_convert(storage, |&v| v as f32)),
             #[cfg(feature = "i64")]
             #[cfg(feature = "f64")]
-            (Self::I64(storage), DType::F64) => Self::F64(storage.iter().map(|&v| v as f64).collect()),
+            (Self::I64(storage), DType::F64) => Self::F64(par_convert(storage, |&v| v as f64)),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::U8) => Self::U8(storage.iter().map(|&v| v as u8).collect()),
+            (Self::I64(storage), DType::U8) => Self::U8(par_convert(storage, |&v| v as u8)),
             #[cfg(feature = "i64")]
             #[cfg(feature = "u16")]
-            (Self::I64(storage), DType::U16) => Self::U16(storage.iter().map(|&v| v as u16).collect()),
+            (Self::I64(storage), DType::U16) => Self::U16(par_convert(storage, |&v| v as u16)),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::U32) => Self::U32(storage.iter().map(|&v| v as u32).collect()),
+            (Self::I64(storage), DType::U32) => Self::U32(par_convert(storage, |&v| v as u32)),
             #[cfg(feature = "i64")]
             #[cfg(feature = "u64")]
-            (Self::I64(storage), DType::U64) => Self::U64(storage.iter().map(|&v| v as u64).collect()),
+            (Self::I64(storage), DType::U64) => Self::U64(par_convert(storage, |&v| v as u64)),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::I8) => Self::I8(storage.iter().map(|&v| v as i8).collect()),
+            (Self::I64(storage), DType::I8) => Self::I8(par_convert(storage, |&v| v as i8)),
             #[cfg(feature = "i64")]
             #[cfg(feature = "i16")]
-            (Self::I64(storage), DType::I16) => Self::I16(storage.iter().map(|&v| v as i16).collect()),
+            (Self::I64(storage), DType::I16) => Self::I16(par_convert(storage, |&v| v as i16)),
             #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::I32) => Self::I32(storage.iter().map(|&v| v as i32).collect()),
+            (Self::I64(storage), DType::I32) => Self::I32(par_convert(storage, |&v| v as i32)),
             #[cfg(feature = "i64")]
             (Self::I64(storage), DType::I64) => Self::I64(storage.clone()),
         };
@@ -1092,9 +1013,57 @@ impl BackendStorageT for CpuStorage {
     }
 
     fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
-        // If already contiguous, return clone
-        if layout.is_contiguous() {
+        // If already contiguous with zero offset, just clone (data is already in correct order)
+        if layout.is_contiguous() && layout.offset() == 0 {
             return Ok(self.clone());
+        }
+
+        // If contiguous but with offset, we can optimize by slicing instead of full iteration
+        if layout.is_contiguous() {
+            let offset = layout.offset() as usize;
+            let size = layout.size() as usize;
+
+            macro_rules! contiguous_slice {
+                ($storage:expr, $dtype_variant:ident) => {{
+                    let end = offset + size;
+                    if end <= $storage.len() {
+                        Self::$dtype_variant($storage[offset..end].to_vec())
+                    } else {
+                        return Err(HoduError::InternalError(format!(
+                            "contiguous slice out of bounds: offset={}, size={}, storage_len={}",
+                            offset,
+                            size,
+                            $storage.len()
+                        )));
+                    }
+                }};
+            }
+
+            let result = match self {
+                Self::BOOL(storage) => contiguous_slice!(storage, BOOL),
+                Self::F8E4M3(storage) => contiguous_slice!(storage, F8E4M3),
+                #[cfg(feature = "f8e5m2")]
+                Self::F8E5M2(storage) => contiguous_slice!(storage, F8E5M2),
+                Self::BF16(storage) => contiguous_slice!(storage, BF16),
+                Self::F16(storage) => contiguous_slice!(storage, F16),
+                Self::F32(storage) => contiguous_slice!(storage, F32),
+                #[cfg(feature = "f64")]
+                Self::F64(storage) => contiguous_slice!(storage, F64),
+                Self::U8(storage) => contiguous_slice!(storage, U8),
+                #[cfg(feature = "u16")]
+                Self::U16(storage) => contiguous_slice!(storage, U16),
+                Self::U32(storage) => contiguous_slice!(storage, U32),
+                #[cfg(feature = "u64")]
+                Self::U64(storage) => contiguous_slice!(storage, U64),
+                Self::I8(storage) => contiguous_slice!(storage, I8),
+                #[cfg(feature = "i16")]
+                Self::I16(storage) => contiguous_slice!(storage, I16),
+                Self::I32(storage) => contiguous_slice!(storage, I32),
+                #[cfg(feature = "i64")]
+                Self::I64(storage) => contiguous_slice!(storage, I64),
+            };
+
+            return Ok(result);
         }
 
         let shape = layout.shape();

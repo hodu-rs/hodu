@@ -7,6 +7,7 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use core::ffi::c_void;
+use smallvec::SmallVec;
 
 /// Execute concat operation to concatenate multiple tensors along a dimension
 ///
@@ -100,7 +101,7 @@ pub fn call_ops_concat(
     // Layout: num_els, num_dims, output_shape, concat_dim, num_inputs,
     //         input_shapes (flattened), input_strides (flattened),
     //         input_offsets, input_buffer_offsets
-    let mut metadata = Vec::with_capacity(
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
         2 + ndim as usize + 1 + 1 + num_inputs * ndim as usize + num_inputs * ndim as usize + num_inputs + num_inputs,
     );
 
@@ -276,7 +277,7 @@ pub fn call_ops_split(
     // Build metadata array for CPU kernel
     // Layout: num_els, num_dims, input_shape, input_strides, input_offset,
     //         split_dim, output_size_on_dim, split_offset
-    let mut metadata = Vec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 3);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 3);
 
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);

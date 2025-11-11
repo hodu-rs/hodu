@@ -7,6 +7,7 @@ use crate::{
     types::{DType, Device, Layout},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
+use smallvec::SmallVec;
 
 pub fn call_ops_cmp_scalar(
     input_storage: &MetalStorage,
@@ -29,7 +30,7 @@ pub fn call_ops_cmp_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -128,7 +129,7 @@ pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: O
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -195,7 +196,7 @@ pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layou
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 
@@ -268,7 +269,7 @@ pub fn call_ops_unary_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(2 + 2 * num_dims as usize + 1);
     metadata.push(num_els as usize);
     metadata.push(num_dims as usize);
 

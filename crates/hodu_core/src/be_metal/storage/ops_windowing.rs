@@ -6,6 +6,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
+use smallvec::SmallVec;
 
 pub fn call_ops_reduce_window(
     input_storage: &MetalStorage,
@@ -56,7 +57,7 @@ pub fn call_ops_reduce_window(
     let output_size = output_shape.size();
 
     // Build metadata: [output_size, num_dims, input_shape..., input_strides..., input_offset, window_shape..., strides..., padding..., output_shape...]
-    let mut metadata = Vec::new();
+    let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(output_size as usize);
     metadata.push(input_ndim as usize);
 

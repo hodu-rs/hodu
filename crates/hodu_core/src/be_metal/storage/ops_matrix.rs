@@ -6,6 +6,7 @@ use crate::{
     types::{Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
+use smallvec::SmallVec;
 
 pub fn call_ops_matmul(
     lhs_storage: &MetalStorage,
@@ -57,7 +58,7 @@ pub fn call_ops_matmul(
     let batch_ndim = lhs_batch_ndim.max(rhs_batch_ndim);
 
     // Broadcast batch dimensions
-    let mut batch_shape = Vec::with_capacity(batch_ndim as usize);
+    let mut batch_shape = SmallVec::<[u32; 24]>::with_capacity(batch_ndim as usize);
     for i in 0..batch_ndim {
         let lhs_idx = (lhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;
         let rhs_idx = (rhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;
@@ -94,7 +95,7 @@ pub fn call_ops_matmul(
     let num_els = output_shape.size();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(
         4 + lhs_ndim as usize + rhs_ndim as usize + batch_ndim as usize + lhs_ndim as usize + rhs_ndim as usize + 5,
     );
 
@@ -216,7 +217,7 @@ pub fn call_ops_dot(
     let num_els = output_shape.size();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(9);
+    let mut metadata = SmallVec::<[usize; 24]>::with_capacity(9);
 
     metadata.push(m as usize);
     metadata.push(k_lhs as usize);

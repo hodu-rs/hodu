@@ -7,6 +7,7 @@ use crate::{
     types::Layout,
 };
 use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
+use smallvec::{smallvec, SmallVec};
 
 #[allow(clippy::too_many_arguments)]
 pub fn call_ops_conv(
@@ -31,7 +32,7 @@ pub fn call_ops_conv(
     let out_channels = weight_shape[0];
 
     let spatial_dims = (input_shape.ndim() - 2) as usize;
-    let mut output_spatial_dims = Vec::with_capacity(spatial_dims);
+    let mut output_spatial_dims = SmallVec::<[usize; 24]>::with_capacity(spatial_dims);
 
     for i in 0..spatial_dims {
         let input_size = input_shape[2 + i as u32];
@@ -42,7 +43,7 @@ pub fn call_ops_conv(
 
     let output_size = batch_size * out_channels * output_spatial_dims.iter().product::<u32>();
 
-    let mut metadata = Vec::new();
+    let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(output_size as usize);
     metadata.push(spatial_dims);
 
@@ -155,7 +156,7 @@ pub fn call_ops_conv_grad_weight(
     let num_els = weight_shape.size();
 
     // Build metadata array
-    let mut metadata = Vec::new();
+    let mut metadata = SmallVec::<[usize; 24]>::new();
     metadata.push(num_els as usize);
 
     let input_ndim = input_shape.ndim();

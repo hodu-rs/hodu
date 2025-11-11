@@ -7,6 +7,7 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use core::ffi::c_void;
+use smallvec::SmallVec;
 
 /// Execute index_select operation to select elements along a dimension
 ///
@@ -68,7 +69,7 @@ pub fn call_ops_index_select(
 
     // Build metadata array
     // Layout: num_els, num_dims, input_shape, input_strides, input_offset, dim, num_indices
-    let mut metadata = Vec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 1 + 1);
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 1 + 1);
 
     metadata.push(num_els as usize);
     metadata.push(ndim as usize);
@@ -210,7 +211,7 @@ pub fn call_ops_index_put(
     let values_shape = values_layout.shape();
     let values_ndim = values_shape.ndim();
 
-    let mut metadata = Vec::with_capacity(
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
         2 + ndim as usize + ndim as usize + 1 + values_ndim as usize + values_ndim as usize + 1 + 1 + 1,
     );
 
@@ -381,7 +382,7 @@ pub fn call_ops_gather(
 
     // Build metadata array
     let indices_ndim = indices_shape.ndim();
-    let mut metadata = Vec::with_capacity(
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
         2 + ndim as usize + ndim as usize + 1 + indices_ndim as usize + indices_ndim as usize + 1 + 1,
     );
 
@@ -536,7 +537,7 @@ pub fn call_ops_scatter(
     let indices_ndim = indices_shape.ndim();
     let src_ndim = src_shape.ndim();
 
-    let mut metadata = Vec::with_capacity(
+    let mut metadata: SmallVec<[usize; 24]> = SmallVec::with_capacity(
         2 + ndim as usize
             + ndim as usize
             + 1
