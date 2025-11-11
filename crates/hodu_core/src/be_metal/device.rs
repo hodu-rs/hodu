@@ -7,7 +7,8 @@ use crate::{
 };
 use hodu_metal_kernels::{
     kernel::Kernels,
-    metal::{Buffer, BufferMap, CommandBuffer, Commands, Device, MTLResourceOptions},
+    metal::{Buffer, BufferMap, CommandBuffer, Commands, Device},
+    RESOURCE_OPTIONS,
 };
 use std::sync::{Arc, LazyLock, RwLock};
 
@@ -30,9 +31,6 @@ pub struct MetalDevice {
     pub(crate) buffers: Arc<RwLock<BufferMap>>,
     pub(crate) kernels: Arc<Kernels>,
 }
-
-pub const RESOURCE_OPTIONS: MTLResourceOptions =
-    objc2_metal::MTLResourceOptions(MTLResourceOptions::StorageModeShared.bits());
 
 // Global singleton Metal device
 static METAL_DEVICE: LazyLock<MetalDevice> = LazyLock::new(|| {
