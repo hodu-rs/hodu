@@ -10,7 +10,7 @@ use crate::{
 /// Execute indexing operations: IndexSelect, IndexPut, Gather, Scatter
 pub fn execute(
     inputs: &[&Arc<BackendStorage>],
-    layouts: &[Layout],
+    layouts: &[&Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,
 ) -> HoduResult<BackendStorage> {
@@ -31,7 +31,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
-            inputs[0].call_ops_index_select(&layouts[0], inputs[1], &layouts[1], dim, op.clone())
+            inputs[0].call_ops_index_select(layouts[0], inputs[1], layouts[1], dim, op.clone())
         },
 
         Op::Indexing(IndexingOp::IndexPut) => {
@@ -51,11 +51,11 @@ pub fn execute(
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             inputs[0].call_ops_index_put(
-                &layouts[0],
+                layouts[0],
                 inputs[1],
-                &layouts[1],
+                layouts[1],
                 inputs[2],
-                &layouts[2],
+                layouts[2],
                 dim,
                 op.clone(),
             )
@@ -77,7 +77,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
-            inputs[0].call_ops_gather(&layouts[0], inputs[1], &layouts[1], dim, op.clone())
+            inputs[0].call_ops_gather(layouts[0], inputs[1], layouts[1], dim, op.clone())
         },
 
         Op::Indexing(IndexingOp::Scatter)
@@ -100,11 +100,11 @@ pub fn execute(
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             inputs[0].call_ops_scatter(
-                &layouts[0],
+                layouts[0],
                 inputs[1],
-                &layouts[1],
+                layouts[1],
                 inputs[2],
-                &layouts[2],
+                layouts[2],
                 dim,
                 op.clone(),
             )

@@ -16,7 +16,7 @@ use crate::{
 pub fn execute_operation(
     op: &Op,
     inputs: &[&Arc<BackendStorage>],
-    layouts: &[Layout],
+    layouts: &[&Layout],
     attributes: &HashMap<String, Attribute>,
 ) -> HoduResult<BackendStorage> {
     match op {

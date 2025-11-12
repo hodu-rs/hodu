@@ -10,7 +10,7 @@ use crate::{
 /// Execute reduce operations
 pub fn execute(
     inputs: &[&Arc<BackendStorage>],
-    layouts: &[Layout],
+    layouts: &[&Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,
 ) -> HoduResult<BackendStorage> {
@@ -37,7 +37,7 @@ pub fn execute(
                 .get("keep_dim")
                 .and_then(|a| if let Attribute::Bool(b) = a { Some(*b) } else { None })
                 .unwrap_or(false);
-            inputs[0].call_ops_reduce(&layouts[0], &dims, keep_dim, op.clone())
+            inputs[0].call_ops_reduce(layouts[0], &dims, keep_dim, op.clone())
         },
 
         Op::Windowing(_) => {
@@ -78,7 +78,7 @@ pub fn execute(
                     }
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("padding".to_string()))?;
-            inputs[0].call_ops_reduce_window(&layouts[0], &window_shape, &strides, &padding, op.clone())
+            inputs[0].call_ops_reduce_window(layouts[0], &window_shape, &strides, &padding, op.clone())
         },
 
         _ => Err(HoduError::InternalError(format!(

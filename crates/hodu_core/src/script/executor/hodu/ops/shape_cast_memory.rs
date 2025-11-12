@@ -10,7 +10,7 @@ use crate::{
 /// Execute shape, cast, and memory operations
 pub fn execute(
     inputs: &[&Arc<BackendStorage>],
-    layouts: &[Layout],
+    layouts: &[&Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,
 ) -> HoduResult<BackendStorage> {
@@ -38,7 +38,7 @@ pub fn execute(
                 .get("dtype")
                 .and_then(|a| if let Attribute::DType(dt) = a { Some(*dt) } else { None })
                 .ok_or_else(|| HoduError::MissingAttribute("dtype".to_string()))?;
-            inputs[0].to_dtype(&layouts[0], target_dtype)
+            inputs[0].to_dtype(layouts[0], target_dtype)
         },
 
         Op::Memory(MemoryOp::Contiguous) => {
@@ -49,7 +49,7 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            inputs[0].contiguous(&layouts[0])
+            inputs[0].contiguous(layouts[0])
         },
 
         Op::Dummy => {

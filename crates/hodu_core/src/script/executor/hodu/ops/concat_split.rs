@@ -10,7 +10,7 @@ use crate::{
 /// Execute concat and split operations
 pub fn execute(
     inputs: &[&Arc<BackendStorage>],
-    layouts: &[Layout],
+    layouts: &[&Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,
 ) -> HoduResult<BackendStorage> {
@@ -30,7 +30,7 @@ pub fn execute(
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             let other_storages: Vec<&BackendStorage> = inputs[1..].iter().map(|s| s.as_ref()).collect();
-            let other_layouts: Vec<&Layout> = layouts[1..].iter().collect();
+            let other_layouts: Vec<&Layout> = layouts[1..].to_vec();
             inputs[0].call_ops_concat(&other_storages, &other_layouts, dim, op.clone())
         },
 
@@ -66,7 +66,7 @@ pub fn execute(
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("size".to_string()))?;
-            inputs[0].call_ops_split(&layouts[0], dim, start, size, op.clone())
+            inputs[0].call_ops_split(layouts[0], dim, start, size, op.clone())
         },
 
         _ => Err(HoduError::InternalError(format!(

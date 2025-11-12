@@ -6,10 +6,7 @@ use crate::{
     be::storage::BackendStorage,
     error::{HoduError, HoduResult},
     layer::compat::*,
-    script::{
-        builder::ir::{Attribute, ValueId},
-        compiler::CompiledModule,
-    },
+    script::{builder::ir::Attribute, compiler::CompiledModule},
     tensor::from_storage,
     types::Layout,
 };
@@ -18,8 +15,19 @@ use crate::{
 pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
     validate_inputs(compiled, &inputs)?;
 
-    // Map value_id to storage for runtime
-    let mut value_storage: HashMap<ValueId, Arc<BackendStorage>> = HashMap::new();
+    // Calculate max ValueId to pre-allocate storage
+    let max_value_id = compiled
+        .execution_plan
+        .iter()
+        .flat_map(|instr| instr.inputs.iter().chain(std::iter::once(&instr.result)))
+        .chain(compiled.input_mapping.values())
+        .chain(compiled.output_mapping.values())
+        .map(|vid| vid.0)
+        .max()
+        .unwrap_or(0) as usize;
+
+    // Use Vec instead of HashMap for O(1) access
+    let mut value_storage: Vec<Option<Arc<BackendStorage>>> = vec![None; max_value_id + 1];
 
     // Load input values
     for (name, value_id) in &compiled.input_mapping {
@@ -29,7 +37,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
 
         let storage = tensor.with_storage(|s| Ok(Arc::new(s.clone())))?;
 
-        value_storage.insert(*value_id, storage);
+        value_storage[value_id.0 as usize] = Some(storage);
     }
 
     // Execute instructions in order
@@ -40,7 +48,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
             if let Some(tensor_id) = compiled.value_to_tensor.get(&instr.result) {
                 if let Some(storage) = compiled.constant_storages.get(tensor_id) {
                     // Use pre-converted storage (no conversion needed!)
-                    value_storage.insert(instr.result, storage.clone());
+                    value_storage[instr.result.0 as usize] = Some(storage.clone());
                     continue;
                 }
             }
@@ -50,8 +58,11 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
         }
 
         // Get input storages for this operation
-        let input_storages: Vec<&Arc<BackendStorage>> =
-            instr.inputs.iter().filter_map(|vid| value_storage.get(vid)).collect();
+        let input_storages: Vec<&Arc<BackendStorage>> = instr
+            .inputs
+            .iter()
+            .filter_map(|vid| value_storage[vid.0 as usize].as_ref())
+            .collect();
 
         if input_storages.len() != instr.inputs.len() {
             return Err(HoduError::InternalError(format!(
@@ -63,10 +74,10 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
         }
 
         // Get input layouts
-        let input_layouts: Vec<Layout> = instr
+        let input_layouts: Vec<&Layout> = instr
             .inputs
             .iter()
-            .filter_map(|vid| compiled.value_layouts.get(vid).cloned())
+            .filter_map(|vid| compiled.value_layouts.get(vid))
             .collect();
 
         if input_layouts.len() != instr.inputs.len() {
@@ -80,14 +91,14 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
 
         // Execute the operation
         let result_storage = ops::execute_operation(&instr.op, &input_storages, &input_layouts, &instr.attributes)?;
-        value_storage.insert(instr.result, Arc::new(result_storage));
+        value_storage[instr.result.0 as usize] = Some(Arc::new(result_storage));
     }
 
     // Collect outputs
     let mut outputs = HashMap::new();
     for (name, value_id) in &compiled.output_mapping {
-        let storage = value_storage
-            .get(value_id)
+        let storage = value_storage[value_id.0 as usize]
+            .as_ref()
             .ok_or_else(|| HoduError::ExecutionError(format!("missing output: {}", name)))?;
 
         let layout = compiled

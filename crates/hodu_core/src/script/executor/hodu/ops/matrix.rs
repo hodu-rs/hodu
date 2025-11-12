@@ -7,7 +7,7 @@ use crate::{
 };
 
 /// Execute matrix operations: Matmul, Dot
-pub fn execute(inputs: &[&Arc<BackendStorage>], layouts: &[Layout], op: &Op) -> HoduResult<BackendStorage> {
+pub fn execute(inputs: &[&Arc<BackendStorage>], layouts: &[&Layout], op: &Op) -> HoduResult<BackendStorage> {
     match op {
         Op::Matrix(MatrixOp::Matmul) => {
             if inputs.len() != 2 || layouts.len() != 2 {
@@ -17,7 +17,7 @@ pub fn execute(inputs: &[&Arc<BackendStorage>], layouts: &[Layout], op: &Op) -> 
                     layouts.len()
                 )));
             }
-            inputs[0].call_ops_matmul(inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_matmul(inputs[1], layouts[0], layouts[1], op.clone())
         },
 
         Op::Matrix(MatrixOp::Dot) => {
@@ -28,7 +28,7 @@ pub fn execute(inputs: &[&Arc<BackendStorage>], layouts: &[Layout], op: &Op) -> 
                     layouts.len()
                 )));
             }
-            inputs[0].call_ops_dot(inputs[1], &layouts[0], &layouts[1], op.clone())
+            inputs[0].call_ops_dot(inputs[1], layouts[0], layouts[1], op.clone())
         },
 
         _ => Err(HoduError::InternalError(format!(
