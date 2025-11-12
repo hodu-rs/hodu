@@ -58,8 +58,8 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 
 **Optional**
 - **OpenBLAS 0.3.30+** (recommended) - For optimized linear algebra operations on CPU
-  - macOS: `brew install openblas`
-  - Linux: `sudo apt install libopenblas-dev pkg-config`
+  - macOS: `brew install openblas gfortran`
+  - Linux: `sudo apt install libopenblas-dev pkg-config gfortran`
   - Windows: Install via vcpkg or MinGW
 
 - **LLVM/Clang** - Required when building with the `xla` feature

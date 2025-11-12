@@ -48,8 +48,8 @@ impl OpenBlasConfig {
         if !self.available {
             println!("cargo:warning=OpenBLAS not found, building without BLAS acceleration");
             println!("cargo:warning=Install OpenBLAS for better performance:");
-            println!("cargo:warning=  macOS: brew install openblas");
-            println!("cargo:warning=  Linux: sudo apt install libopenblas-dev");
+            println!("cargo:warning=  macOS: brew install openblas gfortran");
+            println!("cargo:warning=  Linux: sudo apt install libopenblas-dev pkg-config gfortran");
             println!("cargo:warning=  Windows: install via vcpkg or MinGW");
         }
     }
