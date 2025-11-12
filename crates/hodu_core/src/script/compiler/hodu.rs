@@ -73,7 +73,7 @@ impl CompilerT for HoduCompiler {
         let mut value_to_tensor = HashMap::new();
 
         // Build execution plan (this will populate value_to_tensor)
-        let mut execution_plan = base::build_execution_plan(function, &mut value_to_tensor)?;
+        let execution_plan = base::build_execution_plan(function, &mut value_to_tensor)?;
 
         // Log instruction count for debugging
         if options.debug_mode {
