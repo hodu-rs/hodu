@@ -9,7 +9,7 @@ use crate::{
 
 /// Execute unary operations: Unary, UnaryLogical, UnaryScalar
 pub fn execute(
-    inputs: &[Arc<BackendStorage>],
+    inputs: &[&Arc<BackendStorage>],
     layouts: &[Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,

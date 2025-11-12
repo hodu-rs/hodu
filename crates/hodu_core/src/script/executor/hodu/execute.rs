@@ -50,11 +50,8 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
         }
 
         // Get input storages for this operation
-        let input_storages: Vec<Arc<BackendStorage>> = instr
-            .inputs
-            .iter()
-            .filter_map(|vid| value_storage.get(vid).cloned())
-            .collect();
+        let input_storages: Vec<&Arc<BackendStorage>> =
+            instr.inputs.iter().filter_map(|vid| value_storage.get(vid)).collect();
 
         if input_storages.len() != instr.inputs.len() {
             return Err(HoduError::InternalError(format!(

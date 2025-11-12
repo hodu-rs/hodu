@@ -15,7 +15,7 @@ use crate::{
 /// Execute a single operation by dispatching to the appropriate module
 pub fn execute_operation(
     op: &Op,
-    inputs: &[Arc<BackendStorage>],
+    inputs: &[&Arc<BackendStorage>],
     layouts: &[Layout],
     attributes: &HashMap<String, Attribute>,
 ) -> HoduResult<BackendStorage> {

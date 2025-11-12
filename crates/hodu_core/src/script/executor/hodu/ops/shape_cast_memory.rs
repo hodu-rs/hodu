@@ -9,7 +9,7 @@ use crate::{
 
 /// Execute shape, cast, and memory operations
 pub fn execute(
-    inputs: &[Arc<BackendStorage>],
+    inputs: &[&Arc<BackendStorage>],
     layouts: &[Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,
@@ -55,7 +55,7 @@ pub fn execute(
         Op::Dummy => {
             // Dummy op just returns the first input
             if let Some(input) = inputs.first() {
-                Ok((**input).clone())
+                Ok(input.as_ref().clone())
             } else {
                 Err(HoduError::InternalError(
                     "Dummy operation requires one input".to_string(),

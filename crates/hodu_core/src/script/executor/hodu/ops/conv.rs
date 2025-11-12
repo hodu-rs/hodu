@@ -9,7 +9,7 @@ use crate::{
 
 /// Execute convolution operations
 pub fn execute(
-    inputs: &[Arc<BackendStorage>],
+    inputs: &[&Arc<BackendStorage>],
     layouts: &[Layout],
     op: &Op,
     attributes: &HashMap<String, Attribute>,
@@ -55,7 +55,7 @@ pub fn execute(
                 .ok_or_else(|| HoduError::MissingAttribute("dilation".to_string()))?;
             inputs[0].call_ops_conv(
                 &layouts[0],
-                &inputs[1],
+                inputs[1],
                 &layouts[1],
                 &stride,
                 &padding,
