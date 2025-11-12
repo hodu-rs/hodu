@@ -299,6 +299,7 @@ Common environment variables for cross-compilation:
 - `HODU_DISABLE_BLAS` - Force disable OpenBLAS
 - `HODU_DISABLE_NATIVE` - Disable native CPU optimizations
 - `HODU_DISABLE_SIMD` - Disable SIMD auto-detection
+- `HODU_DISABLE_THREADS` - Disable pthread multi-threading for CPU kernels
 
 ## Docs
 

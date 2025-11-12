@@ -50,6 +50,15 @@ fn main() {
         build.define("ENABLE_SIMD_AUTO", None);
     }
 
+    // Thread parallelization define (unless disabled, std feature only)
+    #[cfg(feature = "std")]
+    {
+        let disable_threads = std::env::var("HODU_DISABLE_THREADS").is_ok();
+        if !disable_threads {
+            build.define("ENABLE_THREADS", None);
+        }
+    }
+
     // Detect and configure OpenBLAS (automatically skips for no_std targets)
     let openblas_config = build_openblas::OpenBlasConfig::detect();
     openblas_config.print_status();
@@ -62,6 +71,30 @@ fn main() {
 
     build.compile("hodu_cpu_kernels");
 
+    // Link pthread for multi-threaded kernel execution (std feature only, unless disabled)
+    #[cfg(feature = "std")]
+    {
+        let disable_threads = std::env::var("HODU_DISABLE_THREADS").is_ok();
+        if !disable_threads {
+            let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
+            let target_env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
+
+            match target_os.as_str() {
+                "linux" | "macos" => {
+                    println!("cargo:rustc-link-lib=pthread");
+                },
+                "windows" => {
+                    if target_env == "gnu" {
+                        // MinGW: use winpthread
+                        println!("cargo:rustc-link-lib=pthread");
+                    }
+                    // MSVC: native Windows threads (no extra linking needed)
+                },
+                _ => {},
+            }
+        }
+    }
+
     // Setup OpenBLAS linking
     openblas_config.setup_linking();
 
@@ -70,6 +103,8 @@ fn main() {
     println!("cargo:rerun-if-changed=kernels/atomic.h");
     println!("cargo:rerun-if-changed=kernels/constants.h");
     println!("cargo:rerun-if-changed=kernels/math_utils.h");
+    println!("cargo:rerun-if-changed=kernels/simd_utils.h");
+    println!("cargo:rerun-if-changed=kernels/thread_utils.h");
     println!("cargo:rerun-if-changed=kernels/types.h");
     println!("cargo:rerun-if-changed=kernels/utils.h");
     println!("cargo:rerun-if-changed=kernels/ops_binary.h");

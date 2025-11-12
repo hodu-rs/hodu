@@ -1,230 +1,167 @@
 # Hodu CPU Kernels
 
-High-performance CPU kernels for tensor operations, supporting a wide range of data types including exotic floating-point formats.
+High-performance CPU kernels for tensor operations in pure C, with optional SIMD acceleration, OpenBLAS integration, and multi-threading support.
 
-## Supported Data Types
+## Features
 
-### Floating Point Types
-- **f8e4m3**: 8-bit float (1 sign, 4 exponent, 3 mantissa bits)
-- **f8e5m2**: 8-bit float (1 sign, 5 exponent, 2 mantissa bits)
-- **bf16**: BFloat16 (1 sign, 8 exponent, 7 mantissa bits)
-- **f16**: Float16/Half (1 sign, 5 exponent, 10 mantissa bits)
-- **f32**: Float32 (standard single precision)
-- **f64**: Float64 (standard double precision)
+### Data Type Support
+- **Floating Point**: f8e4m3, f8e5m2, bf16, f16, f32, f64
+- **Integer**: i8, i16, i32, i64, u8, u16, u32, u64
+- **Boolean**: bool
 
-### Integer Types
-- **u8, u16, u32, u64**: Unsigned integers (8, 16, 32, 64 bits)
-- **i8, i16, i32, i64**: Signed integers (8, 16, 32, 64 bits)
+### Operation Categories
+- **Unary**: neg, abs, sqrt, exp, ln, sin, cos, relu, gelu, tanh, sigmoid, etc.
+- **Binary**: add, sub, mul, div, pow, maximum, minimum, comparison ops
+- **Reduce**: sum, max, min, mean along arbitrary dimensions
+- **Matrix**: matmul (batched with broadcasting), dot product
+- **Convolution**: conv1d, conv2d, conv3d with padding/stride/dilation
+- **Windowing**: max/min/sum/mean pooling operations
+- **Indexing**: index_select, index_put, gather, scatter operations
+- **Concat/Split**: tensor concatenation and splitting
 
-### Boolean Type
-- **bool**: Boolean type (1 byte)
+### Performance Optimizations
 
-## Supported Operations
+#### SIMD Vectorization (f32/f64 only)
+- **x86_64**: AVX2 (256-bit), SSE2 (128-bit)
+- **ARM**: NEON (128-bit)
+- Automatic architecture detection at compile time
+- Vectorized hot paths with scalar fallback for strided layouts
 
-### Unary Operations
-- **Basic**: neg, abs, sign, square, sqrt, recip
-- **Activation Functions**: relu, sigmoid, tanh, gelu, softplus, silu, mish
-- **Trigonometric**: sin, cos, tan
-- **Exponential/Logarithmic**: exp, exp2, exp10, ln, log2, log10
-- **Logical**: logical_not
-- **Scalar Operations**: add_scalar, sub_scalar, mul_scalar, div_scalar, pow_scalar, maximum_scalar, minimum_scalar
-- **Comparison**: eq_scalar, ne_scalar, lt_scalar, le_scalar, gt_scalar, ge_scalar
+#### OpenBLAS Integration (f32/f64 only)
+- Matrix multiplication via GEMM
+- Convolution via im2col + GEMM
+- Automatic detection with fallback to pure C implementation
 
-### Binary Operations
-- **Arithmetic**: add, sub, mul, div, pow
-- **Min/Max**: maximum, minimum
-- **Logical**: logical_and, logical_or, logical_xor
-- **Comparison**: eq, ne, lt, le, gt, ge
+#### Multi-threading (std feature only)
+- **pthread** support on Linux/macOS/MinGW
+- Automatic parallelization for large matrix operations
+- Work-stealing with optimal thread count based on workload size
+- Low overhead for small matrices (automatic single-thread fallback)
 
-### Reduce Operations
-- **Reduction Functions**: sum, max, min, mean
-- **Features**:
-  - Reduce along arbitrary dimensions
-  - Keep dimension option
-  - Strided tensor support
+## Environment Variables
 
-### Matrix Operations
-- **matmul**: Batched matrix multiplication with broadcasting
-- **Features**:
-  - Batch dimension support
-  - Broadcasting for batch dimensions
-  - Strided input support
+Control build-time optimizations and dependencies:
 
-### Convolution Operations
-- **conv1d, conv2d, conv3d**: 1D, 2D, and 3D convolution
-- **Features**:
-  - Padding support
-  - Stride support
-  - Dilation support
-  - Groups support
+### Performance Tuning
+- `HODU_DISABLE_NATIVE` - Disable `-march=native` optimization
+- `HODU_DISABLE_SIMD` - Disable SIMD auto-detection and vectorization
+- `HODU_DISABLE_THREADS` - Disable pthread multi-threading
 
-### Windowing Operations
-- **reduce_window_max**: Sliding window maximum (pooling)
-- **reduce_window_min**: Sliding window minimum
-- **reduce_window_sum**: Sliding window sum
-- **reduce_window_mean**: Sliding window mean (average pooling)
-- **Features**:
-  - Arbitrary window shapes
-  - Configurable strides
-  - Padding support
+### Dependencies
+- `HODU_DISABLE_BLAS` - Force disable OpenBLAS integration
+- `OPENBLAS_DIR` - OpenBLAS installation directory
+- `OPENBLAS_INCLUDE_DIR` - OpenBLAS headers directory
+- `OPENBLAS_LIB_DIR` - OpenBLAS library directory
 
-### Indexing Operations
-- **index_select**: Select elements along a dimension
-- **index_put**: Put values at specified indices
-- **gather**: Gather elements from tensor
-- **scatter**: Scatter values to indices
-- **scatter_add**: Scatter-add values to indices
-- **scatter_max**: Scatter-max values to indices
-- **scatter_min**: Scatter-min values to indices
+### Examples
 
-### Concat/Split Operations
-- **concat**: Concatenate tensors along a dimension
-- **split**: Split tensor into multiple tensors
+```bash
+# Default build with all optimizations
+cargo build --release
 
-## SIMD Supported Data Types
+# Disable multi-threading for reproducible single-threaded performance
+HODU_DISABLE_THREADS=1 cargo build --release
 
-### Floating Point Types
-- **f32**: Float32 (standard single precision)
-- **f64**: Float64 (standard double precision)
+# Build without OpenBLAS for minimal dependencies
+HODU_DISABLE_BLAS=1 cargo build --release
 
-### Supported SIMD Architectures
-- **x86_64 AVX2**: 256-bit SIMD (8 x f32 or 4 x f64 per operation)
-- **x86_64 SSE2**: 128-bit SIMD (4 x f32 or 2 x f64 per operation)
-- **ARM NEON**: 128-bit SIMD (4 x f32 or 2 x f64 per operation)
-- **Fallback**: Scalar implementation for unsupported platforms
+# Build for older CPUs without native optimizations
+HODU_DISABLE_NATIVE=1 cargo build --release
 
-## SIMD Supported Operations
-
-### Unary Operations
-- **neg**: Negation (f32, f64)
-- **abs**: Absolute value (f32, f64)
-- **square**: Squaring (f32, f64)
-- **sqrt**: Square root (f32, f64)
-- **relu**: ReLU activation (f32, f64)
-
-### Binary Operations
-- **add, sub, mul, div**: Arithmetic operations (f32, f64)
-
-### Reduce Operations
-- **sum**: Sum reduction (f32, f64)
-- **max**: Maximum reduction (f32, f64)
-- **min**: Minimum reduction (f32, f64)
-- **norm**: L2 norm (f32, f64)
-- **var**: Variance (f32, f64)
-
-### Matrix Operations
-- **matmul**: Matrix multiplication (f32, f64)
-- **dot**: Dot product (f32, f64)
-
-## OpenBLAS Supported Operations
-
-### Matrix Operations
-- **matmul**: Matrix multiplication with GEMM (f32, f64)
-- **dot**: Dot product (f32, f64)
-
-### Convolution Operations
-- **conv2d**: 2D convolution using im2col + GEMM (f32, f64)
-- **conv2d_grad_weight**: 2D convolution gradient for weights (f32, f64)
-
-### Unary Operations
-- **mul_scalar**: Scalar multiplication using BLAS SCAL (f32, f64)
-
-## Architecture
-
-### Portability
-- **Pure C implementation** for maximum portability
-- Works on embedded systems and general-purpose platforms
-- No external dependencies (only standard C library)
-- Supports both contiguous and strided tensor layouts
-
-### Performance Features
-- **SIMD Vectorization**: Automatic SIMD acceleration for f32/f64 operations on contiguous tensors
-  - Compile-time CPU architecture detection (AVX2/SSE2/ARM NEON)
-  - Vectorized loops with scalar remainder handling
-  - Fallback to scalar code for non-contiguous or strided layouts
-- **OpenBLAS Integration**: High-performance BLAS routines for matrix multiplication and convolution
-  - im2col + GEMM approach for convolution operations
-  - Automatic detection and fallback when OpenBLAS is not available
-- Optimized for contiguous memory layouts
-- Efficient strided access support
-- Type conversion handled transparently
-- Math operations optimized for common cases
+# Cross-compile with custom OpenBLAS
+OPENBLAS_DIR=/opt/openblas cargo build --target aarch64-unknown-linux-gnu --release
+```
 
 ## File Structure
 
 ```
 kernels/
-├── constants.h           # Math and type constants
-├── types.h              # Data type definitions and conversions
+├── atomic.h             # Thread-safe atomic operations
+├── constants.h          # Math constants
 ├── math_utils.h         # Math helper functions
-├── utils.h              # Tensor utilities (striding, contiguity checks)
-├── atomic.h             # Atomic operations for thread safety
-├── simd_utils.h         # SIMD abstractions for AVX2/SSE2/NEON
-├── ops_unary.h/c        # Unary operations
+├── simd_utils.h         # SIMD abstractions (AVX2/SSE2/NEON)
+├── thread_utils.h       # Multi-threading utilities (pthread)
+├── types.h              # Data type definitions
+├── utils.h              # Tensor utilities
 ├── ops_binary.h/c       # Binary operations
-├── ops_reduce.h/c       # Reduction operations
-├── ops_matrix.h/c       # Matrix operations (matmul)
+└── ops_concat_split.h/c # Concat/split operations
 ├── ops_conv.h/c         # Convolution operations
-├── ops_windowing.h/c    # Windowing operations (pooling)
 ├── ops_indexing.h/c     # Indexing operations
-└── ops_concat_split.h/c # Concat and split operations
+├── ops_matrix.h/c       # Matrix operations
+├── ops_reduce.h/c       # Reduction operations
+├── ops_unary.h/c        # Unary operations
+├── ops_windowing.h/c    # Windowing/pooling operations
 ```
 
-## Usage Example
+## Architecture
 
-```c
-#include "ops_unary.h"
-#include "ops_binary.h"
-#include "ops_matrix.h"
+### Portability
+- Pure C implementation for maximum compatibility
+- Works on embedded systems (`no_std`) and general-purpose platforms
+- Supports both contiguous and strided tensor layouts
+- No mandatory external dependencies
 
-// Unary operation: relu on f32 array
-float input[100];
-float output[100];
-unary_relu_f32(input, output, 100, 0, NULL);
-
-// Binary operation: add two f32 arrays
-float lhs[100], rhs[100], result[100];
-binary_add_f32(lhs, rhs, result, 100, 0, NULL);
-
-// Matrix multiplication
-size_t metadata[] = {/* lhs_ndim, rhs_ndim, batch_ndim, shapes, strides, offsets, M, K, N */};
-float A[100], B[100], C[100];
-matmul_f32(A, B, C, 100, 2, metadata);
-```
+### Optimization Strategy
+1. **SIMD fast path**: Vectorized operations for contiguous f32/f64 tensors
+2. **BLAS fast path**: OpenBLAS GEMM for matrix operations when available
+3. **Multi-threaded fast path**: pthread parallelization for large matrices
+4. **Scalar fallback**: Universal C implementation for all types and layouts
 
 ## Building
 
-This crate uses Rust's build system to compile the C kernels. The C code is compiled as a static library and linked with the Rust code.
-
 ```bash
+# Standard build
 cargo build --release
+
+# With OpenBLAS (auto-detected on Linux/macOS)
+brew install openblas gfortran  # macOS
+# or
+sudo apt install libopenblas-dev pkg-config gfortran  # Linux
+
+# Cross-compilation example (ARM with OpenBLAS)
+OPENBLAS_DIR=/opt/arm-openblas cargo build --target aarch64-unknown-linux-gnu
 ```
 
-### Testing
-
-Run all tests including unit tests for each operation category:
+## Testing
 
 ```bash
+# Run all tests
 cargo test
-```
 
-Run specific test suites:
-
-```bash
+# Test specific operation categories
+cargo test --test ops_matrix
 cargo test --test ops_unary
 cargo test --test ops_binary
-cargo test --test ops_reduce
-cargo test --test ops_matrix
-cargo test --test ops_conv
-cargo test --test ops_windowing
-cargo test --test ops_indexing
-cargo test --test ops_concat_split
 ```
 
-## Notes
+## Performance Notes
 
-- The C kernels are designed to be callable from Rust via FFI
-- All exotic float types (f8, bf16, f16) are converted to/from f32 for computation
-- Integer overflow behavior follows C semantics
-- Division by zero returns 0 (not NaN) for integer types
-- Windowing operations use padding values based on the reduction type (e.g., -∞ for max, +∞ for min, 0 for sum)
+- **SIMD**: 2-8x speedup for f32/f64 operations on contiguous data
+- **OpenBLAS**: 10-100x speedup for large matrix multiplications
+- **Multi-threading**: Near-linear scaling up to CPU core count for large matrices
+- **Exotic types** (f8, bf16, f16): Computed via f32 conversion (no SIMD/BLAS acceleration)
+- **Integer operations**: Pure C implementation (no SIMD/BLAS)
+
+## Usage from Rust
+
+```rust
+use hodu_cpu_kernels::*;
+
+// Direct FFI call to C kernel
+unsafe {
+    let input = vec![1.0f32; 100];
+    let mut output = vec![0.0f32; 100];
+
+    ops_unary::unary_relu_f32(
+        input.as_ptr() as *const _,
+        output.as_mut_ptr() as *mut _,
+        100,
+        0,
+        std::ptr::null(),
+    );
+}
+```
+
+## License
+
+BSD-3-Clause

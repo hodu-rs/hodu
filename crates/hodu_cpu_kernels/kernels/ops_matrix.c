@@ -1,4 +1,5 @@
 #include "ops_matrix.h"
+#include "thread_utils.h"
 #include "types.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -41,12 +42,35 @@
 // Batch dimensions of size 1 are broadcast by using index 0 for that dimension.
 
 /// Optimized macro for batched matrix multiplication
-/// - Fast path for contiguous non-batched case
+/// - Fast path for contiguous non-batched case with parallel execution
 /// - Scalar accumulation for better register usage
 ///
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define MATMUL_OP(TYPE, TYPE_SUFFIX)                                                               \
+    typedef struct {                                                                               \
+        const TYPE *lhs;                                                                           \
+        const TYPE *rhs;                                                                           \
+        TYPE *output;                                                                              \
+        size_t start_row;                                                                          \
+        size_t end_row;                                                                            \
+        size_t M, K, N;                                                                            \
+    } matmul_##TYPE_SUFFIX##_args_t;                                                               \
+                                                                                                   \
+    static void *matmul_##TYPE_SUFFIX##_worker(void *arg) {                                        \
+        matmul_##TYPE_SUFFIX##_args_t *args = (matmul_##TYPE_SUFFIX##_args_t *)arg;                \
+        for (size_t i = args->start_row; i < args->end_row; i++) {                                 \
+            for (size_t j = 0; j < args->N; j++) {                                                 \
+                TYPE sum = 0;                                                                      \
+                for (size_t k = 0; k < args->K; k++) {                                             \
+                    sum += args->lhs[i * args->K + k] * args->rhs[k * args->N + j];                \
+                }                                                                                  \
+                args->output[i * args->N + j] = sum;                                               \
+            }                                                                                      \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
     void matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,          \
                               const size_t *metadata) {                                            \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
@@ -78,14 +102,48 @@
                               lhs_offset == 0 && rhs_offset == 0);                                 \
                                                                                                    \
         if (is_contiguous && batch_ndim == 0) {                                                    \
-            /* Fast path: no batching, contiguous */                                               \
-            for (size_t i = 0; i < M; i++) {                                                       \
-                for (size_t j = 0; j < N; j++) {                                                   \
-                    TYPE sum = 0;                                                                  \
-                    for (size_t k = 0; k < K; k++) {                                               \
-                        sum += lhs[i * K + k] * rhs[k * N + j];                                    \
+            /* Fast path: no batching, contiguous - use parallel execution */                      \
+            size_t num_threads = get_optimal_threads(M, 4);                                        \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                /* Parallel execution */                                                           \
+                pthread_t threads[32];                                                             \
+                matmul_##TYPE_SUFFIX##_args_t thread_args[32];                                     \
+                if (num_threads > 32)                                                              \
+                    num_threads = 32;                                                              \
+                                                                                                   \
+                size_t rows_per_thread = M / num_threads;                                          \
+                size_t remaining_rows = M % num_threads;                                           \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    thread_args[t].lhs = lhs;                                                      \
+                    thread_args[t].rhs = rhs;                                                      \
+                    thread_args[t].output = output;                                                \
+                    thread_args[t].M = M;                                                          \
+                    thread_args[t].K = K;                                                          \
+                    thread_args[t].N = N;                                                          \
+                    thread_args[t].start_row = t * rows_per_thread;                                \
+                    thread_args[t].end_row = (t + 1) * rows_per_thread;                            \
+                    if (t == num_threads - 1)                                                      \
+                        thread_args[t].end_row += remaining_rows;                                  \
+                                                                                                   \
+                    pthread_create(&threads[t], NULL, matmul_##TYPE_SUFFIX##_worker,               \
+                                   &thread_args[t]);                                               \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    pthread_join(threads[t], NULL);                                                \
+                }                                                                                  \
+            } else {                                                                               \
+                /* Single-threaded execution */                                                    \
+                for (size_t i = 0; i < M; i++) {                                                   \
+                    for (size_t j = 0; j < N; j++) {                                               \
+                        TYPE sum = 0;                                                              \
+                        for (size_t k = 0; k < K; k++) {                                           \
+                            sum += lhs[i * K + k] * rhs[k * N + j];                                \
+                        }                                                                          \
+                        output[i * N + j] = sum;                                                   \
                     }                                                                              \
-                    output[i * N + j] = sum;                                                       \
                 }                                                                                  \
             }                                                                                      \
         } else {                                                                                   \
@@ -404,9 +462,10 @@ MATMUL_OP(uint64_t, u64)
 // No tiling or cache optimization as CPU doesn't benefit from shared memory
 // tiling like GPUs do.
 
-/// Macro to implement highly optimized 2D matrix multiplication
+/// Macro to implement highly optimized 2D matrix multiplication with parallel execution
 ///
 /// Optimizations:
+/// - Parallel execution with pthread for large matrices
 /// - Cache blocking (32x32x256 blocks for L1 cache)
 /// - Register blocking (4x4 micro-kernels)
 /// - Loop unrolling (4x inner loop)
@@ -416,6 +475,29 @@ MATMUL_OP(uint64_t, u64)
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define DOT_OP(TYPE, TYPE_SUFFIX)                                                                  \
+    typedef struct {                                                                               \
+        const TYPE *lhs;                                                                           \
+        const TYPE *rhs;                                                                           \
+        TYPE *output;                                                                              \
+        size_t start_row;                                                                          \
+        size_t end_row;                                                                            \
+        size_t M, K, N;                                                                            \
+    } dot_##TYPE_SUFFIX##_args_t;                                                                  \
+                                                                                                   \
+    static void *dot_##TYPE_SUFFIX##_worker(void *arg) {                                           \
+        dot_##TYPE_SUFFIX##_args_t *args = (dot_##TYPE_SUFFIX##_args_t *)arg;                      \
+        for (size_t i = args->start_row; i < args->end_row; i++) {                                 \
+            for (size_t j = 0; j < args->N; j++) {                                                 \
+                TYPE sum = 0;                                                                      \
+                for (size_t k = 0; k < args->K; k++) {                                             \
+                    sum += args->lhs[i * args->K + k] * args->rhs[k * args->N + j];                \
+                }                                                                                  \
+                args->output[i * args->N + j] = sum;                                               \
+            }                                                                                      \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
     void dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,             \
                            const size_t *metadata) {                                               \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
@@ -447,38 +529,72 @@ MATMUL_OP(uint64_t, u64)
             (lhs_stride_k == 1 && rhs_stride_n == 1 && lhs_stride_m == K && rhs_stride_k == N);    \
                                                                                                    \
         if (is_contiguous && lhs_offset == 0 && rhs_offset == 0) {                                 \
-            /* Fast path: contiguous matrices with aggressive optimization */                      \
-            for (size_t ii = 0; ii < M; ii += BLOCK_M) {                                           \
-                size_t i_end = (ii + BLOCK_M < M) ? (ii + BLOCK_M) : M;                            \
-                for (size_t kk = 0; kk < K; kk += BLOCK_K) {                                       \
-                    size_t k_end = (kk + BLOCK_K < K) ? (kk + BLOCK_K) : K;                        \
-                    for (size_t jj = 0; jj < N; jj += BLOCK_N) {                                   \
-                        size_t j_end = (jj + BLOCK_N < N) ? (jj + BLOCK_N) : N;                    \
-                        /* Register blocking with 4x4 micro-kernels */                             \
-                        for (size_t i = ii; i < i_end; i += REG_M) {                               \
-                            size_t i_reg_end = (i + REG_M < i_end) ? (i + REG_M) : i_end;          \
-                            for (size_t j = jj; j < j_end; j += REG_N) {                           \
-                                size_t j_reg_end = (j + REG_N < j_end) ? (j + REG_N) : j_end;      \
-                                /* Accumulate 4x4 block in registers */                            \
-                                TYPE acc[4][4] = {{0}};                                            \
-                                for (size_t ir = 0; ir < (i_reg_end - i); ir++) {                  \
-                                    for (size_t jr = 0; jr < (j_reg_end - j); jr++) {              \
-                                        acc[ir][jr] = output[(i + ir) * N + (j + jr)];             \
-                                    }                                                              \
-                                }                                                                  \
-                                /* Compute 4x4 micro-kernel */                                     \
-                                for (size_t k = kk; k < k_end; k++) {                              \
+            /* Fast path: contiguous matrices - use parallel execution for large matrices */       \
+            size_t num_threads = get_optimal_threads(M, 8);                                        \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                /* Parallel execution */                                                           \
+                pthread_t threads[32];                                                             \
+                dot_##TYPE_SUFFIX##_args_t thread_args[32];                                        \
+                if (num_threads > 32)                                                              \
+                    num_threads = 32;                                                              \
+                                                                                                   \
+                size_t rows_per_thread = M / num_threads;                                          \
+                size_t remaining_rows = M % num_threads;                                           \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    thread_args[t].lhs = lhs;                                                      \
+                    thread_args[t].rhs = rhs;                                                      \
+                    thread_args[t].output = output;                                                \
+                    thread_args[t].M = M;                                                          \
+                    thread_args[t].K = K;                                                          \
+                    thread_args[t].N = N;                                                          \
+                    thread_args[t].start_row = t * rows_per_thread;                                \
+                    thread_args[t].end_row = (t + 1) * rows_per_thread;                            \
+                    if (t == num_threads - 1)                                                      \
+                        thread_args[t].end_row += remaining_rows;                                  \
+                                                                                                   \
+                    pthread_create(&threads[t], NULL, dot_##TYPE_SUFFIX##_worker,                  \
+                                   &thread_args[t]);                                               \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    pthread_join(threads[t], NULL);                                                \
+                }                                                                                  \
+            } else {                                                                               \
+                /* Single-threaded execution with cache blocking */                                \
+                for (size_t ii = 0; ii < M; ii += BLOCK_M) {                                       \
+                    size_t i_end = (ii + BLOCK_M < M) ? (ii + BLOCK_M) : M;                        \
+                    for (size_t kk = 0; kk < K; kk += BLOCK_K) {                                   \
+                        size_t k_end = (kk + BLOCK_K < K) ? (kk + BLOCK_K) : K;                    \
+                        for (size_t jj = 0; jj < N; jj += BLOCK_N) {                               \
+                            size_t j_end = (jj + BLOCK_N < N) ? (jj + BLOCK_N) : N;                \
+                            /* Register blocking with 4x4 micro-kernels */                         \
+                            for (size_t i = ii; i < i_end; i += REG_M) {                           \
+                                size_t i_reg_end = (i + REG_M < i_end) ? (i + REG_M) : i_end;      \
+                                for (size_t j = jj; j < j_end; j += REG_N) {                       \
+                                    size_t j_reg_end = (j + REG_N < j_end) ? (j + REG_N) : j_end;  \
+                                    /* Accumulate 4x4 block in registers */                        \
+                                    TYPE acc[4][4] = {{0}};                                        \
                                     for (size_t ir = 0; ir < (i_reg_end - i); ir++) {              \
-                                        TYPE a_val = lhs[(i + ir) * K + k];                        \
                                         for (size_t jr = 0; jr < (j_reg_end - j); jr++) {          \
-                                            acc[ir][jr] += a_val * rhs[k * N + (j + jr)];          \
+                                            acc[ir][jr] = output[(i + ir) * N + (j + jr)];         \
                                         }                                                          \
                                     }                                                              \
-                                }                                                                  \
-                                /* Store back */                                                   \
-                                for (size_t ir = 0; ir < (i_reg_end - i); ir++) {                  \
-                                    for (size_t jr = 0; jr < (j_reg_end - j); jr++) {              \
-                                        output[(i + ir) * N + (j + jr)] = acc[ir][jr];             \
+                                    /* Compute 4x4 micro-kernel */                                 \
+                                    for (size_t k = kk; k < k_end; k++) {                          \
+                                        for (size_t ir = 0; ir < (i_reg_end - i); ir++) {          \
+                                            TYPE a_val = lhs[(i + ir) * K + k];                    \
+                                            for (size_t jr = 0; jr < (j_reg_end - j); jr++) {      \
+                                                acc[ir][jr] += a_val * rhs[k * N + (j + jr)];      \
+                                            }                                                      \
+                                        }                                                          \
+                                    }                                                              \
+                                    /* Store back */                                               \
+                                    for (size_t ir = 0; ir < (i_reg_end - i); ir++) {              \
+                                        for (size_t jr = 0; jr < (j_reg_end - j); jr++) {          \
+                                            output[(i + ir) * N + (j + jr)] = acc[ir][jr];         \
+                                        }                                                          \
                                     }                                                              \
                                 }                                                                  \
                             }                                                                      \

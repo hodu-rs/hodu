@@ -1,5 +1,6 @@
 #include "ops_binary.h"
 #include "simd_utils.h"
+#include "thread_utils.h"
 #include <math.h>
 
 // ============================================================================
@@ -39,6 +40,27 @@
 /// - Integer overflow: Not checked for performance; wraps according to C semantics
 /// - Unsigned underflow: Checked explicitly (e.g., sub uses (x > y) ? (x - y) : 0)
 #define IMPL_BINARY_OP(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                           \
+    typedef struct {                                                                               \
+        const TYPE *lhs;                                                                           \
+        const TYPE *rhs;                                                                           \
+        TYPE *output;                                                                              \
+        size_t start;                                                                              \
+        size_t end;                                                                                \
+        size_t lhs_offset;                                                                         \
+        size_t rhs_offset;                                                                         \
+    } binary_##OP_NAME##_##TYPE_SUFFIX##_args_t;                                                   \
+                                                                                                   \
+    static void *binary_##OP_NAME##_##TYPE_SUFFIX##_worker(void *arg) {                            \
+        binary_##OP_NAME##_##TYPE_SUFFIX##_args_t *args =                                          \
+            (binary_##OP_NAME##_##TYPE_SUFFIX##_args_t *)arg;                                      \
+        for (size_t i = args->start; i < args->end; i++) {                                         \
+            TYPE x = args->lhs[args->lhs_offset + i];                                              \
+            TYPE y = args->rhs[args->rhs_offset + i];                                              \
+            args->output[i] = FUNC;                                                                \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
     void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
                                  const size_t *metadata) {                                         \
         const TYPE *l = (const TYPE *)lhs;                                                         \
@@ -58,10 +80,39 @@
         bool rhs_cont = is_contiguous(num_dims, rhs_shape, rhs_strides);                           \
                                                                                                    \
         if (lhs_cont && rhs_cont) {                                                                \
-            for (size_t i = 0; i < num_els; i++) {                                                 \
-                TYPE x = l[lhs_offset + i];                                                        \
-                TYPE y = r[rhs_offset + i];                                                        \
-                out[i] = FUNC;                                                                     \
+            const size_t min_work_per_thread = 10000;                                              \
+            size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wvla\"")         \
+                    pthread_t threads[num_threads];                                                \
+                binary_##OP_NAME##_##TYPE_SUFFIX##_args_t args[num_threads];                       \
+                _Pragma("GCC diagnostic pop")                                                      \
+                                                                                                   \
+                    size_t chunk_size = num_els / num_threads;                                     \
+                size_t remaining = num_els % num_threads;                                          \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    args[t].lhs = l;                                                               \
+                    args[t].rhs = r;                                                               \
+                    args[t].output = out;                                                          \
+                    args[t].lhs_offset = lhs_offset;                                               \
+                    args[t].rhs_offset = rhs_offset;                                               \
+                    args[t].start = t * chunk_size + (t < remaining ? t : remaining);              \
+                    args[t].end = args[t].start + chunk_size + (t < remaining ? 1 : 0);            \
+                    pthread_create(&threads[t], NULL, binary_##OP_NAME##_##TYPE_SUFFIX##_worker,   \
+                                   &args[t]);                                                      \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    pthread_join(threads[t], NULL);                                                \
+                }                                                                                  \
+            } else {                                                                               \
+                for (size_t i = 0; i < num_els; i++) {                                             \
+                    TYPE x = l[lhs_offset + i];                                                    \
+                    TYPE y = r[rhs_offset + i];                                                    \
+                    out[i] = FUNC;                                                                 \
+                }                                                                                  \
             }                                                                                      \
         } else if (lhs_cont) {                                                                     \
             for (size_t i = 0; i < num_els; i++) {                                                 \

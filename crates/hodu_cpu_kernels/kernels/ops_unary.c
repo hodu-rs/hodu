@@ -1,5 +1,6 @@
 #include "ops_unary.h"
 #include "simd_utils.h"
+#include "thread_utils.h"
 #include <math.h>
 
 #ifdef USE_BLAS
@@ -34,6 +35,31 @@
  * @param FUNC Expression to compute the result (uses variable 'x')
  */
 #define IMPL_UNARY_OP(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                            \
+    typedef struct {                                                                               \
+        const TYPE *input;                                                                         \
+        TYPE *output;                                                                              \
+        size_t start;                                                                              \
+        size_t end;                                                                                \
+        size_t offset;                                                                             \
+    } unary_##OP_NAME##_##TYPE_SUFFIX##_args_t;                                                    \
+                                                                                                   \
+    static void *unary_##OP_NAME##_##TYPE_SUFFIX##_worker(void *arg) {                             \
+        unary_##OP_NAME##_##TYPE_SUFFIX##_args_t *args =                                           \
+            (unary_##OP_NAME##_##TYPE_SUFFIX##_args_t *)arg;                                       \
+        if (args->input) {                                                                         \
+            for (size_t i = args->start; i < args->end; i++) {                                     \
+                TYPE x = args->input[args->offset + i];                                            \
+                args->output[i] = FUNC;                                                            \
+            }                                                                                      \
+        } else {                                                                                   \
+            for (size_t i = args->start; i < args->end; i++) {                                     \
+                TYPE x = args->output[i];                                                          \
+                args->output[i] = FUNC;                                                            \
+            }                                                                                      \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
     void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
@@ -47,15 +73,42 @@
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
         if (contiguous) {                                                                          \
-            if (in) {                                                                              \
-                for (size_t i = 0; i < num_els; i++) {                                             \
-                    TYPE x = in[offset + i];                                                       \
-                    out[i] = FUNC;                                                                 \
+            const size_t min_work_per_thread = 10000;                                              \
+            size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wvla\"")         \
+                    pthread_t threads[num_threads];                                                \
+                unary_##OP_NAME##_##TYPE_SUFFIX##_args_t args[num_threads];                        \
+                _Pragma("GCC diagnostic pop")                                                      \
+                                                                                                   \
+                    size_t chunk_size = num_els / num_threads;                                     \
+                size_t remaining = num_els % num_threads;                                          \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    args[t].input = in;                                                            \
+                    args[t].output = out;                                                          \
+                    args[t].offset = offset;                                                       \
+                    args[t].start = t * chunk_size + (t < remaining ? t : remaining);              \
+                    args[t].end = args[t].start + chunk_size + (t < remaining ? 1 : 0);            \
+                    pthread_create(&threads[t], NULL, unary_##OP_NAME##_##TYPE_SUFFIX##_worker,    \
+                                   &args[t]);                                                      \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    pthread_join(threads[t], NULL);                                                \
                 }                                                                                  \
             } else {                                                                               \
-                for (size_t i = 0; i < num_els; i++) {                                             \
-                    TYPE x = out[i];                                                               \
-                    out[i] = FUNC;                                                                 \
+                if (in) {                                                                          \
+                    for (size_t i = 0; i < num_els; i++) {                                         \
+                        TYPE x = in[offset + i];                                                   \
+                        out[i] = FUNC;                                                             \
+                    }                                                                              \
+                } else {                                                                           \
+                    for (size_t i = 0; i < num_els; i++) {                                         \
+                        TYPE x = out[i];                                                           \
+                        out[i] = FUNC;                                                             \
+                    }                                                                              \
                 }                                                                                  \
             }                                                                                      \
         } else {                                                                                   \
@@ -79,6 +132,33 @@
  * @param FUNC Expression using 'x' (element) and 'const_val' (scalar)
  */
 #define IMPL_UNARY_WITH_SCALAR(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                   \
+    typedef struct {                                                                               \
+        const TYPE *input;                                                                         \
+        TYPE *output;                                                                              \
+        TYPE const_val;                                                                            \
+        size_t start;                                                                              \
+        size_t end;                                                                                \
+        size_t offset;                                                                             \
+    } unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_args_t;                                             \
+                                                                                                   \
+    static void *unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_worker(void *arg) {                      \
+        unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_args_t *args =                                    \
+            (unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_args_t *)arg;                                \
+        TYPE const_val = args->const_val;                                                          \
+        if (args->input) {                                                                         \
+            for (size_t i = args->start; i < args->end; i++) {                                     \
+                TYPE x = args->input[args->offset + i];                                            \
+                args->output[i] = FUNC;                                                            \
+            }                                                                                      \
+        } else {                                                                                   \
+            for (size_t i = args->start; i < args->end; i++) {                                     \
+                TYPE x = args->output[i];                                                          \
+                args->output[i] = FUNC;                                                            \
+            }                                                                                      \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
     void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
                                  const void *scalar) {                                             \
         const size_t num_els = metadata[0];                                                        \
@@ -94,15 +174,43 @@
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
         if (contiguous) {                                                                          \
-            if (in) {                                                                              \
-                for (size_t i = 0; i < num_els; i++) {                                             \
-                    TYPE x = in[offset + i];                                                       \
-                    out[i] = FUNC;                                                                 \
+            const size_t min_work_per_thread = 10000;                                              \
+            size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wvla\"")         \
+                    pthread_t threads[num_threads];                                                \
+                unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_args_t args[num_threads];                 \
+                _Pragma("GCC diagnostic pop")                                                      \
+                                                                                                   \
+                    size_t chunk_size = num_els / num_threads;                                     \
+                size_t remaining = num_els % num_threads;                                          \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    args[t].input = in;                                                            \
+                    args[t].output = out;                                                          \
+                    args[t].const_val = const_val;                                                 \
+                    args[t].offset = offset;                                                       \
+                    args[t].start = t * chunk_size + (t < remaining ? t : remaining);              \
+                    args[t].end = args[t].start + chunk_size + (t < remaining ? 1 : 0);            \
+                    pthread_create(&threads[t], NULL,                                              \
+                                   unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_worker, &args[t]);     \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    pthread_join(threads[t], NULL);                                                \
                 }                                                                                  \
             } else {                                                                               \
-                for (size_t i = 0; i < num_els; i++) {                                             \
-                    TYPE x = out[i];                                                               \
-                    out[i] = FUNC;                                                                 \
+                if (in) {                                                                          \
+                    for (size_t i = 0; i < num_els; i++) {                                         \
+                        TYPE x = in[offset + i];                                                   \
+                        out[i] = FUNC;                                                             \
+                    }                                                                              \
+                } else {                                                                           \
+                    for (size_t i = 0; i < num_els; i++) {                                         \
+                        TYPE x = out[i];                                                           \
+                        out[i] = FUNC;                                                             \
+                    }                                                                              \
                 }                                                                                  \
             }                                                                                      \
         } else {                                                                                   \
