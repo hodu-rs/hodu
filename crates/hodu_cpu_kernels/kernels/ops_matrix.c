@@ -103,7 +103,7 @@
                                                                                                    \
         if (is_contiguous && batch_ndim == 0) {                                                    \
             /* Fast path: no batching, contiguous - use parallel execution */                      \
-            size_t num_threads = get_optimal_threads(M, 4);                                        \
+            size_t num_threads = get_optimal_threads(M, 128);                                      \
                                                                                                    \
             if (num_threads > 1) {                                                                 \
                 /* Parallel execution */                                                           \
@@ -530,7 +530,7 @@ MATMUL_OP(uint64_t, u64)
                                                                                                    \
         if (is_contiguous && lhs_offset == 0 && rhs_offset == 0) {                                 \
             /* Fast path: contiguous matrices - use parallel execution for large matrices */       \
-            size_t num_threads = get_optimal_threads(M, 8);                                        \
+            size_t num_threads = get_optimal_threads(M, 256);                                      \
                                                                                                    \
             if (num_threads > 1) {                                                                 \
                 /* Parallel execution */                                                           \

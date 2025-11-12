@@ -73,7 +73,7 @@
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
         if (contiguous) {                                                                          \
-            const size_t min_work_per_thread = 10000;                                              \
+            const size_t min_work_per_thread = 100000;                                             \
             size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
                                                                                                    \
             if (num_threads > 1) {                                                                 \
@@ -174,7 +174,7 @@
         bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);            \
                                                                                                    \
         if (contiguous) {                                                                          \
-            const size_t min_work_per_thread = 10000;                                              \
+            const size_t min_work_per_thread = 100000;                                             \
             size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
                                                                                                    \
             if (num_threads > 1) {                                                                 \

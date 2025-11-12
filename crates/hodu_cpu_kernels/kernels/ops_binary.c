@@ -80,7 +80,7 @@
         bool rhs_cont = is_contiguous(num_dims, rhs_shape, rhs_strides);                           \
                                                                                                    \
         if (lhs_cont && rhs_cont) {                                                                \
-            const size_t min_work_per_thread = 10000;                                              \
+            const size_t min_work_per_thread = 100000;                                             \
             size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
                                                                                                    \
             if (num_threads > 1) {                                                                 \
