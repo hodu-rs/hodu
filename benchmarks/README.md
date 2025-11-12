@@ -27,6 +27,18 @@ Performance benchmarks comparing Hodu against popular deep learning frameworks.
 
 ![benchmark](../assets/benchmarks/benchmark_mlp_2_v0.2.3.png)
 
+## Benchmark Configuration
+
+### Statistical Methodology
+
+All benchmarks use **trimmed mean** to ensure reliable results by removing outliers:
+- **Warmup iterations**: 10 (increased from 5)
+- **Measurement iterations**: 30 (increased from 10)
+- **Statistical method**: Trimmed mean with 10% trim ratio (removes top/bottom 10% of measurements)
+- **Timeout**: 2 seconds per configuration
+
+This methodology significantly reduces variance and provides more stable, reproducible results across runs.
+
 ## Requirements
 
 - **Python**: 3.11.x

@@ -2,6 +2,24 @@ use hodu::prelude::*;
 use std::env;
 use std::time::Instant;
 
+// Statistical utilities
+fn median(times: &mut [f64]) -> f64 {
+    times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let len = times.len();
+    if len % 2 == 0 {
+        (times[len / 2 - 1] + times[len / 2]) / 2.0
+    } else {
+        times[len / 2]
+    }
+}
+
+fn trimmed_mean(times: &mut [f64], trim_ratio: f64) -> f64 {
+    times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    let trim_count = (times.len() as f64 * trim_ratio) as usize;
+    let trimmed = &times[trim_count..times.len() - trim_count];
+    trimmed.iter().sum::<f64>() / trimmed.len() as f64
+}
+
 #[derive(Debug, Clone, Copy)]
 enum BenchMode {
     DynamicCPU,
@@ -139,20 +157,23 @@ fn benchmark_dynamic(
         let _ = mlp.forward(&x)?;
     }
 
-    // Benchmark
-    let start = Instant::now();
+    // Benchmark - collect individual iteration times
+    let mut times = Vec::with_capacity(iterations);
+    let bench_start = Instant::now();
     for i in 0..iterations {
+        let start = Instant::now();
         let _ = mlp.forward(&x)?;
+        times.push(start.elapsed().as_secs_f64());
 
         // Check timeout after each iteration
-        let elapsed = start.elapsed();
-        if elapsed.as_secs_f64() > 1.0 {
-            return Err(format!("TIMEOUT: Exceeded 1 second after {} iterations", i + 1).into());
+        let total_elapsed = bench_start.elapsed();
+        if total_elapsed.as_secs_f64() > 2.0 {
+            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
         }
     }
-    let elapsed = start.elapsed();
 
-    Ok(elapsed.as_secs_f64() / iterations as f64)
+    // Use trimmed mean (remove top/bottom 10%)
+    Ok(trimmed_mean(&mut times, 0.1))
 }
 
 fn benchmark_static(
@@ -211,21 +232,23 @@ fn benchmark_static(
         let _ = script.run()?;
     }
 
-    // Benchmark
-    let start = Instant::now();
+    // Benchmark - collect individual iteration times
+    let mut times = Vec::with_capacity(iterations);
+    let bench_start = Instant::now();
     for i in 0..iterations {
+        let start = Instant::now();
         let _ = script.run()?;
+        times.push(start.elapsed().as_secs_f64());
 
         // Check timeout after each iteration
-        let start_iteration = Instant::now();
-        let elapsed_iteration = start_iteration.elapsed();
-        if elapsed_iteration.as_secs_f64() > 1.0 {
-            return Err(format!("TIMEOUT: Exceeded 1 second after {} iterations", i + 1).into());
+        let total_elapsed = bench_start.elapsed();
+        if total_elapsed.as_secs_f64() > 2.0 {
+            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
         }
     }
-    let elapsed = start.elapsed();
 
-    Ok(elapsed.as_secs_f64() / iterations as f64)
+    // Use trimmed mean (remove top/bottom 10%)
+    Ok(trimmed_mean(&mut times, 0.1))
 }
 
 fn run_benchmark(
@@ -388,8 +411,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (128, 768, 2048, 1024), // Large: different in/out features (needs projection)
     ];
 
-    let warmup = 5;
-    let iterations = 10;
+    let warmup = 10;
+    let iterations = 30;
 
     run_benchmark(mode, &configs, warmup, iterations)?;
 

@@ -1,7 +1,20 @@
 import torch
+import numpy as np
 import torch.nn as nn
 import time
 import sys
+
+
+def trimmed_mean(times, trim_ratio=0.1):
+    """Calculate trimmed mean by removing top and bottom percentiles"""
+    times = np.array(times)
+    times.sort()
+    trim_count = int(len(times) * trim_ratio)
+    if trim_count > 0:
+        trimmed = times[trim_count:-trim_count]
+    else:
+        trimmed = times
+    return np.mean(trimmed)
 
 
 class BenchMode:
@@ -105,15 +118,16 @@ def benchmark_dynamic(
             _ = model(x)
             BenchMode.synchronize(device)
 
-    # Benchmark
-    start = time.time()
+    # Benchmark - collect individual iteration times
+    times = []
     with torch.no_grad():
         for _ in range(iterations):
+            start = time.time()
             _ = model(x)
             BenchMode.synchronize(device)
-    elapsed = time.time() - start
+            times.append(time.time() - start)
 
-    return elapsed / iterations
+    return trimmed_mean(times)
 
 
 def benchmark_static(
@@ -136,15 +150,16 @@ def benchmark_static(
             _ = model(x)
             BenchMode.synchronize(device)
 
-    # Benchmark
-    start = time.time()
+    # Benchmark - collect individual iteration times
+    times = []
     with torch.no_grad():
         for _ in range(iterations):
+            start = time.time()
             _ = model(x)
             BenchMode.synchronize(device)
-    elapsed = time.time() - start
+            times.append(time.time() - start)
 
-    return elapsed / iterations
+    return trimmed_mean(times)
 
 
 def run_benchmark(mode, configs, warmup, iterations):
@@ -220,8 +235,8 @@ def main():
         (128, 768, 2048, 1024),
     ]
 
-    warmup = 5
-    iterations = 10
+    warmup = 10
+    iterations = 30
 
     run_benchmark(mode, configs, warmup, iterations)
 

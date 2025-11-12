@@ -26,6 +26,17 @@ if [ -d "crates/hodu_metal_kernels" ]; then
     (cd crates/hodu_metal_kernels && cargo fmt)
 fi
 
+# Format benchmark crates
+if [ -d "benchmarks" ]; then
+    for cargo_toml in benchmarks/*/Cargo.toml; do
+        if [ -f "$cargo_toml" ]; then
+            bench_dir=$(dirname "$cargo_toml")
+            echo -e "  ${CYAN}→${NC} ${DIM}${bench_dir}${NC}"
+            (cd "$bench_dir" && cargo fmt --all)
+        fi
+    done
+fi
+
 echo -e "${BRIGHT_GREEN}✓${NC} Rust formatting complete\n"
 
 # Format C/C++/CUDA/Metal files
