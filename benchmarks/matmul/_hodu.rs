@@ -2,22 +2,45 @@ use hodu::prelude::*;
 use std::env;
 use std::time::Instant;
 
-// Statistical utilities
-fn median(times: &mut [f64]) -> f64 {
-    times.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let len = times.len();
-    if len % 2 == 0 {
-        (times[len / 2 - 1] + times[len / 2]) / 2.0
-    } else {
-        times[len / 2]
+// Memory measurement utilities
+#[cfg(target_os = "linux")]
+fn get_memory_usage_kb() -> Option<usize> {
+    let status = std::fs::read_to_string("/proc/self/status").ok()?;
+    for line in status.lines() {
+        if line.starts_with("VmRSS:") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            return parts.get(1)?.parse().ok();
+        }
     }
+    None
 }
 
+#[cfg(target_os = "macos")]
+fn get_memory_usage_kb() -> Option<usize> {
+    use std::process::Command;
+    let output = Command::new("ps")
+        .args(["-o", "rss=", "-p", &std::process::id().to_string()])
+        .output()
+        .ok()?;
+    let rss_str = String::from_utf8(output.stdout).ok()?;
+    rss_str.trim().parse().ok()
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn get_memory_usage_kb() -> Option<usize> {
+    None
+}
+
+// Statistical utilities
 fn trimmed_mean(times: &mut [f64], trim_ratio: f64) -> f64 {
     times.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let trim_count = (times.len() as f64 * trim_ratio) as usize;
-    let trimmed = &times[trim_count..times.len() - trim_count];
-    trimmed.iter().sum::<f64>() / trimmed.len() as f64
+    if trim_count > 0 {
+        let trimmed = &times[trim_count..times.len() - trim_count];
+        trimmed.iter().sum::<f64>() / trimmed.len() as f64
+    } else {
+        times.iter().sum::<f64>() / times.len() as f64
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -80,7 +103,7 @@ fn benchmark_dynamic(
     n: usize,
     warmup: usize,
     iterations: usize,
-) -> Result<f64, Box<dyn std::error::Error>> {
+) -> Result<(f64, Option<usize>), Box<dyn std::error::Error>> {
     match mode {
         BenchMode::DynamicCPU => {
             set_runtime_device(Device::CPU);
@@ -104,6 +127,8 @@ fn benchmark_dynamic(
         let _ = a.matmul(&b)?;
     }
 
+    let mem_before = get_memory_usage_kb();
+
     // Benchmark - collect individual iteration times
     let mut times = Vec::with_capacity(iterations);
     let bench_start = Instant::now();
@@ -114,13 +139,19 @@ fn benchmark_dynamic(
 
         // Check timeout after each iteration
         let total_elapsed = bench_start.elapsed();
-        if total_elapsed.as_secs_f64() > 2.0 {
-            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
+        if total_elapsed.as_secs_f64() > 10.0 {
+            return Err(format!("TIMEOUT: Exceeded 10 seconds after {} iterations", i + 1).into());
         }
     }
 
+    let mem_after = get_memory_usage_kb();
+    let mem_used = match (mem_before, mem_after) {
+        (Some(before), Some(after)) => Some(after.saturating_sub(before)),
+        _ => mem_after,
+    };
+
     // Use trimmed mean (remove top/bottom 10%)
-    Ok(trimmed_mean(&mut times, 0.1))
+    Ok((trimmed_mean(&mut times, 0.1), mem_used))
 }
 
 fn benchmark_static(
@@ -130,7 +161,7 @@ fn benchmark_static(
     n: usize,
     warmup: usize,
     iterations: usize,
-) -> Result<f64, Box<dyn std::error::Error>> {
+) -> Result<(f64, Option<usize>), Box<dyn std::error::Error>> {
     let a_data = Tensor::randn(&[m, k], 0f32, 1.)?;
     let b_data = Tensor::randn(&[k, n], 0f32, 1.)?;
 
@@ -177,6 +208,8 @@ fn benchmark_static(
         let _ = script.run()?;
     }
 
+    let mem_before = get_memory_usage_kb();
+
     // Benchmark - collect individual iteration times
     let mut times = Vec::with_capacity(iterations);
     let bench_start = Instant::now();
@@ -187,13 +220,19 @@ fn benchmark_static(
 
         // Check timeout after each iteration
         let total_elapsed = bench_start.elapsed();
-        if total_elapsed.as_secs_f64() > 2.0 {
-            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
+        if total_elapsed.as_secs_f64() > 10.0 {
+            return Err(format!("TIMEOUT: Exceeded 10 seconds after {} iterations", i + 1).into());
         }
     }
 
+    let mem_after = get_memory_usage_kb();
+    let mem_used = match (mem_before, mem_after) {
+        (Some(before), Some(after)) => Some(after.saturating_sub(before)),
+        _ => mem_after,
+    };
+
     // Use trimmed mean (remove top/bottom 10%)
-    Ok(trimmed_mean(&mut times, 0.1))
+    Ok((trimmed_mean(&mut times, 0.1), mem_used))
 }
 
 fn run_benchmark(
@@ -231,14 +270,20 @@ fn run_benchmark(
         };
 
         match result {
-            Ok(time) => {
-                println!("{}x{}x{},time_ms={:.6}ms", m, k, n, time * 1000.0);
+            Ok((time, mem)) => {
+                if let Some(mem_kb) = mem {
+                    println!("{}x{}x{},time_ms={:.6}ms,mem_kb={}", m, k, n, time * 1000.0, mem_kb);
+                } else {
+                    println!("{}x{}x{},time_ms={:.6}ms", m, k, n, time * 1000.0);
+                }
             },
             Err(e) if e.to_string().contains("TIMEOUT") => {
                 println!("{}x{}x{},TIMEOUT", m, k, n);
-                timed_out = true; // Mark as timed out to skip remaining benchmarks
+                timed_out = true;
             },
-            Err(e) => return Err(e),
+            Err(_) => {
+                println!("{}x{}x{},ERROR", m, k, n);
+            },
         }
     }
 
@@ -281,8 +326,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let configs = [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)];
 
-    let warmup = 10;
-    let iterations = 30;
+    let warmup = 100;
+    let iterations = 100;
 
     run_benchmark(mode, &configs, warmup, iterations)?;
 

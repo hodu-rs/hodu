@@ -2,6 +2,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 import time
+import gc
 
 
 def trimmed_mean(times, trim_ratio=0.1):
@@ -80,6 +81,7 @@ class MLPBlock(tf.keras.Model):
 def benchmark_dynamic(
     mode, batch_size, in_features, hidden_features, out_features, warmup, iterations
 ):
+    gc.collect()
     device = BenchMode.get_device(mode)
 
     with tf.device(device):
@@ -96,10 +98,18 @@ def benchmark_dynamic(
 
         # Benchmark - collect individual iteration times
         times = []
-        for _ in range(iterations):
+        bench_start = time.time()
+        for i in range(iterations):
             start = time.time()
             _ = model(x, training=False)
             times.append(time.time() - start)
+
+            # Check timeout after each iteration
+            total_elapsed = time.time() - bench_start
+            if total_elapsed > 10.0:
+                raise TimeoutError(
+                    f"TIMEOUT: Exceeded 10 seconds after {i + 1} iterations"
+                )
 
     return trimmed_mean(times)
 
@@ -107,6 +117,7 @@ def benchmark_dynamic(
 def benchmark_static(
     mode, batch_size, in_features, hidden_features, out_features, warmup, iterations
 ):
+    gc.collect()
     device = BenchMode.get_device(mode)
 
     with tf.device(device):
@@ -128,10 +139,18 @@ def benchmark_static(
 
         # Benchmark - collect individual iteration times
         times = []
-        for _ in range(iterations):
+        bench_start = time.time()
+        for i in range(iterations):
             start = time.time()
             _ = model_compiled(x)
             times.append(time.time() - start)
+
+            # Check timeout after each iteration
+            total_elapsed = time.time() - bench_start
+            if total_elapsed > 10.0:
+                raise TimeoutError(
+                    f"TIMEOUT: Exceeded 10 seconds after {i + 1} iterations"
+                )
 
     return trimmed_mean(times)
 
@@ -144,6 +163,7 @@ def run_benchmark(mode, configs, warmup, iterations):
     timed_out = False
 
     for batch_size, in_features, hidden_features, out_features in configs:
+        # If we already timed out, skip remaining benchmarks
         if timed_out:
             print(
                 f"{batch_size}x{in_features}x{hidden_features}x{out_features},TIMEOUT"
@@ -152,7 +172,7 @@ def run_benchmark(mode, configs, warmup, iterations):
 
         try:
             if "static" in mode:
-                time_seconds = benchmark_static(
+                time_sec = benchmark_static(
                     mode,
                     batch_size,
                     in_features,
@@ -162,7 +182,7 @@ def run_benchmark(mode, configs, warmup, iterations):
                     iterations,
                 )
             else:
-                time_seconds = benchmark_dynamic(
+                time_sec = benchmark_dynamic(
                     mode,
                     batch_size,
                     in_features,
@@ -172,20 +192,16 @@ def run_benchmark(mode, configs, warmup, iterations):
                     iterations,
                 )
 
-            time_ms = time_seconds * 1000
             print(
-                f"{batch_size}x{in_features}x{hidden_features}x{out_features},time_ms={time_ms:.6f}ms"
+                f"{batch_size}x{in_features}x{hidden_features}x{out_features},time_ms={time_sec * 1000:.6f}ms"
             )
-        except Exception as e:
-            if "timeout" in str(e).lower():
-                print(
-                    f"{batch_size}x{in_features}x{hidden_features}x{out_features},TIMEOUT"
-                )
-                timed_out = True
-            else:
-                print(
-                    f"{batch_size}x{in_features}x{hidden_features}x{out_features},ERROR"
-                )
+        except TimeoutError:
+            print(
+                f"{batch_size}x{in_features}x{hidden_features}x{out_features},TIMEOUT"
+            )
+            timed_out = True
+        except Exception:
+            print(f"{batch_size}x{in_features}x{hidden_features}x{out_features},ERROR")
 
 
 def main():
@@ -207,8 +223,8 @@ def main():
         (128, 768, 2048, 1024),
     ]
 
-    warmup = 10
-    iterations = 30
+    warmup = 100
+    iterations = 100
 
     run_benchmark(mode, configs, warmup, iterations)
 

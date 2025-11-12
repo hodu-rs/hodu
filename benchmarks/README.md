@@ -32,22 +32,31 @@ Performance benchmarks comparing Hodu against popular deep learning frameworks.
 ### Statistical Methodology
 
 All benchmarks use **trimmed mean** to ensure reliable results by removing outliers:
-- **Warmup iterations**: 10 (increased from 5)
-- **Measurement iterations**: 30 (increased from 10)
+- **Warmup iterations**: 100 (extensive warmup for maximum stability)
+- **Measurement iterations**: 100 (high sample count for statistical significance)
 - **Statistical method**: Trimmed mean with 10% trim ratio (removes top/bottom 10% of measurements)
-- **Timeout**: 2 seconds per configuration
+- **Timeout**: 10 seconds per configuration
 
-This methodology significantly reduces variance and provides more stable, reproducible results across runs.
+This rigorous methodology with high iteration counts and statistical outlier removal provides highly accurate, stable, and reproducible results with strong statistical confidence.
+
+### Measured Metrics
+
+Each benchmark measures:
+1. **Execution Time**: Precise average time per operation (in milliseconds)
+2. **Performance Ratio**: Speedup relative to PyTorch baseline
+   - 🟢 Green: 1.1x+ faster (bold green)
+   - 🟡 Yellow: 0.9x-1.1x (similar performance, bold yellow)
+   - 🔴 Red: <0.9x slower (bold red)
 
 ## Requirements
 
-- **Python**: 3.11.x
+- **Python**: 3.11.x or higher
 - **Rust**: 1.90.0 or higher
 
 ## Setup
 
 ```bash
-# Install Python dependencies for plotting
+# Install Python dependencies
 pip3 install -r requirements.txt
 
 # Setup benchmark environments (JAX, TensorFlow, PyTorch, etc.)
@@ -71,7 +80,7 @@ python3 setup.py --cuda13
 Run benchmarks from the `benchmarks` directory using:
 
 ```bash
-# Run matrix multiplication benchmark
+# Run matrix multiplication benchmark with beautiful output
 python3 run.py --bench=matmul --cpu            # CPU only
 python3 run.py --bench=matmul --metal          # Metal only (macOS)
 python3 run.py --bench=matmul --cuda           # CUDA only (NVIDIA GPUs)
@@ -87,15 +96,6 @@ python3 run.py --bench=mlp --cpu --xla         # CPU + XLA
 
 # Quiet mode (progress bar only)
 python3 run.py --bench=matmul --cpu --quiet
-
-# Save results as JSON
-python3 run.py --bench=matmul --cpu --metal --save
-
-# Save results and generate plots
-python3 run.py --bench=matmul --cpu --metal --save --plot
-
-# Plot from existing JSON results
-python3 run.py --plot=results_matmul_20231029_143000.json
 ```
 
 ### Available Benchmarks
@@ -105,23 +105,9 @@ python3 run.py --plot=results_matmul_20231029_143000.json
 
 ### Options
 
+- `--bench=<type>`: Benchmark type (`matmul` or `mlp`) - **required**
 - `--cpu`: Run CPU benchmarks
 - `--metal`: Run Metal (macOS GPU) benchmarks
 - `--cuda`: Run CUDA (NVIDIA GPU) benchmarks
 - `--xla`: Run XLA benchmarks (requires `--cpu`)
-- `--quiet`: Show only progress bar
-- `--save`: Save results to JSON file
-- `--plot`: Generate visualization (requires `--save`)
-- `--plot=<file>`: Generate plot from existing JSON file
-
-### Visualization
-
-The `--plot` flag generates professional benchmark graphs with:
-- **Speedup ratio** visualization (baseline = PyTorch Dynamic)
-- Baseline reference line at 1.0x
-- Bar chart for easy comparison across frameworks
-- Framework-specific color coding (Hodu in pink, PyTorch in orange, etc.)
-- Dynamic vs Static execution modes differentiation (solid vs hatched bars)
-- Separate CPU and GPU subplots
-- Log-scale Y-axis for clear performance differences
-- High-resolution PNG output (300 DPI)
+- `--quiet`: Show only progress bar (both runners)

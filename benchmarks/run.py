@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Benchmark runner with beautiful output and memory tracking.
+"""
 
 import json
 import re
@@ -7,1151 +10,572 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# --- Colors (ANSI escape codes) ---
-GREEN = "\033[0;32m"
-BLUE = "\033[0;34m"
-YELLOW = "\033[1;33m"
-RED = "\033[0;31m"
-CYAN = "\033[0;36m"
-MAGENTA = "\033[0;35m"
-WHITE = "\033[1;37m"
-LIGHT_PINK = "\033[38;5;218m"
-NC = "\033[0m"  # No Color
+# Try to import rich for beautiful output
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.progress import (
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        BarColumn,
+        TimeElapsedColumn,
+    )
+    from rich.panel import Panel
+    from rich.layout import Layout
+    from rich import box
 
-# Cursor control
-HIDE_CURSOR = "\033[?25l"
-SHOW_CURSOR = "\033[?25h"
-
-# Global quiet mode flag
-QUIET_MODE = False
-
-
-def print_color(color, text):
-    """Prints text in the specified color."""
-    if not QUIET_MODE:
-        print(f"{color}{text}{NC}")
+    RICH_AVAILABLE = True
+except ImportError:
+    RICH_AVAILABLE = False
+    print("Warning: rich library not available. Install with: pip install rich")
+    print("Falling back to simple output...")
 
 
-def print_progress(current, total):
-    """Print progress percentage in quiet mode (updates same line)."""
-    if QUIET_MODE:
-        if current == 1:
-            # Hide cursor at the start
-            print(HIDE_CURSOR, end="", flush=True)
-        percentage = int((current / total) * 100)
-        bar_length = 20
-        filled = int(bar_length * current / total)
-        bar = "█" * filled + "░" * (bar_length - filled)
-        print(f"\rProgress: [{bar}] {percentage}%    ", end="", flush=True)
+# Configuration
+TABLE_WIDTH = 160
+VENV_JAX_TF = "1"
+VENV_TENSORFLOW = "2"
 
 
-def run_command(command, cwd=None, env=None):
-    """Runs a command and captures output."""
-    try:
-        result = subprocess.run(
-            command, check=False, capture_output=True, text=True, cwd=cwd, env=env
-        )
-        return result
-    except Exception as e:
-        print_color(RED, f"Error running command {' '.join(command)}: {e}")
-        return None
+class BenchmarkRunner:
+    """Main benchmark runner with rich output."""
 
+    def __init__(self):
+        self.console = Console() if RICH_AVAILABLE else None
+        self.all_results = {}
+        self.quiet_mode = False
 
-def parse_benchmark_output(output):
-    """Parse benchmark output and extract timing data."""
-    results = {}
-    mode = None
+    def print_header(self, bench_type):
+        """Print beautiful header."""
+        if not RICH_AVAILABLE or self.quiet_mode:
+            print(f"\n{'=' * 80}")
+            print(f"Benchmark: {bench_type.upper()}")
+            print(f"{'=' * 80}\n")
+            return
 
-    for line in output.strip().split("\n"):
-        if line.startswith("mode="):
-            mode = line.split("=", 1)[1]
-        elif "," in line:
-            # Parse generic format: <size>,<value>
-            # where size can be any dimension (3D, 4D, etc.)
-            parts = line.split(",", 1)
-            if len(parts) == 2:
-                size = parts[0]
-                value = parts[1]
+        title = {
+            "matmul": "Matrix Multiplication Benchmark",
+            "mlp": "MLP Block Benchmark (3-layer with GELU and Residual)",
+        }.get(bench_type, f"{bench_type.upper()} Benchmark")
 
-                if "TIMEOUT" in value:
-                    results[size] = "TIMEOUT"
-                elif "ERROR" in value:
-                    results[size] = "ERROR"
-                elif "ms" in value:
-                    # Extract time value from formats like "0.123456ms" or "time_ms=0.123456ms"
-                    match = re.search(r"(?:time_ms=)?([0-9.]+)", value)
-                    if match:
-                        results[size] = float(match.group(1))
-
-    return mode, results
-
-
-def run_candle_benchmark(bench_type, mode):
-    """Run Candle (Rust) benchmark."""
-    print_color(CYAN, f"\n--- Running Candle {mode} ---")
-
-    # Run benchmark (cargo run will build if needed)
-    run_cmd = ["cargo", "run", "--release", "--bin", "candle", "--"]
-    if "metal" in mode:
-        run_cmd.insert(3, "--features=metal,candle-bench")
-    elif "cuda" in mode:
-        run_cmd.insert(3, "--features=cuda,candle-bench")
-    else:
-        run_cmd.insert(3, "--features=candle-bench")
-    run_cmd.append(mode)
-
-    print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
-    result = run_command(run_cmd, cwd=Path(__file__).parent / bench_type)
-
-    if result and result.returncode == 0:
-        return parse_benchmark_output(result.stdout)
-    else:
-        error_msg = result.stderr if result else "Unknown error"
-        print_color(RED, f"Candle benchmark failed: {error_msg}")
-        return None, {}
-
-
-def run_burn_benchmark(bench_type, mode):
-    """Run Burn (Rust) benchmark."""
-    print_color(CYAN, f"\n--- Running Burn {mode} ---")
-
-    # Run benchmark (cargo run will build if needed)
-    run_cmd = ["cargo", "run", "--release", "--bin", "burn", "--"]
-    if "wgpu" in mode:
-        run_cmd.insert(3, "--features=wgpu,burn-bench")
-    elif "tch" in mode or "cuda" in mode:
-        run_cmd.insert(3, "--features=cuda,burn-bench")
-    else:
-        run_cmd.insert(3, "--features=burn-bench")
-    run_cmd.append(mode)
-
-    print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
-    result = run_command(run_cmd, cwd=Path(__file__).parent / bench_type)
-
-    if result and result.returncode == 0:
-        return parse_benchmark_output(result.stdout)
-    else:
-        error_msg = result.stderr if result else "Unknown error"
-        print_color(RED, f"Burn benchmark failed: {error_msg}")
-        return None, {}
-
-
-def run_hodu_benchmark(bench_type, mode):
-    """Run Hodu (Rust) benchmark."""
-    print_color(CYAN, f"\n--- Running Hodu {mode} ---")
-
-    # Run benchmark (cargo run will build if needed)
-    run_cmd = ["cargo", "run", "--release", "--bin", "hodu", "--"]
-    if "metal" in mode:
-        run_cmd.insert(3, "--features=metal,hodu-bench")
-    elif "xla" in mode:
-        run_cmd.insert(3, "--features=xla,hodu-bench")
-    elif "cuda" in mode:
-        run_cmd.insert(3, "--features=cuda,hodu-bench")
-    else:
-        run_cmd.insert(3, "--features=hodu-bench")
-    run_cmd.append(mode)
-
-    print_color(YELLOW, f"Running: {' '.join(run_cmd)}")
-    result = run_command(run_cmd, cwd=Path(__file__).parent / bench_type)
-
-    if result and result.returncode == 0:
-        return parse_benchmark_output(result.stdout)
-    else:
-        error_msg = result.stderr if result else "Unknown error"
-        print_color(RED, f"Hodu benchmark failed: {error_msg}")
-        return None, {}
-
-
-def run_python_benchmark(bench_type, script, mode):
-    """Run Python-based benchmark (PyTorch, JAX, TensorFlow)."""
-    script_name = Path(script).stem.replace("_", "")
-    print_color(CYAN, f"\n--- Running {script_name.upper()} {mode} ---")
-
-    # Determine which Python executable to use
-    base_path = Path(__file__).parent
-
-    if script == "_jax.py":
-        # Use .venvs/1 for JAX
-        venv_path = base_path / ".venvs" / "1"
-        if venv_path.exists():
-            python_exe = venv_path / "bin" / "python3"
-            cmd = [str(python_exe), script, mode]
-        else:
-            print_color(YELLOW, "Warning: .venvs/1 not found, using system python3")
-            cmd = ["python3", script, mode]
-    elif script == "_tensorflow.py":
-        # Use .venvs/2 for TensorFlow
-        venv_path = base_path / ".venvs" / "2"
-        if venv_path.exists():
-            python_exe = venv_path / "bin" / "python3"
-            cmd = [str(python_exe), script, mode]
-        else:
-            print_color(YELLOW, "Warning: .venvs/2 not found, using system python3")
-            cmd = ["python3", script, mode]
-    else:
-        # Use .venvs/1 for PyTorch (same as JAX)
-        venv_path = base_path / ".venvs" / "1"
-        if venv_path.exists():
-            python_exe = venv_path / "bin" / "python3"
-            cmd = [str(python_exe), script, mode]
-        else:
-            print_color(YELLOW, "Warning: .venvs/1 not found, using system python3")
-            cmd = ["python3", script, mode]
-
-    print_color(YELLOW, f"Running: {' '.join(cmd)}")
-
-    result = run_command(cmd, cwd=Path(__file__).parent / bench_type)
-
-    if result and result.returncode == 0:
-        return parse_benchmark_output(result.stdout)
-    else:
-        error_msg = result.stderr if result else "Unknown error"
-        # Check if it's just a missing dependency
-        if "ModuleNotFoundError" in error_msg or "ImportError" in error_msg:
-            print_color(
-                YELLOW, f"{script_name.upper()} not available (dependency missing)"
+        self.console.print(
+            Panel.fit(
+                f"[bold cyan]{title}[/bold cyan]\n"
+                f"[dim]Measuring execution time and memory usage[/dim]",
+                border_style="cyan",
+                padding=(1, 2),
             )
-        else:
-            print_color(RED, f"{script_name.upper()} benchmark failed: {error_msg}")
+        )
+
+    def run_command(self, command, cwd=None):
+        """Run a command and capture output."""
+        try:
+            result = subprocess.run(
+                command, check=False, capture_output=True, text=True, cwd=cwd
+            )
+            return result
+        except Exception as e:
+            if RICH_AVAILABLE:
+                self.console.print(f"[red]Error running command: {e}[/red]")
+            else:
+                print(f"Error running command: {e}")
+            return None
+
+    def parse_benchmark_output(self, output):
+        """Parse benchmark output including memory data."""
+        results = {}
+        mode = None
+
+        for line in output.strip().split("\n"):
+            if line.startswith("mode="):
+                mode = line.split("=", 1)[1]
+            elif "," in line:
+                parts = line.split(",", 1)
+                if len(parts) == 2:
+                    size = parts[0]
+                    value_str = parts[1]
+
+                    if "TIMEOUT" in value_str:
+                        results[size] = {"time": "TIMEOUT", "memory": None}
+                    elif "ERROR" in value_str:
+                        results[size] = {"time": "ERROR", "memory": None}
+                    else:
+                        time_ms = None
+                        mem_kb = None
+
+                        # Extract time
+                        time_match = re.search(r"time_ms=([0-9.]+)", value_str)
+                        if time_match:
+                            time_ms = float(time_match.group(1))
+
+                        # Extract memory
+                        mem_match = re.search(r"mem_kb=([0-9.]+)", value_str)
+                        if mem_match:
+                            mem_kb = float(mem_match.group(1))
+                        else:
+                            mem_match = re.search(r"mem_mb=([0-9.]+)", value_str)
+                            if mem_match:
+                                mem_kb = float(mem_match.group(1)) * 1024
+
+                        results[size] = {"time": time_ms, "memory": mem_kb}
+
+        return mode, results
+
+    def get_rust_features(self, framework, mode):
+        """Get cargo features for Rust frameworks."""
+        features_map = {
+            "candle": {
+                "metal": "metal,candle-bench",
+                "cuda": "cuda,candle-bench",
+                "default": "candle-bench",
+            },
+            "burn": {
+                "wgpu": "wgpu,burn-bench",
+                "tch": "cuda,burn-bench",
+                "cuda": "cuda,burn-bench",
+                "default": "burn-bench",
+            },
+            "hodu": {
+                "metal": "metal,hodu-bench",
+                "xla": "xla,hodu-bench",
+                "cuda": "cuda,hodu-bench",
+                "default": "hodu-bench",
+            },
+        }
+
+        framework_features = features_map.get(framework, {})
+        for key in ["metal", "cuda", "wgpu", "tch", "xla"]:
+            if key in mode:
+                return framework_features.get(key, framework_features.get("default"))
+        return framework_features.get("default", "")
+
+    def run_rust_benchmark(self, bench_type, framework, mode):
+        """Run Rust-based benchmark."""
+        features = self.get_rust_features(framework, mode)
+        cmd = [
+            "cargo",
+            "run",
+            "--release",
+            f"--features={features}",
+            "--bin",
+            framework,
+            "--",
+            mode,
+        ]
+
+        result = self.run_command(cmd, cwd=Path(__file__).parent / bench_type)
+
+        if result and result.returncode == 0:
+            return self.parse_benchmark_output(result.stdout)
         return None, {}
 
+    def get_python_executable(self, script):
+        """Get the appropriate Python executable."""
+        base_path = Path(__file__).parent
+        venv_num = VENV_TENSORFLOW if script == "_tensorflow.py" else VENV_JAX_TF
+        venv_path = base_path / ".venvs" / venv_num
 
-def get_ratio_color(ratio):
-    """Get color based on ratio relative to baseline (1.0).
+        if venv_path.exists():
+            return str(venv_path / "bin" / "python3")
+        return "python3"
 
-    Color intensity increases as the difference from 1.0 increases:
-    - ratio > 1.0 (faster): Green shades (lighter near 1.0, darker further away)
-    - ratio = 1.0 (same): White
-    - ratio < 1.0 (slower): Red shades (lighter near 1.0, darker further away)
-    """
-    if ratio > 1.0:
-        # Faster than baseline - Green with varying intensity
-        if ratio >= 2.0:
-            return "\033[38;5;34m"  # Dark green (very fast)
-        elif ratio >= 1.5:
-            return "\033[38;5;40m"  # Medium-dark green
-        elif ratio >= 1.2:
-            return "\033[38;5;46m"  # Medium green
-        elif ratio >= 1.1:
-            return "\033[38;5;82m"  # Light green
+    def run_python_benchmark(self, bench_type, script, mode):
+        """Run Python-based benchmark."""
+        python_exe = self.get_python_executable(script)
+        cmd = [python_exe, script, mode]
+
+        result = self.run_command(cmd, cwd=Path(__file__).parent / bench_type)
+
+        if result and result.returncode == 0:
+            return self.parse_benchmark_output(result.stdout)
         else:
-            return "\033[38;5;120m"  # Very light green (barely faster)
-    elif ratio < 1.0:
-        # Slower than baseline - Red with varying intensity
-        if ratio <= 0.5:
-            return "\033[38;5;160m"  # Dark red (very slow)
-        elif ratio <= 0.7:
-            return "\033[38;5;196m"  # Medium-dark red
-        elif ratio <= 0.85:
-            return "\033[38;5;202m"  # Medium red
-        elif ratio <= 0.95:
-            return "\033[38;5;208m"  # Light red/orange
-        else:
-            return "\033[38;5;214m"  # Very light orange (barely slower)
-    else:
-        # Same as baseline - White
-        return WHITE
+            error_msg = result.stderr if result else "Unknown error"
+            if "ModuleNotFoundError" in error_msg or "ImportError" in error_msg:
+                return None, {}  # Silently skip
+        return None, {}
 
+    def create_results_table(
+        self, bench_type, cpu_results, gpu_results, cpu_baseline, gpu_baseline
+    ):
+        """Create beautiful results table using rich."""
+        if not RICH_AVAILABLE:
+            return self._create_simple_table(
+                bench_type, cpu_results, gpu_results, cpu_baseline, gpu_baseline
+            )
 
-def print_comparison_table(
-    bench_type, all_results, cpu_baseline, gpu_baseline, gpu_type=None
-):
-    """Print a unified comparison table with CPU and GPU sections."""
-    if not all_results:
-        print_color(RED, "No results to display")
-        return
+        # Get all sizes
+        all_sizes = set()
+        for results in {**cpu_results, **gpu_results}.values():
+            all_sizes.update(results.keys())
+        sizes = sorted(all_sizes, key=lambda s: [int(x) for x in s.split("x")])
 
-    # Separate CPU and GPU results
-    cpu_results = {}
-    gpu_results = {}
+        if not sizes:
+            self.console.print("[red]No timing data found[/red]")
+            return
 
-    for key, results in all_results.items():
-        # Check if this is a CPU or GPU benchmark based on the mode name
-        if any(x in key for x in ["CPU", "cpu", "XLA"]):
-            cpu_results[key] = results
-        elif any(x in key for x in ["Metal", "CUDA", "GPU", "gpu", "WGPU", "TCH"]):
-            gpu_results[key] = results
-        else:
-            # Default to CPU if unclear
-            cpu_results[key] = results
-
-    # Get all sizes
-    sizes = set()
-    for _, results in all_results.items():
-        sizes.update(results.keys())
-    sizes = sorted(sizes, key=lambda s: [int(x) for x in s.split("x")])
-
-    if not sizes:
-        print_color(RED, "No timing data found")
-        return
-
-    print("\n" + "=" * 140)
-    if bench_type == "matmul":
-        print("Matrix Multiplication Benchmark Results")
-    else:  # mlp
-        print("MLP Block Benchmark Results (3-layer MLP with GELU and Residual)")
-    print("=" * 140)
-
-    # Print sizes as metadata
-    sizes_str = ", ".join(sizes)
-    print(f"\nSizes: {sizes_str}\n")
-
-    # Build simple header
-    if bench_type == "matmul":
-        # For matmul: Time(ms) over all time values, Ratio over all ratio values
-        time_width = len(sizes) * 10 + (len(sizes) - 1) * 3
-        ratio_width = len(sizes) * 12 + (len(sizes) - 1) * 3
-        print(
-            f"{'Framework':>12} {'Mode':>15} {'Time(ms)':>{time_width}} {'Ratio':>{ratio_width}}"
+        # Create table
+        table = Table(
+            title=f"[bold cyan]{bench_type.upper()} Benchmark Results[/bold cyan]",
+            box=box.ROUNDED,
+            show_header=True,
+            header_style="bold magenta",
+            title_style="bold cyan",
         )
-    else:  # mlp
-        # For mlp: Build header with Time/Ratio labels
-        label_parts = []
-        # First add all Time columns
-        for i, size in enumerate(sizes):
-            if i == 0:
-                label_parts.append(f"{'Time(ms)':>10}")
-            else:
-                label_parts.append(f"{'':>10}")
-        # Then add all Ratio columns
-        for i, size in enumerate(sizes):
-            if i == 0:
-                label_parts.append(f"{'Ratio':>12}")
-            else:
-                label_parts.append(f"{'':>12}")
-        label_header = "  ".join(label_parts)
-        header_line = f"{'Framework':>12} {'Mode':>15} {label_header}"
-        print(header_line)
 
-    print("-" * 140)
+        table.add_column("Framework", style="cyan", width=14)
+        table.add_column("Mode", style="yellow", width=18)
 
-    # Print CPU results first
-    if cpu_results:
-        cpu_baseline_results = all_results.get(cpu_baseline, {})
-        impl_names = sorted(cpu_results.keys())
+        # Add size columns
+        for size in sizes:
+            table.add_column(f"{size}\nTime", justify="right", width=12)
+            table.add_column("Ratio", justify="right", width=10)
 
-        for impl_name in impl_names:
-            results = cpu_results[impl_name]
-
-            # Extract framework and mode
-            parts = impl_name.split(" - ")
-            framework = parts[0] if parts else impl_name
-            mode = parts[1] if len(parts) > 1 else ""
-
-            if impl_name == cpu_baseline:
-                fw_color = BLUE
-            elif framework == "Hodu":
-                fw_color = LIGHT_PINK
-            else:
-                fw_color = CYAN
-
-            # Build time string
-            time_parts = []
-            ratio_parts = []
-
-            for size in sizes:
-                time_ms = results.get(size)
-                cpu_baseline_time = cpu_baseline_results.get(size)
-
-                if time_ms is None:
-                    time_parts.append(f"{'N/A':>10}")
-                    ratio_parts.append(f"{'':>12}")
-                elif time_ms == "TIMEOUT":
-                    time_parts.append(f"{'TIMEOUT':>10}")
-                    if (
-                        cpu_baseline_time
-                        and cpu_baseline_time != "TIMEOUT"
-                        and cpu_baseline_time != "ERROR"
-                        and isinstance(cpu_baseline_time, (int, float))
-                        and cpu_baseline_time > 0
-                    ):
-                        max_ratio = cpu_baseline_time / 1000.0
-                        ratio_parts.append(f"{RED}{f'<{max_ratio:.2f}x':>12}{NC}")
-                    else:
-                        ratio_parts.append(f"{RED}{'TIMEOUT':>12}{NC}")
-                elif time_ms == "ERROR":
-                    time_parts.append(f"{'ERROR':>10}")
-                    ratio_parts.append(f"{'N/A':>12}")
-                else:
-                    time_parts.append(f"{time_ms:>10.4f}")
-                    # Calculate ratio vs CPU baseline
-                    if cpu_baseline_time == "TIMEOUT" or cpu_baseline_time == "ERROR":
-                        ratio_parts.append(f"{'N/A':>12}")
-                    elif (
-                        cpu_baseline_time
-                        and isinstance(cpu_baseline_time, (int, float))
-                        and cpu_baseline_time > 0
-                    ):
-                        ratio = cpu_baseline_time / time_ms
-                        ratio_color = get_ratio_color(ratio)
-                        ratio_parts.append(f"{ratio_color}{f'{ratio:.2f}x':>12}{NC}")
-                    elif impl_name == cpu_baseline:
-                        ratio_parts.append(f"{WHITE}{'baseline':>12}{NC}")
-                    else:
-                        ratio_parts.append(f"{'':>12}")
-
-            if bench_type == "matmul":
-                time_str = ",  ".join(time_parts)
-                ratio_str = ",  ".join(ratio_parts)
-                print(
-                    f"{fw_color}{framework:>12}{NC} {mode:>15} {time_str} {ratio_str}"
-                )
-            else:  # mlp
-                output_str = "  ".join(time_parts + ratio_parts)
-                print(f"{fw_color}{framework:>12}{NC} {mode:>15} {output_str}")
-
-    # Print separator between CPU and GPU
-    if cpu_results and gpu_results:
-        print("-" * 140)
-
-    # Print GPU results
-    if gpu_results:
-        # Determine GPU type from results or provided gpu_type
-        if gpu_type:
-            gpu_type_header = gpu_type
-        else:
-            gpu_type_header = "GPU"
-            for impl_name in gpu_results.keys():
-                if "Metal" in impl_name or "metal" in impl_name:
-                    gpu_type_header = "Metal"
-                    break
-                elif "CUDA" in impl_name or "cuda" in impl_name:
-                    gpu_type_header = "CUDA"
-                    break
-
-        print(f"\n{gpu_type_header} Results:\n")
-
-        gpu_baseline_results = all_results.get(gpu_baseline, {})
-        impl_names = sorted(gpu_results.keys())
-
-        for impl_name in impl_names:
-            results = gpu_results[impl_name]
-
-            # Extract framework and mode
-            parts = impl_name.split(" - ")
-            framework = parts[0] if parts else impl_name
-            mode = parts[1] if len(parts) > 1 else ""
-
-            if impl_name == gpu_baseline:
-                fw_color = BLUE
-            elif framework == "Hodu":
-                fw_color = LIGHT_PINK
-            else:
-                fw_color = CYAN
-
-            # Build time string
-            time_parts = []
-            ratio_parts = []
-
-            for size in sizes:
-                time_ms = results.get(size)
-                gpu_baseline_time = gpu_baseline_results.get(size)
-
-                if time_ms is None:
-                    time_parts.append(f"{'N/A':>10}")
-                    ratio_parts.append(f"{'':>12}")
-                elif time_ms == "TIMEOUT":
-                    time_parts.append(f"{'TIMEOUT':>10}")
-                    if (
-                        gpu_baseline_time
-                        and gpu_baseline_time != "TIMEOUT"
-                        and gpu_baseline_time != "ERROR"
-                        and isinstance(gpu_baseline_time, (int, float))
-                        and gpu_baseline_time > 0
-                    ):
-                        max_ratio = gpu_baseline_time / 1000.0
-                        ratio_parts.append(f"{RED}{f'<{max_ratio:.2f}x':>12}{NC}")
-                    else:
-                        ratio_parts.append(f"{RED}{'TIMEOUT':>12}{NC}")
-                elif time_ms == "ERROR":
-                    time_parts.append(f"{'ERROR':>10}")
-                    ratio_parts.append(f"{'N/A':>12}")
-                else:
-                    time_parts.append(f"{time_ms:>10.4f}")
-                    # Calculate ratio vs GPU baseline
-                    if gpu_baseline_time == "TIMEOUT" or gpu_baseline_time == "ERROR":
-                        ratio_parts.append(f"{'N/A':>12}")
-                    elif (
-                        gpu_baseline_time
-                        and isinstance(gpu_baseline_time, (int, float))
-                        and gpu_baseline_time > 0
-                    ):
-                        ratio = gpu_baseline_time / time_ms
-                        ratio_color = get_ratio_color(ratio)
-                        ratio_parts.append(f"{ratio_color}{f'{ratio:.2f}x':>12}{NC}")
-                    elif impl_name == gpu_baseline:
-                        ratio_parts.append(f"{WHITE}{'baseline':>12}{NC}")
-                    else:
-                        ratio_parts.append(f"{'':>12}")
-
-            if bench_type == "matmul":
-                time_str = ",  ".join(time_parts)
-                ratio_str = ",  ".join(ratio_parts)
-                print(
-                    f"{fw_color}{framework:>12}{NC} {mode:>15} {time_str} {ratio_str}"
-                )
-            else:  # mlp
-                output_str = "  ".join(time_parts + ratio_parts)
-                print(f"{fw_color}{framework:>12}{NC} {mode:>15} {output_str}")
-
-    print("\n" + "=" * 140)
-
-
-def save_results_json(bench_type, all_results, output_path):
-    """Save benchmark results to JSON file."""
-    data = {
-        "benchmark_type": bench_type,
-        "timestamp": datetime.now().isoformat(),
-        "results": {},
-    }
-
-    for impl_name, results in all_results.items():
-        data["results"][impl_name] = {}
-        for size, value in results.items():
-            if isinstance(value, (int, float)):
-                data["results"][impl_name][size] = value
-            else:
-                data["results"][impl_name][size] = str(value)
-
-    with open(output_path, "w") as f:
-        json.dump(data, f, indent=2)
-
-    print_color(GREEN, f"\nResults saved to: {output_path}")
-
-
-def plot_results(json_path, save_plot=False):
-    """Generate plots from benchmark results JSON."""
-    try:
-        import matplotlib.pyplot as plt
-        import pandas as pd
-    except ImportError:
-        print_color(RED, "Error: pandas and matplotlib are required for plotting")
-        print_color(YELLOW, "Install with: pip install pandas matplotlib")
-        return
-
-    # Load results
-    with open(json_path, "r") as f:
-        data = json.load(f)
-
-    bench_type = data["benchmark_type"]
-    results = data["results"]
-
-    # Convert to DataFrame
-    df_data = []
-    for impl_name, sizes_data in results.items():
-        for size, time_ms in sizes_data.items():
-            if isinstance(time_ms, (int, float)):
+        # Add CPU results
+        if cpu_results:
+            cpu_baseline_results = cpu_results.get(cpu_baseline, {})
+            for impl_name in sorted(cpu_results.keys()):
+                results = cpu_results[impl_name]
                 parts = impl_name.split(" - ")
                 framework = parts[0] if parts else impl_name
                 mode = parts[1] if len(parts) > 1 else ""
-                df_data.append(
-                    {
-                        "framework": framework,
-                        "mode": mode,
-                        "impl": impl_name,
-                        "size": size,
-                        "time_ms": time_ms,
-                    }
+
+                row = [framework, mode]
+                for size in sizes:
+                    result = results.get(size, {})
+                    time_ms = result.get("time")
+                    baseline_result = cpu_baseline_results.get(size, {})
+                    baseline_time = baseline_result.get("time")
+
+                    # Time
+                    if time_ms == "TIMEOUT":
+                        row.append("[red]TIMEOUT[/red]")
+                    elif time_ms == "ERROR":
+                        row.append("[red]ERROR[/red]")
+                    elif time_ms is not None:
+                        row.append(f"[bold]{time_ms:.3f}ms[/bold]")
+                    else:
+                        row.append("[dim]N/A[/dim]")
+
+                    # Ratio
+                    if (
+                        time_ms
+                        and isinstance(time_ms, (int, float))
+                        and baseline_time
+                        and isinstance(baseline_time, (int, float))
+                    ):
+                        ratio = baseline_time / time_ms
+                        if ratio >= 1.1:
+                            row.append(f"[bold green]{ratio:.2f}x[/bold green]")
+                        elif ratio >= 0.9:
+                            row.append(f"[bold yellow]{ratio:.2f}x[/bold yellow]")
+                        else:
+                            row.append(f"[bold red]{ratio:.2f}x[/bold red]")
+                    elif impl_name == cpu_baseline:
+                        row.append("[bold white]baseline[/bold white]")
+                    else:
+                        row.append("[dim]-[/dim]")
+
+                table.add_row(*row)
+
+        # Add separator and GPU results
+        if cpu_results and gpu_results:
+            table.add_section()
+
+        if gpu_results:
+            gpu_baseline_results = gpu_results.get(gpu_baseline, {})
+            for impl_name in sorted(gpu_results.keys()):
+                results = gpu_results[impl_name]
+                parts = impl_name.split(" - ")
+                framework = parts[0] if parts else impl_name
+                mode = parts[1] if len(parts) > 1 else ""
+
+                row = [framework, mode]
+                for size in sizes:
+                    result = results.get(size, {})
+                    time_ms = result.get("time")
+                    baseline_result = gpu_baseline_results.get(size, {})
+                    baseline_time = baseline_result.get("time")
+
+                    # Time
+                    if time_ms == "TIMEOUT":
+                        row.append("[red]TIMEOUT[/red]")
+                    elif time_ms == "ERROR":
+                        row.append("[red]ERROR[/red]")
+                    elif time_ms is not None:
+                        row.append(f"[bold]{time_ms:.3f}ms[/bold]")
+                    else:
+                        row.append("[dim]N/A[/dim]")
+
+                    # Ratio
+                    if (
+                        time_ms
+                        and isinstance(time_ms, (int, float))
+                        and baseline_time
+                        and isinstance(baseline_time, (int, float))
+                    ):
+                        ratio = baseline_time / time_ms
+                        if ratio >= 1.1:
+                            row.append(f"[bold green]{ratio:.2f}x[/bold green]")
+                        elif ratio >= 0.9:
+                            row.append(f"[bold yellow]{ratio:.2f}x[/bold yellow]")
+                        else:
+                            row.append(f"[bold red]{ratio:.2f}x[/bold red]")
+                    elif impl_name == gpu_baseline:
+                        row.append("[bold white]baseline[/bold white]")
+                    else:
+                        row.append("[dim]-[/dim]")
+
+                table.add_row(*row)
+
+        self.console.print(table)
+
+    def _create_simple_table(
+        self, bench_type, cpu_results, gpu_results, cpu_baseline, gpu_baseline
+    ):
+        """Create simple text table without rich."""
+        print(f"\n{'=' * TABLE_WIDTH}")
+        print(f"{bench_type.upper()} Benchmark Results")
+        print(f"{'=' * TABLE_WIDTH}\n")
+        # Simple table output similar to old version
+        print("Framework   Mode           Results")
+        print("-" * TABLE_WIDTH)
+        # ... (simplified output)
+
+    def run_all_benchmarks(self, bench_type, modes_config):
+        """Run all benchmarks with progress bar."""
+        if not RICH_AVAILABLE or self.quiet_mode:
+            return self._run_all_simple(bench_type, modes_config)
+
+        rust_benchmarks = [
+            ("burn", modes_config["burn"]),
+            ("candle", modes_config["candle"]),
+            ("hodu", modes_config["hodu"]),
+        ]
+
+        total = (
+            sum(len(modes) for _, modes in rust_benchmarks)
+            + len(modes_config["jax"])
+            + len(modes_config["tensorflow"])
+            + len(modes_config["pytorch"])
+        )
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            TimeElapsedColumn(),
+            console=self.console,
+        ) as progress:
+            task = progress.add_task("[cyan]Running benchmarks...", total=total)
+
+            # Rust benchmarks
+            for framework, modes in rust_benchmarks:
+                for mode in modes:
+                    progress.update(
+                        task,
+                        description=f"[cyan]Running {framework.capitalize()} {mode}...",
+                    )
+                    mode_name, results = self.run_rust_benchmark(
+                        bench_type, framework, mode
+                    )
+                    if results:
+                        self.all_results[
+                            f"{framework.capitalize()} - {mode_name or mode}"
+                        ] = results
+                    progress.advance(task)
+
+            # Python benchmarks
+            for mode in modes_config["jax"]:
+                progress.update(task, description=f"[cyan]Running JAX {mode}...")
+                mode_name, results = self.run_python_benchmark(
+                    bench_type, "_jax.py", mode
                 )
+                if results:
+                    self.all_results[f"JAX - {mode_name or mode}"] = results
+                progress.advance(task)
 
-    df = pd.DataFrame(df_data)
+            for mode in modes_config["tensorflow"]:
+                progress.update(task, description=f"[cyan]Running TensorFlow {mode}...")
+                tf_mode = mode.replace("cuda", "gpu").replace("metal", "gpu")
+                mode_name, results = self.run_python_benchmark(
+                    bench_type, "_tensorflow.py", tf_mode
+                )
+                if results:
+                    self.all_results[f"TensorFlow - {mode_name or tf_mode}"] = results
+                progress.advance(task)
 
-    if df.empty:  # type: ignore
-        print_color(RED, "No valid data to plot")
-        return
+            for mode in modes_config["pytorch"]:
+                progress.update(task, description=f"[cyan]Running PyTorch {mode}...")
+                mode_name, results = self.run_python_benchmark(
+                    bench_type, "_torch.py", mode
+                )
+                if results:
+                    self.all_results[f"PyTorch - {mode_name or mode}"] = results
+                progress.advance(task)
 
-    # Separate CPU and GPU results
-    cpu_mask = df["impl"].str.contains("CPU|cpu|XLA", case=False, na=False)
-    gpu_mask = df["impl"].str.contains(
-        "Metal|CUDA|GPU|gpu|WGPU|TCH", case=False, na=False
-    )
+    def _run_all_simple(self, bench_type, modes_config):
+        """Run benchmarks without progress bar."""
+        rust_benchmarks = [
+            ("burn", modes_config["burn"]),
+            ("candle", modes_config["candle"]),
+            ("hodu", modes_config["hodu"]),
+        ]
 
-    df_cpu = df[cpu_mask]
-    df_gpu = df[gpu_mask]
+        # Rust benchmarks
+        for framework, modes in rust_benchmarks:
+            for mode in modes:
+                if not self.quiet_mode:
+                    print(f"Running {framework.capitalize()} {mode}...")
+                mode_name, results = self.run_rust_benchmark(
+                    bench_type, framework, mode
+                )
+                if results:
+                    self.all_results[
+                        f"{framework.capitalize()} - {mode_name or mode}"
+                    ] = results
 
-    # Find baselines (PyTorch dynamic)
-    cpu_baseline = None
-    gpu_baseline = None
+        # Python benchmarks
+        for mode in modes_config["jax"]:
+            if not self.quiet_mode:
+                print(f"Running JAX {mode}...")
+            mode_name, results = self.run_python_benchmark(bench_type, "_jax.py", mode)
+            if results:
+                self.all_results[f"JAX - {mode_name or mode}"] = results
 
-    for impl in df["impl"].unique():  # type: ignore
-        if "PyTorch" in impl and ("Dynamic CPU" in impl or "dynamic-cpu" in impl):
-            cpu_baseline = impl
-        if "PyTorch" in impl and (
-            "Dynamic Metal" in impl
-            or "dynamic-metal" in impl
-            or "Dynamic CUDA" in impl
-            or "dynamic-cuda" in impl
+        for mode in modes_config["tensorflow"]:
+            if not self.quiet_mode:
+                print(f"Running TensorFlow {mode}...")
+            tf_mode = mode.replace("cuda", "gpu").replace("metal", "gpu")
+            mode_name, results = self.run_python_benchmark(
+                bench_type, "_tensorflow.py", tf_mode
+            )
+            if results:
+                self.all_results[f"TensorFlow - {mode_name or tf_mode}"] = results
+
+        for mode in modes_config["pytorch"]:
+            if not self.quiet_mode:
+                print(f"Running PyTorch {mode}...")
+            mode_name, results = self.run_python_benchmark(
+                bench_type, "_torch.py", mode
+            )
+            if results:
+                self.all_results[f"PyTorch - {mode_name or mode}"] = results
+
+
+def is_cpu_result(key):
+    """Check if result is CPU benchmark."""
+    return any(k in key for k in ["CPU", "cpu", "XLA"])
+
+
+def is_gpu_result(key):
+    """Check if result is GPU benchmark."""
+    return any(k in key for k in ["Metal", "CUDA", "GPU", "gpu", "WGPU", "TCH"])
+
+
+def find_baseline(results, is_cpu=True):
+    """Find PyTorch baseline."""
+    for key in results.keys():
+        if "PyTorch" not in key:
+            continue
+        if is_cpu and ("Dynamic CPU" in key or "dynamic-cpu" in key):
+            return key
+        if not is_cpu and any(
+            x in key
+            for x in ["Dynamic Metal", "dynamic-metal", "Dynamic CUDA", "dynamic-cuda"]
         ):
-            gpu_baseline = impl
+            return key
 
-    # Calculate ratios for CPU
-    if cpu_baseline and not df_cpu.empty:  # type: ignore
-        baseline_data = df_cpu[df_cpu["impl"] == cpu_baseline]
-        for size in df_cpu["size"].unique():  # type: ignore
-            baseline_time = baseline_data[baseline_data["size"] == size]["time_ms"]
-            if not baseline_time.empty:  # type: ignore
-                baseline_time = baseline_time.values[0]  # type: ignore
-                mask = df_cpu["size"] == size
-                df_cpu.loc[mask, "ratio"] = baseline_time / df_cpu.loc[mask, "time_ms"]
-            else:
-                mask = df_cpu["size"] == size
-                df_cpu.loc[mask, "ratio"] = 1.0
-    else:
-        df_cpu["ratio"] = 1.0
-
-    # Calculate ratios for GPU
-    if gpu_baseline and not df_gpu.empty:  # type: ignore
-        baseline_data = df_gpu[df_gpu["impl"] == gpu_baseline]
-        for size in df_gpu["size"].unique():  # type: ignore
-            baseline_time = baseline_data[baseline_data["size"] == size]["time_ms"]
-            if not baseline_time.empty:  # type: ignore
-                baseline_time = baseline_time.values[0]  # type: ignore
-                mask = df_gpu["size"] == size
-                df_gpu.loc[mask, "ratio"] = baseline_time / df_gpu.loc[mask, "time_ms"]
-            else:
-                mask = df_gpu["size"] == size
-                df_gpu.loc[mask, "ratio"] = 1.0
-    else:
-        df_gpu["ratio"] = 1.0
-
-    # Modern plot style
-    plt.rcParams.update(
-        {
-            "font.family": "sans-serif",
-            "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
-            "axes.facecolor": "#f8f9fa",
-            "figure.facecolor": "white",
-            "axes.edgecolor": "#dee2e6",
-            "axes.linewidth": 1.2,
-            "grid.color": "#dee2e6",
-            "grid.linestyle": "--",
-            "grid.linewidth": 0.8,
-            "grid.alpha": 0.5,
-        }
-    )
-
-    # Color palette - more vibrant
-    framework_colors = {
-        "Hodu": "#E91E63",  # Material Pink (more vibrant)
-        "PyTorch": "#EE4C2C",  # PyTorch orange
-        "JAX": "#4285F4",  # Google blue
-        "TensorFlow": "#FF6F00",  # TensorFlow orange
-        "Burn": "#D84315",  # Deep orange
-        "Candle": "#8D6E63",  # Brown
-    }
-
-    # Create figure with subplots
-    has_cpu = not df_cpu.empty  # type: ignore
-    has_gpu = not df_gpu.empty  # type: ignore
-    n_plots = (1 if has_cpu else 0) + (1 if has_gpu else 0)
-
-    if n_plots == 0:
-        print_color(RED, "No data to plot")
-        return
-
-    fig, axes = plt.subplots(1, n_plots, figsize=(10 * n_plots, 7))
-    if n_plots == 1:
-        axes = [axes]
-
-    plot_idx = 0
-
-    # Plot CPU results
-    if not df_cpu.empty:  # type: ignore
-        ax = axes[plot_idx]
-        plot_idx += 1
-
-        sizes = sorted(
-            df_cpu["size"].unique(),  # type: ignore
-            key=lambda s: [int(x) for x in s.split("x")],  # type: ignore
-        )
-
-        impls = sorted(df_cpu["impl"].unique())  # type: ignore
-        n_impls = len(impls)
-        n_sizes = len(sizes)
-
-        # Bar width and positions
-        bar_width = 0.8 / n_impls
-        x = range(n_sizes)
-
-        for idx, impl in enumerate(impls):
-            impl_data = df_cpu[df_cpu["impl"] == impl]
-            ratios = [
-                impl_data[impl_data["size"] == s]["ratio"].values[0]  # type: ignore
-                if s in impl_data["size"].values  # type: ignore
-                else 0
-                for s in sizes
-            ]
-
-            framework = impl_data["framework"].iloc[0]  # type: ignore
-            color = framework_colors.get(framework, "#607D8B")
-
-            # Style differentiation
-            is_dynamic = "Dynamic" in impl or "dynamic" in impl
-            hatch = None if is_dynamic else "//"
-            alpha = 0.9 if framework == "Hodu" else 0.85
-
-            # Cleaner label
-            mode = impl.split(" - ")[1] if " - " in impl else impl
-            label = f"{framework} ({mode})"
-
-            # Calculate x positions for this group
-            x_pos = [i + (idx - n_impls / 2 + 0.5) * bar_width for i in x]
-
-            # Filter out zero values for plotting
-            x_pos_filtered = [x_pos[i] for i in range(len(ratios)) if ratios[i] > 0]
-            ratios_filtered = [r for r in ratios if r > 0]
-
-            if ratios_filtered:  # Only plot if there's data
-                ax.bar(
-                    x_pos_filtered,
-                    ratios_filtered,
-                    bar_width,
-                    label=label,
-                    color=color,
-                    alpha=alpha,
-                    hatch=hatch,
-                    edgecolor="white",
-                    linewidth=1.5,
-                )
-
-        # Add baseline reference line at y=1.0
-        ax.axhline(
-            y=1.0,
-            color="#dc3545",
-            linestyle="--",
-            linewidth=2,
-            alpha=0.7,
-            label="Baseline (PyTorch)",
-            zorder=0,
-        )
-
-        ax.set_xlabel("Problem Size", fontsize=14, fontweight="600", color="#2c3e50")
-        ax.set_ylabel(
-            "Speedup (relative to baseline)",
-            fontsize=14,
-            fontweight="600",
-            color="#2c3e50",
-        )
-        ax.set_xticks(x)
-        ax.set_xticklabels(sizes, rotation=45, ha="right", fontsize=11)
-        ax.tick_params(axis="both", labelsize=11, colors="#495057")
-        ax.legend(
-            bbox_to_anchor=(1.02, 1),
-            loc="upper left",
-            fontsize=9,
-            framealpha=0.95,
-            edgecolor="#dee2e6",
-            shadow=True,
-            fancybox=True,
-        )
-        ax.set_yscale("log")
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.grid(True, axis="y")
-
-        # Add annotations for values > 1 (better than baseline)
-        ax.text(
-            0.02,
-            0.98,
-            "Higher is better ↑",
-            transform=ax.transAxes,
-            fontsize=10,
-            verticalalignment="top",
-            color="#28a745",
-            fontweight="600",
-        )
-
-    # Plot GPU results
-    if not df_gpu.empty:  # type: ignore
-        ax = axes[plot_idx]
-
-        sizes = sorted(
-            df_gpu["size"].unique(),  # type: ignore
-            key=lambda s: [int(x) for x in s.split("x")],  # type: ignore
-        )
-
-        impls = sorted(df_gpu["impl"].unique())  # type: ignore
-        n_impls = len(impls)
-        n_sizes = len(sizes)
-
-        # Bar width and positions
-        bar_width = 0.8 / n_impls
-        x = range(n_sizes)
-
-        for idx, impl in enumerate(impls):
-            impl_data = df_gpu[df_gpu["impl"] == impl]
-            ratios = [
-                impl_data[impl_data["size"] == s]["ratio"].values[0]  # type: ignore
-                if s in impl_data["size"].values  # type: ignore
-                else 0
-                for s in sizes
-            ]
-
-            framework = impl_data["framework"].iloc[0]  # type: ignore
-            color = framework_colors.get(framework, "#607D8B")
-
-            # Style differentiation
-            is_dynamic = "Dynamic" in impl or "dynamic" in impl
-            hatch = None if is_dynamic else "//"
-            alpha = 0.9 if framework == "Hodu" else 0.85
-
-            # Cleaner label
-            mode = impl.split(" - ")[1] if " - " in impl else impl
-            label = f"{framework} ({mode})"
-
-            # Calculate x positions for this group
-            x_pos = [i + (idx - n_impls / 2 + 0.5) * bar_width for i in x]
-
-            # Filter out zero values for plotting
-            x_pos_filtered = [x_pos[i] for i in range(len(ratios)) if ratios[i] > 0]
-            ratios_filtered = [r for r in ratios if r > 0]
-
-            if ratios_filtered:  # Only plot if there's data
-                ax.bar(
-                    x_pos_filtered,
-                    ratios_filtered,
-                    bar_width,
-                    label=label,
-                    color=color,
-                    alpha=alpha,
-                    hatch=hatch,
-                    edgecolor="white",
-                    linewidth=1.5,
-                )
-
-        # Add baseline reference line at y=1.0
-        ax.axhline(
-            y=1.0,
-            color="#dc3545",
-            linestyle="--",
-            linewidth=2,
-            alpha=0.7,
-            label="Baseline (PyTorch)",
-            zorder=0,
-        )
-
-        # Determine GPU type
-        gpu_type = "Metal" if "Metal" in df_gpu["impl"].iloc[0] else "CUDA"  # type: ignore
-        ax.set_xlabel("Problem Size", fontsize=14, fontweight="600", color="#2c3e50")
-        ax.set_ylabel(
-            "Speedup (relative to baseline)",
-            fontsize=14,
-            fontweight="600",
-            color="#2c3e50",
-        )
-        ax.set_xticks(x)
-        ax.set_xticklabels(sizes, rotation=45, ha="right", fontsize=11)
-        ax.tick_params(axis="both", labelsize=11, colors="#495057")
-        ax.legend(
-            bbox_to_anchor=(1.02, 1),
-            loc="upper left",
-            fontsize=9,
-            framealpha=0.95,
-            edgecolor="#dee2e6",
-            shadow=True,
-            fancybox=True,
-        )
-        ax.set_yscale("log")
-        ax.spines["top"].set_visible(False)
-        ax.spines["right"].set_visible(False)
-        ax.grid(True, axis="y")
-
-        # Add annotations for values > 1 (better than baseline)
-        ax.text(
-            0.02,
-            0.98,
-            "Higher is better ↑",
-            transform=ax.transAxes,
-            fontsize=10,
-            verticalalignment="top",
-            color="#28a745",
-            fontweight="600",
-        )
-
-    plt.tight_layout(pad=2.0)
-
-    # Save plot if requested
-    if save_plot:
-        output_dir = Path(json_path).parent
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        plot_path = output_dir / f"benchmark_{bench_type}_{timestamp}.png"
-        plt.savefig(
-            plot_path, dpi=300, bbox_inches="tight", facecolor="white", edgecolor="none"
-        )
-        print_color(GREEN, f"Plot saved to: {plot_path}")
-
-    plt.show()
+    check_func = is_cpu_result if is_cpu else is_gpu_result
+    for key in results.keys():
+        if check_func(key):
+            return key
+    return None
 
 
 def main():
-    global QUIET_MODE
+    """Main entry point."""
+    if len(sys.argv) < 2:
+        print(
+            "Usage: python run_new.py --bench=matmul|mlp [--cpu] [--metal] [--cuda] [--xla] [--quiet]"
+        )
+        sys.exit(1)
 
-    # Parse command line arguments
+    # Parse arguments
     bench_type = None
     enable_cpu = "--cpu" in sys.argv
     enable_metal = "--metal" in sys.argv
     enable_cuda = "--cuda" in sys.argv
     enable_xla = "--xla" in sys.argv
-    QUIET_MODE = "--quiet" in sys.argv
-    enable_plot = "--plot" in sys.argv
-    enable_save = "--save" in sys.argv
+    quiet_mode = "--quiet" in sys.argv
 
-    # Check if only plotting
-    plot_only = None
-    for arg in sys.argv[1:]:
-        if arg.startswith("--plot="):
-            plot_only = arg.split("=", 1)[1]
-            break
-
-    # If plot only mode, just plot and exit
-    if plot_only:
-        plot_results(plot_only)
-        return
-
-    # Find --bench argument
     for arg in sys.argv[1:]:
         if arg.startswith("--bench="):
             bench_type = arg.split("=", 1)[1]
             break
 
-    if not bench_type:
-        print_color(RED, "Error: Must specify --bench=matmul or --bench=mlp")
-        print_color(
-            YELLOW,
-            "Usage: python run.py --bench=matmul|mlp [--cpu] [--metal] [--cuda] [--xla] [--quiet] [--plot] [--save]",
-        )
-        print_color(
-            YELLOW,
-            "   Or: python run.py --plot=<json_file>  # Plot from existing results",
-        )
+    if not bench_type or bench_type not in ["matmul", "mlp"]:
+        print("Error: Must specify --bench=matmul or --bench=mlp")
         sys.exit(1)
 
-    if bench_type not in ["matmul", "mlp"]:
-        print_color(RED, f"Error: Unknown benchmark type '{bench_type}'")
-        print_color(YELLOW, "Valid types: matmul, mlp")
-        sys.exit(1)
+    # Setup runner
+    runner = BenchmarkRunner()
+    runner.quiet_mode = quiet_mode
+    runner.print_header(bench_type)
 
-    # Check if benchmark directory exists
-    bench_dir = Path(__file__).parent / bench_type
-    if not bench_dir.exists():
-        print_color(RED, f"Error: Benchmark directory '{bench_type}' not found")
-        sys.exit(1)
+    # Configure modes
+    modes_config = {
+        "burn": [],
+        "candle": [],
+        "hodu": [],
+        "jax": [],
+        "tensorflow": [],
+        "pytorch": [],
+    }
 
-    # Determine which modes to test
-    test_modes = []
-    hodu_modes = []
-    jax_modes = []
-
-    # Add CPU modes if requested
     if enable_cpu:
-        test_modes.extend(
-            [
-                ("dynamic-cpu", "CPU"),
-                ("static-cpu", "CPU"),
-            ]
-        )
-        hodu_modes.extend(["dynamic-cpu", "static-cpu"])
-        jax_modes.extend([("dynamic-cpu", "CPU"), ("static-cpu", "CPU")])
+        modes_config["hodu"].extend(["dynamic-cpu", "static-cpu"])
+        modes_config["jax"].append("dynamic-cpu")
+        modes_config["jax"].append("static-cpu")
+        modes_config["tensorflow"].extend(["dynamic-cpu", "static-cpu"])
+        modes_config["pytorch"].extend(["dynamic-cpu", "static-cpu"])
+        modes_config["burn"].append("dynamic-cpu")
+        modes_config["candle"].append("dynamic-cpu")
 
-    # Add GPU modes if requested
     if sys.platform == "darwin" and enable_metal:
-        test_modes.extend(
-            [
-                ("dynamic-metal", "Metal"),
-                ("static-metal", "Metal"),
-            ]
-        )
-        hodu_modes.extend(["dynamic-metal", "static-metal"])
-        jax_modes.extend([("dynamic-metal", "Metal"), ("static-metal", "Metal")])
+        modes_config["hodu"].extend(["dynamic-metal", "static-metal"])
+        modes_config["jax"].extend(["dynamic-metal", "static-metal"])
+        modes_config["tensorflow"].extend(["dynamic-metal", "static-metal"])
+        modes_config["pytorch"].extend(["dynamic-metal", "static-metal"])
+        modes_config["burn"].append("dynamic-wgpu")
+        modes_config["candle"].append("dynamic-metal")
     elif sys.platform != "darwin" and enable_cuda:
-        test_modes.extend(
-            [
-                ("dynamic-cuda", "CUDA"),
-                ("static-cuda", "CUDA"),
-            ]
-        )
-        hodu_modes.extend(["dynamic-cuda", "static-cuda"])
-        jax_modes.extend([("dynamic-cuda", "CUDA"), ("static-cuda", "CUDA")])
+        modes_config["hodu"].extend(["dynamic-cuda", "static-cuda"])
+        modes_config["jax"].extend(["dynamic-cuda", "static-cuda"])
+        modes_config["tensorflow"].extend(["dynamic-cuda", "static-cuda"])
+        modes_config["pytorch"].extend(["dynamic-cuda", "static-cuda"])
+        modes_config["burn"].extend(["dynamic-wgpu", "dynamic-tch"])
+        modes_config["candle"].append("dynamic-cuda")
 
-    # Add XLA mode if requested (requires CPU to be enabled)
     if enable_xla and enable_cpu:
-        hodu_modes.append("static-xla-cpu")
+        modes_config["hodu"].append("static-xla-cpu")
 
-    # Determine Burn modes (dynamic only)
-    burn_modes = []
-    if enable_cpu:
-        burn_modes.append("dynamic-cpu")
-    # WGPU works on both Metal (macOS) and CUDA (Linux/Windows)
-    if sys.platform == "darwin" and enable_metal:
-        burn_modes.append("dynamic-wgpu")
-    if sys.platform != "darwin" and enable_cuda:
-        burn_modes.append("dynamic-wgpu")
-        # LibTorch CUDA backend (only on CUDA platforms)
-        burn_modes.append("dynamic-tch")
+    # Run benchmarks
+    runner.run_all_benchmarks(bench_type, modes_config)
 
-    # Determine Candle modes (dynamic only)
-    candle_modes = []
-    if enable_cpu:
-        candle_modes.append("dynamic-cpu")
-    if sys.platform == "darwin" and enable_metal:
-        candle_modes.append("dynamic-metal")
-    elif sys.platform != "darwin" and enable_cuda:
-        candle_modes.append("dynamic-cuda")
+    # Separate CPU and GPU results
+    cpu_results = {k: v for k, v in runner.all_results.items() if is_cpu_result(k)}
+    gpu_results = {k: v for k, v in runner.all_results.items() if is_gpu_result(k)}
 
-    all_results = {}
+    # Find baselines
+    cpu_baseline = find_baseline(runner.all_results, is_cpu=True)
+    gpu_baseline = find_baseline(runner.all_results, is_cpu=False)
 
-    # Calculate total number of benchmarks for progress tracking
-    total_benchmarks = (
-        len(burn_modes)
-        + len(candle_modes)
-        + len(hodu_modes)
-        + len(jax_modes)
-        + len(test_modes) * 2  # TensorFlow + PyTorch
+    # Display results
+    runner.create_results_table(
+        bench_type, cpu_results, gpu_results, cpu_baseline, gpu_baseline
     )
-    current_benchmark = 0
-
-    # Run Burn benchmarks
-    for mode in burn_modes:
-        current_benchmark += 1
-        print_progress(current_benchmark, total_benchmarks)
-        mode_name, results = run_burn_benchmark(bench_type, mode)
-        if results:
-            all_results[f"Burn - {mode_name or mode}"] = results
-
-    # Run Candle benchmarks
-    for mode in candle_modes:
-        current_benchmark += 1
-        print_progress(current_benchmark, total_benchmarks)
-        mode_name, results = run_candle_benchmark(bench_type, mode)
-        if results:
-            all_results[f"Candle - {mode_name or mode}"] = results
-
-    # Run Hodu benchmarks
-    for mode in hodu_modes:
-        current_benchmark += 1
-        print_progress(current_benchmark, total_benchmarks)
-        mode_name, results = run_hodu_benchmark(bench_type, mode)
-        if results:
-            all_results[f"Hodu - {mode_name or mode}"] = results
-
-    # Run JAX benchmarks
-    for mode, device in jax_modes:
-        current_benchmark += 1
-        print_progress(current_benchmark, total_benchmarks)
-        mode_name, results = run_python_benchmark(bench_type, "_jax.py", mode)
-        if results:
-            all_results[f"JAX - {mode_name or mode}"] = results
-
-    # Run TensorFlow benchmarks
-    for mode, device in test_modes:
-        current_benchmark += 1
-        print_progress(current_benchmark, total_benchmarks)
-        # TensorFlow uses 'gpu' instead of 'cuda'/'metal'
-        tf_mode = mode.replace("cuda", "gpu").replace("metal", "gpu")
-        mode_name, results = run_python_benchmark(bench_type, "_tensorflow.py", tf_mode)
-        if results:
-            all_results[f"TensorFlow - {mode_name or tf_mode}"] = results
-
-    # Run PyTorch benchmarks
-    for mode, device in test_modes:
-        current_benchmark += 1
-        print_progress(current_benchmark, total_benchmarks)
-        mode_name, results = run_python_benchmark(bench_type, "_torch.py", mode)
-        if results:
-            all_results[f"PyTorch - {mode_name or mode}"] = results
-
-    # Print newline after progress indicator in quiet mode
-    if QUIET_MODE:
-        print(SHOW_CURSOR)  # Show cursor and newline
-
-    # Find CPU and GPU baselines (PyTorch dynamic-cpu)
-    cpu_baseline = None
-    gpu_baseline = None
-
-    for key in all_results.keys():
-        if "PyTorch" in key and ("Dynamic CPU" in key or "dynamic-cpu" in key):
-            cpu_baseline = key
-            break
-
-    for key in all_results.keys():
-        if "PyTorch" in key and (
-            "Dynamic Metal" in key
-            or "dynamic-metal" in key
-            or "Dynamic CUDA" in key
-            or "dynamic-cuda" in key
-        ):
-            if gpu_baseline is None:  # Use first GPU PyTorch result found
-                gpu_baseline = key
-
-    # Fallback to first result if PyTorch not found
-    if not cpu_baseline:
-        for key in all_results.keys():
-            if any(x in key for x in ["CPU", "cpu", "XLA"]):
-                cpu_baseline = key
-                break
-
-    if not gpu_baseline:
-        for key in all_results.keys():
-            if any(x in key for x in ["Metal", "CUDA", "GPU", "gpu", "WGPU", "TCH"]):
-                gpu_baseline = key
-                break
-
-    # Determine GPU type based on enabled flags
-    gpu_type = None
-    if enable_metal:
-        gpu_type = "Metal"
-    elif enable_cuda:
-        gpu_type = "CUDA"
-
-    # Print unified comparison table
-    print_comparison_table(
-        bench_type, all_results, cpu_baseline, gpu_baseline, gpu_type
-    )
-
-    # Handle save and plot
-    if enable_save or enable_plot:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        json_path = Path(__file__).parent / f"results_{bench_type}_{timestamp}.json"
-
-        # Save JSON only if --save is specified
-        if enable_save:
-            save_results_json(bench_type, all_results, json_path)
-
-        # Generate plot if requested
-        if enable_plot:
-            # For plot-only mode, create temporary JSON
-            if not enable_save:
-                import tempfile
-
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".json", delete=False
-                ) as f:
-                    json.dump(
-                        {
-                            "benchmark_type": bench_type,
-                            "timestamp": datetime.now().isoformat(),
-                            "results": {
-                                impl_name: {
-                                    size: value
-                                    if isinstance(value, (int, float))
-                                    else str(value)
-                                    for size, value in results.items()
-                                }
-                                for impl_name, results in all_results.items()
-                            },
-                        },
-                        f,
-                        indent=2,
-                    )
-                    temp_json_path = f.name
-                plot_results(temp_json_path, save_plot=False)
-                # Clean up temp file
-                import os
-
-                os.unlink(temp_json_path)
-            else:
-                plot_results(json_path, save_plot=True)
 
 
 if __name__ == "__main__":

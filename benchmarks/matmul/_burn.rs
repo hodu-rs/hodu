@@ -3,21 +3,15 @@ use std::env;
 use std::time::Instant;
 
 // Statistical utilities
-fn median(times: &mut [f64]) -> f64 {
-    times.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let len = times.len();
-    if len % 2 == 0 {
-        (times[len / 2 - 1] + times[len / 2]) / 2.0
-    } else {
-        times[len / 2]
-    }
-}
-
 fn trimmed_mean(times: &mut [f64], trim_ratio: f64) -> f64 {
     times.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let trim_count = (times.len() as f64 * trim_ratio) as usize;
-    let trimmed = &times[trim_count..times.len() - trim_count];
-    trimmed.iter().sum::<f64>() / trimmed.len() as f64
+    if trim_count > 0 {
+        let trimmed = &times[trim_count..times.len() - trim_count];
+        trimmed.iter().sum::<f64>() / trimmed.len() as f64
+    } else {
+        times.iter().sum::<f64>() / times.len() as f64
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -83,8 +77,8 @@ fn benchmark_dynamic_ndarray(
 
         // Check timeout after each iteration
         let total_elapsed = bench_start.elapsed();
-        if total_elapsed.as_secs_f64() > 2.0 {
-            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
+        if total_elapsed.as_secs_f64() > 10.0 {
+            return Err(format!("TIMEOUT: Exceeded 10 seconds after {} iterations", i + 1).into());
         }
     }
 
@@ -126,8 +120,8 @@ fn benchmark_dynamic_wgpu(
 
         // Check timeout after each iteration
         let total_elapsed = bench_start.elapsed();
-        if total_elapsed.as_secs_f64() > 2.0 {
-            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
+        if total_elapsed.as_secs_f64() > 10.0 {
+            return Err(format!("TIMEOUT: Exceeded 10 seconds after {} iterations", i + 1).into());
         }
     }
 
@@ -169,8 +163,8 @@ fn benchmark_dynamic_tch(
 
         // Check timeout after each iteration
         let total_elapsed = bench_start.elapsed();
-        if total_elapsed.as_secs_f64() > 2.0 {
-            return Err(format!("TIMEOUT: Exceeded 2 seconds after {} iterations", i + 1).into());
+        if total_elapsed.as_secs_f64() > 10.0 {
+            return Err(format!("TIMEOUT: Exceeded 10 seconds after {} iterations", i + 1).into());
         }
     }
 
@@ -213,8 +207,7 @@ fn run_benchmark(
                 println!("{}x{}x{},TIMEOUT", m, k, n);
                 timed_out = true; // Mark as timed out to skip remaining benchmarks
             },
-            Err(e) => {
-                eprintln!("Error for {}x{}x{}: {}", m, k, n, e);
+            Err(_) => {
                 println!("{}x{}x{},ERROR", m, k, n);
             },
         }
@@ -252,8 +245,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let configs = [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)];
 
-    let warmup = 10;
-    let iterations = 30;
+    let warmup = 100;
+    let iterations = 100;
 
     run_benchmark(mode, &configs, warmup, iterations)?;
 

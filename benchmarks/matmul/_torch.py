@@ -2,6 +2,26 @@ import torch
 import numpy as np
 import time
 import sys
+import gc
+
+# Try to import psutil for memory tracking
+try:
+    import psutil
+
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+
+
+def get_memory_usage_mb():
+    """Get current memory usage in MB."""
+    if not PSUTIL_AVAILABLE:
+        return None
+    try:
+        process = psutil.Process()
+        return process.memory_info().rss / (1024 * 1024)
+    except Exception:
+        return None
 
 
 def trimmed_mean(times, trim_ratio=0.1):
@@ -74,6 +94,7 @@ class BenchMode:
 
 
 def benchmark_dynamic(mode, m, k, n, warmup, iterations):
+    gc.collect()
     device = BenchMode.get_device(mode)
 
     # Create random tensors
@@ -85,18 +106,39 @@ def benchmark_dynamic(mode, m, k, n, warmup, iterations):
         _ = torch.matmul(a, b)
         BenchMode.synchronize(device)
 
+    gc.collect()
+    mem_before = get_memory_usage_mb()
+    peak_mem = mem_before if mem_before else 0
+
     # Benchmark - collect individual iteration times
     times = []
-    for _ in range(iterations):
+    bench_start = time.time()
+    for i in range(iterations):
         start = time.time()
         _ = torch.matmul(a, b)
         BenchMode.synchronize(device)
         times.append(time.time() - start)
 
-    return trimmed_mean(times)
+        # Track peak memory
+        current_mem = get_memory_usage_mb()
+        if current_mem and current_mem > peak_mem:
+            peak_mem = current_mem
+
+        # Check timeout after each iteration
+        total_elapsed = time.time() - bench_start
+        if total_elapsed > 10.0:
+            raise TimeoutError(f"TIMEOUT: Exceeded 10 seconds after {i + 1} iterations")
+
+    mem_after = get_memory_usage_mb()
+    mem_used_mb = None
+    if mem_before and mem_after:
+        mem_used_mb = peak_mem - mem_before
+
+    return trimmed_mean(times), mem_used_mb
 
 
 def benchmark_static(mode, m, k, n, warmup, iterations):
+    gc.collect()
     device = BenchMode.get_device(mode)
 
     # Create random tensors
@@ -119,15 +161,35 @@ def benchmark_static(mode, m, k, n, warmup, iterations):
         _ = matmul_compiled(a, b)
         BenchMode.synchronize(device)
 
+    gc.collect()
+    mem_before = get_memory_usage_mb()
+    peak_mem = mem_before if mem_before else 0
+
     # Benchmark - collect individual iteration times
     times = []
-    for _ in range(iterations):
+    bench_start = time.time()
+    for i in range(iterations):
         start = time.time()
         _ = matmul_compiled(a, b)
         BenchMode.synchronize(device)
         times.append(time.time() - start)
 
-    return trimmed_mean(times)
+        # Track peak memory
+        current_mem = get_memory_usage_mb()
+        if current_mem and current_mem > peak_mem:
+            peak_mem = current_mem
+
+        # Check timeout after each iteration
+        total_elapsed = time.time() - bench_start
+        if total_elapsed > 10.0:
+            raise TimeoutError(f"TIMEOUT: Exceeded 10 seconds after {i + 1} iterations")
+
+    mem_after = get_memory_usage_mb()
+    mem_used_mb = None
+    if mem_before and mem_after:
+        mem_used_mb = peak_mem - mem_before
+
+    return trimmed_mean(times), mem_used_mb
 
 
 def run_benchmark(mode, configs, warmup, iterations):
@@ -135,20 +197,31 @@ def run_benchmark(mode, configs, warmup, iterations):
     print(f"warmup={warmup}")
     print(f"iterations={iterations}")
 
+    timed_out = False
+
     for m, k, n in configs:
+        # If we already timed out, skip remaining benchmarks
+        if timed_out:
+            print(f"{m}x{k}x{n},TIMEOUT")
+            continue
+
         try:
             if "static" in mode:
-                time_sec = benchmark_static(mode, m, k, n, warmup, iterations)
+                time_sec, mem_mb = benchmark_static(mode, m, k, n, warmup, iterations)
             else:
-                time_sec = benchmark_dynamic(mode, m, k, n, warmup, iterations)
+                time_sec, mem_mb = benchmark_dynamic(mode, m, k, n, warmup, iterations)
 
-            print(f"{m}x{k}x{n},{time_sec * 1000:.6f}ms")
-        except Exception as e:
+            if mem_mb is not None:
+                print(
+                    f"{m}x{k}x{n},time_ms={time_sec * 1000:.6f}ms,mem_mb={mem_mb:.2f}"
+                )
+            else:
+                print(f"{m}x{k}x{n},time_ms={time_sec * 1000:.6f}ms")
+        except TimeoutError:
+            print(f"{m}x{k}x{n},TIMEOUT")
+            timed_out = True
+        except Exception:
             print(f"{m}x{k}x{n},ERROR")
-            # Optionally print error to stderr for debugging
-            import sys
-
-            print(f"Error for {m}x{k}x{n}: {e}", file=sys.stderr)
 
 
 def print_usage():
@@ -225,8 +298,8 @@ def main():
         (1024, 1024, 1024),
     ]
 
-    warmup = 10
-    iterations = 30
+    warmup = 100
+    iterations = 100
 
     run_benchmark(mode, configs, warmup, iterations)
 
