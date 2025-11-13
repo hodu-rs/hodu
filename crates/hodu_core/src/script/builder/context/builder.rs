@@ -66,6 +66,7 @@ impl Builder {
             tensor_to_value: s.tensor_to_value.clone(),
             graph_inputs: s.graph_inputs.clone(),
             graph_outputs: s.graph_outputs.clone(),
+            intermediate_tensors: s.intermediate_tensors.clone(),
             is_ended: s.is_ended,
         })
     }

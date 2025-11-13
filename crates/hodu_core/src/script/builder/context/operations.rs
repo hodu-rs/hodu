@@ -56,6 +56,13 @@ impl Builder {
             let result_value = s.allocate_result_value(&outputs)?;
             let attributes = convert_op_params(op_params);
             s.add_instruction(result_value, op, input_values, attributes)?;
+
+            // Keep output tensors alive until build completes
+            for &tensor_id in &outputs {
+                let tensor = crate::tensor::tensor_from_id(tensor_id);
+                s.intermediate_tensors.push(tensor);
+            }
+
             Ok(())
         })
         .ok_or_else(|| HoduError::InternalError(format!("Builder {} not found", self.get_name())))?

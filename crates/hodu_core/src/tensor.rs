@@ -56,10 +56,9 @@ impl Clone for Tensor {
         }
         #[cfg(not(feature = "std"))]
         {
-            if let Some(tensors) = TENSORS.try_read() {
-                if let Some(tensor_) = tensors.get(&self.0) {
-                    tensor_.ref_count.fetch_add(1, Ordering::Relaxed);
-                }
+            let tensors = TENSORS.read();
+            if let Some(tensor_ref) = tensors.get(&self.0) {
+                tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
             }
         }
         Tensor(self.0)
@@ -68,6 +67,13 @@ impl Clone for Tensor {
 
 impl Drop for Tensor {
     fn drop(&mut self) {
+        // Skip cleanup during gradient computation to avoid premature removal
+        // Tensors are kept alive in gradient.rs's keep_alive Vec and will be
+        // properly cleaned up after IS_COMPUTING_GRADIENTS is set to false
+        if gradient::is_computing_gradients() {
+            return;
+        }
+
         #[cfg(feature = "std")]
         {
             if let Some(tensor_ref) = TENSORS.get(&self.0) {
@@ -82,21 +88,18 @@ impl Drop for Tensor {
         }
         #[cfg(not(feature = "std"))]
         {
-            let should_remove = if let Some(tensors) = TENSORS.try_read() {
-                if let Some(tensor_) = tensors.get(&self.0) {
-                    let prev_count = tensor_.ref_count.fetch_sub(1, Ordering::Relaxed);
+            let should_remove = {
+                let tensors = TENSORS.read();
+                if let Some(tensor_ref) = tensors.get(&self.0) {
+                    let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
                     prev_count == 1
                 } else {
                     false
                 }
-            } else {
-                false
             };
-
             if should_remove {
-                if let Some(mut tensors) = TENSORS.try_write() {
-                    tensors.remove(&self.0);
-                }
+                let mut tensors = TENSORS.write();
+                tensors.remove(&self.0);
             }
         }
     }
@@ -440,6 +443,20 @@ pub(crate) fn register_operation_in_builder(
 }
 
 pub(crate) fn tensor_from_id(tensor_id: TensorId) -> Tensor {
+    // Increment reference count for the new handle
+    #[cfg(feature = "std")]
+    {
+        if let Some(tensor_ref) = TENSORS.get(&tensor_id) {
+            tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let tensors = TENSORS.read();
+        if let Some(tensor_ref) = tensors.get(&tensor_id) {
+            tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
+        }
+    }
     Tensor(tensor_id)
 }
 

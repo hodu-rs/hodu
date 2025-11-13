@@ -87,6 +87,10 @@ struct TapeEntry {
     op: Op,
     op_params: OpParams,
     input_ids: Vec<TensorId>,
+    #[allow(dead_code)]
+    input_tensors: Vec<Tensor>, // Keep input tensors alive until backward completes
+    #[allow(dead_code)]
+    output_tensor: Tensor, // Keep output tensor alive until backward completes
 }
 
 // Multiple tapes, one per context
@@ -296,6 +300,10 @@ pub(crate) fn record_operation_with_params(
     if !is_computing_gradients() {
         let context_id = get_active_context();
 
+        // Create Tensor handles from input_ids and output_id to keep them alive
+        let input_tensors: Vec<Tensor> = input_ids.iter().map(|&id| crate::tensor::tensor_from_id(id)).collect();
+        let output_tensor = crate::tensor::tensor_from_id(output_id);
+
         let mut tapes = {
             #[cfg(feature = "std")]
             {
@@ -313,6 +321,8 @@ pub(crate) fn record_operation_with_params(
                 op,
                 op_params,
                 input_ids,
+                input_tensors,
+                output_tensor,
             });
         }
     }
@@ -359,8 +369,32 @@ pub fn clear_tape() {
     }
 }
 
+// RAII guard to manage gradient computation lifecycle
+struct GradientComputationGuard {
+    keep_alive: Vec<Tensor>,
+}
+
+impl GradientComputationGuard {
+    fn new() -> Self {
+        IS_COMPUTING_GRADIENTS.store(true, Ordering::Relaxed);
+        Self { keep_alive: Vec::new() }
+    }
+
+    fn keep(&mut self, tensor: Tensor) {
+        self.keep_alive.push(tensor);
+    }
+}
+
+impl Drop for GradientComputationGuard {
+    fn drop(&mut self) {
+        // Set flag to false BEFORE dropping tensors
+        IS_COMPUTING_GRADIENTS.store(false, Ordering::Relaxed);
+        // Now self.keep_alive will be dropped, and tensors can be properly cleaned up
+    }
+}
+
 pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
-    IS_COMPUTING_GRADIENTS.store(true, Ordering::Relaxed);
+    let mut guard = GradientComputationGuard::new();
 
     let result = (|| -> HoduResult<()> {
         let loss_tensor = tensor_from_id(loss_tensor_id);
@@ -373,6 +407,9 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
 
         let mut gradients: HashMap<TensorId, TensorId> = HashMap::new();
         gradients.insert(loss_tensor_id, loss_grad_id);
+
+        guard.keep(loss_tensor);
+        guard.keep(loss_grad);
 
         // Get tape from active context
         let context_id = get_active_context();
@@ -401,6 +438,8 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
                     return Err(HoduError::TensorNotFound(grad_output));
                 }
 
+                guard.keep(tensor_from_id(grad_output));
+
                 let input_grads = compute_vjp_for_op(
                     &entry.op,
                     &entry.op_params,
@@ -408,6 +447,10 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
                     entry.output_id,
                     grad_output,
                 )?;
+
+                for &grad_id in &input_grads {
+                    guard.keep(tensor_from_id(grad_id));
+                }
 
                 for (input_id, grad_id) in entry.input_ids.iter().zip(input_grads.iter()) {
                     if tensor::get(*grad_id).is_none() {
@@ -418,7 +461,9 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
                         if tensor::get(existing_grad).is_none() {
                             return Err(HoduError::TensorNotFound(existing_grad));
                         }
-                        create_add_tensor(existing_grad, *grad_id)?
+                        let result_id = create_add_tensor(existing_grad, *grad_id)?;
+                        guard.keep(tensor_from_id(result_id));
+                        result_id
                     } else {
                         *grad_id
                     };
@@ -436,7 +481,9 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
         Ok(())
     })();
 
-    IS_COMPUTING_GRADIENTS.store(false, Ordering::Relaxed);
+    // Explicitly drop guard to set IS_COMPUTING_GRADIENTS = false
+    // and clean up keep_alive Vec before returning
+    drop(guard);
 
     result
 }

@@ -88,7 +88,10 @@ impl Tensor {
     }
 
     pub fn set_(&mut self, src: &Self) -> HoduResult<()> {
-        self.0 = src.id();
+        // Clone src (increments ref_count) and assign to self
+        // Old self is automatically dropped (decrements its ref_count)
+        *self = src.clone();
+
         Ok(())
     }
 }

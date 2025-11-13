@@ -34,6 +34,7 @@ pub struct BuilderState {
     pub tensor_to_value: HashMap<TensorId, ValueId>,
     pub graph_inputs: Vec<(&'static str, Tensor)>,
     pub graph_outputs: Vec<(&'static str, Tensor)>,
+    pub intermediate_tensors: Vec<Tensor>,
     pub is_ended: bool,
 }
 
@@ -51,6 +52,7 @@ impl BuilderState {
             tensor_to_value: HashMap::new(),
             graph_inputs: Vec::new(),
             graph_outputs: Vec::new(),
+            intermediate_tensors: Vec::new(),
             is_ended: false,
         }
     }
