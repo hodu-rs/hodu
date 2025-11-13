@@ -399,20 +399,49 @@ fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
         // Find managed tensors that are tape outputs but not used as inputs
         let mut to_remove = Vec::new();
 
-        for entry in tape.iter() {
-            if let Some(tensor_ref) = crate::tensor::TENSORS.get(&entry.output_id) {
-                let is_managed = tensor_ref.is_managed.load(crate::layer::compat::Ordering::Relaxed);
+        #[cfg(feature = "std")]
+        {
+            for entry in tape.iter() {
+                if let Some(tensor_ref) = crate::tensor::TENSORS.get(&entry.output_id) {
+                    let is_managed = tensor_ref.is_managed.load(crate::layer::compat::Ordering::Relaxed);
 
-                // If managed and not used as input by any entry, mark for removal
-                if is_managed && !used_in_tape.contains(&entry.output_id) {
-                    to_remove.push(entry.output_id);
+                    // If managed and not used as input by any entry, mark for removal
+                    if is_managed && !used_in_tape.contains(&entry.output_id) {
+                        to_remove.push(entry.output_id);
+                    }
+                }
+            }
+        }
+
+        #[cfg(not(feature = "std"))]
+        {
+            let tensors = crate::tensor::TENSORS.read();
+            for entry in tape.iter() {
+                if let Some(tensor_ref) = tensors.get(&entry.output_id) {
+                    let is_managed = tensor_ref.is_managed.load(crate::layer::compat::Ordering::Relaxed);
+
+                    // If managed and not used as input by any entry, mark for removal
+                    if is_managed && !used_in_tape.contains(&entry.output_id) {
+                        to_remove.push(entry.output_id);
+                    }
                 }
             }
         }
 
         // Remove managed tensors from TENSORS
-        for tensor_id in &to_remove {
-            crate::tensor::TENSORS.remove(tensor_id);
+        #[cfg(feature = "std")]
+        {
+            for tensor_id in &to_remove {
+                crate::tensor::TENSORS.remove(tensor_id);
+            }
+        }
+
+        #[cfg(not(feature = "std"))]
+        {
+            let mut tensors = crate::tensor::TENSORS.write();
+            for tensor_id in &to_remove {
+                tensors.remove(tensor_id);
+            }
         }
 
         // Remove tape entries for removed tensors

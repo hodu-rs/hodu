@@ -98,7 +98,7 @@ impl Drop for Tensor {
         }
         #[cfg(not(feature = "std"))]
         {
-            let (should_remove, is_managed) = {
+            let should_remove = {
                 let tensors = TENSORS.read();
                 if let Some(tensor_ref) = tensors.get(&tensor_id) {
                     let is_managed = tensor_ref.is_managed.load(Ordering::Relaxed);
@@ -106,9 +106,9 @@ impl Drop for Tensor {
                         return; // Managed tensors are not dropped
                     }
                     let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
-                    (prev_count == 1, is_managed)
+                    prev_count == 1
                 } else {
-                    (false, false)
+                    false
                 }
             };
             if should_remove {
