@@ -231,8 +231,8 @@ def run_benchmark(mode, configs, warmup, iterations):
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python _torch.py <mode>")
+    if len(sys.argv) < 2:
+        print("Usage: python _torch.py <mode> [warmup] [iterations]")
         print("\nAvailable modes:")
         print("  dynamic-cpu     - Dynamic execution on CPU")
         print("  dynamic-cuda    - Dynamic execution on CUDA")
@@ -244,15 +244,16 @@ def main():
 
     mode = sys.argv[1]
 
+    # Parse warmup and iterations from command line, with defaults
+    warmup = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    iterations = int(sys.argv[3]) if len(sys.argv) > 3 else 100
+
     # MLP configs: (batch_size, in_features, hidden_features, out_features)
     configs = [
         (32, 256, 512, 256),
         (64, 512, 1024, 512),
         (128, 768, 2048, 1024),
     ]
-
-    warmup = 100
-    iterations = 100
 
     run_benchmark(mode, configs, warmup, iterations)
 

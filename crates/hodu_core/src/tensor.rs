@@ -47,11 +47,12 @@ impl AsRef<Tensor> for Tensor {
 
 impl Clone for Tensor {
     fn clone(&self) -> Self {
-        // Increment reference count
+        // Increment reference count and mark as unmanaged (user is explicitly holding this tensor)
         #[cfg(feature = "std")]
         {
             if let Some(tensor_ref) = TENSORS.get(&self.0) {
                 tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
+                tensor_ref.is_managed.store(false, Ordering::Relaxed);
             }
         }
         #[cfg(not(feature = "std"))]
@@ -59,6 +60,7 @@ impl Clone for Tensor {
             let tensors = TENSORS.read();
             if let Some(tensor_ref) = tensors.get(&self.0) {
                 tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
+                tensor_ref.is_managed.store(false, Ordering::Relaxed);
             }
         }
         Tensor(self.0)
@@ -74,32 +76,45 @@ impl Drop for Tensor {
             return;
         }
 
+        let tensor_id = self.0;
+
         #[cfg(feature = "std")]
         {
-            if let Some(tensor_ref) = TENSORS.get(&self.0) {
+            if let Some(tensor_ref) = TENSORS.get(&tensor_id) {
+                // Managed tensors are not dropped - they're cleaned up by gradient tape
+                if tensor_ref.is_managed.load(Ordering::Relaxed) {
+                    return;
+                }
+
                 let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
                 if prev_count == 1 {
-                    // Last reference - drop the guard first
+                    // Last reference - trigger cascade cleanup
                     drop(tensor_ref);
+                    gradient::cleanup_dropped_tensor(tensor_id);
                     // Now remove from global HashMap
-                    TENSORS.remove(&self.0);
+                    TENSORS.remove(&tensor_id);
                 }
             }
         }
         #[cfg(not(feature = "std"))]
         {
-            let should_remove = {
+            let (should_remove, is_managed) = {
                 let tensors = TENSORS.read();
-                if let Some(tensor_ref) = tensors.get(&self.0) {
+                if let Some(tensor_ref) = tensors.get(&tensor_id) {
+                    let is_managed = tensor_ref.is_managed.load(Ordering::Relaxed);
+                    if is_managed {
+                        return; // Managed tensors are not dropped
+                    }
                     let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
-                    prev_count == 1
+                    (prev_count == 1, is_managed)
                 } else {
-                    false
+                    (false, false)
                 }
             };
             if should_remove {
+                gradient::cleanup_dropped_tensor(tensor_id);
                 let mut tensors = TENSORS.write();
-                tensors.remove(&self.0);
+                tensors.remove(&tensor_id);
             }
         }
     }
@@ -112,6 +127,7 @@ pub struct Tensor_ {
     requires_grad: bool,
     grad_tensor_id: Option<TensorId>,
     ref_count: AtomicU32,
+    is_managed: AtomicBool, // True if tensor is managed by gradient tape (never held by user)
 }
 
 #[cfg(feature = "std")]
@@ -388,6 +404,7 @@ pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: 
         requires_grad,
         grad_tensor_id: None,
         ref_count: AtomicU32::new(1),
+        is_managed: AtomicBool::new(true),
     };
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);
@@ -405,6 +422,7 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
         requires_grad,
         grad_tensor_id: None,
         ref_count: AtomicU32::new(1),
+        is_managed: AtomicBool::new(true),
     };
 
     let tensor_id = TensorId::new();
@@ -420,6 +438,7 @@ pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (Ten
         requires_grad,
         grad_tensor_id: None,
         ref_count: AtomicU32::new(1),
+        is_managed: AtomicBool::new(true), // Builder tensors (operation results) are managed
     };
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);

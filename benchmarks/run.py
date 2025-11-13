@@ -12,18 +12,18 @@ from pathlib import Path
 
 # Try to import rich for beautiful output
 try:
+    from rich import box
     from rich.console import Console
-    from rich.table import Table
+    from rich.layout import Layout
+    from rich.panel import Panel
     from rich.progress import (
+        BarColumn,
         Progress,
         SpinnerColumn,
         TextColumn,
-        BarColumn,
         TimeElapsedColumn,
     )
-    from rich.panel import Panel
-    from rich.layout import Layout
-    from rich import box
+    from rich.table import Table
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -41,10 +41,12 @@ VENV_TENSORFLOW = "2"
 class BenchmarkRunner:
     """Main benchmark runner with rich output."""
 
-    def __init__(self):
+    def __init__(self, warmup=5, iterations=100):
         self.console = Console() if RICH_AVAILABLE else None
         self.all_results = {}
         self.quiet_mode = False
+        self.warmup = warmup
+        self.iterations = iterations
 
     def print_header(self, bench_type):
         """Print beautiful header."""
@@ -162,6 +164,8 @@ class BenchmarkRunner:
             framework,
             "--",
             mode,
+            str(self.warmup),
+            str(self.iterations),
         ]
 
         result = self.run_command(cmd, cwd=Path(__file__).parent / bench_type)
@@ -183,7 +187,7 @@ class BenchmarkRunner:
     def run_python_benchmark(self, bench_type, script, mode):
         """Run Python-based benchmark."""
         python_exe = self.get_python_executable(script)
-        cmd = [python_exe, script, mode]
+        cmd = [python_exe, script, mode, str(self.warmup), str(self.iterations)]
 
         result = self.run_command(cmd, cwd=Path(__file__).parent / bench_type)
 
@@ -498,8 +502,10 @@ def main():
     """Main entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python run_new.py --bench=matmul|mlp [--cpu] [--metal] [--cuda] [--xla] [--quiet]"
+            "Usage: python run.py --bench=matmul|mlp [--cpu] [--metal] [--cuda] [--xla] [--quiet] [-w=N] [-i=N]"
         )
+        print("  -w=N: warmup iterations (default: 5)")
+        print("  -i=N: benchmark iterations (default: 50)")
         sys.exit(1)
 
     # Parse arguments
@@ -509,18 +515,31 @@ def main():
     enable_cuda = "--cuda" in sys.argv
     enable_xla = "--xla" in sys.argv
     quiet_mode = "--quiet" in sys.argv
+    warmup = 5  # Default
+    iterations = 50  # Default
 
     for arg in sys.argv[1:]:
         if arg.startswith("--bench="):
             bench_type = arg.split("=", 1)[1]
-            break
+        elif arg.startswith("-w="):
+            try:
+                warmup = int(arg.split("=", 1)[1])
+            except ValueError:
+                print(f"Error: Invalid warmup value: {arg}")
+                sys.exit(1)
+        elif arg.startswith("-i="):
+            try:
+                iterations = int(arg.split("=", 1)[1])
+            except ValueError:
+                print(f"Error: Invalid iterations value: {arg}")
+                sys.exit(1)
 
     if not bench_type or bench_type not in ["matmul", "mlp"]:
         print("Error: Must specify --bench=matmul or --bench=mlp")
         sys.exit(1)
 
     # Setup runner
-    runner = BenchmarkRunner()
+    runner = BenchmarkRunner(warmup=warmup, iterations=iterations)
     runner.quiet_mode = quiet_mode
     runner.print_header(bench_type)
 

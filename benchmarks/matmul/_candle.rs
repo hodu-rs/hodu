@@ -144,7 +144,7 @@ fn print_usage() {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 2 {
+    if args.len() < 2 {
         print_usage();
         std::process::exit(1);
     }
@@ -158,10 +158,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
-    let configs = [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)];
+    // Parse warmup and iterations from command line, with defaults
+    let warmup = if args.len() > 2 {
+        args[2].parse().unwrap_or(5)
+    } else {
+        5
+    };
 
-    let warmup = 100;
-    let iterations = 100;
+    let iterations = if args.len() > 3 {
+        args[3].parse().unwrap_or(100)
+    } else {
+        100
+    };
+
+    let configs = [(256, 256, 256), (512, 512, 512), (1024, 1024, 1024)];
 
     run_benchmark(mode, &configs, warmup, iterations)?;
 

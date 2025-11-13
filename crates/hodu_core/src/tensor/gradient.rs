@@ -87,10 +87,8 @@ struct TapeEntry {
     op: Op,
     op_params: OpParams,
     input_ids: Vec<TensorId>,
-    #[allow(dead_code)]
-    input_tensors: Vec<Tensor>, // Keep input tensors alive until backward completes
-    #[allow(dead_code)]
-    output_tensor: Tensor, // Keep output tensor alive until backward completes
+    // Note: We don't store input_tensors. Managed tensors are kept alive in TENSORS,
+    // and will be cleaned up by cascade cleanup when no longer needed.
 }
 
 // Multiple tapes, one per context
@@ -300,10 +298,6 @@ pub(crate) fn record_operation_with_params(
     if !is_computing_gradients() {
         let context_id = get_active_context();
 
-        // Create Tensor handles from input_ids and output_id to keep them alive
-        let input_tensors: Vec<Tensor> = input_ids.iter().map(|&id| crate::tensor::tensor_from_id(id)).collect();
-        let output_tensor = crate::tensor::tensor_from_id(output_id);
-
         let mut tapes = {
             #[cfg(feature = "std")]
             {
@@ -321,8 +315,6 @@ pub(crate) fn record_operation_with_params(
                 op,
                 op_params,
                 input_ids,
-                input_tensors,
-                output_tensor,
             });
         }
     }
@@ -365,6 +357,73 @@ pub fn clear_tape() {
         let mut tapes = GRADIENT_TAPES.lock();
         if let Some(tape) = tapes.get_mut(&context_id) {
             tape.clear();
+        }
+    }
+}
+
+/// Remove tape entries for a dropped tensor with cascade cleanup
+pub(crate) fn cleanup_dropped_tensor(tensor_id: TensorId) {
+    let context_id = get_active_context();
+
+    #[cfg(feature = "std")]
+    {
+        if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
+            if let Some(tape) = tapes.get_mut(&context_id) {
+                // Remove entries where this tensor is the output
+                tape.retain(|entry| entry.output_id != tensor_id);
+
+                // Cascade: remove orphaned managed tensors
+                cleanup_orphaned_managed_tensors(tape);
+            }
+        }
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let mut tapes = GRADIENT_TAPES.lock();
+        if let Some(tape) = tapes.get_mut(&context_id) {
+            tape.retain(|entry| entry.output_id != tensor_id);
+            cleanup_orphaned_managed_tensors(tape);
+        }
+    }
+}
+
+/// Cascade cleanup: remove managed tensors that are no longer used by any tape entry
+fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
+    loop {
+        let initial_len = tape.len();
+
+        // Collect all tensor IDs that are currently used as inputs in the tape
+        let used_in_tape: crate::layer::compat::HashSet<TensorId> =
+            tape.iter().flat_map(|entry| entry.input_ids.iter().copied()).collect();
+
+        // Find managed tensors that are tape outputs but not used as inputs
+        let mut to_remove = Vec::new();
+
+        for entry in tape.iter() {
+            if let Some(tensor_ref) = crate::tensor::TENSORS.get(&entry.output_id) {
+                let is_managed = tensor_ref.is_managed.load(crate::layer::compat::Ordering::Relaxed);
+
+                // If managed and not used as input by any entry, mark for removal
+                if is_managed && !used_in_tape.contains(&entry.output_id) {
+                    to_remove.push(entry.output_id);
+                }
+            }
+        }
+
+        // Remove managed tensors from TENSORS
+        for tensor_id in &to_remove {
+            crate::tensor::TENSORS.remove(tensor_id);
+        }
+
+        // Remove tape entries for removed tensors
+        if !to_remove.is_empty() {
+            let to_remove_set: crate::layer::compat::HashSet<_> = to_remove.into_iter().collect();
+            tape.retain(|entry| !to_remove_set.contains(&entry.output_id));
+        }
+
+        // Stop if no more entries were removed
+        if tape.len() == initial_len {
+            break;
         }
     }
 }

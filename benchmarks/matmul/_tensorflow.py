@@ -172,7 +172,7 @@ def get_valid_modes():
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print_usage()
         sys.exit(1)
 
@@ -184,14 +184,15 @@ def main():
         print_usage()
         sys.exit(1)
 
+    # Parse warmup and iterations from command line, with defaults
+    warmup = int(sys.argv[2]) if len(sys.argv) > 2 else 5
+    iterations = int(sys.argv[3]) if len(sys.argv) > 3 else 100
+
     configs = [
         (256, 256, 256),
         (512, 512, 512),
         (1024, 1024, 1024),
     ]
-
-    warmup = 100
-    iterations = 100
 
     run_benchmark(mode, configs, warmup, iterations)
 

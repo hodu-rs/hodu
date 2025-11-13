@@ -247,7 +247,7 @@ fn print_usage() {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 2 {
+    if args.len() < 2 {
         print_usage();
         std::process::exit(1);
     }
@@ -261,11 +261,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
 
+    // Parse warmup and iterations from command line, with defaults
+    let warmup = if args.len() > 2 {
+        args[2].parse().unwrap_or(5)
+    } else {
+        5
+    };
+
+    let iterations = if args.len() > 3 {
+        args[3].parse().unwrap_or(100)
+    } else {
+        100
+    };
+
     // MLP configs: (batch_size, in_features, hidden_features, out_features)
     let configs = [(32, 256, 512, 256), (64, 512, 1024, 512), (128, 768, 2048, 1024)];
-
-    let warmup = 100;
-    let iterations = 100;
 
     run_benchmark(mode, &configs, warmup, iterations)?;
 
