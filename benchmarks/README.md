@@ -8,9 +8,9 @@ Performance benchmarks comparing Hodu against popular deep learning frameworks.
 - **Hardware**: MacBook Air M2 (16GB RAM)
 - **Device**: CPU, Metal
 - **Compiler**: HODU, XLA
-- **Version**: v0.2.3
+- **Version**: v0.2.4
 
-![benchmark](../assets/benchmarks/benchmark_mlp_1_v0.2.3.png)
+![benchmark](../assets/benchmarks/benchmark_mlp_1_v0.2.4.png)
 
 ---
 

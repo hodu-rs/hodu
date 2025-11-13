@@ -1,6 +1,6 @@
 [package]
 name = "hodu_nn_macros"
-version = "0.2.3"
+version = "0.2.4"
 description = "hodu nn macros"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]

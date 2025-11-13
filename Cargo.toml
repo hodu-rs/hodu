@@ -4,7 +4,7 @@ exclude = ["benchmarks", "crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"
 
 [package]
 name = "hodu"
-version = "0.2.3"
+version = "0.2.4"
 description = "A user-friendly ML framework built in Rust for rapid prototyping and embedded deployment"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -28,15 +28,15 @@ half = { version = "2.7.1", default-features = false, features = [
     "num-traits",
     "rand_distr",
 ] }
-hodu_core = { path = "crates/hodu_core", version = "0.2.3" }
-hodu_cpu_kernels = { path = "crates/hodu_cpu_kernels", version = "0.2.3" }
-hodu_cuda_kernels = { path = "crates/hodu_cuda_kernels", version = "0.2.3" }
-hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.2.3" }
-hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.2.3" }
-hodu_nn = { path = "crates/hodu_nn", version = "0.2.3" }
-hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.3" }
-hodu_utils = { path = "crates/hodu_utils", version = "0.2.3" }
-hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.3" }
+hodu_core = { path = "crates/hodu_core", version = "0.2.4" }
+hodu_cpu_kernels = { path = "crates/hodu_cpu_kernels", version = "0.2.4" }
+hodu_cuda_kernels = { path = "crates/hodu_cuda_kernels", version = "0.2.4" }
+hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.2.4" }
+hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.2.4" }
+hodu_nn = { path = "crates/hodu_nn", version = "0.2.4" }
+hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
+hodu_utils = { path = "crates/hodu_utils", version = "0.2.4" }
+hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.4" }
 hodu_xla = "0.4.7"
 num-traits = { version = "0.2.19", default-features = false }
 paste = "1.0.15"
@@ -74,4 +74,4 @@ metal = ["std", "hodu_internal/metal"]
 xla = ["std", "hodu_internal/xla"]
 
 [dependencies]
-hodu_internal = { path = "crates/hodu_internal", version = "0.2.3" }
+hodu_internal = { path = "crates/hodu_internal", version = "0.2.4" }
