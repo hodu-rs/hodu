@@ -1,5 +1,6 @@
 use crate::{
     error::{HoduError, HoduResult},
+    layer::compat::AtomicU32,
     script::builder::{get_active_builder, is_builder_active},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::{Layout, Shape},
@@ -19,6 +20,7 @@ impl Tensor {
             layout,
             requires_grad: false,
             grad_tensor_id: None,
+            ref_count: AtomicU32::new(1),
         };
         let tensor_id = TensorId::new();
         insert(tensor_id, tensor_);

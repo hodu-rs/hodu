@@ -75,13 +75,6 @@ impl CompilerT for HoduCompiler {
         // Build execution plan (this will populate value_to_tensor)
         let execution_plan = base::build_execution_plan(function, &mut value_to_tensor)?;
 
-        // Log instruction count for debugging
-        if options.debug_mode {
-            eprintln!("=== Hodu Compiler Debug ===");
-            eprintln!("Instruction count: {}", execution_plan.len());
-            eprintln!("===========================");
-        }
-
         // Extract input/output mapping
         let (input_mapping, output_mapping) = base::extract_input_output_mapping(function);
 

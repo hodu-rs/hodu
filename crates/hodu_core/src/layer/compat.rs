@@ -55,14 +55,14 @@ pub use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Orderi
 pub use core::{
     any::TypeId,
     cell::{Cell, RefCell},
-    fmt, ops,
+    fmt, iter, ops,
 };
 
 #[cfg(feature = "std")]
 pub use std::{
     any::TypeId,
     cell::{Cell, RefCell},
-    fmt, ops, thread_local,
+    fmt, iter, ops, thread_local,
 };
 
 // Debug printing

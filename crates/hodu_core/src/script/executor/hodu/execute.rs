@@ -19,7 +19,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
     let max_value_id = compiled
         .execution_plan
         .iter()
-        .flat_map(|instr| instr.inputs.iter().chain(std::iter::once(&instr.result)))
+        .flat_map(|instr| instr.inputs.iter().chain(iter::once(&instr.result)))
         .chain(compiled.input_mapping.values())
         .chain(compiled.output_mapping.values())
         .map(|vid| vid.0)

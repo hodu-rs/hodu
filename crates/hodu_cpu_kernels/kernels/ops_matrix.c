@@ -107,7 +107,7 @@
                                                                                                    \
             if (num_threads > 1) {                                                                 \
                 /* Parallel execution */                                                           \
-                pthread_t threads[32];                                                             \
+                thread_t threads[32];                                                              \
                 matmul_##TYPE_SUFFIX##_args_t thread_args[32];                                     \
                 if (num_threads > 32)                                                              \
                     num_threads = 32;                                                              \
@@ -127,12 +127,11 @@
                     if (t == num_threads - 1)                                                      \
                         thread_args[t].end_row += remaining_rows;                                  \
                                                                                                    \
-                    pthread_create(&threads[t], NULL, matmul_##TYPE_SUFFIX##_worker,               \
-                                   &thread_args[t]);                                               \
+                    thread_create(&threads[t], matmul_##TYPE_SUFFIX##_worker, &thread_args[t]);    \
                 }                                                                                  \
                                                                                                    \
                 for (size_t t = 0; t < num_threads; t++) {                                         \
-                    pthread_join(threads[t], NULL);                                                \
+                    thread_join(threads[t]);                                                       \
                 }                                                                                  \
             } else {                                                                               \
                 /* Single-threaded execution */                                                    \
@@ -534,7 +533,7 @@ MATMUL_OP(uint64_t, u64)
                                                                                                    \
             if (num_threads > 1) {                                                                 \
                 /* Parallel execution */                                                           \
-                pthread_t threads[32];                                                             \
+                thread_t threads[32];                                                              \
                 dot_##TYPE_SUFFIX##_args_t thread_args[32];                                        \
                 if (num_threads > 32)                                                              \
                     num_threads = 32;                                                              \
@@ -554,12 +553,11 @@ MATMUL_OP(uint64_t, u64)
                     if (t == num_threads - 1)                                                      \
                         thread_args[t].end_row += remaining_rows;                                  \
                                                                                                    \
-                    pthread_create(&threads[t], NULL, dot_##TYPE_SUFFIX##_worker,                  \
-                                   &thread_args[t]);                                               \
+                    thread_create(&threads[t], dot_##TYPE_SUFFIX##_worker, &thread_args[t]);       \
                 }                                                                                  \
                                                                                                    \
                 for (size_t t = 0; t < num_threads; t++) {                                         \
-                    pthread_join(threads[t], NULL);                                                \
+                    thread_join(threads[t]);                                                       \
                 }                                                                                  \
             } else {                                                                               \
                 /* Single-threaded execution with cache blocking */                                \

@@ -77,12 +77,10 @@
             size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
                                                                                                    \
             if (num_threads > 1) {                                                                 \
-                _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wvla\"")         \
-                    pthread_t threads[num_threads];                                                \
+                thread_t threads[num_threads];                                                     \
                 unary_##OP_NAME##_##TYPE_SUFFIX##_args_t args[num_threads];                        \
-                _Pragma("GCC diagnostic pop")                                                      \
                                                                                                    \
-                    size_t chunk_size = num_els / num_threads;                                     \
+                size_t chunk_size = num_els / num_threads;                                         \
                 size_t remaining = num_els % num_threads;                                          \
                                                                                                    \
                 for (size_t t = 0; t < num_threads; t++) {                                         \
@@ -91,12 +89,12 @@
                     args[t].offset = offset;                                                       \
                     args[t].start = t * chunk_size + (t < remaining ? t : remaining);              \
                     args[t].end = args[t].start + chunk_size + (t < remaining ? 1 : 0);            \
-                    pthread_create(&threads[t], NULL, unary_##OP_NAME##_##TYPE_SUFFIX##_worker,    \
-                                   &args[t]);                                                      \
+                    thread_create(&threads[t], unary_##OP_NAME##_##TYPE_SUFFIX##_worker,           \
+                                  &args[t]);                                                       \
                 }                                                                                  \
                                                                                                    \
                 for (size_t t = 0; t < num_threads; t++) {                                         \
-                    pthread_join(threads[t], NULL);                                                \
+                    thread_join(threads[t]);                                                       \
                 }                                                                                  \
             } else {                                                                               \
                 if (in) {                                                                          \
@@ -178,12 +176,10 @@
             size_t num_threads = get_optimal_threads(num_els, min_work_per_thread);                \
                                                                                                    \
             if (num_threads > 1) {                                                                 \
-                _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wvla\"")         \
-                    pthread_t threads[num_threads];                                                \
+                thread_t threads[num_threads];                                                     \
                 unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_args_t args[num_threads];                 \
-                _Pragma("GCC diagnostic pop")                                                      \
                                                                                                    \
-                    size_t chunk_size = num_els / num_threads;                                     \
+                size_t chunk_size = num_els / num_threads;                                         \
                 size_t remaining = num_els % num_threads;                                          \
                                                                                                    \
                 for (size_t t = 0; t < num_threads; t++) {                                         \
@@ -193,12 +189,12 @@
                     args[t].offset = offset;                                                       \
                     args[t].start = t * chunk_size + (t < remaining ? t : remaining);              \
                     args[t].end = args[t].start + chunk_size + (t < remaining ? 1 : 0);            \
-                    pthread_create(&threads[t], NULL,                                              \
-                                   unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_worker, &args[t]);     \
+                    thread_create(&threads[t], unary_scalar_##OP_NAME##_##TYPE_SUFFIX##_worker,    \
+                                  &args[t]);                                                       \
                 }                                                                                  \
                                                                                                    \
                 for (size_t t = 0; t < num_threads; t++) {                                         \
-                    pthread_join(threads[t], NULL);                                                \
+                    thread_join(threads[t]);                                                       \
                 }                                                                                  \
             } else {                                                                               \
                 if (in) {                                                                          \

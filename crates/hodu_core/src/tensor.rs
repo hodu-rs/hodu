@@ -37,12 +37,68 @@ impl TensorId {
 }
 
 #[repr(transparent)]
-#[derive(Clone)]
 pub struct Tensor(TensorId);
 
 impl AsRef<Tensor> for Tensor {
     fn as_ref(&self) -> &Tensor {
         self
+    }
+}
+
+impl Clone for Tensor {
+    fn clone(&self) -> Self {
+        // Increment reference count
+        #[cfg(feature = "std")]
+        {
+            if let Some(tensor_ref) = TENSORS.get(&self.0) {
+                tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            if let Some(tensors) = TENSORS.try_read() {
+                if let Some(tensor_) = tensors.get(&self.0) {
+                    tensor_.ref_count.fetch_add(1, Ordering::Relaxed);
+                }
+            }
+        }
+        Tensor(self.0)
+    }
+}
+
+impl Drop for Tensor {
+    fn drop(&mut self) {
+        #[cfg(feature = "std")]
+        {
+            if let Some(tensor_ref) = TENSORS.get(&self.0) {
+                let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
+                if prev_count == 1 {
+                    // Last reference - drop the guard first
+                    drop(tensor_ref);
+                    // Now remove from global HashMap
+                    TENSORS.remove(&self.0);
+                }
+            }
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            let should_remove = if let Some(tensors) = TENSORS.try_read() {
+                if let Some(tensor_) = tensors.get(&self.0) {
+                    let prev_count = tensor_.ref_count.fetch_sub(1, Ordering::Relaxed);
+                    prev_count == 1
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if should_remove {
+                if let Some(mut tensors) = TENSORS.try_write() {
+                    tensors.remove(&self.0);
+                }
+            }
+        }
     }
 }
 
@@ -52,6 +108,7 @@ pub struct Tensor_ {
     layout: Layout,
     requires_grad: bool,
     grad_tensor_id: Option<TensorId>,
+    ref_count: AtomicU32,
 }
 
 #[cfg(feature = "std")]
@@ -327,6 +384,7 @@ pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: 
         layout,
         requires_grad,
         grad_tensor_id: None,
+        ref_count: AtomicU32::new(1),
     };
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);
@@ -343,6 +401,7 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
         layout,
         requires_grad,
         grad_tensor_id: None,
+        ref_count: AtomicU32::new(1),
     };
 
     let tensor_id = TensorId::new();
@@ -357,6 +416,7 @@ pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (Ten
         layout,
         requires_grad,
         grad_tensor_id: None,
+        ref_count: AtomicU32::new(1),
     };
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);
