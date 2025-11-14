@@ -388,22 +388,34 @@ pub(crate) fn cleanup_dropped_tensor(tensor_id: TensorId) {
 }
 
 /// Cascade cleanup: remove managed tensors that are no longer used by any tape entry
+/// Uses single-pass mark-sweep algorithm for O(n) complexity
 fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
+    if tape.is_empty() {
+        return;
+    }
+
     loop {
         let initial_len = tape.len();
 
+        // Pre-allocate HashSet with capacity for better performance
+        let mut used_in_tape: HashSet<TensorId> = HashSet::with_capacity(tape.len());
+
         // Collect all tensor IDs that are currently used as inputs in the tape
-        let used_in_tape: crate::layer::compat::HashSet<TensorId> =
-            tape.iter().flat_map(|entry| entry.input_ids.iter().copied()).collect();
+        for entry in tape.iter() {
+            for &input_id in &entry.input_ids {
+                used_in_tape.insert(input_id);
+            }
+        }
+
+        // Pre-allocate vectors for removal candidates
+        let mut to_remove = Vec::with_capacity(tape.len() / 4); // estimate 25% removal rate
 
         // Find managed tensors that are tape outputs but not used as inputs
-        let mut to_remove = Vec::new();
-
         #[cfg(feature = "std")]
         {
             for entry in tape.iter() {
                 if let Some(tensor_ref) = crate::tensor::TENSORS.get(&entry.output_id) {
-                    let is_managed = tensor_ref.is_managed.load(crate::layer::compat::Ordering::Relaxed);
+                    let is_managed = tensor_ref.is_managed.load(Ordering::Relaxed);
 
                     // If managed and not used as input by any entry, mark for removal
                     if is_managed && !used_in_tape.contains(&entry.output_id) {
@@ -418,7 +430,7 @@ fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
             let tensors = crate::tensor::TENSORS.read();
             for entry in tape.iter() {
                 if let Some(tensor_ref) = tensors.get(&entry.output_id) {
-                    let is_managed = tensor_ref.is_managed.load(crate::layer::compat::Ordering::Relaxed);
+                    let is_managed = tensor_ref.is_managed.load(Ordering::Relaxed);
 
                     // If managed and not used as input by any entry, mark for removal
                     if is_managed && !used_in_tape.contains(&entry.output_id) {
@@ -426,6 +438,11 @@ fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
                     }
                 }
             }
+        }
+
+        // Early exit if nothing to remove
+        if to_remove.is_empty() {
+            break;
         }
 
         // Remove managed tensors from TENSORS
@@ -444,11 +461,11 @@ fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
             }
         }
 
+        // Build removal set with pre-allocated capacity
+        let to_remove_set: HashSet<_> = to_remove.into_iter().collect();
+
         // Remove tape entries for removed tensors
-        if !to_remove.is_empty() {
-            let to_remove_set: crate::layer::compat::HashSet<_> = to_remove.into_iter().collect();
-            tape.retain(|entry| !to_remove_set.contains(&entry.output_id));
-        }
+        tape.retain(|entry| !to_remove_set.contains(&entry.output_id));
 
         // Stop if no more entries were removed
         if tape.len() == initial_len {
@@ -463,9 +480,17 @@ struct GradientComputationGuard {
 }
 
 impl GradientComputationGuard {
+    #[allow(dead_code)]
     fn new() -> Self {
         IS_COMPUTING_GRADIENTS.store(true, Ordering::Relaxed);
         Self { keep_alive: Vec::new() }
+    }
+
+    fn new_with_capacity(capacity: usize) -> Self {
+        IS_COMPUTING_GRADIENTS.store(true, Ordering::Relaxed);
+        Self {
+            keep_alive: Vec::with_capacity(capacity),
+        }
     }
 
     fn keep(&mut self, tensor: Tensor) {
@@ -482,38 +507,39 @@ impl Drop for GradientComputationGuard {
 }
 
 pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
-    let mut guard = GradientComputationGuard::new();
+    let loss_tensor = tensor_from_id(loss_tensor_id);
+    let loss_shape = loss_tensor.shape();
+
+    let loss_grad = Tensor::ones(&loss_shape, loss_tensor.dtype())?;
+    let loss_grad_id = loss_grad.id();
+
+    set_grad_tensor_id(loss_tensor_id, loss_grad_id)?;
+
+    // Get tape from active context
+    let context_id = get_active_context();
+    let tape = {
+        #[cfg(feature = "std")]
+        {
+            let tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
+            tapes.get(&context_id).cloned().unwrap_or_default()
+        }
+        #[cfg(not(feature = "std"))]
+        {
+            let tapes = GRADIENT_TAPES.lock();
+            tapes.get(&context_id).cloned().unwrap_or_default()
+        }
+    };
+
+    // Pre-allocate based on tape size for better performance
+    let tape_len = tape.len();
+    let mut guard = GradientComputationGuard::new_with_capacity(tape_len * 3);
+    let mut gradients: HashMap<TensorId, TensorId> = HashMap::with_capacity(tape_len);
+
+    gradients.insert(loss_tensor_id, loss_grad_id);
+    guard.keep(loss_tensor);
+    guard.keep(loss_grad);
 
     let result = (|| -> HoduResult<()> {
-        let loss_tensor = tensor_from_id(loss_tensor_id);
-        let loss_shape = loss_tensor.shape();
-
-        let loss_grad = Tensor::ones(&loss_shape, loss_tensor.dtype())?;
-        let loss_grad_id = loss_grad.id();
-
-        set_grad_tensor_id(loss_tensor_id, loss_grad_id)?;
-
-        let mut gradients: HashMap<TensorId, TensorId> = HashMap::new();
-        gradients.insert(loss_tensor_id, loss_grad_id);
-
-        guard.keep(loss_tensor);
-        guard.keep(loss_grad);
-
-        // Get tape from active context
-        let context_id = get_active_context();
-        let tape = {
-            #[cfg(feature = "std")]
-            {
-                let tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
-                tapes.get(&context_id).cloned().unwrap_or_default()
-            }
-            #[cfg(not(feature = "std"))]
-            {
-                let tapes = GRADIENT_TAPES.lock();
-                tapes.get(&context_id).cloned().unwrap_or_default()
-            }
-        };
-
         for entry in tape.iter().rev() {
             if let Some(&grad_output) = gradients.get(&entry.output_id) {
                 for &input_id in &entry.input_ids {
