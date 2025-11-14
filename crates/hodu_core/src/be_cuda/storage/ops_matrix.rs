@@ -29,32 +29,32 @@ pub fn call_ops_matmul(
     let output_size = {
         let mut dims = Vec::new();
         for i in 0..(lhs_ndim - 2) {
-            dims.push(lhs_shape[i] as usize);
+            dims.push(lhs_shape[i]);
         }
-        dims.push(lhs_shape[lhs_ndim - 2] as usize);
-        dims.push(rhs_shape[rhs_ndim - 1] as usize);
+        dims.push(lhs_shape[lhs_ndim - 2]);
+        dims.push(rhs_shape[rhs_ndim - 1]);
         dims.iter().map(|&x| x as u32).product::<u32>()
     };
 
     let mut metadata = Vec::new();
     metadata.push(output_size as usize);
-    metadata.push(lhs_ndim as usize);
-    metadata.push(rhs_ndim as usize);
+    metadata.push(lhs_ndim);
+    metadata.push(rhs_ndim);
 
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
@@ -132,18 +132,18 @@ pub fn call_ops_dot(
     let n = rhs_shape[1];
 
     let mut metadata = Vec::new();
-    metadata.push(m as usize);
-    metadata.push(k as usize);
-    metadata.push(n as usize);
+    metadata.push(m);
+    metadata.push(k);
+    metadata.push(n);
 
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
@@ -152,7 +152,7 @@ pub fn call_ops_dot(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    let output_size = (m * n) as usize;
+    let output_size = m * n;
 
     macro_rules! call_dot {
         ($lhs:expr, $rhs:expr, $ty:ty) => {{

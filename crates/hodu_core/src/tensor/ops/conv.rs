@@ -13,7 +13,7 @@ use crate::{
 };
 
 impl Tensor {
-    pub fn conv1d(&self, weight: &Self, stride: u32, padding: u32, dilation: u32) -> HoduResult<Self> {
+    pub fn conv1d(&self, weight: &Self, stride: usize, padding: usize, dilation: usize) -> HoduResult<Self> {
         let input_shape = self.shape();
         let weight_shape = weight.shape();
         let input_dims = input_shape.dims();
@@ -67,7 +67,7 @@ impl Tensor {
         // Calculate layouts before if-else block
         let input_layout = self.layout();
         let weight_layout = weight.layout();
-        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
+        let result_layout = Layout::from_shape(&Shape::from(output_shape));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
@@ -144,7 +144,7 @@ impl Tensor {
         }
     }
 
-    pub fn conv2d(&self, weight: &Self, stride: u32, padding: u32, dilation: u32) -> HoduResult<Self> {
+    pub fn conv2d(&self, weight: &Self, stride: usize, padding: usize, dilation: usize) -> HoduResult<Self> {
         let input_shape = self.shape();
         let weight_shape = weight.shape();
         let input_dims = input_shape.dims();
@@ -201,7 +201,7 @@ impl Tensor {
         // Calculate layouts before if-else block
         let input_layout = self.layout();
         let weight_layout = weight.layout();
-        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
+        let result_layout = Layout::from_shape(&Shape::from(output_shape));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
@@ -282,7 +282,7 @@ impl Tensor {
         }
     }
 
-    pub fn conv3d(&self, weight: &Self, stride: u32, padding: u32, dilation: u32) -> HoduResult<Self> {
+    pub fn conv3d(&self, weight: &Self, stride: usize, padding: usize, dilation: usize) -> HoduResult<Self> {
         let input_shape = self.shape();
         let weight_shape = weight.shape();
         let input_dims = input_shape.dims();
@@ -342,7 +342,7 @@ impl Tensor {
         // Calculate layouts before if-else block
         let input_layout = self.layout();
         let weight_layout = weight.layout();
-        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
+        let result_layout = Layout::from_shape(&Shape::from(output_shape));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
@@ -430,10 +430,10 @@ impl Tensor {
     pub fn conv_transpose1d(
         &self,
         weight: &Self,
-        stride: u32,
-        padding: u32,
-        output_padding: u32,
-        dilation: u32,
+        stride: usize,
+        padding: usize,
+        output_padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let weight_shape = weight.shape();
@@ -489,7 +489,7 @@ impl Tensor {
         // Calculate layouts before if-else block
         let input_layout = self.layout();
         let weight_layout = weight.layout();
-        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
+        let result_layout = Layout::from_shape(&Shape::from(output_shape));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
@@ -571,10 +571,10 @@ impl Tensor {
     pub fn conv_transpose2d(
         &self,
         weight: &Self,
-        stride: u32,
-        padding: u32,
-        output_padding: u32,
-        dilation: u32,
+        stride: usize,
+        padding: usize,
+        output_padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let weight_shape = weight.shape();
@@ -634,7 +634,7 @@ impl Tensor {
         // Calculate layouts before if-else block
         let input_layout = self.layout();
         let weight_layout = weight.layout();
-        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
+        let result_layout = Layout::from_shape(&Shape::from(output_shape));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
@@ -720,10 +720,10 @@ impl Tensor {
     pub fn conv_transpose3d(
         &self,
         weight: &Self,
-        stride: u32,
-        padding: u32,
-        output_padding: u32,
-        dilation: u32,
+        stride: usize,
+        padding: usize,
+        output_padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let weight_shape = weight.shape();
@@ -787,7 +787,7 @@ impl Tensor {
         // Calculate layouts before if-else block
         let input_layout = self.layout();
         let weight_layout = weight.layout();
-        let result_layout = Layout::from_shape(&Shape::from(output_shape.clone()));
+        let result_layout = Layout::from_shape(&Shape::from(output_shape));
         let requires_grad = (self.is_requires_grad() || weight.is_requires_grad()) && validate_requires_grad;
 
         if builder::is_builder_active() {
@@ -878,10 +878,10 @@ impl Tensor {
     pub(crate) fn conv1d_grad_weight(
         &self,
         grad_output: &Self,
-        weight_shape: &[u32],
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        weight_shape: &[usize],
+        stride: usize,
+        padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let grad_output_shape = grad_output.shape();
@@ -916,7 +916,7 @@ impl Tensor {
         let dilation_arr = [dilation];
 
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             let scalars = vec![
@@ -950,7 +950,7 @@ impl Tensor {
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
-                        &Shape::from(weight_shape.to_vec()),
+                        &Shape::from(weight_shape),
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -959,7 +959,7 @@ impl Tensor {
                 })
             })?;
 
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let result = from_storage(storage, result_layout, true, false);
 
             Ok(result)
@@ -969,10 +969,10 @@ impl Tensor {
     pub(crate) fn conv2d_grad_weight(
         &self,
         grad_output: &Self,
-        weight_shape: &[u32],
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        weight_shape: &[usize],
+        stride: usize,
+        padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let grad_output_shape = grad_output.shape();
@@ -1007,7 +1007,7 @@ impl Tensor {
         let dilation_arr = [dilation; 2];
 
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             let scalars = vec![
@@ -1042,7 +1042,7 @@ impl Tensor {
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
-                        &Shape::from(weight_shape.to_vec()),
+                        &Shape::from(weight_shape),
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -1051,7 +1051,7 @@ impl Tensor {
                 })
             })?;
 
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let result = from_storage(storage, result_layout, true, false);
 
             Ok(result)
@@ -1061,10 +1061,10 @@ impl Tensor {
     pub(crate) fn conv3d_grad_weight(
         &self,
         grad_output: &Self,
-        weight_shape: &[u32],
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        weight_shape: &[usize],
+        stride: usize,
+        padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let grad_output_shape = grad_output.shape();
@@ -1099,7 +1099,7 @@ impl Tensor {
         let dilation_arr = [dilation; 3];
 
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             let scalars = vec![
@@ -1135,7 +1135,7 @@ impl Tensor {
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
-                        &Shape::from(weight_shape.to_vec()),
+                        &Shape::from(weight_shape),
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -1144,7 +1144,7 @@ impl Tensor {
                 })
             })?;
 
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let result = from_storage(storage, result_layout, true, false);
 
             Ok(result)
@@ -1154,10 +1154,10 @@ impl Tensor {
     pub(crate) fn conv_transpose1d_grad_weight(
         &self,
         grad_output: &Self,
-        weight_shape: &[u32],
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        weight_shape: &[usize],
+        stride: usize,
+        padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let grad_output_shape = grad_output.shape();
@@ -1192,7 +1192,7 @@ impl Tensor {
         let dilation_arr = [dilation];
 
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             let scalars = vec![
@@ -1226,7 +1226,7 @@ impl Tensor {
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
-                        &Shape::from(weight_shape.to_vec()),
+                        &Shape::from(weight_shape),
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -1235,7 +1235,7 @@ impl Tensor {
                 })
             })?;
 
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let result = from_storage(storage, result_layout, true, false);
 
             Ok(result)
@@ -1245,10 +1245,10 @@ impl Tensor {
     pub(crate) fn conv_transpose2d_grad_weight(
         &self,
         grad_output: &Self,
-        weight_shape: &[u32],
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        weight_shape: &[usize],
+        stride: usize,
+        padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let grad_output_shape = grad_output.shape();
@@ -1283,7 +1283,7 @@ impl Tensor {
         let dilation_arr = [dilation; 2];
 
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             let scalars = vec![
@@ -1318,7 +1318,7 @@ impl Tensor {
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
-                        &Shape::from(weight_shape.to_vec()),
+                        &Shape::from(weight_shape),
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -1327,7 +1327,7 @@ impl Tensor {
                 })
             })?;
 
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let result = from_storage(storage, result_layout, true, false);
 
             Ok(result)
@@ -1337,10 +1337,10 @@ impl Tensor {
     pub(crate) fn conv_transpose3d_grad_weight(
         &self,
         grad_output: &Self,
-        weight_shape: &[u32],
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        weight_shape: &[usize],
+        stride: usize,
+        padding: usize,
+        dilation: usize,
     ) -> HoduResult<Self> {
         let input_shape = self.shape();
         let grad_output_shape = grad_output.shape();
@@ -1375,7 +1375,7 @@ impl Tensor {
         let dilation_arr = [dilation; 3];
 
         if builder::is_builder_active() {
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             let scalars = vec![
@@ -1411,7 +1411,7 @@ impl Tensor {
                         &self.layout(),
                         grad_output_storage,
                         &grad_output.layout(),
-                        &Shape::from(weight_shape.to_vec()),
+                        &Shape::from(weight_shape),
                         &stride_arr,
                         &padding_arr,
                         &dilation_arr,
@@ -1420,7 +1420,7 @@ impl Tensor {
                 })
             })?;
 
-            let result_layout = Layout::from_shape(&Shape::from(weight_shape.to_vec()));
+            let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let result = from_storage(storage, result_layout, true, false);
 
             Ok(result)

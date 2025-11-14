@@ -37,10 +37,10 @@ pub fn call_ops_matmul(
     }
 
     // Extract matrix dimensions
-    let m = lhs_shape.dims()[(lhs_ndim - 2) as usize];
-    let k_lhs = lhs_shape.dims()[(lhs_ndim - 1) as usize];
-    let k_rhs = rhs_shape.dims()[(rhs_ndim - 2) as usize];
-    let n = rhs_shape.dims()[(rhs_ndim - 1) as usize];
+    let m = lhs_shape.dims()[lhs_ndim - 2];
+    let k_lhs = lhs_shape.dims()[lhs_ndim - 1];
+    let k_rhs = rhs_shape.dims()[rhs_ndim - 2];
+    let n = rhs_shape.dims()[rhs_ndim - 1];
 
     // Check that inner dimensions match
     if k_lhs != k_rhs {
@@ -57,17 +57,17 @@ pub fn call_ops_matmul(
     let batch_ndim = lhs_batch_ndim.max(rhs_batch_ndim);
 
     // Broadcast batch dimensions
-    let mut batch_shape = Vec::with_capacity(batch_ndim as usize);
+    let mut batch_shape = Vec::with_capacity(batch_ndim);
     for i in 0..batch_ndim {
         let lhs_idx = (lhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;
         let rhs_idx = (rhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;
 
-        let lhs_dim = if lhs_idx < lhs_batch_ndim as usize {
+        let lhs_dim = if lhs_idx < lhs_batch_ndim {
             lhs_shape.dims()[lhs_idx]
         } else {
             1
         };
-        let rhs_dim = if rhs_idx < rhs_batch_ndim as usize {
+        let rhs_dim = if rhs_idx < rhs_batch_ndim {
             rhs_shape.dims()[rhs_idx]
         } else {
             1
@@ -94,54 +94,52 @@ pub fn call_ops_matmul(
     let num_els = output_shape.size();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(
-        4 + lhs_ndim as usize + rhs_ndim as usize + batch_ndim as usize + lhs_ndim as usize + rhs_ndim as usize + 5,
-    );
+    let mut metadata = Vec::with_capacity(4 + lhs_ndim + rhs_ndim + batch_ndim + lhs_ndim + rhs_ndim + 5);
 
-    metadata.push(num_els as usize);
-    metadata.push(lhs_ndim as usize);
-    metadata.push(rhs_ndim as usize);
-    metadata.push(batch_ndim as usize);
+    metadata.push(num_els);
+    metadata.push(lhs_ndim);
+    metadata.push(rhs_ndim);
+    metadata.push(batch_ndim);
 
     // Add lhs shape
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add rhs shape
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add batch shape
     for &dim in &batch_shape {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add lhs strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add rhs strides
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     // Add matrix dimensions M, K, N
-    metadata.push(m as usize);
-    metadata.push(k_lhs as usize);
-    metadata.push(n as usize);
+    metadata.push(m);
+    metadata.push(k_lhs);
+    metadata.push(n);
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "matmul_output")?;
+    let output_buffer = device.new_buffer(num_els, dtype, "matmul_output")?;
 
     // Generate kernel name
     let kernel_name = format!("matmul_{}", dtype);
@@ -165,12 +163,7 @@ pub fn call_ops_matmul(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
 }
 
 pub fn call_ops_dot(
@@ -218,28 +211,28 @@ pub fn call_ops_dot(
     // Build metadata array for Metal kernel
     let mut metadata = Vec::with_capacity(9);
 
-    metadata.push(m as usize);
-    metadata.push(k_lhs as usize);
-    metadata.push(n as usize);
+    metadata.push(m);
+    metadata.push(k_lhs);
+    metadata.push(n);
 
     // Add strides
     let lhs_strides = lhs_layout.strides();
     let rhs_strides = rhs_layout.strides();
 
-    metadata.push(lhs_strides[0] as usize); // lhs_stride_m
-    metadata.push(lhs_strides[1] as usize); // lhs_stride_k
-    metadata.push(rhs_strides[0] as usize); // rhs_stride_k
-    metadata.push(rhs_strides[1] as usize); // rhs_stride_n
+    metadata.push(lhs_strides[0]); // lhs_stride_m
+    metadata.push(lhs_strides[1]); // lhs_stride_k
+    metadata.push(rhs_strides[0]); // rhs_stride_k
+    metadata.push(rhs_strides[1]); // rhs_stride_n
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "dot_output")?;
+    let output_buffer = device.new_buffer(num_els, dtype, "dot_output")?;
 
     // Generate kernel name
     let kernel_name = format!("dot_{}", dtype);
@@ -260,15 +253,10 @@ pub fn call_ops_dot(
         lhs_offset,
         rhs_offset,
         &output_buffer,
-        m as usize,
-        n as usize,
+        m,
+        n,
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
 }

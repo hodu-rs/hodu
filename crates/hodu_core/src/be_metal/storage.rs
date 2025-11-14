@@ -152,16 +152,16 @@ impl BackendStorageT for MetalStorage {
         let command_buffer = self.device.command_buffer()?;
 
         // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
-        metadata.push(num_els as usize);
-        metadata.push(shape.ndim() as usize);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
         for i in 0..shape.ndim() {
-            metadata.push(shape[i] as usize);
+            metadata.push(shape[i]);
         }
-        for i in 0..shape.ndim() {
-            metadata.push(strides[i as usize] as usize);
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
         }
-        metadata.push(offset as usize);
+        metadata.push(offset);
 
         // Match scalar type and call appropriate kernel
         macro_rules! call_kernel {
@@ -260,15 +260,15 @@ impl BackendStorageT for MetalStorage {
         ops_matrix::call_ops_dot(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
+    fn call_ops_reduce(&self, layout: &Layout, dims: &[usize], keep_dim: bool, op: Op) -> HoduResult<Self> {
         ops_reduce::call_ops_reduce(self, layout, dims, keep_dim, op)
     }
 
-    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
+    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: usize, op: Op) -> HoduResult<Self> {
         ops_concat_split::call_ops_concat(self, others, layouts, dim, op)
     }
 
-    fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
+    fn call_ops_split(&self, layout: &Layout, dim: usize, start: usize, size: usize, op: Op) -> HoduResult<Self> {
         ops_concat_split::call_ops_split(self, layout, dim, start, size, op)
     }
 
@@ -277,7 +277,7 @@ impl BackendStorageT for MetalStorage {
         layout: &Layout,
         indices_storage: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_index_select(self, layout, indices_storage, indices_layout, dim, op)
@@ -290,7 +290,7 @@ impl BackendStorageT for MetalStorage {
         indices_layout: &Layout,
         values_storage: &Self,
         values_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_index_put(
@@ -310,7 +310,7 @@ impl BackendStorageT for MetalStorage {
         layout: &Layout,
         indices_storage: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_gather(self, layout, indices_storage, indices_layout, dim, op)
@@ -323,7 +323,7 @@ impl BackendStorageT for MetalStorage {
         indices_layout: &Layout,
         src_storage: &Self,
         src_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_scatter(
@@ -343,9 +343,9 @@ impl BackendStorageT for MetalStorage {
         layout: &Layout,
         weight_storage: &Self,
         weight_layout: &Layout,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_conv::call_ops_conv(
@@ -366,9 +366,9 @@ impl BackendStorageT for MetalStorage {
         grad_output_storage: &Self,
         grad_output_layout: &Layout,
         weight_shape: &Shape,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_conv::call_ops_conv_grad_weight(
@@ -387,9 +387,9 @@ impl BackendStorageT for MetalStorage {
     fn call_ops_reduce_window(
         &self,
         layout: &Layout,
-        window_shape: &[u32],
-        strides: &[u32],
-        padding: &[u32],
+        window_shape: &[usize],
+        strides: &[usize],
+        padding: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_windowing::call_ops_reduce_window(self, layout, window_shape, strides, padding, op)
@@ -407,21 +407,21 @@ impl BackendStorageT for MetalStorage {
         let num_els = layout.size();
 
         // Create output buffer with target dtype
-        let output_buffer = self.device.new_buffer(num_els as usize, target_dtype, "to_dtype")?;
+        let output_buffer = self.device.new_buffer(num_els, target_dtype, "to_dtype")?;
 
         let command_buffer = self.device.command_buffer()?;
 
         // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
-        metadata.push(num_els as usize);
-        metadata.push(shape.ndim() as usize);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
         for i in 0..shape.ndim() {
-            metadata.push(shape[i] as usize);
+            metadata.push(shape[i]);
         }
-        for i in 0..shape.ndim() {
-            metadata.push(strides[i as usize] as usize);
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
         }
-        metadata.push(offset as usize);
+        metadata.push(offset);
 
         let input = BufferOffset {
             buffer: &self.buffer,
@@ -443,12 +443,7 @@ impl BackendStorageT for MetalStorage {
             &metadata,
         )?;
 
-        Ok(Self::new(
-            output_buffer,
-            self.device.clone(),
-            num_els as usize,
-            target_dtype,
-        ))
+        Ok(Self::new(output_buffer, self.device.clone(), num_els, target_dtype))
     }
 
     fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
@@ -463,21 +458,21 @@ impl BackendStorageT for MetalStorage {
         let num_els = layout.size();
 
         // Create output buffer
-        let output_buffer = self.device.new_buffer(num_els as usize, self.dtype, "contiguous")?;
+        let output_buffer = self.device.new_buffer(num_els, self.dtype, "contiguous")?;
 
         let command_buffer = self.device.command_buffer()?;
 
         // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
-        metadata.push(num_els as usize);
-        metadata.push(shape.ndim() as usize);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
         for i in 0..shape.ndim() {
-            metadata.push(shape[i] as usize);
+            metadata.push(shape[i]);
         }
-        for i in 0..shape.ndim() {
-            metadata.push(strides[i as usize] as usize);
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
         }
-        metadata.push(offset as usize);
+        metadata.push(offset);
 
         let input = BufferOffset {
             buffer: &self.buffer,
@@ -524,11 +519,6 @@ impl BackendStorageT for MetalStorage {
             },
         }
 
-        Ok(Self::new(
-            output_buffer,
-            self.device.clone(),
-            num_els as usize,
-            self.dtype,
-        ))
+        Ok(Self::new(output_buffer, self.device.clone(), num_els, self.dtype))
     }
 }

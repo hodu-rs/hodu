@@ -25,7 +25,7 @@ pub fn call_ops_concat(
     first: &CpuStorage,
     others: &[&CpuStorage],
     layouts: &[&Layout],
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Collect all storages
@@ -79,12 +79,12 @@ pub fn call_ops_concat(
 
         // Check all dimensions except concat_dim match
         for d in 0..ndim {
-            if d != dim && shape.dims()[d as usize] != first_shape.dims()[d as usize] {
+            if d != dim && shape.dims()[d] != first_shape.dims()[d] {
                 return Err(HoduError::BackendError(format!(
                     "dimension {} mismatch: expected {}, got {}",
                     d,
-                    first_shape.dims()[d as usize],
-                    shape.dims()[d as usize]
+                    first_shape.dims()[d],
+                    shape.dims()[d]
                 )));
             }
         }
@@ -92,7 +92,7 @@ pub fn call_ops_concat(
 
     // Compute output shape
     let mut output_shape_vec = first_shape.dims().to_vec();
-    output_shape_vec[dim as usize] = layouts.iter().map(|l| l.shape().dims()[dim as usize]).sum();
+    output_shape_vec[dim] = layouts.iter().map(|l| l.shape().dims()[dim]).sum();
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
@@ -100,20 +100,19 @@ pub fn call_ops_concat(
     // Layout: num_els, num_dims, output_shape, concat_dim, num_inputs,
     //         input_shapes (flattened), input_strides (flattened),
     //         input_offsets, input_buffer_offsets
-    let mut metadata: Vec<usize> = Vec::with_capacity(
-        2 + ndim as usize + 1 + 1 + num_inputs * ndim as usize + num_inputs * ndim as usize + num_inputs + num_inputs,
-    );
+    let mut metadata: Vec<usize> =
+        Vec::with_capacity(2 + ndim + 1 + 1 + num_inputs * ndim + num_inputs * ndim + num_inputs + num_inputs);
 
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     // Add output shape
     for &d in &output_shape_vec {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add concat dimension
-    metadata.push(dim as usize);
+    metadata.push(dim);
 
     // Add number of inputs
     metadata.push(num_inputs);
@@ -121,27 +120,27 @@ pub fn call_ops_concat(
     // Add input shapes (flattened)
     for layout in layouts {
         for &d in layout.shape().dims() {
-            metadata.push(d as usize);
+            metadata.push(d);
         }
     }
 
     // Add input strides (flattened)
     for layout in layouts {
         for &s in layout.strides() {
-            metadata.push(s as usize);
+            metadata.push(s);
         }
     }
 
     // Add input offsets
     for layout in layouts {
-        metadata.push(layout.offset() as usize);
+        metadata.push(layout.offset());
     }
 
     // Add input buffer offsets (we'll pack all inputs contiguously)
     let mut buffer_offset = 0;
     for layout in layouts {
         metadata.push(buffer_offset);
-        buffer_offset += layout.shape().size() as usize;
+        buffer_offset += layout.shape().size();
     }
 
     // Generate kernel name
@@ -150,7 +149,7 @@ pub fn call_ops_concat(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size(), dtype)?;
 
     // Pack all inputs into a single buffer and call kernel based on dtype
     macro_rules! concat_impl {
@@ -231,9 +230,9 @@ pub fn call_ops_concat(
 pub fn call_ops_split(
     storage: &CpuStorage,
     layout: &Layout,
-    dim: u32,
-    start: u32,
-    size: u32,
+    dim: usize,
+    start: usize,
+    size: usize,
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate op
@@ -251,7 +250,7 @@ pub fn call_ops_split(
     }
 
     // Validate start and size
-    let dim_size = input_shape.dims()[dim as usize];
+    let dim_size = input_shape.dims()[dim];
     if start >= dim_size {
         return Err(HoduError::BackendError(format!(
             "split start {} exceeds dimension size {}",
@@ -269,39 +268,39 @@ pub fn call_ops_split(
 
     // Compute output shape
     let mut output_shape_vec = input_shape.dims().to_vec();
-    output_shape_vec[dim as usize] = size;
+    output_shape_vec[dim] = size;
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
     // Build metadata array for CPU kernel
     // Layout: num_els, num_dims, input_shape, input_strides, input_offset,
     //         split_dim, output_size_on_dim, split_offset
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 3);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + 3);
 
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     // Add input shape
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add input strides
     for &s in layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add input offset
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     // Add split dimension
-    metadata.push(dim as usize);
+    metadata.push(dim);
 
     // Add output size on split dimension
-    metadata.push(size as usize);
+    metadata.push(size);
 
     // Add split offset (start position)
-    metadata.push(start as usize);
+    metadata.push(start);
 
     // Generate kernel name
     let dtype = storage.dtype();
@@ -310,7 +309,7 @@ pub fn call_ops_split(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

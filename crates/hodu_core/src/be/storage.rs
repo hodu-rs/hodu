@@ -43,13 +43,13 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_dot(&self, _: &Self, _: &Layout, _: &Layout, _: Op) -> HoduResult<Self>;
 
-    fn call_ops_reduce(&self, _: &Layout, _: &[u32], _: bool, _: Op) -> HoduResult<Self>;
+    fn call_ops_reduce(&self, _: &Layout, _: &[usize], _: bool, _: Op) -> HoduResult<Self>;
 
-    fn call_ops_concat(&self, _: &[&Self], _: &[&Layout], _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_concat(&self, _: &[&Self], _: &[&Layout], _: usize, _: Op) -> HoduResult<Self>;
 
-    fn call_ops_split(&self, _: &Layout, _: u32, _: u32, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_split(&self, _: &Layout, _: usize, _: usize, _: usize, _: Op) -> HoduResult<Self>;
 
-    fn call_ops_index_select(&self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_index_select(&self, _: &Layout, _: &Self, _: &Layout, _: usize, _: Op) -> HoduResult<Self>;
 
     fn call_ops_index_put(
         &self,
@@ -58,11 +58,11 @@ pub trait BackendStorageT: Sized {
         _: &Layout,
         _: &Self,
         _: &Layout,
-        _: u32,
+        _: usize,
         _: Op,
     ) -> HoduResult<Self>;
 
-    fn call_ops_gather(&self, _: &Layout, _: &Self, _: &Layout, _: u32, _: Op) -> HoduResult<Self>;
+    fn call_ops_gather(&self, _: &Layout, _: &Self, _: &Layout, _: usize, _: Op) -> HoduResult<Self>;
 
     fn call_ops_scatter(
         &self,
@@ -71,7 +71,7 @@ pub trait BackendStorageT: Sized {
         _: &Layout,
         _: &Self,
         _: &Layout,
-        _: u32,
+        _: usize,
         _: Op,
     ) -> HoduResult<Self>;
 
@@ -80,9 +80,9 @@ pub trait BackendStorageT: Sized {
         _: &Layout,
         _: &Self,
         _: &Layout,
-        _: &[u32],
-        _: &[u32],
-        _: &[u32],
+        _: &[usize],
+        _: &[usize],
+        _: &[usize],
         _: Op,
     ) -> HoduResult<Self>;
 
@@ -92,13 +92,13 @@ pub trait BackendStorageT: Sized {
         _: &Self,
         _: &Layout,
         _: &Shape,
-        _: &[u32],
-        _: &[u32],
-        _: &[u32],
+        _: &[usize],
+        _: &[usize],
+        _: &[usize],
         _: Op,
     ) -> HoduResult<Self>;
 
-    fn call_ops_reduce_window(&self, _: &Layout, _: &[u32], _: &[u32], _: &[u32], _: Op) -> HoduResult<Self>;
+    fn call_ops_reduce_window(&self, _: &Layout, _: &[usize], _: &[usize], _: &[usize], _: Op) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
@@ -432,7 +432,7 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_reduce(&self, layout: &Layout, dims: &[usize], keep_dim: bool, op: Op) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_reduce(layout, dims, keep_dim, op)?)),
             #[cfg(feature = "cuda")]
@@ -442,7 +442,13 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_concat(
+        &self,
+        others: &[&Self],
+        layouts: &[&Layout],
+        dim: usize,
+        op: Op,
+    ) -> HoduResult<Self> {
         // Check all storages are on the same device
         let device = self.device();
         for other in others {
@@ -492,7 +498,14 @@ impl BackendStorage {
         }
     }
 
-    pub(crate) fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
+    pub(crate) fn call_ops_split(
+        &self,
+        layout: &Layout,
+        dim: usize,
+        start: usize,
+        size: usize,
+        op: Op,
+    ) -> HoduResult<Self> {
         match self {
             Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_split(layout, dim, start, size, op)?)),
             #[cfg(feature = "cuda")]
@@ -507,7 +520,7 @@ impl BackendStorage {
         layout: &Layout,
         indices_storage: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         // Check devices match
@@ -559,7 +572,7 @@ impl BackendStorage {
         indices_layout: &Layout,
         values_storage: &Self,
         values_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         // Check all devices match
@@ -620,7 +633,7 @@ impl BackendStorage {
         layout: &Layout,
         indices_storage: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         // Check devices match
@@ -672,7 +685,7 @@ impl BackendStorage {
         indices_layout: &Layout,
         src_storage: &Self,
         src_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         // Check all devices match
@@ -739,9 +752,9 @@ impl BackendStorage {
         layout: &Layout,
         weight_storage: &Self,
         weight_layout: &Layout,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         // Check devices match
@@ -798,9 +811,9 @@ impl BackendStorage {
         grad_output_storage: &Self,
         grad_output_layout: &Layout,
         weight_shape: &Shape,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         // Check devices match
@@ -857,9 +870,9 @@ impl BackendStorage {
     pub(crate) fn call_ops_reduce_window(
         &self,
         layout: &Layout,
-        window_shape: &[u32],
-        strides: &[u32],
-        padding: &[u32],
+        window_shape: &[usize],
+        strides: &[usize],
+        padding: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         match self {

@@ -58,9 +58,9 @@ impl BackendDevice {
         match device {
             Device::CPU => Ok(BackendStorage::CPU(CpuDevice::allocate(size, dtype)?)),
             #[cfg(feature = "cuda")]
-            Device::CUDA(device_id) => Ok(BackendStorage::CUDA(crate::be_cuda::device::CudaDevice::allocate(
-                size, dtype,
-            )?)),
+            Device::CUDA(device_id) => Ok(BackendStorage::CUDA(
+                crate::be_cuda::device::CudaDevice::allocate_on_device(device_id, size, dtype)?,
+            )),
             #[cfg(feature = "metal")]
             Device::Metal => Ok(BackendStorage::Metal(crate::be_metal::device::MetalDevice::allocate(
                 size, dtype,

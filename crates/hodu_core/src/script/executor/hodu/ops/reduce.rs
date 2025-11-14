@@ -23,11 +23,11 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            let dims: Vec<u32> = attributes
+            let dims: Vec<usize> = attributes
                 .get("dims")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }
@@ -48,31 +48,31 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            let window_shape: Vec<u32> = attributes
+            let window_shape: Vec<usize> = attributes
                 .get("window_shape")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("window_shape".to_string()))?;
-            let strides: Vec<u32> = attributes
+            let strides: Vec<usize> = attributes
                 .get("strides")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("strides".to_string()))?;
-            let padding: Vec<u32> = attributes
+            let padding: Vec<usize> = attributes
                 .get("padding")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }

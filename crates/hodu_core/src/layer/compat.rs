@@ -45,10 +45,10 @@ pub use std::sync::{LazyLock, Mutex, RwLock};
 
 // Atomic operations
 #[cfg(not(feature = "std"))]
-pub use core::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Ordering};
+pub use core::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 
 #[cfg(feature = "std")]
-pub use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, AtomicUsize, Ordering};
+pub use std::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 
 // Core traits and functions
 #[cfg(not(feature = "std"))]

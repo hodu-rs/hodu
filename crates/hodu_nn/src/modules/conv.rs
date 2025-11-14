@@ -8,19 +8,19 @@ use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType}
 pub struct Conv1D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: u32,
-    padding: u32,
-    dilation: u32,
+    stride: usize,
+    padding: usize,
+    dilation: usize,
 }
 
 impl Conv1D {
     pub fn new(
-        in_channels: u32,
-        out_channels: u32,
-        kernel_size: u32,
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        in_channels: usize,
+        out_channels: usize,
+        kernel_size: usize,
+        stride: usize,
+        padding: usize,
+        dilation: usize,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -83,19 +83,19 @@ impl Conv1D {
 pub struct Conv2D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: u32,
-    padding: u32,
-    dilation: u32,
+    stride: usize,
+    padding: usize,
+    dilation: usize,
 }
 
 impl Conv2D {
     pub fn new(
-        in_channels: u32,
-        out_channels: u32,
-        kernel_size: u32,
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        in_channels: usize,
+        out_channels: usize,
+        kernel_size: usize,
+        stride: usize,
+        padding: usize,
+        dilation: usize,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -158,19 +158,19 @@ impl Conv2D {
 pub struct Conv3D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: u32,
-    padding: u32,
-    dilation: u32,
+    stride: usize,
+    padding: usize,
+    dilation: usize,
 }
 
 impl Conv3D {
     pub fn new(
-        in_channels: u32,
-        out_channels: u32,
-        kernel_size: u32,
-        stride: u32,
-        padding: u32,
-        dilation: u32,
+        in_channels: usize,
+        out_channels: usize,
+        kernel_size: usize,
+        stride: usize,
+        padding: usize,
+        dilation: usize,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -237,21 +237,21 @@ impl Conv3D {
 pub struct ConvTranspose1D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: u32,
-    padding: u32,
-    output_padding: u32,
-    dilation: u32,
+    stride: usize,
+    padding: usize,
+    output_padding: usize,
+    dilation: usize,
 }
 
 impl ConvTranspose1D {
     pub fn new(
-        in_channels: u32,
-        out_channels: u32,
-        kernel_size: u32,
-        stride: u32,
-        padding: u32,
-        output_padding: u32,
-        dilation: u32,
+        in_channels: usize,
+        out_channels: usize,
+        kernel_size: usize,
+        stride: usize,
+        padding: usize,
+        output_padding: usize,
+        dilation: usize,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -321,21 +321,21 @@ impl ConvTranspose1D {
 pub struct ConvTranspose2D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: u32,
-    padding: u32,
-    output_padding: u32,
-    dilation: u32,
+    stride: usize,
+    padding: usize,
+    output_padding: usize,
+    dilation: usize,
 }
 
 impl ConvTranspose2D {
     pub fn new(
-        in_channels: u32,
-        out_channels: u32,
-        kernel_size: u32,
-        stride: u32,
-        padding: u32,
-        output_padding: u32,
-        dilation: u32,
+        in_channels: usize,
+        out_channels: usize,
+        kernel_size: usize,
+        stride: usize,
+        padding: usize,
+        output_padding: usize,
+        dilation: usize,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {
@@ -405,21 +405,21 @@ impl ConvTranspose2D {
 pub struct ConvTranspose3D {
     weight: Tensor,
     bias: Option<Tensor>,
-    stride: u32,
-    padding: u32,
-    output_padding: u32,
-    dilation: u32,
+    stride: usize,
+    padding: usize,
+    output_padding: usize,
+    dilation: usize,
 }
 
 impl ConvTranspose3D {
     pub fn new(
-        in_channels: u32,
-        out_channels: u32,
-        kernel_size: u32,
-        stride: u32,
-        padding: u32,
-        output_padding: u32,
-        dilation: u32,
+        in_channels: usize,
+        out_channels: usize,
+        kernel_size: usize,
+        stride: usize,
+        padding: usize,
+        output_padding: usize,
+        dilation: usize,
         with_bias: bool,
         dtype: DType,
     ) -> HoduResult<Self> {

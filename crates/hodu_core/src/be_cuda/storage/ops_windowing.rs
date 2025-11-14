@@ -11,9 +11,9 @@ use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
 pub fn call_ops_reduce_window(
     input_storage: &CudaStorage,
     input_layout: &Layout,
-    window_shape: &[u32],
-    strides: &[u32],
-    padding: &[u32],
+    window_shape: &[usize],
+    strides: &[usize],
+    padding: &[usize],
     op: Op,
 ) -> HoduResult<CudaStorage> {
     let windowing_op = match op {
@@ -29,42 +29,42 @@ pub fn call_ops_reduce_window(
     let input_ndim = input_shape.ndim();
     let spatial_dims = input_ndim - 2;
 
-    let mut output_shape_vec: Vec<u32> = vec![input_shape[0], input_shape[1]];
+    let mut output_shape_vec: Vec<usize> = vec![input_shape[0], input_shape[1]];
     for i in 0..spatial_dims {
         let input_size = input_shape[2 + i];
-        let window_size = window_shape[i as usize];
-        let stride = strides[i as usize];
-        let pad = padding[i as usize];
+        let window_size = window_shape[i];
+        let stride = strides[i];
+        let pad = padding[i];
         let output_size = (input_size + 2 * pad - window_size) / stride + 1;
         output_shape_vec.push(output_size);
     }
 
-    let output_size: u32 = output_shape_vec.iter().product();
+    let output_size: usize = output_shape_vec.iter().product();
 
     let mut metadata = Vec::new();
-    metadata.push(output_size as usize);
-    metadata.push(input_ndim as usize);
+    metadata.push(output_size);
+    metadata.push(input_ndim);
 
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &s in input_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     for &w in window_shape {
-        metadata.push(w as usize);
+        metadata.push(w);
     }
     for &s in strides {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &p in padding {
-        metadata.push(p as usize);
-        metadata.push(p as usize);
+        metadata.push(p);
+        metadata.push(p);
     }
     for &d in &output_shape_vec {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     let dtype = input_storage.dtype();

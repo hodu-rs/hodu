@@ -28,7 +28,7 @@ impl VjpCompute for WindowingOp {
                     return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
                 }
 
-                let rank = scalars[0].to_u32() as usize;
+                let rank = scalars[0].to_usize();
                 if scalars.len() < 1 + rank * 4 + 1 {
                     return Err(HoduError::InternalError(
                         "ReduceWindow requires sufficient parameters".to_string(),
@@ -36,7 +36,7 @@ impl VjpCompute for WindowingOp {
                 }
 
                 // Extract window_shape
-                let window_shape: Vec<usize> = (0..rank).map(|i| scalars[1 + i].to_u32() as usize).collect();
+                let window_shape: Vec<usize> = (0..rank).map(|i| scalars[1 + i].to_usize()).collect();
 
                 let input = inputs[0];
                 let input_tensor = tensor_from_id(input);

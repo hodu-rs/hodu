@@ -30,22 +30,22 @@ pub fn call_ops_cmp_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", cmp_op, input_storage.dtype());
@@ -53,7 +53,7 @@ pub fn call_ops_cmp_scalar(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (cmp ops return BOOL)
-    let mut output = CpuDevice::allocate(num_els as usize, DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els, DType::BOOL)?;
 
     // Get raw pointers and call kernel with scalar
     macro_rules! call_kernel {
@@ -109,22 +109,22 @@ pub fn call_ops_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op)
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", unary_op, input_storage.dtype());
@@ -133,7 +133,7 @@ pub fn call_ops_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op)
 
     // Create output storage
     let dtype = input_storage.dtype();
-    let mut output = CpuDevice::allocate(num_els as usize, dtype)?;
+    let mut output = CpuDevice::allocate(num_els, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -193,22 +193,22 @@ pub fn call_ops_unary_logical(input_storage: &CpuStorage, input_layout: &Layout,
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", unary_op, input_storage.dtype());
@@ -216,7 +216,7 @@ pub fn call_ops_unary_logical(input_storage: &CpuStorage, input_layout: &Layout,
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (logical ops return BOOL)
-    let mut output = CpuDevice::allocate(num_els as usize, DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els, DType::BOOL)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -281,22 +281,22 @@ pub fn call_ops_unary_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", unary_op, input_storage.dtype());
@@ -305,7 +305,7 @@ pub fn call_ops_unary_scalar(
 
     // Create output storage
     let dtype = input_storage.dtype();
-    let mut output = CpuDevice::allocate(num_els as usize, dtype)?;
+    let mut output = CpuDevice::allocate(num_els, dtype)?;
 
     // Get raw pointers and call kernel with scalar
     macro_rules! call_kernel {

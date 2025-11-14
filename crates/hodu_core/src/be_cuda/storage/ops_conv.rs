@@ -14,9 +14,9 @@ pub fn call_ops_conv(
     input_layout: &Layout,
     weight_storage: &CudaStorage,
     weight_layout: &Layout,
-    stride: &[u32],
-    padding: &[u32],
-    dilation: &[u32],
+    stride: &[usize],
+    padding: &[usize],
+    dilation: &[usize],
     op: Op,
 ) -> HoduResult<CudaStorage> {
     let conv_op = match op {
@@ -30,45 +30,45 @@ pub fn call_ops_conv(
     let batch_size = input_shape[0];
     let out_channels = weight_shape[0];
 
-    let spatial_dims = (input_shape.ndim() - 2) as usize;
+    let spatial_dims = input_shape.ndim() - 2;
     let mut output_spatial_dims = Vec::with_capacity(spatial_dims);
 
     for i in 0..spatial_dims {
-        let input_size = input_shape[2 + i as u32];
-        let kernel_size = weight_shape[2 + i as u32];
+        let input_size = input_shape[2 + i];
+        let kernel_size = weight_shape[2 + i];
         let output_size = (input_size + 2 * padding[i] - dilation[i] * (kernel_size - 1) - 1) / stride[i] + 1;
-        output_spatial_dims.push(output_size as usize);
+        output_spatial_dims.push(output_size);
     }
 
-    let output_size = batch_size * out_channels * output_spatial_dims.iter().map(|&x| x as u32).product::<u32>();
+    let output_size = batch_size * out_channels * output_spatial_dims.iter().product::<usize>();
 
     let mut metadata = Vec::new();
-    metadata.push(output_size as usize);
+    metadata.push(output_size);
     metadata.push(spatial_dims);
 
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in weight_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &s in input_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &s in weight_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(weight_layout.offset() as usize);
+    metadata.push(input_layout.offset());
+    metadata.push(weight_layout.offset());
 
     for &s in stride {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &p in padding {
-        metadata.push(p as usize);
+        metadata.push(p);
     }
     for &d in dilation {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     let dtype = input_storage.dtype();
@@ -137,9 +137,9 @@ pub fn call_ops_conv_grad_weight(
     grad_output_storage: &CudaStorage,
     grad_output_layout: &Layout,
     weight_shape: &crate::types::Shape,
-    stride: &[u32],
-    padding: &[u32],
-    dilation: &[u32],
+    stride: &[usize],
+    padding: &[usize],
+    dilation: &[usize],
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate op
@@ -158,46 +158,46 @@ pub fn call_ops_conv_grad_weight(
 
     // Build metadata array
     let mut metadata = Vec::new();
-    metadata.push(num_els as usize);
+    metadata.push(num_els);
 
     let input_ndim = input_shape.ndim();
     let spatial_dims = input_ndim - 2;
 
-    metadata.push(input_ndim as usize);
-    metadata.push(spatial_dims as usize);
+    metadata.push(input_ndim);
+    metadata.push(spatial_dims);
 
     // Add shapes
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in grad_output_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in weight_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add strides
     for &s in input_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &s in grad_output_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add offsets
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(grad_output_layout.offset() as usize);
+    metadata.push(input_layout.offset());
+    metadata.push(grad_output_layout.offset());
 
     // Add conv parameters
     for &s in stride {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &p in padding {
-        metadata.push(p as usize);
+        metadata.push(p);
     }
     for &d in dilation {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     let dtype = input_storage.dtype();

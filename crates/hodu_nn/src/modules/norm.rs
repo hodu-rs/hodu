@@ -5,7 +5,7 @@ use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType}
 
 #[derive(Module, Clone)]
 pub struct BatchNorm1D {
-    num_features: u32,
+    num_features: usize,
     eps: Scalar,
     momentum: Scalar,
     affine: bool,
@@ -17,7 +17,7 @@ pub struct BatchNorm1D {
 
 impl BatchNorm1D {
     pub fn new(
-        num_features: u32,
+        num_features: usize,
         eps: impl Into<Scalar>,
         momentum: impl Into<Scalar>,
         affine: bool,
@@ -183,7 +183,7 @@ impl BatchNorm1D {
 
 #[derive(Module, Clone)]
 pub struct BatchNorm2D {
-    num_features: u32,
+    num_features: usize,
     eps: Scalar,
     momentum: Scalar,
     affine: bool,
@@ -195,7 +195,7 @@ pub struct BatchNorm2D {
 
 impl BatchNorm2D {
     pub fn new(
-        num_features: u32,
+        num_features: usize,
         eps: impl Into<Scalar>,
         momentum: impl Into<Scalar>,
         affine: bool,
@@ -325,7 +325,7 @@ impl BatchNorm2D {
 
 #[derive(Module, Clone)]
 pub struct BatchNorm3D {
-    num_features: u32,
+    num_features: usize,
     eps: Scalar,
     momentum: Scalar,
     affine: bool,
@@ -337,7 +337,7 @@ pub struct BatchNorm3D {
 
 impl BatchNorm3D {
     pub fn new(
-        num_features: u32,
+        num_features: usize,
         eps: impl Into<Scalar>,
         momentum: impl Into<Scalar>,
         affine: bool,
@@ -467,7 +467,7 @@ impl BatchNorm3D {
 
 #[derive(Module, Clone)]
 pub struct LayerNorm {
-    normalized_shape: Vec<u32>,
+    normalized_shape: Vec<usize>,
     eps: Scalar,
     elementwise_affine: bool,
     gamma: Option<Tensor>,
@@ -476,7 +476,7 @@ pub struct LayerNorm {
 
 impl LayerNorm {
     pub fn new(
-        normalized_shape: Vec<u32>,
+        normalized_shape: Vec<usize>,
         eps: impl Into<Scalar>,
         elementwise_affine: bool,
         dtype: DType,
@@ -507,7 +507,7 @@ impl LayerNorm {
     pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let input_shape = input.shape();
         let input_rank = input_shape.ndim();
-        let norm_rank = self.normalized_shape.len() as u32;
+        let norm_rank = self.normalized_shape.len();
 
         // Verify that the last dimensions match normalized_shape
         if input_rank < norm_rank {
@@ -518,7 +518,7 @@ impl LayerNorm {
         }
 
         for i in 0..norm_rank {
-            if input_shape[input_rank - norm_rank + i] != self.normalized_shape[i as usize] {
+            if input_shape[input_rank - norm_rank + i] != self.normalized_shape[i] {
                 return Err(hodu_core::error::HoduError::InternalError(format!(
                     "Input shape mismatch at dimension {}",
                     i
@@ -527,7 +527,7 @@ impl LayerNorm {
         }
 
         // Compute axes to normalize over (last norm_rank dimensions)
-        let axes: Vec<u32> = (0..norm_rank).map(|i| input_rank - norm_rank + i).collect();
+        let axes: Vec<usize> = (0..norm_rank).map(|i| input_rank - norm_rank + i).collect();
 
         // Compute mean and variance over the normalized dimensions
         let mean = input.mean(&axes, true)?;

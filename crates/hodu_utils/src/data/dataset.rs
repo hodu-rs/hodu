@@ -31,7 +31,7 @@ impl TensorDataset {
     }
 
     fn len(&self) -> usize {
-        self.data.shape()[0] as usize
+        self.data.shape()[0]
     }
 
     fn get(&self, index: usize) -> HoduResult<DataItem> {

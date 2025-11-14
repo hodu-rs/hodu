@@ -25,26 +25,26 @@ pub fn call_ops_binary(
     let num_els = lhs_shape.size();
     let num_dims = lhs_shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
@@ -181,26 +181,26 @@ pub fn call_ops_binary_logical(
     let num_els = lhs_shape.size();
     let num_dims = lhs_shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
@@ -278,26 +278,26 @@ pub fn call_ops_cmp(
     let num_els = lhs_shape.size();
     let num_dims = lhs_shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();

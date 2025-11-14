@@ -28,9 +28,9 @@ pub fn call_ops_conv(
     input_layout: &Layout,
     weight_storage: &CpuStorage,
     weight_layout: &Layout,
-    stride: &[u32],
-    padding: &[u32],
-    dilation: &[u32],
+    stride: &[usize],
+    padding: &[usize],
+    dilation: &[usize],
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate op
@@ -113,17 +113,17 @@ pub fn call_ops_conv(
             let num_els = output_shape.size();
 
             let metadata: Vec<usize> = vec![
-                num_els as usize,
-                in_channels as usize,
-                out_channels as usize,
-                in_width as usize,
-                kernel_width as usize,
-                out_width as usize,
-                stride_w as usize,
-                padding_w as usize,
-                dilation_w as usize,
-                input_layout.offset() as usize,
-                weight_layout.offset() as usize,
+                num_els,
+                in_channels,
+                out_channels,
+                in_width,
+                kernel_width,
+                out_width,
+                stride_w,
+                padding_w,
+                dilation_w,
+                input_layout.offset(),
+                weight_layout.offset(),
             ];
 
             (metadata, output_shape)
@@ -156,23 +156,23 @@ pub fn call_ops_conv(
             let num_els = output_shape.size();
 
             let metadata: Vec<usize> = vec![
-                num_els as usize,
-                in_channels as usize,
-                out_channels as usize,
-                in_height as usize,
-                in_width as usize,
-                kernel_height as usize,
-                kernel_width as usize,
-                out_height as usize,
-                out_width as usize,
-                stride_h as usize,
-                stride_w as usize,
-                padding_h as usize,
-                padding_w as usize,
-                dilation_h as usize,
-                dilation_w as usize,
-                input_layout.offset() as usize,
-                weight_layout.offset() as usize,
+                num_els,
+                in_channels,
+                out_channels,
+                in_height,
+                in_width,
+                kernel_height,
+                kernel_width,
+                out_height,
+                out_width,
+                stride_h,
+                stride_w,
+                padding_h,
+                padding_w,
+                dilation_h,
+                dilation_w,
+                input_layout.offset(),
+                weight_layout.offset(),
             ];
 
             (metadata, output_shape)
@@ -212,29 +212,29 @@ pub fn call_ops_conv(
             let num_els = output_shape.size();
 
             let metadata: Vec<usize> = vec![
-                num_els as usize,
-                in_channels as usize,
-                out_channels as usize,
-                in_depth as usize,
-                in_height as usize,
-                in_width as usize,
-                kernel_depth as usize,
-                kernel_height as usize,
-                kernel_width as usize,
-                out_depth as usize,
-                out_height as usize,
-                out_width as usize,
-                stride_d as usize,
-                stride_h as usize,
-                stride_w as usize,
-                padding_d as usize,
-                padding_h as usize,
-                padding_w as usize,
-                dilation_d as usize,
-                dilation_h as usize,
-                dilation_w as usize,
-                input_layout.offset() as usize,
-                weight_layout.offset() as usize,
+                num_els,
+                in_channels,
+                out_channels,
+                in_depth,
+                in_height,
+                in_width,
+                kernel_depth,
+                kernel_height,
+                kernel_width,
+                out_depth,
+                out_height,
+                out_width,
+                stride_d,
+                stride_h,
+                stride_w,
+                padding_d,
+                padding_h,
+                padding_w,
+                dilation_d,
+                dilation_h,
+                dilation_w,
+                input_layout.offset(),
+                weight_layout.offset(),
             ];
 
             (metadata, output_shape)
@@ -248,7 +248,7 @@ pub fn call_ops_conv(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -314,9 +314,9 @@ pub fn call_ops_conv_grad_weight(
     grad_output_storage: &CpuStorage,
     grad_output_layout: &Layout,
     weight_shape: &Shape,
-    stride: &[u32],
-    padding: &[u32],
-    dilation: &[u32],
+    stride: &[usize],
+    padding: &[usize],
+    dilation: &[usize],
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate op
@@ -371,17 +371,17 @@ pub fn call_ops_conv_grad_weight(
             let num_els = weight_shape.size();
 
             vec![
-                num_els as usize,
-                batch_size as usize, // metadata[1] = batch_size (instead of in_channels in forward pass)
-                out_channels as usize,
-                in_width as usize,
-                kernel_width as usize,
-                out_width as usize,
-                stride_w as usize,
-                padding_w as usize,
-                dilation_w as usize,
-                input_layout.offset() as usize,
-                grad_output_layout.offset() as usize,
+                num_els,
+                batch_size, // metadata[1] = batch_size (instead of in_channels in forward pass)
+                out_channels,
+                in_width,
+                kernel_width,
+                out_width,
+                stride_w,
+                padding_w,
+                dilation_w,
+                input_layout.offset(),
+                grad_output_layout.offset(),
             ]
         },
         2 => {
@@ -401,23 +401,23 @@ pub fn call_ops_conv_grad_weight(
             let num_els = weight_shape.size();
 
             vec![
-                num_els as usize,
-                batch_size as usize, // metadata[1] = batch_size (instead of in_channels in forward pass)
-                out_channels as usize,
-                in_height as usize,
-                in_width as usize,
-                kernel_height as usize,
-                kernel_width as usize,
-                out_height as usize,
-                out_width as usize,
-                stride_h as usize,
-                stride_w as usize,
-                padding_h as usize,
-                padding_w as usize,
-                dilation_h as usize,
-                dilation_w as usize,
-                input_layout.offset() as usize,
-                grad_output_layout.offset() as usize,
+                num_els,
+                batch_size, // metadata[1] = batch_size (instead of in_channels in forward pass)
+                out_channels,
+                in_height,
+                in_width,
+                kernel_height,
+                kernel_width,
+                out_height,
+                out_width,
+                stride_h,
+                stride_w,
+                padding_h,
+                padding_w,
+                dilation_h,
+                dilation_w,
+                input_layout.offset(),
+                grad_output_layout.offset(),
             ]
         },
         3 => {
@@ -443,29 +443,29 @@ pub fn call_ops_conv_grad_weight(
             let num_els = weight_shape.size();
 
             vec![
-                num_els as usize,
-                batch_size as usize, // metadata[1] = batch_size (instead of in_channels in forward pass)
-                out_channels as usize,
-                in_depth as usize,
-                in_height as usize,
-                in_width as usize,
-                kernel_depth as usize,
-                kernel_height as usize,
-                kernel_width as usize,
-                out_depth as usize,
-                out_height as usize,
-                out_width as usize,
-                stride_d as usize,
-                stride_h as usize,
-                stride_w as usize,
-                padding_d as usize,
-                padding_h as usize,
-                padding_w as usize,
-                dilation_d as usize,
-                dilation_h as usize,
-                dilation_w as usize,
-                input_layout.offset() as usize,
-                grad_output_layout.offset() as usize,
+                num_els,
+                batch_size, // metadata[1] = batch_size (instead of in_channels in forward pass)
+                out_channels,
+                in_depth,
+                in_height,
+                in_width,
+                kernel_depth,
+                kernel_height,
+                kernel_width,
+                out_depth,
+                out_height,
+                out_width,
+                stride_d,
+                stride_h,
+                stride_w,
+                padding_d,
+                padding_h,
+                padding_w,
+                dilation_d,
+                dilation_h,
+                dilation_w,
+                input_layout.offset(),
+                grad_output_layout.offset(),
             ]
         },
         _ => unreachable!(),
@@ -477,7 +477,7 @@ pub fn call_ops_conv_grad_weight(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (gradient weights)
-    let mut grad_weight = CpuDevice::allocate(weight_shape.size() as usize, dtype)?;
+    let mut grad_weight = CpuDevice::allocate(weight_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

@@ -9,7 +9,7 @@ use crate::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub struct ValueId(pub u32);
+pub struct ValueId(pub usize);
 
 impl fmt::Display for ValueId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -21,7 +21,7 @@ impl fmt::Display for ValueId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub struct BlockId(pub u32);
+pub struct BlockId(pub usize);
 
 impl fmt::Display for BlockId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -154,7 +154,7 @@ pub struct ValueInfo {
 pub enum Attribute {
     Bool(bool),
     Int(i32),
-    U32(u32),
+    Usize(usize),
     Float(f32),
     String(String),
     IntArray(Vec<i32>),

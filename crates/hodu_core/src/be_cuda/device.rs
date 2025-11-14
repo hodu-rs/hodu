@@ -20,8 +20,8 @@ pub struct CudaDevice {
 // Global device pool: maps CUDA device ID -> CudaDevice
 static CUDA_DEVICES: LazyLock<RwLock<HashMap<usize, Arc<CudaDevice>>>> = LazyLock::new(|| RwLock::new(HashMap::new()));
 
-impl std::fmt::Debug for CudaDevice {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for CudaDevice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "CudaDevice({})", self.cuda_device_id)
     }
 }
@@ -31,14 +31,21 @@ impl CudaDevice {
     pub fn get(cuda_device_id: usize) -> HoduResult<Arc<CudaDevice>> {
         // Try to get existing device first (read lock)
         {
+            #[cfg(feature = "std")]
             let devices = CUDA_DEVICES.read()?;
+            #[cfg(not(feature = "std"))]
+            let devices = CUDA_DEVICES.read();
+
             if let Some(device) = devices.get(&cuda_device_id) {
                 return Ok(device.clone());
             }
         }
 
         // Need to create new device (write lock)
+        #[cfg(feature = "std")]
         let mut devices = CUDA_DEVICES.write()?;
+        #[cfg(not(feature = "std"))]
+        let mut devices = CUDA_DEVICES.write();
 
         // Double-check in case another thread created it
         if let Some(device) = devices.get(&cuda_device_id) {
@@ -108,6 +115,43 @@ impl CudaDevice {
         stream
             .memcpy_stod(data)
             .map_err(|e| HoduError::BackendError(format!("CUDA memcpy_stod failed: {:?}", e)))
+    }
+
+    /// Allocate storage on a specific CUDA device
+    pub fn allocate_on_device(device_id: usize, size: usize, dtype: DType) -> HoduResult<CudaStorage> {
+        use crate::be_cuda::storage::CudaStorageData;
+        use float8::F8E4M3;
+        #[cfg(feature = "f8e5m2")]
+        use float8::F8E5M2;
+        use half::{bf16, f16};
+
+        let device = CudaDevice::get(device_id)?;
+
+        let data = match dtype {
+            DType::BOOL => CudaStorageData::BOOL(device.new_buffer::<bool>(size)?),
+            DType::F8E4M3 => CudaStorageData::F8E4M3(device.new_buffer::<F8E4M3>(size)?),
+            #[cfg(feature = "f8e5m2")]
+            DType::F8E5M2 => CudaStorageData::F8E5M2(device.new_buffer::<F8E5M2>(size)?),
+            DType::BF16 => CudaStorageData::BF16(device.new_buffer::<bf16>(size)?),
+            DType::F16 => CudaStorageData::F16(device.new_buffer::<f16>(size)?),
+            DType::F32 => CudaStorageData::F32(device.new_buffer::<f32>(size)?),
+            #[cfg(feature = "f64")]
+            DType::F64 => CudaStorageData::F64(device.new_buffer::<f64>(size)?),
+            DType::U8 => CudaStorageData::U8(device.new_buffer::<u8>(size)?),
+            #[cfg(feature = "u16")]
+            DType::U16 => CudaStorageData::U16(device.new_buffer::<u16>(size)?),
+            DType::U32 => CudaStorageData::U32(device.new_buffer::<u32>(size)?),
+            #[cfg(feature = "u64")]
+            DType::U64 => CudaStorageData::U64(device.new_buffer::<u64>(size)?),
+            DType::I8 => CudaStorageData::I8(device.new_buffer::<i8>(size)?),
+            #[cfg(feature = "i16")]
+            DType::I16 => CudaStorageData::I16(device.new_buffer::<i16>(size)?),
+            DType::I32 => CudaStorageData::I32(device.new_buffer::<i32>(size)?),
+            #[cfg(feature = "i64")]
+            DType::I64 => CudaStorageData::I64(device.new_buffer::<i64>(size)?),
+        };
+
+        Ok(CudaStorage::new(device_id, device, data))
     }
 }
 

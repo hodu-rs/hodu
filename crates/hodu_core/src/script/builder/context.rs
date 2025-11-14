@@ -14,11 +14,11 @@ pub use storage::{get_active_builder, is_builder_active, with_active_builder};
 
 /// Unique identifier for a builder instance
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub struct BuilderId(u32);
+pub struct BuilderId(usize);
 
 impl BuilderId {
     pub(crate) fn new() -> Self {
-        static BUILDER_ID_COUNTER: AtomicU32 = AtomicU32::new(0);
+        static BUILDER_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
         Self(BUILDER_ID_COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 }
@@ -29,8 +29,8 @@ pub struct BuilderState {
     pub module: Module,
     pub current_function: Option<String>,
     pub current_block: Option<BlockId>,
-    pub value_counter: u32,
-    pub block_counter: u32,
+    pub value_counter: usize,
+    pub block_counter: usize,
     pub tensor_to_value: HashMap<TensorId, ValueId>,
     pub graph_inputs: Vec<(&'static str, Tensor)>,
     pub graph_outputs: Vec<(&'static str, Tensor)>,

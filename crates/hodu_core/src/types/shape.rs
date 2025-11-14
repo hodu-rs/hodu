@@ -1,6 +1,6 @@
 use crate::layer::compat::*;
 
-/// Shape represents the dimensions of a tensor using u32 for memory efficiency.
+/// Shape represents the dimensions of a tensor using usize for native platform compatibility.
 ///
 /// This struct provides a type-safe wrapper around dimension vectors
 /// and includes utilities for shape manipulation and validation.
@@ -8,13 +8,13 @@ use crate::layer::compat::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub struct Shape {
-    dims: Vec<u32>,
+    dims: Vec<usize>,
 }
 
 impl Shape {
     /// Creates a new shape from a slice of dimensions.
     #[inline]
-    pub fn new(dims: &[u32]) -> Self {
+    pub fn new(dims: &[usize]) -> Self {
         Self { dims: dims.to_vec() }
     }
 
@@ -26,43 +26,44 @@ impl Shape {
 
     /// Returns the dimensions as a slice.
     #[inline]
-    pub fn dims(&self) -> &[u32] {
+    pub fn dims(&self) -> &[usize] {
         &self.dims
     }
 
     /// Returns a mutable reference to the dimensions.
     #[inline]
-    pub fn dims_mut(&mut self) -> &mut Vec<u32> {
+    pub fn dims_mut(&mut self) -> &mut Vec<usize> {
         &mut self.dims
     }
 
-    /// Converts the shape to a Vec<u32>.
+    /// Converts the shape to a Vec<usize>.
     #[inline]
-    pub fn to_vec(&self) -> Vec<u32> {
+    pub fn to_vec(&self) -> Vec<usize> {
         self.dims.clone()
     }
 
     /// Returns the last dimension, or None if the shape is scalar.
     #[inline]
-    pub fn last(&self) -> Option<u32> {
+    pub fn last(&self) -> Option<usize> {
         self.dims.last().copied()
     }
 
     /// Returns the number of dimensions (rank).
     #[inline]
-    pub fn ndim(&self) -> u32 {
-        self.dims.len() as u32
+    pub fn ndim(&self) -> usize {
+        self.dims.len()
     }
 
     /// Returns the size of a specific dimension.
     #[inline]
-    pub fn dim(&self, index: u32) -> Option<u32> {
-        self.dims.get(index as usize).copied()
+    pub fn dim_size(&self, index: i32) -> Option<usize> {
+        let index = if index < 0 { self.ndim() as i32 + index } else { index } as usize;
+        self.dims.get(index).copied()
     }
 
     /// Returns the total number of elements.
     #[inline]
-    pub fn size(&self) -> u32 {
+    pub fn size(&self) -> usize {
         self.dims.iter().product()
     }
 
@@ -81,7 +82,7 @@ impl Shape {
 
         let offset = target.ndim() - self.ndim();
         for (i, &dim) in self.dims.iter().enumerate() {
-            let target_idx = (i as u32 + offset) as usize;
+            let target_idx = i + offset;
             let target_dim = target.dims[target_idx];
             if dim != 1 && dim != target_dim {
                 return false;
@@ -94,12 +95,11 @@ impl Shape {
     #[inline]
     pub fn broadcast_shape(lhs: &Shape, rhs: &Shape) -> Option<Shape> {
         let max_ndim = lhs.ndim().max(rhs.ndim());
-        let max_ndim_usize = max_ndim as usize;
-        let mut result_dims = Vec::with_capacity(max_ndim_usize);
+        let mut result_dims = Vec::with_capacity(max_ndim);
 
         for i in 0..max_ndim {
-            let lhs_idx = lhs.ndim().saturating_sub(max_ndim - i) as usize;
-            let rhs_idx = rhs.ndim().saturating_sub(max_ndim - i) as usize;
+            let lhs_idx = lhs.ndim().saturating_sub(max_ndim - i);
+            let rhs_idx = rhs.ndim().saturating_sub(max_ndim - i);
 
             let lhs_dim = lhs.dims.get(lhs_idx).copied().unwrap_or(1);
             let rhs_dim = rhs.dims.get(rhs_idx).copied().unwrap_or(1);
@@ -107,6 +107,7 @@ impl Shape {
             if lhs_dim != rhs_dim && lhs_dim != 1 && rhs_dim != 1 {
                 return None;
             }
+
             result_dims.push(lhs_dim.max(rhs_dim));
         }
 
@@ -115,45 +116,32 @@ impl Shape {
 
     /// Normalizes a dimension index, handling negative indices.
     #[inline]
-    pub fn normalize_axis(&self, axis: i32) -> Option<u32> {
+    pub fn normalize_axis(&self, axis: i32) -> Option<usize> {
         let ndim = self.ndim() as i32;
         let normalized = if axis < 0 { ndim + axis } else { axis };
 
         if normalized >= 0 && normalized < ndim {
-            Some(normalized as u32)
+            Some(normalized as usize)
         } else {
             None
         }
     }
 }
 
-impl From<Vec<u32>> for Shape {
-    fn from(dims: Vec<u32>) -> Self {
+impl From<Vec<usize>> for Shape {
+    fn from(dims: Vec<usize>) -> Self {
         Self { dims }
-    }
-}
-
-impl From<&[u32]> for Shape {
-    fn from(dims: &[u32]) -> Self {
-        Self::new(dims)
     }
 }
 
 impl From<&[usize]> for Shape {
     fn from(dims: &[usize]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
-        Self { dims }
+        Self::new(dims)
     }
 }
 
 impl From<&Vec<usize>> for Shape {
     fn from(dims: &Vec<usize>) -> Self {
-        Self::from(dims.as_slice())
-    }
-}
-
-impl From<&Vec<u32>> for Shape {
-    fn from(dims: &Vec<u32>) -> Self {
         Self::from(dims.as_slice())
     }
 }
@@ -167,14 +155,14 @@ impl From<&Shape> for Shape {
 // i8
 impl<const N: usize> From<[i8; N]> for Shape {
     fn from(dims: [i8; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[i8; N]> for Shape {
     fn from(dims: &[i8; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -183,7 +171,7 @@ impl<const N: usize> From<&[i8; N]> for Shape {
 #[cfg(feature = "i16")]
 impl<const N: usize> From<[i16; N]> for Shape {
     fn from(dims: [i16; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -191,7 +179,7 @@ impl<const N: usize> From<[i16; N]> for Shape {
 #[cfg(feature = "i16")]
 impl<const N: usize> From<&[i16; N]> for Shape {
     fn from(dims: &[i16; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -199,14 +187,14 @@ impl<const N: usize> From<&[i16; N]> for Shape {
 // i32
 impl<const N: usize> From<[i32; N]> for Shape {
     fn from(dims: [i32; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[i32; N]> for Shape {
     fn from(dims: &[i32; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -215,7 +203,7 @@ impl<const N: usize> From<&[i32; N]> for Shape {
 #[cfg(feature = "i64")]
 impl<const N: usize> From<[i64; N]> for Shape {
     fn from(dims: [i64; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -223,7 +211,7 @@ impl<const N: usize> From<[i64; N]> for Shape {
 #[cfg(feature = "i64")]
 impl<const N: usize> From<&[i64; N]> for Shape {
     fn from(dims: &[i64; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -231,14 +219,14 @@ impl<const N: usize> From<&[i64; N]> for Shape {
 // isize
 impl<const N: usize> From<[isize; N]> for Shape {
     fn from(dims: [isize; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[isize; N]> for Shape {
     fn from(dims: &[isize; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -246,14 +234,14 @@ impl<const N: usize> From<&[isize; N]> for Shape {
 // u8
 impl<const N: usize> From<[u8; N]> for Shape {
     fn from(dims: [u8; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[u8; N]> for Shape {
     fn from(dims: &[u8; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -262,7 +250,7 @@ impl<const N: usize> From<&[u8; N]> for Shape {
 #[cfg(feature = "u16")]
 impl<const N: usize> From<[u16; N]> for Shape {
     fn from(dims: [u16; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -270,7 +258,7 @@ impl<const N: usize> From<[u16; N]> for Shape {
 #[cfg(feature = "u16")]
 impl<const N: usize> From<&[u16; N]> for Shape {
     fn from(dims: &[u16; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -278,13 +266,15 @@ impl<const N: usize> From<&[u16; N]> for Shape {
 // u32
 impl<const N: usize> From<[u32; N]> for Shape {
     fn from(dims: [u32; N]) -> Self {
-        Self::from(dims.as_slice())
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        Self { dims }
     }
 }
 
 impl<const N: usize> From<&[u32; N]> for Shape {
     fn from(dims: &[u32; N]) -> Self {
-        Self::from(dims.as_slice())
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        Self { dims }
     }
 }
 
@@ -292,7 +282,7 @@ impl<const N: usize> From<&[u32; N]> for Shape {
 #[cfg(feature = "u64")]
 impl<const N: usize> From<[u64; N]> for Shape {
     fn from(dims: [u64; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -300,7 +290,7 @@ impl<const N: usize> From<[u64; N]> for Shape {
 #[cfg(feature = "u64")]
 impl<const N: usize> From<&[u64; N]> for Shape {
     fn from(dims: &[u64; N]) -> Self {
-        let dims: Vec<u32> = dims.iter().map(|&d| d as u32).collect();
+        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -318,17 +308,16 @@ impl<const N: usize> From<&[usize; N]> for Shape {
     }
 }
 
-impl AsRef<[u32]> for Shape {
-    fn as_ref(&self) -> &[u32] {
+impl AsRef<[usize]> for Shape {
+    fn as_ref(&self) -> &[usize] {
         &self.dims
     }
 }
 
-impl core::ops::Index<u32> for Shape {
-    type Output = u32;
-
-    fn index(&self, index: u32) -> &Self::Output {
-        &self.dims[index as usize]
+impl core::ops::Index<usize> for Shape {
+    type Output = usize;
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.dims[index]
     }
 }
 

@@ -10,9 +10,9 @@ use hodu_metal_kernels::{kernels, utils::BufferOffset};
 pub fn call_ops_reduce_window(
     input_storage: &MetalStorage,
     input_layout: &Layout,
-    window_shape: &[u32],
-    strides: &[u32],
-    padding: &[u32],
+    window_shape: &[usize],
+    strides: &[usize],
+    padding: &[usize],
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Extract windowing op
@@ -30,23 +30,20 @@ pub fn call_ops_reduce_window(
 
     // Validate that window_shape, strides, and padding have correct length
     let spatial_dims = input_ndim - 2; // Assuming [N, C, ...spatial]
-    if window_shape.len() != spatial_dims as usize
-        || strides.len() != spatial_dims as usize
-        || padding.len() != spatial_dims as usize
-    {
+    if window_shape.len() != spatial_dims || strides.len() != spatial_dims || padding.len() != spatial_dims {
         return Err(HoduError::BackendError(
             "window_shape, strides, and padding must match spatial dimensions".to_string(),
         ));
     }
 
     // Compute output shape
-    let mut output_shape_vec: Vec<u32> = vec![input_shape.dims()[0], input_shape.dims()[1]];
+    let mut output_shape_vec: Vec<usize> = vec![input_shape.dims()[0], input_shape.dims()[1]];
 
     for i in 0..spatial_dims {
-        let input_size = input_shape.dims()[(2 + i) as usize];
-        let window_size = window_shape[i as usize];
-        let stride = strides[i as usize];
-        let pad = padding[i as usize];
+        let input_size = input_shape.dims()[2 + i];
+        let window_size = window_shape[i];
+        let stride = strides[i];
+        let pad = padding[i];
 
         let output_size = (input_size + 2 * pad - window_size) / stride + 1;
         output_shape_vec.push(output_size);
@@ -58,40 +55,40 @@ pub fn call_ops_reduce_window(
     // Build metadata: [output_size, num_dims, input_shape..., input_strides..., input_offset, window_shape..., strides..., padding..., output_shape...]
     let mut metadata = Vec::new();
     metadata.push(output_size as usize);
-    metadata.push(input_ndim as usize);
+    metadata.push(input_ndim);
 
     // Add input shape
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add input strides
     for &s in input_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add input offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     // Add window shape
     for &w in window_shape {
-        metadata.push(w as usize);
+        metadata.push(w);
     }
 
     // Add strides
     for &s in strides {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add padding (need to expand to before/after pairs)
     for &p in padding {
-        metadata.push(p as usize); // pad_before
-        metadata.push(p as usize); // pad_after
+        metadata.push(p); // pad_before
+        metadata.push(p); // pad_after
     }
 
     // Add output shape
     for &d in &output_shape_vec {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     let dtype = input_storage.dtype();

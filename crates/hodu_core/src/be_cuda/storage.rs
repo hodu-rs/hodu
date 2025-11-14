@@ -212,16 +212,16 @@ impl BackendStorageT for CudaStorage {
         let offset = layout.offset();
         let num_els = layout.size();
 
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
-        metadata.push(num_els as usize);
-        metadata.push(shape.ndim() as usize);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
         for i in 0..shape.ndim() {
-            metadata.push(shape[i] as usize);
+            metadata.push(shape[i]);
         }
-        for i in 0..shape.ndim() {
-            metadata.push(strides[i as usize] as usize);
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
         }
-        metadata.push(offset as usize);
+        metadata.push(offset);
 
         let dtype = self.dtype();
 
@@ -314,15 +314,15 @@ impl BackendStorageT for CudaStorage {
         ops_matrix::call_ops_dot(self, rhs, lhs_layout, rhs_layout, op)
     }
 
-    fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
+    fn call_ops_reduce(&self, layout: &Layout, dims: &[usize], keep_dim: bool, op: Op) -> HoduResult<Self> {
         ops_reduce::call_ops_reduce(self, layout, dims, keep_dim, op)
     }
 
-    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
+    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: usize, op: Op) -> HoduResult<Self> {
         ops_concat_split::call_ops_concat(self, others, layouts, dim, op)
     }
 
-    fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
+    fn call_ops_split(&self, layout: &Layout, dim: usize, start: usize, size: usize, op: Op) -> HoduResult<Self> {
         ops_concat_split::call_ops_split(self, layout, dim, start, size, op)
     }
 
@@ -331,7 +331,7 @@ impl BackendStorageT for CudaStorage {
         layout: &Layout,
         indices: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_index_select(self, layout, indices, indices_layout, dim, op)
@@ -344,7 +344,7 @@ impl BackendStorageT for CudaStorage {
         indices_layout: &Layout,
         values: &Self,
         values_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_index_put(self, layout, indices, indices_layout, values, values_layout, dim, op)
@@ -355,7 +355,7 @@ impl BackendStorageT for CudaStorage {
         layout: &Layout,
         indices: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_gather(self, layout, indices, indices_layout, dim, op)
@@ -368,7 +368,7 @@ impl BackendStorageT for CudaStorage {
         indices_layout: &Layout,
         src: &Self,
         src_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_scatter(self, layout, indices, indices_layout, src, src_layout, dim, op)
@@ -379,9 +379,9 @@ impl BackendStorageT for CudaStorage {
         layout: &Layout,
         weight: &Self,
         weight_layout: &Layout,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_conv::call_ops_conv(self, layout, weight, weight_layout, stride, padding, dilation, op)
@@ -393,9 +393,9 @@ impl BackendStorageT for CudaStorage {
         grad_output: &Self,
         grad_output_layout: &Layout,
         weight_shape: &Shape,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_conv::call_ops_conv_grad_weight(
@@ -414,9 +414,9 @@ impl BackendStorageT for CudaStorage {
     fn call_ops_reduce_window(
         &self,
         layout: &Layout,
-        window_shape: &[u32],
-        strides: &[u32],
-        padding: &[u32],
+        window_shape: &[usize],
+        strides: &[usize],
+        padding: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_windowing::call_ops_reduce_window(self, layout, window_shape, strides, padding, op)
@@ -432,16 +432,16 @@ impl BackendStorageT for CudaStorage {
         let offset = layout.offset();
         let num_els = layout.size();
 
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
-        metadata.push(num_els as usize);
-        metadata.push(shape.ndim() as usize);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
         for i in 0..shape.ndim() {
-            metadata.push(shape[i] as usize);
+            metadata.push(shape[i]);
         }
-        for i in 0..shape.ndim() {
-            metadata.push(strides[i as usize] as usize);
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
         }
-        metadata.push(offset as usize);
+        metadata.push(offset);
 
         let src_dtype = self.dtype();
         let device = self.get_device();
@@ -525,16 +525,16 @@ impl BackendStorageT for CudaStorage {
         let offset = layout.offset();
         let num_els = layout.size();
 
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() as usize * 2 + 1);
-        metadata.push(num_els as usize);
-        metadata.push(shape.ndim() as usize);
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
         for i in 0..shape.ndim() {
-            metadata.push(shape[i] as usize);
+            metadata.push(shape[i]);
         }
-        for i in 0..shape.ndim() {
-            metadata.push(strides[i as usize] as usize);
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
         }
-        metadata.push(offset as usize);
+        metadata.push(offset);
 
         let dtype = self.dtype();
         let device = self.get_device();

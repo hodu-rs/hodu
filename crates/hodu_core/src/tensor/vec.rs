@@ -43,8 +43,8 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let rows = dims[0] as usize;
-        let cols = dims[1] as usize;
+        let rows = dims[0];
+        let cols = dims[1];
 
         Ok((0..rows)
             .map(|i| {
@@ -65,7 +65,7 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2) = (dims[0] as usize, dims[1] as usize, dims[2] as usize);
+        let (d0, d1, d2) = (dims[0], dims[1], dims[2]);
         let stride1 = d1 * d2;
 
         Ok((0..d0)
@@ -92,7 +92,7 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2, d3) = (dims[0] as usize, dims[1] as usize, dims[2] as usize, dims[3] as usize);
+        let (d0, d1, d2, d3) = (dims[0], dims[1], dims[2], dims[3]);
         let stride1 = d1 * d2 * d3;
         let stride2 = d2 * d3;
 
@@ -125,13 +125,7 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2, d3, d4) = (
-            dims[0] as usize,
-            dims[1] as usize,
-            dims[2] as usize,
-            dims[3] as usize,
-            dims[4] as usize,
-        );
+        let (d0, d1, d2, d3, d4) = (dims[0], dims[1], dims[2], dims[3], dims[4]);
         let stride1 = d1 * d2 * d3 * d4;
         let stride2 = d2 * d3 * d4;
         let stride3 = d3 * d4;
@@ -170,14 +164,7 @@ impl Tensor {
         }
 
         let flat_data = self.to_flatten_vec::<T>()?;
-        let (d0, d1, d2, d3, d4, d5) = (
-            dims[0] as usize,
-            dims[1] as usize,
-            dims[2] as usize,
-            dims[3] as usize,
-            dims[4] as usize,
-            dims[5] as usize,
-        );
+        let (d0, d1, d2, d3, d4, d5) = (dims[0], dims[1], dims[2], dims[3], dims[4], dims[5]);
         let stride1 = d1 * d2 * d3 * d4 * d5;
         let stride2 = d2 * d3 * d4 * d5;
         let stride3 = d3 * d4 * d5;
@@ -222,7 +209,7 @@ fn extract_vec_from_cpu_storage<T: Clone + 'static>(cpu_storage: &CpuStorage, la
         cpu_storage.clone()
     };
 
-    let total_elements = layout.shape().dims().iter().map(|&d| d as usize).product::<usize>();
+    let total_elements = layout.shape().dims().iter().copied().product::<usize>();
     let mut result = Vec::with_capacity(total_elements);
 
     macro_rules! extract_storage {
@@ -279,16 +266,12 @@ fn extract_with_layout<T: Clone>(result: &mut Vec<T>, data: &[T], layout: &Layou
     if layout.is_contiguous() {
         result.extend_from_slice(data);
     } else {
-        let total_elements = dims.dims().iter().map(|&d| d as usize).product::<usize>();
-        let ndim = dims.ndim() as usize;
+        let total_elements = dims.dims().iter().copied().product::<usize>();
+        let ndim = dims.ndim();
         let mut indices = vec![0usize; ndim];
 
         for _ in 0..total_elements {
-            let flat_idx = indices
-                .iter()
-                .zip(strides.iter())
-                .map(|(&i, &s)| i * (s as usize))
-                .sum::<usize>();
+            let flat_idx = indices.iter().zip(strides.iter()).map(|(&i, &s)| i * s).sum::<usize>();
 
             if flat_idx < data.len() {
                 result.push(data[flat_idx].clone());
@@ -298,7 +281,7 @@ fn extract_with_layout<T: Clone>(result: &mut Vec<T>, data: &[T], layout: &Layou
             let mut carry = 1;
             for i in (0..ndim).rev() {
                 indices[i] += carry;
-                if indices[i] < dims.dims()[i] as usize {
+                if indices[i] < dims.dims()[i] {
                     carry = 0;
                     break;
                 } else {

@@ -139,36 +139,27 @@ impl Tensor {
 
         let shape = self.shape();
         let shape_dims = shape.dims();
-        let ndim = shape_dims.len() as i32;
+        let ndim = shape_dims.len();
 
         // Convert dims to i32 and handle negative indices
-        let dims_i32: Vec<i32> = dims
-            .iter()
-            .map(|&d| {
-                let scalar = d.into();
-                scalar.to_i32()
-            })
-            .collect();
+        let dims_i32: Vec<i32> = dims.iter().map(|&d| d.into().to_i32()).collect();
 
         // Calculate output shape
-        let reduce_dims: Vec<u32> = if dims.is_empty() {
-            (0..ndim as u32).collect()
+        let reduce_dims: Vec<usize> = if dims.is_empty() {
+            (0..ndim).collect()
         } else {
             dims_i32
                 .iter()
-                .map(|&d| {
-                    let dim = if d < 0 { ndim + d } else { d };
-                    dim as u32
-                })
+                .map(|&d| if d < 0 { (ndim as i32 + d) as usize } else { d as usize })
                 .collect()
         };
 
         let mut output_dims = shape_dims.to_vec();
         for &dim in &reduce_dims {
             if keep_dim {
-                output_dims[dim as usize] = 1;
+                output_dims[dim] = 1;
             } else {
-                output_dims[dim as usize] = 0;
+                output_dims[dim] = 0;
             }
         }
         if !keep_dim {

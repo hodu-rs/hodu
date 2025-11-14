@@ -14,7 +14,7 @@ impl Tensor {
         &self,
         window_shape: impl Into<Shape>,
         strides: impl Into<Shape>,
-        padding: &[(u32, u32)],
+        padding: &[(usize, usize)],
         reduction: &str,
     ) -> HoduResult<Self> {
         let window_shape = window_shape.into();
@@ -54,7 +54,7 @@ impl Tensor {
                 reason: format!("strides length {} must match tensor rank {}", strides.ndim(), rank),
             });
         }
-        if padding.len() != rank as usize {
+        if padding.len() != rank {
             return Err(HoduError::InvalidLayout {
                 reason: format!("padding length {} must match tensor rank {}", padding.len(), rank),
             });
@@ -69,21 +69,18 @@ impl Tensor {
         let input_dims = input_shape.dims();
         let window_dims = window_shape.dims();
         let stride_dims = strides.dims();
-        let mut output_dims = Vec::with_capacity(rank as usize);
-        for i in 0..rank as usize {
+        let mut output_dims = Vec::with_capacity(rank);
+        for i in 0..rank {
             let padded_size = input_dims[i] + padding[i].0 + padding[i].1;
             let out_size = (padded_size - window_dims[i]) / stride_dims[i] + 1;
             output_dims.push(out_size);
         }
 
-        // Get u32 arrays (already u32)
-        let window_shape_u32 = window_dims;
-        let strides_u32 = stride_dims;
         // Flatten padding to [lo, hi, lo, hi, ...]
-        let mut padding_u32 = Vec::with_capacity(padding.len() * 2);
+        let mut padding_flat = Vec::with_capacity(padding.len() * 2);
         for &(lo, hi) in padding {
-            padding_u32.push(lo);
-            padding_u32.push(hi);
+            padding_flat.push(lo);
+            padding_flat.push(hi);
         }
 
         if builder::is_builder_active() {
@@ -93,15 +90,15 @@ impl Tensor {
 
             let mut scalars = Vec::new();
             // Add window_shape
-            for &dim in window_shape_u32 {
+            for &dim in window_dims {
                 scalars.push(Scalar::from(dim));
             }
             // Add strides
-            for &stride in strides_u32 {
+            for &stride in stride_dims {
                 scalars.push(Scalar::from(stride));
             }
             // Add padding
-            for &pad in &padding_u32 {
+            for &pad in &padding_flat {
                 scalars.push(Scalar::from(pad));
             }
 
@@ -121,13 +118,13 @@ impl Tensor {
 
             if requires_grad {
                 let mut grad_scalars = Vec::new();
-                for &dim in window_shape_u32 {
+                for &dim in window_dims {
                     grad_scalars.push(Scalar::from(dim));
                 }
-                for &stride in strides_u32 {
+                for &stride in stride_dims {
                     grad_scalars.push(Scalar::from(stride));
                 }
-                for &pad in &padding_u32 {
+                for &pad in &padding_flat {
                     grad_scalars.push(Scalar::from(pad));
                 }
 
@@ -144,9 +141,9 @@ impl Tensor {
             let storage = self.with_storage(|input_storage| {
                 input_storage.call_ops_reduce_window(
                     &self.layout(),
-                    window_shape_u32,
-                    strides_u32,
-                    &padding_u32,
+                    window_dims,
+                    stride_dims,
+                    &padding_flat,
                     Op::Windowing(windowing_op),
                 )
             })?;
@@ -157,13 +154,13 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let mut scalars = Vec::new();
-                for &dim in window_shape_u32 {
+                for &dim in window_dims {
                     scalars.push(Scalar::from(dim));
                 }
-                for &stride in strides_u32 {
+                for &stride in stride_dims {
                     scalars.push(Scalar::from(stride));
                 }
-                for &pad in &padding_u32 {
+                for &pad in &padding_flat {
                     scalars.push(Scalar::from(pad));
                 }
 

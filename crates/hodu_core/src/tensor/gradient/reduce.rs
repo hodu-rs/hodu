@@ -25,7 +25,7 @@ impl VjpCompute for ReduceOp {
             // If no dims provided (fallback case), use all dimensions
             (0..input_shape.dims().len()).collect()
         } else {
-            dims_scalars.iter().map(|scalar| scalar.to_u32() as usize).collect()
+            dims_scalars.iter().map(|scalar| scalar.to_usize()).collect()
         };
 
         match self {
@@ -41,7 +41,6 @@ impl VjpCompute for ReduceOp {
                 let reduce_elements = reduce_dims
                     .iter()
                     .map(|&dim| input_shape.dims()[dim])
-                    .map(|x| x as usize)
                     .product::<usize>() as f32;
                 let scale_scalar = Scalar::from_f32(1.0 / reduce_elements, dtype);
 
@@ -78,7 +77,6 @@ impl VjpCompute for ReduceOp {
                 let reduce_elements = reduce_dims
                     .iter()
                     .map(|&dim| input_shape.dims()[dim])
-                    .map(|x| x as usize)
                     .product::<usize>() as f32;
                 let scale = Scalar::from_f32(2.0 / reduce_elements, dtype);
                 let derivative = diff.mul_scalar(scale)?;
@@ -97,7 +95,6 @@ impl VjpCompute for ReduceOp {
                 let reduce_elements = reduce_dims
                     .iter()
                     .map(|&dim| input_shape.dims()[dim])
-                    .map(|x| x as usize)
                     .product::<usize>() as f32;
                 let scale = Scalar::from_f32(1.0 / reduce_elements, dtype);
                 let derivative = diff.div(&broadcasted_std)?.mul_scalar(scale)?;

@@ -1,17 +1,17 @@
 use crate::{
     be::storage::BackendStorageT,
-    be_cuda::storage::{CudaStorage, CudaStorageData},
+    be_cuda::storage::{CudaSlice, CudaStorage, CudaStorageData},
     error::{HoduError, HoduResult},
     layer::compat::*,
     ops::Op,
     types::Layout,
 };
-use hodu_cuda_kernels::{cuda::CudaSlice, kernels};
+use hodu_cuda_kernels::kernels;
 
 pub fn call_ops_reduce(
     input_storage: &CudaStorage,
     layout: &Layout,
-    dims: &[u32],
+    dims: &[usize],
     keep_dim: bool,
     op: Op,
 ) -> HoduResult<CudaStorage> {
@@ -23,6 +23,17 @@ pub fn call_ops_reduce(
     let input_shape = layout.shape();
     let input_ndim = input_shape.ndim();
 
+    // Validate reduce dimensions
+    for &dim in dims {
+        if dim >= input_ndim {
+            return Err(HoduError::InvalidAxis {
+                axis: dim as i32,
+                ndim: input_ndim,
+            });
+        }
+    }
+
+    // Compute output shape
     let mut output_shape_vec = Vec::new();
     for i in 0..input_ndim {
         if dims.contains(&i) {
@@ -30,34 +41,43 @@ pub fn call_ops_reduce(
                 output_shape_vec.push(1);
             }
         } else {
-            output_shape_vec.push(input_shape[i] as usize);
+            output_shape_vec.push(input_shape[i]);
         }
     }
+
+    // Handle empty output shape (reduce all dimensions without keep_dim)
+    if output_shape_vec.is_empty() {
+        output_shape_vec.push(1);
+    }
+
     let output_size: u32 = output_shape_vec.iter().map(|&x| x as u32).product();
 
-    let mut metadata = Vec::new();
-    metadata.push(input_ndim as usize);
-
-    for &dim in input_shape.dims() {
-        metadata.push(dim as usize);
-    }
-    for &stride in layout.strides() {
-        metadata.push(stride as usize);
-    }
-    metadata.push(layout.offset() as usize);
-
-    for &dim in &output_shape_vec {
-        metadata.push(dim as usize);
-    }
-
-    metadata.push(dims.len());
+    // Calculate reduce size
+    let mut reduce_size: usize = 1;
     for &dim in dims {
-        metadata.push(dim as usize);
+        reduce_size *= input_shape[dim];
     }
+
+    // Build metadata matching Metal's format
+    let num_dims = input_ndim;
+    let output_shape_len = output_shape_vec.len();
+    let num_reduce_dims = dims.len();
+
+    let mut metadata = Vec::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
+
+    metadata.push(num_dims);
+    metadata.extend(input_shape.dims().iter().copied());
+    metadata.extend(layout.strides().iter().copied());
+    metadata.push(layout.offset());
+    metadata.push(output_shape_len);
+    metadata.extend(output_shape_vec.iter().copied());
+    metadata.push(num_reduce_dims);
+    metadata.extend(dims.iter().copied());
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
-
     let kernel_name = format!("{}_{}", reduce_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);

@@ -25,7 +25,7 @@ pub fn call_ops_index_select(
     layout: &Layout,
     indices_storage: &CpuStorage,
     indices_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate indices dtype
@@ -62,28 +62,28 @@ pub fn call_ops_index_select(
     // Compute output shape
     let num_indices = indices_layout.shape().size();
     let mut output_shape_vec = input_shape.dims().to_vec();
-    output_shape_vec[dim as usize] = num_indices;
+    output_shape_vec[dim] = num_indices;
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
     // Build metadata array
     // Layout: num_els, num_dims, input_shape, input_strides, input_offset, dim, num_indices
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim as usize + ndim as usize + 1 + 1 + 1);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + 1 + 1);
 
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(layout.offset() as usize);
-    metadata.push(dim as usize);
-    metadata.push(num_indices as usize);
+    metadata.push(layout.offset());
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     // Generate kernel name
     let dtype = storage.dtype();
@@ -92,7 +92,7 @@ pub fn call_ops_index_select(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -159,7 +159,7 @@ pub fn call_ops_index_put(
     indices_layout: &Layout,
     values_storage: &CpuStorage,
     values_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate indices dtype
@@ -210,38 +210,36 @@ pub fn call_ops_index_put(
     let values_shape = values_layout.shape();
     let values_ndim = values_shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(
-        2 + ndim as usize + ndim as usize + 1 + values_ndim as usize + values_ndim as usize + 1 + 1 + 1,
-    );
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + values_ndim + values_ndim + 1 + 1 + 1);
 
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     // Add values info
-    metadata.push(values_ndim as usize);
+    metadata.push(values_ndim);
     for &d in values_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in values_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(values_layout.offset() as usize);
+    metadata.push(values_layout.offset());
 
     let num_indices = indices_layout.shape().size();
-    metadata.push(dim as usize);
-    metadata.push(num_indices as usize);
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     // Generate kernel name
     let dtype = storage.dtype();
@@ -343,7 +341,7 @@ pub fn call_ops_gather(
     layout: &Layout,
     indices_storage: &CpuStorage,
     indices_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate indices dtype
@@ -381,34 +379,32 @@ pub fn call_ops_gather(
 
     // Build metadata array
     let indices_ndim = indices_shape.ndim();
-    let mut metadata: Vec<usize> = Vec::with_capacity(
-        2 + ndim as usize + ndim as usize + 1 + indices_ndim as usize + indices_ndim as usize + 1 + 1,
-    );
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + indices_ndim + indices_ndim + 1 + 1);
 
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
-    metadata.push(indices_ndim as usize);
+    metadata.push(indices_ndim);
     for &d in indices_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in indices_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(indices_layout.offset() as usize);
-    metadata.push(dim as usize);
+    metadata.push(indices_layout.offset());
+    metadata.push(dim);
 
     // Generate kernel name
     let dtype = storage.dtype();
@@ -417,7 +413,7 @@ pub fn call_ops_gather(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -484,7 +480,7 @@ pub fn call_ops_scatter(
     indices_layout: &Layout,
     src_storage: &CpuStorage,
     src_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Validate indices dtype
@@ -536,56 +532,46 @@ pub fn call_ops_scatter(
     let indices_ndim = indices_shape.ndim();
     let src_ndim = src_shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(
-        2 + ndim as usize
-            + ndim as usize
-            + 1
-            + indices_ndim as usize
-            + indices_ndim as usize
-            + 1
-            + src_ndim as usize
-            + src_ndim as usize
-            + 1
-            + 1,
-    );
+    let mut metadata: Vec<usize> =
+        Vec::with_capacity(2 + ndim + ndim + 1 + indices_ndim + indices_ndim + 1 + src_ndim + src_ndim + 1 + 1);
 
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     // Add indices info
-    metadata.push(indices_ndim as usize);
+    metadata.push(indices_ndim);
     for &d in indices_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in indices_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(indices_layout.offset() as usize);
+    metadata.push(indices_layout.offset());
 
     // Add src info
-    metadata.push(src_ndim as usize);
+    metadata.push(src_ndim);
     for &d in src_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     for &s in src_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(src_layout.offset() as usize);
-    metadata.push(dim as usize);
+    metadata.push(src_layout.offset());
+    metadata.push(dim);
 
     // Generate kernel name
     let dtype = storage.dtype();

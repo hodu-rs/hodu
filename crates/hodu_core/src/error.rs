@@ -39,13 +39,13 @@ pub enum HoduError {
     /// Shape mismatch between expected and actual shapes.
     ShapeMismatch { expected: Shape, got: Shape },
     /// Size mismatch between expected and actual sizes.
-    SizeMismatch { expected: u32, got: u32 },
+    SizeMismatch { expected: usize, got: usize },
     /// Incompatible shapes in a binary operation.
     IncompatibleShapes { lhs: Shape, rhs: Shape, op: Op },
     /// Invalid layout configuration.
     InvalidLayout { reason: String },
     /// Invalid axis for the given shape.
-    InvalidAxis { axis: i32, ndim: u32 },
+    InvalidAxis { axis: i32, ndim: usize },
 
     // ===== Tensor Errors =====
     /// Tensor not found in the global registry.

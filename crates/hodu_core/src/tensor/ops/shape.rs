@@ -236,7 +236,7 @@ impl Tensor {
         self.broadcast(other.shape())
     }
 
-    pub fn broadcast_left(&self, added_dims: &[u32]) -> HoduResult<Self> {
+    pub fn broadcast_left(&self, added_dims: &[usize]) -> HoduResult<Self> {
         let current_shape = self.shape();
         let current_dims = current_shape.dims();
 

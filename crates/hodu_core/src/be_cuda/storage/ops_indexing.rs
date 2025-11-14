@@ -13,7 +13,7 @@ pub fn call_ops_index_select(
     input_layout: &Layout,
     indices_storage: &CudaStorage,
     indices_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate indices dtype
@@ -49,7 +49,7 @@ pub fn call_ops_index_select(
     // Compute output shape
     let mut output_shape_vec = input_shape.dims().to_vec();
     let num_indices = indices_shape.size();
-    output_shape_vec[dim as usize] = num_indices;
+    output_shape_vec[dim] = num_indices;
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
@@ -64,15 +64,15 @@ pub fn call_ops_index_select(
     let kernel = kernels::Kernel(kernel_name_static);
 
     // Build metadata
-    let num_dims = input_ndim as usize;
+    let num_dims = input_ndim;
     let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 2 + 3);
-    metadata.push(num_els as usize);
+    metadata.push(num_els);
     metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
-    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(dim as usize);
-    metadata.push(num_indices as usize);
+    metadata.extend(input_shape.dims().iter().copied());
+    metadata.extend(input_layout.strides().iter().copied());
+    metadata.push(input_layout.offset());
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     // Extract indices
     let indices = match &indices_storage.data {
@@ -133,7 +133,7 @@ pub fn call_ops_index_put(
     indices_layout: &Layout,
     values_storage: &CudaStorage,
     values_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate indices dtype
@@ -178,17 +178,17 @@ pub fn call_ops_index_put(
     let kernel = kernels::Kernel(kernel_name_static);
 
     // Build metadata
-    let num_dims = input_shape.ndim() as usize;
+    let num_dims = input_shape.ndim();
     let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 3 + 4);
-    metadata.push(num_els as usize);
+    metadata.push(num_els);
     metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
-    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
-    metadata.extend(values_layout.strides().iter().map(|&s| s as usize));
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(values_layout.offset() as usize);
-    metadata.push(dim as usize);
-    metadata.push(num_indices as usize);
+    metadata.extend(input_shape.dims().iter().copied());
+    metadata.extend(input_layout.strides().iter().copied());
+    metadata.extend(values_layout.strides().iter().copied());
+    metadata.push(input_layout.offset());
+    metadata.push(values_layout.offset());
+    metadata.push(dim);
+    metadata.push(num_indices);
 
     // Extract indices
     let indices = match &indices_storage.data {
@@ -262,7 +262,7 @@ pub fn call_ops_gather(
     input_layout: &Layout,
     indices_storage: &CudaStorage,
     indices_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate indices dtype
@@ -295,17 +295,17 @@ pub fn call_ops_gather(
     let kernel = kernels::Kernel(kernel_name_static);
 
     // Build metadata
-    let num_dims = input_shape.ndim() as usize;
-    let num_indices = indices_shape.size() as usize;
+    let num_dims = input_shape.ndim();
+    let num_indices = indices_shape.size();
     let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 3 + 4);
-    metadata.push(num_els as usize);
+    metadata.push(num_els);
     metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
-    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
-    metadata.extend(indices_layout.strides().iter().map(|&s| s as usize));
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(indices_layout.offset() as usize);
-    metadata.push(dim as usize);
+    metadata.extend(input_shape.dims().iter().copied());
+    metadata.extend(input_layout.strides().iter().copied());
+    metadata.extend(indices_layout.strides().iter().copied());
+    metadata.push(input_layout.offset());
+    metadata.push(indices_layout.offset());
+    metadata.push(dim);
     metadata.push(num_indices);
 
     // Extract indices
@@ -367,7 +367,7 @@ pub fn call_ops_scatter(
     indices_layout: &Layout,
     src_storage: &CudaStorage,
     src_layout: &Layout,
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate indices dtype
@@ -411,20 +411,20 @@ pub fn call_ops_scatter(
     let kernel = kernels::Kernel(kernel_name_static);
 
     // Build metadata
-    let num_dims = input_shape.ndim() as usize;
-    let num_src_els = src_shape.size() as usize;
+    let num_dims = input_shape.ndim();
+    let num_src_els = src_shape.size();
     let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 5 + 4);
     metadata.push(num_src_els);
     metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
-    metadata.extend(input_layout.strides().iter().map(|&s| s as usize));
-    metadata.extend(src_shape.dims().iter().map(|&d| d as usize));
-    metadata.extend(src_layout.strides().iter().map(|&s| s as usize));
-    metadata.extend(indices_layout.strides().iter().map(|&s| s as usize));
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(src_layout.offset() as usize);
-    metadata.push(indices_layout.offset() as usize);
-    metadata.push(dim as usize);
+    metadata.extend(input_shape.dims().iter().copied());
+    metadata.extend(input_layout.strides().iter().copied());
+    metadata.extend(src_shape.dims().iter().copied());
+    metadata.extend(src_layout.strides().iter().copied());
+    metadata.extend(indices_layout.strides().iter().copied());
+    metadata.push(input_layout.offset());
+    metadata.push(src_layout.offset());
+    metadata.push(indices_layout.offset());
+    metadata.push(dim);
 
     // Extract indices
     let indices = match &indices_storage.data {

@@ -294,16 +294,16 @@ impl BackendStorageT for CpuStorage {
             if strides == Layout::compute_strides(shape) && offset == 0 {
                 data.fill(value);
             } else {
-                let ndim = shape.ndim() as usize;
-                let mut indices = vec![0u32; ndim];
+                let ndim = shape.ndim();
+                let mut indices = vec![0; ndim];
 
                 loop {
-                    let flat_index = (offset
+                    let flat_index = offset
                         + indices
                             .iter()
                             .enumerate()
                             .map(|(i, &idx)| idx * strides[i])
-                            .sum::<u32>()) as usize;
+                            .sum::<usize>();
 
                     if flat_index < data.len() {
                         data[flat_index] = value;
@@ -314,7 +314,7 @@ impl BackendStorageT for CpuStorage {
                     for i in (0..ndim).rev() {
                         if carry {
                             indices[i] += 1;
-                            if indices[i] < shape[i as u32] {
+                            if indices[i] < shape[i] {
                                 carry = false;
                             } else {
                                 indices[i] = 0;
@@ -426,15 +426,15 @@ impl BackendStorageT for CpuStorage {
         ops_matrix::call_ops_dot(self, rhs_storage, lhs_layout, rhs_layout, op)
     }
 
-    fn call_ops_reduce(&self, layout: &Layout, dims: &[u32], keep_dim: bool, op: Op) -> HoduResult<Self> {
+    fn call_ops_reduce(&self, layout: &Layout, dims: &[usize], keep_dim: bool, op: Op) -> HoduResult<Self> {
         ops_reduce::call_ops_reduce(self, layout, dims, keep_dim, op)
     }
 
-    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: u32, op: Op) -> HoduResult<Self> {
+    fn call_ops_concat(&self, others: &[&Self], layouts: &[&Layout], dim: usize, op: Op) -> HoduResult<Self> {
         ops_concat_split::call_ops_concat(self, others, layouts, dim, op)
     }
 
-    fn call_ops_split(&self, layout: &Layout, dim: u32, start: u32, size: u32, op: Op) -> HoduResult<Self> {
+    fn call_ops_split(&self, layout: &Layout, dim: usize, start: usize, size: usize, op: Op) -> HoduResult<Self> {
         ops_concat_split::call_ops_split(self, layout, dim, start, size, op)
     }
 
@@ -443,7 +443,7 @@ impl BackendStorageT for CpuStorage {
         layout: &Layout,
         indices_storage: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_index_select(self, layout, indices_storage, indices_layout, dim, op)
@@ -456,7 +456,7 @@ impl BackendStorageT for CpuStorage {
         indices_layout: &Layout,
         values_storage: &Self,
         values_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_index_put(
@@ -476,7 +476,7 @@ impl BackendStorageT for CpuStorage {
         layout: &Layout,
         indices_storage: &Self,
         indices_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_gather(self, layout, indices_storage, indices_layout, dim, op)
@@ -489,7 +489,7 @@ impl BackendStorageT for CpuStorage {
         indices_layout: &Layout,
         src_storage: &Self,
         src_layout: &Layout,
-        dim: u32,
+        dim: usize,
         op: Op,
     ) -> HoduResult<Self> {
         ops_indexing::call_ops_scatter(
@@ -509,9 +509,9 @@ impl BackendStorageT for CpuStorage {
         layout: &Layout,
         weight_storage: &Self,
         weight_layout: &Layout,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_conv::call_ops_conv(
@@ -532,9 +532,9 @@ impl BackendStorageT for CpuStorage {
         grad_output_storage: &Self,
         grad_output_layout: &Layout,
         weight_shape: &crate::types::Shape,
-        stride: &[u32],
-        padding: &[u32],
-        dilation: &[u32],
+        stride: &[usize],
+        padding: &[usize],
+        dilation: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_conv::call_ops_conv_grad_weight(
@@ -553,9 +553,9 @@ impl BackendStorageT for CpuStorage {
     fn call_ops_reduce_window(
         &self,
         layout: &Layout,
-        window_shape: &[u32],
-        strides: &[u32],
-        padding: &[u32],
+        window_shape: &[usize],
+        strides: &[usize],
+        padding: &[usize],
         op: Op,
     ) -> HoduResult<Self> {
         ops_windowing::call_ops_reduce_window(self, layout, window_shape, strides, padding, op)
@@ -1020,8 +1020,8 @@ impl BackendStorageT for CpuStorage {
 
         // If contiguous but with offset, we can optimize by slicing instead of full iteration
         if layout.is_contiguous() {
-            let offset = layout.offset() as usize;
-            let size = layout.size() as usize;
+            let offset = layout.offset();
+            let size = layout.size();
 
             macro_rules! contiguous_slice {
                 ($storage:expr, $dtype_variant:ident) => {{

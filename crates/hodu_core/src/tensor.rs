@@ -22,16 +22,16 @@ pub use gradient::{is_computing_gradients, GradientContext};
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
-pub struct TensorId(u32);
+pub struct TensorId(usize);
 
 impl TensorId {
     pub(crate) fn new() -> Self {
-        static TENSOR_COUNTER: AtomicU32 = AtomicU32::new(0);
+        static TENSOR_COUNTER: AtomicUsize = AtomicUsize::new(0);
         Self(TENSOR_COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 
     #[cfg(test)]
-    pub fn test_new(id: u32) -> Self {
+    pub(crate) fn test_new(id: usize) -> Self {
         Self(id)
     }
 }
@@ -126,7 +126,7 @@ pub struct Tensor_ {
     layout: Layout,
     requires_grad: bool,
     grad_tensor_id: Option<TensorId>,
-    ref_count: AtomicU32,
+    ref_count: AtomicUsize,
     is_managed: AtomicBool, // True if tensor is managed by gradient tape (never held by user)
 }
 
@@ -292,24 +292,24 @@ impl Tensor {
         with_tensor(self.0, |t| f(t.layout.shape()))
     }
 
-    pub fn strides(&self) -> Vec<u32> {
+    pub fn strides(&self) -> Vec<usize> {
         with_tensor(self.0, |t| t.layout.strides().to_vec()).unwrap_or_else(Vec::new)
     }
 
-    pub fn offset(&self) -> u32 {
+    pub fn offset(&self) -> usize {
         with_tensor(self.0, |t| t.layout.offset()).unwrap_or(0)
     }
 
-    pub fn ndim(&self) -> u32 {
-        with_tensor(self.0, |t| t.layout.shape().ndim()).unwrap_or(0)
+    pub fn ndim(&self) -> usize {
+        with_tensor(self.0, |t| t.layout.ndim()).unwrap_or(0)
     }
 
-    pub fn dim(&self, index: u32) -> Option<u32> {
-        with_tensor(self.0, |t| t.layout.shape().dim(index)).unwrap_or(None)
+    pub fn dim_size(&self, index: i32) -> Option<usize> {
+        with_tensor(self.0, |t| t.layout.dim_size(index)).unwrap_or(None)
     }
 
-    pub fn size(&self) -> u32 {
-        with_tensor(self.0, |t| t.layout.shape().size()).unwrap_or(1)
+    pub fn size(&self) -> usize {
+        with_tensor(self.0, |t| t.layout.size()).unwrap_or(1)
     }
 
     pub fn device(&self) -> Device {
@@ -403,7 +403,7 @@ pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: 
         layout,
         requires_grad,
         grad_tensor_id: None,
-        ref_count: AtomicU32::new(1),
+        ref_count: AtomicUsize::new(1),
         is_managed: AtomicBool::new(true),
     };
     let tensor_id = TensorId::new();
@@ -421,7 +421,7 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
         layout,
         requires_grad,
         grad_tensor_id: None,
-        ref_count: AtomicU32::new(1),
+        ref_count: AtomicUsize::new(1),
         is_managed: AtomicBool::new(true),
     };
 
@@ -437,7 +437,7 @@ pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (Ten
         layout,
         requires_grad,
         grad_tensor_id: None,
-        ref_count: AtomicU32::new(1),
+        ref_count: AtomicUsize::new(1),
         is_managed: AtomicBool::new(true), // Builder tensors (operation results) are managed
     };
     let tensor_id = TensorId::new();

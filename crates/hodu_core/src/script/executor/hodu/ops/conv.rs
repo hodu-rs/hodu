@@ -23,31 +23,31 @@ pub fn execute(
                     layouts.len()
                 )));
             }
-            let stride: Vec<u32> = attributes
+            let stride: Vec<usize> = attributes
                 .get("stride")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("stride".to_string()))?;
-            let padding: Vec<u32> = attributes
+            let padding: Vec<usize> = attributes
                 .get("padding")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("padding".to_string()))?;
-            let dilation: Vec<u32> = attributes
+            let dilation: Vec<usize> = attributes
                 .get("dilation")
                 .and_then(|a| {
                     if let Attribute::Scalars(s) = a {
-                        Some(s.iter().map(|sc| sc.to_u32()).collect())
+                        Some(s.iter().map(|sc| sc.to_usize()).collect())
                     } else {
                         None
                     }

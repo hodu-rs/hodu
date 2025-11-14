@@ -24,8 +24,8 @@ pub fn execute(
             let dim = attributes
                 .get("dim")
                 .and_then(|a| match a {
-                    Attribute::U32(d) => Some(*d),
-                    Attribute::Scalar(s) => Some(s.to_u32()),
+                    Attribute::Usize(d) => Some(*d),
+                    Attribute::Scalar(s) => Some(s.to_usize()),
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
@@ -45,24 +45,24 @@ pub fn execute(
             let dim = attributes
                 .get("dim")
                 .and_then(|a| match a {
-                    Attribute::U32(d) => Some(*d),
-                    Attribute::Scalar(s) => Some(s.to_u32()),
+                    Attribute::Usize(d) => Some(*d),
+                    Attribute::Scalar(s) => Some(s.to_usize()),
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("dim".to_string()))?;
             let start = attributes
                 .get("start")
                 .and_then(|a| match a {
-                    Attribute::U32(s) => Some(*s),
-                    Attribute::Scalar(s) => Some(s.to_u32()),
+                    Attribute::Usize(s) => Some(*s),
+                    Attribute::Scalar(s) => Some(s.to_usize()),
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("start".to_string()))?;
             let size = attributes
                 .get("size")
                 .and_then(|a| match a {
-                    Attribute::U32(s) => Some(*s),
-                    Attribute::Scalar(s) => Some(s.to_u32()),
+                    Attribute::Usize(s) => Some(*s),
+                    Attribute::Scalar(s) => Some(s.to_usize()),
                     _ => None,
                 })
                 .ok_or_else(|| HoduError::MissingAttribute("size".to_string()))?;

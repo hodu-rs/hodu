@@ -228,7 +228,7 @@ fn print_attribute(attr: &Attribute) -> String {
         Attribute::String(s) => format!("\"{}\"", s),
         Attribute::IntArray(arr) => format!("[{}]", arr.iter().map(|i| i.to_string()).collect::<Vec<_>>().join(", ")),
         Attribute::FloatArray(arr) => format!("[{}]", arr.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(", ")),
-        Attribute::U32(u) => u.to_string(),
+        Attribute::Usize(u) => u.to_string(),
         Attribute::Scalar(s) => format!("{:?}", s),
         Attribute::Scalars(arr) => format!(
             "[{}]",

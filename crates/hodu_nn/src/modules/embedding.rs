@@ -4,19 +4,19 @@ use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor, types::DType}
 
 #[derive(Module, Clone)]
 pub struct Embedding {
-    num_embeddings: u32,
-    embedding_dim: u32,
+    num_embeddings: usize,
+    embedding_dim: usize,
     weight: Tensor,
-    padding_idx: Option<u32>,
+    padding_idx: Option<usize>,
     max_norm: Option<Scalar>,
     norm_type: Scalar,
 }
 
 impl Embedding {
     pub fn new(
-        num_embeddings: u32,
-        embedding_dim: u32,
-        padding_idx: Option<u32>,
+        num_embeddings: usize,
+        embedding_dim: usize,
+        padding_idx: Option<usize>,
         max_norm: Option<impl Into<Scalar>>,
         norm_type: impl Into<Scalar>,
         dtype: DType,
@@ -148,7 +148,7 @@ impl Embedding {
         embeddings.mul(&scale)
     }
 
-    fn handle_padding_idx(&self, embeddings: &Tensor, indices: &Tensor, padding_idx: u32) -> HoduResult<Tensor> {
+    fn handle_padding_idx(&self, embeddings: &Tensor, indices: &Tensor, padding_idx: usize) -> HoduResult<Tensor> {
         // Create a mask where padding indices are marked
         // mask = (indices == padding_idx)
         let padding_idx_scalar = Scalar::from_f32(padding_idx as f32, indices.dtype());
@@ -180,15 +180,15 @@ impl Embedding {
         &self.weight
     }
 
-    pub fn num_embeddings(&self) -> u32 {
+    pub fn num_embeddings(&self) -> usize {
         self.num_embeddings
     }
 
-    pub fn embedding_dim(&self) -> u32 {
+    pub fn embedding_dim(&self) -> usize {
         self.embedding_dim
     }
 
-    pub fn padding_idx(&self) -> Option<u32> {
+    pub fn padding_idx(&self) -> Option<usize> {
         self.padding_idx
     }
 

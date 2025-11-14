@@ -13,7 +13,7 @@ pub fn call_ops_concat(
     first: &CudaStorage,
     others: &[&CudaStorage],
     layouts: &[&Layout],
-    dim: u32,
+    dim: usize,
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Collect all storages
@@ -68,12 +68,12 @@ pub fn call_ops_concat(
 
         // Check all dimensions except concat_dim match
         for d in 0..ndim {
-            if d != dim && shape.dims()[d as usize] != first_shape.dims()[d as usize] {
+            if d != dim && shape.dims()[d] != first_shape.dims()[d] {
                 return Err(HoduError::BackendError(format!(
                     "dimension {} mismatch: expected {}, got {}",
                     d,
-                    first_shape.dims()[d as usize],
-                    shape.dims()[d as usize]
+                    first_shape.dims()[d],
+                    shape.dims()[d]
                 )));
             }
         }
@@ -81,7 +81,7 @@ pub fn call_ops_concat(
 
     // Compute output shape
     let mut output_shape_vec = first_shape.dims().to_vec();
-    output_shape_vec[dim as usize] = layouts.iter().map(|l| l.shape().dims()[dim as usize]).sum();
+    output_shape_vec[dim] = layouts.iter().map(|l| l.shape().dims()[dim]).sum();
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
@@ -94,34 +94,34 @@ pub fn call_ops_concat(
 
     // Build metadata for concat kernel
     let mut metadata = Vec::new();
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     // Add output shape
     for &d in &output_shape_vec {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
-    metadata.push(dim as usize);
+    metadata.push(dim);
     metadata.push(num_inputs);
 
     // Add input shapes
     for layout in layouts {
         for &d in layout.shape().dims() {
-            metadata.push(d as usize);
+            metadata.push(d);
         }
     }
 
     // Add input strides
     for layout in layouts {
         for &s in layout.strides() {
-            metadata.push(s as usize);
+            metadata.push(s);
         }
     }
 
     // Add input offsets
     for layout in layouts {
-        metadata.push(layout.offset() as usize);
+        metadata.push(layout.offset());
     }
 
     // Add input buffer offsets - cumulative positions in packed temp buffer (in elements)
@@ -194,9 +194,9 @@ pub fn call_ops_concat(
 pub fn call_ops_split(
     storage: &CudaStorage,
     layout: &Layout,
-    dim: u32,
-    start: u32,
-    size: u32,
+    dim: usize,
+    start: usize,
+    size: usize,
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate op
@@ -213,7 +213,7 @@ pub fn call_ops_split(
         return Err(HoduError::InvalidAxis { axis: dim as i32, ndim });
     }
 
-    let dim_size = input_shape.dims()[dim as usize];
+    let dim_size = input_shape.dims()[dim];
     if start + size > dim_size {
         return Err(HoduError::BackendError(format!(
             "split range [{}, {}) exceeds dimension size {}",
@@ -225,34 +225,34 @@ pub fn call_ops_split(
 
     // Compute output shape
     let mut output_shape_vec = input_shape.dims().to_vec();
-    output_shape_vec[dim as usize] = size;
+    output_shape_vec[dim] = size;
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
     // Build metadata array for CUDA kernel
     let mut metadata = Vec::new();
-    metadata.push(num_els as usize);
-    metadata.push(ndim as usize);
+    metadata.push(num_els);
+    metadata.push(ndim);
 
     // Add input shape
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add input strides
     for &s in layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     // Add output shape
     for &d in &output_shape_vec {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
-    metadata.push(dim as usize);
-    metadata.push(start as usize);
+    metadata.push(dim);
+    metadata.push(start);
 
     let dtype = storage.dtype();
     let device = storage.get_device();

@@ -31,35 +31,25 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let channels_output = scalars[2].to_u32() as usize;
-                let channels_input = scalars[3].to_u32() as usize;
-                let kernel_size = scalars[4].to_u32() as usize;
-                let padding = scalars[5].to_u32() as usize;
-                let stride = scalars[6].to_u32() as usize;
-                let dilation = scalars[7].to_u32() as usize;
+                let channels_output = scalars[2].to_usize();
+                let channels_input = scalars[3].to_usize();
+                let kernel_size = scalars[4].to_usize();
+                let padding = scalars[5].to_usize();
+                let stride = scalars[6].to_usize();
+                let dilation = scalars[7].to_usize();
 
                 // Gradient w.r.t. input: use transposed convolution
                 // For conv1d: y = conv1d(x, w), grad_x = conv_transpose1d(grad_y, w, same params)
                 // Weight for conv_transpose needs to be transposed: [Co, Ci, K] -> [Ci, Co, K]
                 let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
 
-                let grad_input = grad_output_tensor.conv_transpose1d(
-                    &weight_transposed,
-                    stride as u32,
-                    padding as u32,
-                    0,
-                    dilation as u32,
-                )?;
+                let grad_input =
+                    grad_output_tensor.conv_transpose1d(&weight_transposed, stride, padding, 0, dilation)?;
 
                 // Gradient w.r.t. weight: conv1d_grad_weight(input, grad_output, weight_shape)
-                let weight_shape = vec![channels_output as u32, channels_input as u32, kernel_size as u32];
-                let grad_weight = input.conv1d_grad_weight(
-                    &grad_output_tensor,
-                    &weight_shape,
-                    stride as u32,
-                    padding as u32,
-                    dilation as u32,
-                )?;
+                let weight_shape = vec![channels_output, channels_input, kernel_size];
+                let grad_weight =
+                    input.conv1d_grad_weight(&grad_output_tensor, &weight_shape, stride, padding, dilation)?;
 
                 Ok(vec![grad_input.id(), grad_weight.id()])
             },
@@ -78,41 +68,26 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_height = scalars[3].to_u32() as usize;
-                let kernel_width = scalars[4].to_u32() as usize;
-                let channels_output = scalars[5].to_u32() as usize;
-                let channels_input = scalars[6].to_u32() as usize;
-                let padding = scalars[7].to_u32() as usize;
-                let stride = scalars[8].to_u32() as usize;
-                let dilation = scalars[9].to_u32() as usize;
+                let kernel_height = scalars[3].to_usize();
+                let kernel_width = scalars[4].to_usize();
+                let channels_output = scalars[5].to_usize();
+                let channels_input = scalars[6].to_usize();
+                let padding = scalars[7].to_usize();
+                let stride = scalars[8].to_usize();
+                let dilation = scalars[9].to_usize();
 
                 // Gradient w.r.t. input: use transposed convolution
                 // For conv2d: y = conv2d(x, w), grad_x = conv_transpose2d(grad_y, w, same params)
                 // Weight for conv_transpose needs to be transposed: [Co, Ci, Kh, Kw] -> [Ci, Co, Kh, Kw]
                 let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
 
-                let grad_input = grad_output_tensor.conv_transpose2d(
-                    &weight_transposed,
-                    stride as u32,
-                    padding as u32,
-                    0,
-                    dilation as u32,
-                )?;
+                let grad_input =
+                    grad_output_tensor.conv_transpose2d(&weight_transposed, stride, padding, 0, dilation)?;
 
                 // Gradient w.r.t. weight: conv2d_grad_weight(input, grad_output, weight_shape)
-                let weight_shape_vec = vec![
-                    channels_output as u32,
-                    channels_input as u32,
-                    kernel_height as u32,
-                    kernel_width as u32,
-                ];
-                let grad_weight = input.conv2d_grad_weight(
-                    &grad_output_tensor,
-                    &weight_shape_vec,
-                    stride as u32,
-                    padding as u32,
-                    dilation as u32,
-                )?;
+                let weight_shape_vec = vec![channels_output, channels_input, kernel_height, kernel_width];
+                let grad_weight =
+                    input.conv2d_grad_weight(&grad_output_tensor, &weight_shape_vec, stride, padding, dilation)?;
 
                 Ok(vec![grad_input.id(), grad_weight.id()])
             },
@@ -131,43 +106,33 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_depth = scalars[4].to_u32() as usize;
-                let kernel_height = scalars[5].to_u32() as usize;
-                let kernel_width = scalars[6].to_u32() as usize;
-                let channels_output = scalars[7].to_u32() as usize;
-                let channels_input = scalars[8].to_u32() as usize;
-                let padding = scalars[9].to_u32() as usize;
-                let stride = scalars[10].to_u32() as usize;
-                let dilation = scalars[11].to_u32() as usize;
+                let kernel_depth = scalars[4].to_usize();
+                let kernel_height = scalars[5].to_usize();
+                let kernel_width = scalars[6].to_usize();
+                let channels_output = scalars[7].to_usize();
+                let channels_input = scalars[8].to_usize();
+                let padding = scalars[9].to_usize();
+                let stride = scalars[10].to_usize();
+                let dilation = scalars[11].to_usize();
 
                 // Gradient w.r.t. input: use transposed convolution
                 // For conv3d: y = conv3d(x, w), grad_x = conv_transpose3d(grad_y, w, same params)
                 // Weight for conv_transpose needs to be transposed: [Co, Ci, Kd, Kh, Kw] -> [Ci, Co, Kd, Kh, Kw]
                 let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
 
-                let grad_input = grad_output_tensor.conv_transpose3d(
-                    &weight_transposed,
-                    stride as u32,
-                    padding as u32,
-                    0,
-                    dilation as u32,
-                )?;
+                let grad_input =
+                    grad_output_tensor.conv_transpose3d(&weight_transposed, stride, padding, 0, dilation)?;
 
                 // Gradient w.r.t. weight: conv3d_grad_weight(input, grad_output, weight_shape)
                 let weight_shape = vec![
-                    channels_output as u32,
-                    channels_input as u32,
-                    kernel_depth as u32,
-                    kernel_height as u32,
-                    kernel_width as u32,
+                    channels_output,
+                    channels_input,
+                    kernel_depth,
+                    kernel_height,
+                    kernel_width,
                 ];
-                let grad_weight = input.conv3d_grad_weight(
-                    &grad_output_tensor,
-                    &weight_shape,
-                    stride as u32,
-                    padding as u32,
-                    dilation as u32,
-                )?;
+                let grad_weight =
+                    input.conv3d_grad_weight(&grad_output_tensor, &weight_shape, stride, padding, dilation)?;
 
                 Ok(vec![grad_input.id(), grad_weight.id()])
             },
@@ -190,26 +155,26 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let channels_output = scalars[2].to_u32() as usize;
-                let channels_input = scalars[3].to_u32() as usize;
-                let kernel_size = scalars[4].to_u32() as usize;
-                let padding = scalars[5].to_u32() as usize;
-                let _output_padding = scalars[6].to_u32() as usize;
-                let stride = scalars[7].to_u32() as usize;
-                let dilation = scalars[8].to_u32() as usize;
+                let channels_output = scalars[2].to_usize();
+                let channels_input = scalars[3].to_usize();
+                let kernel_size = scalars[4].to_usize();
+                let padding = scalars[5].to_usize();
+                let _output_padding = scalars[6].to_usize();
+                let stride = scalars[7].to_usize();
+                let dilation = scalars[8].to_usize();
 
                 // Gradient w.r.t. input: Use regular Conv1d
                 // weight shape for conv1d is [Co, Ci, K], but we need to transpose channels
-                let grad_input = grad_output_tensor.conv1d(&weight, stride as u32, padding as u32, dilation as u32)?;
+                let grad_input = grad_output_tensor.conv1d(&weight, stride, padding, dilation)?;
 
                 // Gradient w.r.t. weight: conv_transpose1d_grad_weight(input, grad_output, weight_shape)
-                let weight_shape = vec![channels_input as u32, channels_output as u32, kernel_size as u32];
+                let weight_shape = vec![channels_input, channels_output, kernel_size];
                 let grad_weight = input.conv_transpose1d_grad_weight(
                     &grad_output_tensor,
                     &weight_shape,
-                    stride as u32,
-                    padding as u32,
-                    dilation as u32,
+                    stride,
+                    padding,
+                    dilation,
                 )?;
 
                 Ok(vec![grad_input.id(), grad_weight.id()])
@@ -233,31 +198,26 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_height = scalars[3].to_u32() as usize;
-                let kernel_width = scalars[4].to_u32() as usize;
-                let channels_output = scalars[5].to_u32() as usize;
-                let channels_input = scalars[6].to_u32() as usize;
-                let padding = scalars[7].to_u32() as usize;
-                let _output_padding = scalars[8].to_u32() as usize;
-                let stride = scalars[9].to_u32() as usize;
-                let dilation = scalars[10].to_u32() as usize;
+                let kernel_height = scalars[3].to_usize();
+                let kernel_width = scalars[4].to_usize();
+                let channels_output = scalars[5].to_usize();
+                let channels_input = scalars[6].to_usize();
+                let padding = scalars[7].to_usize();
+                let _output_padding = scalars[8].to_usize();
+                let stride = scalars[9].to_usize();
+                let dilation = scalars[10].to_usize();
 
                 // Gradient w.r.t. input: Use regular Conv2d
-                let grad_input = grad_output_tensor.conv2d(&weight, stride as u32, padding as u32, dilation as u32)?;
+                let grad_input = grad_output_tensor.conv2d(&weight, stride, padding, dilation)?;
 
                 // Gradient w.r.t. weight: conv_transpose2d_grad_weight
-                let weight_shape = vec![
-                    channels_input as u32,
-                    channels_output as u32,
-                    kernel_height as u32,
-                    kernel_width as u32,
-                ];
+                let weight_shape = vec![channels_input, channels_output, kernel_height, kernel_width];
                 let grad_weight = input.conv_transpose2d_grad_weight(
                     &grad_output_tensor,
                     &weight_shape,
-                    stride as u32,
-                    padding as u32,
-                    dilation as u32,
+                    stride,
+                    padding,
+                    dilation,
                 )?;
 
                 Ok(vec![grad_input.id(), grad_weight.id()])
@@ -281,33 +241,33 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_depth = scalars[4].to_u32() as usize;
-                let kernel_height = scalars[5].to_u32() as usize;
-                let kernel_width = scalars[6].to_u32() as usize;
-                let channels_output = scalars[7].to_u32() as usize;
-                let channels_input = scalars[8].to_u32() as usize;
-                let padding = scalars[9].to_u32() as usize;
-                let _output_padding = scalars[10].to_u32() as usize;
-                let stride = scalars[11].to_u32() as usize;
-                let dilation = scalars[12].to_u32() as usize;
+                let kernel_depth = scalars[4].to_usize();
+                let kernel_height = scalars[5].to_usize();
+                let kernel_width = scalars[6].to_usize();
+                let channels_output = scalars[7].to_usize();
+                let channels_input = scalars[8].to_usize();
+                let padding = scalars[9].to_usize();
+                let _output_padding = scalars[10].to_usize();
+                let stride = scalars[11].to_usize();
+                let dilation = scalars[12].to_usize();
 
                 // Gradient w.r.t. input: Use regular Conv3d
-                let grad_input = grad_output_tensor.conv3d(&weight, stride as u32, padding as u32, dilation as u32)?;
+                let grad_input = grad_output_tensor.conv3d(&weight, stride, padding, dilation)?;
 
                 // Gradient w.r.t. weight: conv_transpose3d_grad_weight
                 let weight_shape = vec![
-                    channels_input as u32,
-                    channels_output as u32,
-                    kernel_depth as u32,
-                    kernel_height as u32,
-                    kernel_width as u32,
+                    channels_input,
+                    channels_output,
+                    kernel_depth,
+                    kernel_height,
+                    kernel_width,
                 ];
                 let grad_weight = input.conv_transpose3d_grad_weight(
                     &grad_output_tensor,
                     &weight_shape,
-                    stride as u32,
-                    padding as u32,
-                    dilation as u32,
+                    stride,
+                    padding,
+                    dilation,
                 )?;
 
                 Ok(vec![grad_input.id(), grad_weight.id()])

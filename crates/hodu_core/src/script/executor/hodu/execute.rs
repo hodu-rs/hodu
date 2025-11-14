@@ -24,7 +24,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
         .chain(compiled.output_mapping.values())
         .map(|vid| vid.0)
         .max()
-        .unwrap_or(0) as usize;
+        .unwrap_or(0);
 
     // Use Vec instead of HashMap for O(1) access
     let mut value_storage: Vec<Option<Arc<BackendStorage>>> = vec![None; max_value_id + 1];
@@ -37,7 +37,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
 
         let storage = tensor.with_storage(|s| Ok(Arc::new(s.clone())))?;
 
-        value_storage[value_id.0 as usize] = Some(storage);
+        value_storage[value_id.0] = Some(storage);
     }
 
     // Execute instructions in order
@@ -48,7 +48,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
             if let Some(tensor_id) = compiled.value_to_tensor.get(&instr.result) {
                 if let Some(storage) = compiled.constant_storages.get(tensor_id) {
                     // Use pre-converted storage (no conversion needed!)
-                    value_storage[instr.result.0 as usize] = Some(storage.clone());
+                    value_storage[instr.result.0] = Some(storage.clone());
                     continue;
                 }
             }
@@ -61,7 +61,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
         let input_storages: Vec<&Arc<BackendStorage>> = instr
             .inputs
             .iter()
-            .filter_map(|vid| value_storage[vid.0 as usize].as_ref())
+            .filter_map(|vid| value_storage[vid.0].as_ref())
             .collect();
 
         if input_storages.len() != instr.inputs.len() {
@@ -91,13 +91,13 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
 
         // Execute the operation
         let result_storage = ops::execute_operation(&instr.op, &input_storages, &input_layouts, &instr.attributes)?;
-        value_storage[instr.result.0 as usize] = Some(Arc::new(result_storage));
+        value_storage[instr.result.0] = Some(Arc::new(result_storage));
     }
 
     // Collect outputs
     let mut outputs = HashMap::new();
     for (name, value_id) in &compiled.output_mapping {
-        let storage = value_storage[value_id.0 as usize]
+        let storage = value_storage[value_id.0]
             .as_ref()
             .ok_or_else(|| HoduError::ExecutionError(format!("missing output: {}", name)))?;
 

@@ -901,6 +901,40 @@ impl Scalar {
     }
 
     #[inline]
+    pub fn to_usize(&self) -> usize {
+        match *self {
+            Self::BOOL(x) => {
+                if x {
+                    1
+                } else {
+                    0
+                }
+            },
+            Self::F8E4M3(x) => x.to_f64().max(0.0) as usize,
+            #[cfg(feature = "f8e5m2")]
+            Self::F8E5M2(x) => x.to_f64().max(0.0) as usize,
+            Self::BF16(x) => x.to_f64().max(0.0) as usize,
+            Self::F16(x) => x.to_f64().max(0.0) as usize,
+            Self::F32(x) => x.max(0.0) as usize,
+            #[cfg(feature = "f64")]
+            Self::F64(x) => x.max(0.0) as usize,
+            Self::U8(x) => x as usize,
+            #[cfg(feature = "u16")]
+            Self::U16(x) => x as usize,
+
+            Self::U32(x) => x as usize,
+            #[cfg(feature = "u64")]
+            Self::U64(x) => x as usize,
+            Self::I8(x) => x.max(0) as usize,
+            #[cfg(feature = "i16")]
+            Self::I16(x) => x.max(0) as usize,
+            Self::I32(x) => x.max(0) as usize,
+            #[cfg(feature = "i64")]
+            Self::I64(x) => x.max(0) as usize,
+        }
+    }
+
+    #[inline]
     pub fn to_i8(&self) -> i8 {
         match *self {
             Self::BOOL(x) => {
@@ -1037,6 +1071,40 @@ impl Scalar {
             Self::I64(x) => x,
         }
     }
+
+    #[inline]
+    pub fn to_isize(&self) -> isize {
+        match *self {
+            Self::BOOL(x) => {
+                if x {
+                    1
+                } else {
+                    0
+                }
+            },
+            Self::F8E4M3(x) => x.to_f64() as isize,
+            #[cfg(feature = "f8e5m2")]
+            Self::F8E5M2(x) => x.to_f64() as isize,
+            Self::BF16(x) => x.to_f64() as isize,
+            Self::F16(x) => x.to_f64() as isize,
+            Self::F32(x) => x as isize,
+            #[cfg(feature = "f64")]
+            Self::F64(x) => x as isize,
+            Self::U8(x) => x as isize,
+            #[cfg(feature = "u16")]
+            Self::U16(x) => x as isize,
+
+            Self::U32(x) => x as isize,
+            #[cfg(feature = "u64")]
+            Self::U64(x) => x.min(isize::MAX as u64) as isize,
+            Self::I8(x) => x as isize,
+            #[cfg(feature = "i16")]
+            Self::I16(x) => x as isize,
+            Self::I32(x) => x as isize,
+            #[cfg(feature = "i64")]
+            Self::I64(x) => x as isize,
+        }
+    }
 }
 
 impl From<bool> for Scalar {
@@ -1151,18 +1219,7 @@ impl From<u64> for Scalar {
 impl From<usize> for Scalar {
     #[inline]
     fn from(x: usize) -> Self {
-        #[cfg(feature = "u64")]
-        {
-            Self::U64(x as u64)
-        }
-        #[cfg(all(not(feature = "u64"), feature = "i64"))]
-        {
-            Self::I64(x as i64)
-        }
-        #[cfg(not(any(feature = "u64", feature = "i64")))]
-        {
-            Self::U32(x as u32)
-        }
+        Self::U32(x as u32)
     }
 }
 
@@ -1211,14 +1268,7 @@ impl From<i64> for Scalar {
 impl From<isize> for Scalar {
     #[inline]
     fn from(x: isize) -> Self {
-        #[cfg(feature = "i64")]
-        {
-            Self::I64(x as i64)
-        }
-        #[cfg(not(feature = "i64"))]
-        {
-            Self::I32(x as i32)
-        }
+        Self::I32(x as i32)
     }
 }
 

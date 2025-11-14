@@ -17,10 +17,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -34,7 +34,7 @@ impl Tensor {
         let shape_dims = shape.dims();
         let indices_size = indices.size();
         let mut output_dims = shape_dims.to_vec();
-        output_dims[dim_u32 as usize] = indices_size;
+        output_dims[dim_usize] = indices_size;
 
         let result_layout = Layout::from_shape(&crate::types::Shape::from(output_dims));
         let self_layout = self.layout();
@@ -73,7 +73,7 @@ impl Tensor {
                         &self_layout,
                         indices_storage,
                         &indices_layout,
-                        dim_u32,
+                        dim_usize,
                         Op::Indexing(IndexingOp::IndexSelect),
                     )
                 })
@@ -100,10 +100,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -154,7 +154,7 @@ impl Tensor {
                             &indices_layout,
                             values_storage,
                             &values_layout,
-                            dim_u32,
+                            dim_usize,
                             Op::Indexing(IndexingOp::IndexPut),
                         )
                     })
@@ -182,10 +182,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -232,7 +232,7 @@ impl Tensor {
                         &self_layout,
                         indices_storage,
                         &result_layout,
-                        dim_u32,
+                        dim_usize,
                         Op::Indexing(IndexingOp::Gather),
                     )
                 })
@@ -259,10 +259,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -314,7 +314,7 @@ impl Tensor {
                             &indices_layout,
                             src_storage,
                             &src_layout,
-                            dim_u32,
+                            dim_usize,
                             Op::Indexing(IndexingOp::Scatter),
                         )
                     })
@@ -342,10 +342,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -394,7 +394,7 @@ impl Tensor {
                             &indices.layout(),
                             src_storage,
                             &src.layout(),
-                            dim_u32,
+                            dim_usize,
                             Op::Indexing(IndexingOp::ScatterAdd),
                         )
                     })
@@ -422,10 +422,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -474,7 +474,7 @@ impl Tensor {
                             &indices.layout(),
                             src_storage,
                             &src.layout(),
-                            dim_u32,
+                            dim_usize,
                             Op::Indexing(IndexingOp::ScatterMax),
                         )
                     })
@@ -502,10 +502,10 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
 
         // Validate device, dtype for device, and dtype for operation
@@ -554,7 +554,7 @@ impl Tensor {
                             &indices.layout(),
                             src_storage,
                             &src.layout(),
-                            dim_u32,
+                            dim_usize,
                             Op::Indexing(IndexingOp::ScatterMin),
                         )
                     })

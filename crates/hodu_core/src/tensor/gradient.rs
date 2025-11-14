@@ -397,10 +397,8 @@ fn cleanup_orphaned_managed_tensors(tape: &mut Vec<TapeEntry>) {
     loop {
         let initial_len = tape.len();
 
-        // Pre-allocate HashSet with capacity for better performance
-        let mut used_in_tape: HashSet<TensorId> = HashSet::with_capacity(tape.len());
-
         // Collect all tensor IDs that are currently used as inputs in the tape
+        let mut used_in_tape: HashSet<TensorId> = HashSet::new();
         for entry in tape.iter() {
             for &input_id in &entry.input_ids {
                 used_in_tape.insert(input_id);
@@ -533,7 +531,7 @@ pub fn compute_gradients(loss_tensor_id: TensorId) -> HoduResult<()> {
     // Pre-allocate based on tape size for better performance
     let tape_len = tape.len();
     let mut guard = GradientComputationGuard::new_with_capacity(tape_len * 3);
-    let mut gradients: HashMap<TensorId, TensorId> = HashMap::with_capacity(tape_len);
+    let mut gradients: HashMap<TensorId, TensorId> = HashMap::new();
 
     gradients.insert(loss_tensor_id, loss_grad_id);
     guard.keep(loss_tensor);

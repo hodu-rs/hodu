@@ -29,29 +29,29 @@ pub fn call_ops_cmp_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
     // Create output buffer (cmp ops return BOOL)
     let output_dtype = DType::BOOL;
-    let output_buffer = device.new_buffer(num_els as usize, output_dtype, "cmp_scalar_output")?;
+    let output_buffer = device.new_buffer(num_els, output_dtype, "cmp_scalar_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", cmp_op, dtype);
@@ -104,12 +104,7 @@ pub fn call_ops_cmp_scalar(
         },
     }
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        output_dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, output_dtype))
 }
 
 pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -> HoduResult<MetalStorage> {
@@ -128,28 +123,28 @@ pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: O
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "unary_output")?;
+    let output_buffer = device.new_buffer(num_els, dtype, "unary_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", unary_op, dtype);
@@ -171,12 +166,7 @@ pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: O
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
 }
 
 pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layout, op: Op) -> HoduResult<MetalStorage> {
@@ -195,29 +185,29 @@ pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layou
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
     // Create output buffer (logical ops return BOOL)
     let output_dtype = DType::BOOL;
-    let output_buffer = device.new_buffer(num_els as usize, output_dtype, "unary_logical_output")?;
+    let output_buffer = device.new_buffer(num_els, output_dtype, "unary_logical_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", unary_op, dtype);
@@ -239,12 +229,7 @@ pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layou
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        output_dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, output_dtype))
 }
 
 pub fn call_ops_unary_scalar(
@@ -268,28 +253,28 @@ pub fn call_ops_unary_scalar(
     let num_dims = shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shape
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in input_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(input_layout.offset() as usize);
+    metadata.push(input_layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "unary_scalar_output")?;
+    let output_buffer = device.new_buffer(num_els, dtype, "unary_scalar_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", unary_op, dtype);
@@ -342,10 +327,5 @@ pub fn call_ops_unary_scalar(
         },
     }
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
 }

@@ -10,7 +10,7 @@ use hodu_metal_kernels::{kernels, utils::BufferOffset};
 pub fn call_ops_reduce(
     storage: &MetalStorage,
     layout: &Layout,
-    dims: &[u32],
+    dims: &[usize],
     keep_dim: bool,
     op: Op,
 ) -> HoduResult<MetalStorage> {
@@ -45,7 +45,7 @@ pub fn call_ops_reduce(
                 output_shape_vec.push(1);
             }
         } else {
-            output_shape_vec.push(input_shape.dims()[i as usize]);
+            output_shape_vec.push(input_shape.dims()[i]);
         }
     }
 
@@ -58,16 +58,16 @@ pub fn call_ops_reduce(
     let output_size = output_shape.size();
 
     // Calculate reduce size
-    let mut reduce_size: u64 = 1;
+    let mut reduce_size: usize = 1;
     for &dim in dims {
-        reduce_size *= input_shape.dims()[dim as usize] as u64;
+        reduce_size *= input_shape.dims()[dim];
     }
 
     let dtype = storage.dtype();
     let device = storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(output_size as usize, dtype, "reduce_output")?;
+    let output_buffer = device.new_buffer(output_size, dtype, "reduce_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", reduce_op, dtype);
@@ -76,21 +76,21 @@ pub fn call_ops_reduce(
 
     // Build metadata
     // Layout: [num_dims, shape..., strides..., offset, output_shape_len, output_shape..., num_reduce_dims, reduce_dims..., keep_dim, reduce_size]
-    let num_dims = input_ndim as usize;
+    let num_dims = input_ndim;
     let output_shape_len = output_shape_vec.len();
     let num_reduce_dims = dims.len();
 
     let mut metadata = Vec::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
     metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().map(|&d| d as usize));
-    metadata.extend(layout.strides().iter().map(|&s| s as usize));
-    metadata.push(layout.offset() as usize);
+    metadata.extend(input_shape.dims().iter().copied());
+    metadata.extend(layout.strides().iter().copied());
+    metadata.push(layout.offset());
     metadata.push(output_shape_len);
-    metadata.extend(output_shape_vec.iter().map(|&d| d as usize));
+    metadata.extend(output_shape_vec.iter().copied());
     metadata.push(num_reduce_dims);
-    metadata.extend(dims.iter().map(|&d| d as usize));
+    metadata.extend(dims.iter().copied());
     metadata.push(if keep_dim { 1 } else { 0 });
-    metadata.push(reduce_size as usize);
+    metadata.push(reduce_size);
 
     // Create buffer offset for input
     let input_offset = BufferOffset::zero_offset(storage.buffer());
@@ -107,10 +107,5 @@ pub fn call_ops_reduce(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        output_size as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), output_size, dtype))
 }

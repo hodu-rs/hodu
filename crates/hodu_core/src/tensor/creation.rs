@@ -91,7 +91,7 @@ impl Tensor {
         } else {
             get_runtime_device()
         };
-        let storage = BackendDevice::allocate(shape.size() as usize, device, dtype)?;
+        let storage = BackendDevice::allocate(shape.size(), device, dtype)?;
         let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
@@ -108,7 +108,7 @@ impl Tensor {
         } else {
             get_runtime_device()
         };
-        let storage = BackendDevice::zeros(shape.size() as usize, device, dtype)?;
+        let storage = BackendDevice::zeros(shape.size(), device, dtype)?;
         let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
@@ -126,7 +126,7 @@ impl Tensor {
             get_runtime_device()
         };
         let layout = Layout::from_shape(&shape);
-        let mut storage = BackendDevice::zeros(shape.size() as usize, device, dtype)?;
+        let mut storage = BackendDevice::zeros(shape.size(), device, dtype)?;
         storage.const_set(Scalar::one(dtype), &layout)?;
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
@@ -144,7 +144,7 @@ impl Tensor {
         } else {
             get_runtime_device()
         };
-        let mut storage = BackendDevice::zeros(shape.size() as usize, device, value.dtype())?;
+        let mut storage = BackendDevice::zeros(shape.size(), device, value.dtype())?;
         let layout = Layout::from_shape(&shape);
         storage.const_set(value, &layout)?;
         Ok(from_storage(storage, layout, !is_builder_active(), false))
@@ -156,7 +156,7 @@ impl Tensor {
     }
 
     pub fn scalar<T: Into<Scalar>>(value: T) -> HoduResult<Self> {
-        Self::full(&[] as &[u32], value)
+        Self::full(&[] as &[usize], value)
     }
 
     pub fn randn<T: Into<Scalar>>(shape: impl Into<Shape>, mean: T, std: T) -> HoduResult<Self> {
@@ -175,7 +175,7 @@ impl Tensor {
         } else {
             DType::F32
         };
-        let storage = BackendDevice::randn(shape.size() as usize, device, dtype, mean.to_f32(), std.to_f32())?;
+        let storage = BackendDevice::randn(shape.size(), device, dtype, mean.to_f32(), std.to_f32())?;
         let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }
@@ -201,7 +201,7 @@ impl Tensor {
         } else {
             DType::F32
         };
-        let storage = BackendDevice::rand_uniform(shape.size() as usize, device, dtype, low.to_f32(), high.to_f32())?;
+        let storage = BackendDevice::rand_uniform(shape.size(), device, dtype, low.to_f32(), high.to_f32())?;
         let layout = Layout::from_shape(&shape);
         Ok(from_storage(storage, layout, !is_builder_active(), false))
     }

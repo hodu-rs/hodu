@@ -395,8 +395,8 @@ impl fmt::Display for Tensor {
             write!(f, "<none>")
         } else {
             let layout = self.layout();
-            let size = layout.size() as usize;
-            let shape: Vec<usize> = layout.shape().dims().iter().map(|&d| d as usize).collect();
+            let size = layout.size();
+            let shape: Vec<usize> = layout.shape().dims().to_vec();
             match self.dtype() {
                 DType::BOOL => {
                     if let Ok(data) = self.to_flatten_vec::<bool>() {
@@ -519,7 +519,7 @@ impl fmt::Debug for Tensor {
         write!(f, "Tensor(device={}, dtype={}, shape=[", self.device(), self.dtype(),)?;
         let layout = self.layout();
         let shape_ref = layout.shape();
-        let shape: Vec<usize> = shape_ref.dims().iter().map(|&d| d as usize).collect();
+        let shape: Vec<usize> = shape_ref.dims().to_vec();
         for (i, dim) in shape.iter().enumerate() {
             if i > 0 {
                 write!(f, ", ")?

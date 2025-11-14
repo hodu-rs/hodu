@@ -26,9 +26,9 @@ use core::ffi::c_void;
 pub fn call_ops_reduce_window(
     storage: &CpuStorage,
     layout: &Layout,
-    window_shape: &[u32],
-    strides: &[u32],
-    padding: &[u32],
+    window_shape: &[usize],
+    strides: &[usize],
+    padding: &[usize],
     op: Op,
 ) -> HoduResult<CpuStorage> {
     // Extract windowing op
@@ -45,7 +45,7 @@ pub fn call_ops_reduce_window(
     let kernel_prefix = format!("{}", windowing_op);
 
     let input_shape = layout.shape();
-    let ndim = input_shape.ndim() as usize;
+    let ndim = input_shape.ndim();
 
     // Validate window_shape, strides, padding dimensions
     if window_shape.len() != ndim {
@@ -102,40 +102,40 @@ pub fn call_ops_reduce_window(
     //         window_shape, strides, padding, output_shape
     let mut metadata: Vec<usize> = Vec::with_capacity(3 + ndim * 7);
 
-    metadata.push(output_size as usize);
+    metadata.push(output_size);
     metadata.push(ndim);
 
     // Add input shape
     for &dim in input_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add input strides
     for &stride in layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offset
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     // Add window shape
     for &w in window_shape {
-        metadata.push(w as usize);
+        metadata.push(w);
     }
 
     // Add strides
     for &s in strides {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add padding (already flattened)
     for &p in padding {
-        metadata.push(p as usize);
+        metadata.push(p);
     }
 
     // Add output shape
     for &dim in &output_shape_vec {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Generate kernel name
@@ -145,7 +145,7 @@ pub fn call_ops_reduce_window(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage
-    let mut output = CpuDevice::allocate(output_shape.size() as usize, dtype)?;
+    let mut output = CpuDevice::allocate(output_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

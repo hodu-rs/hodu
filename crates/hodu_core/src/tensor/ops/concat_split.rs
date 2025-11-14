@@ -25,12 +25,11 @@ impl Tensor {
 
         let first = tensors[0];
         let ndim = first.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
-        let dim_usize = dim_u32 as usize;
 
         // Validate device, dtype for device, and dtype for operation
         validate_same_device(tensors, Op::Concat(ConcatOp::Concat))?;
@@ -97,7 +96,7 @@ impl Tensor {
             let first_storage = &all_storages[0];
             let other_refs: Vec<_> = all_storages[1..].iter().collect();
             let storage =
-                first_storage.call_ops_concat(&other_refs, &layout_refs, dim_u32, Op::Concat(ConcatOp::Concat))?;
+                first_storage.call_ops_concat(&other_refs, &layout_refs, dim_usize, Op::Concat(ConcatOp::Concat))?;
 
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
@@ -138,12 +137,11 @@ impl Tensor {
         let dim_scalar = dim.into();
         let dim_i32 = dim_scalar.to_i32();
         let ndim = self.ndim() as i32;
-        let dim_u32 = if dim_i32 < 0 {
-            (ndim + dim_i32) as u32
+        let dim_usize = if dim_i32 < 0 {
+            (ndim + dim_i32) as usize
         } else {
-            dim_i32 as u32
+            dim_i32 as usize
         };
-        let dim_usize = dim_u32 as usize;
 
         // Validate dtype for device and operation
         validate_dtype_for_device(self.dtype(), self.device())?;
@@ -156,7 +154,7 @@ impl Tensor {
 
         // Prepare params for gradient: [dim, size1, size2, ...]
         let mut params = vec![dim_scalar];
-        params.extend(sizes.iter().map(|&s| Scalar::from(s as u32)));
+        params.extend(sizes.iter().map(|&s| Scalar::from(s)));
 
         if builder::is_builder_active() {
             let mut results = Vec::new();
@@ -166,7 +164,7 @@ impl Tensor {
                 .iter()
                 .map(|&size| {
                     let mut result_dims = shape_dims.to_vec();
-                    result_dims[dim_usize] = size as u32;
+                    result_dims[dim_usize] = size;
                     let result_layout = Layout::from_shape(&Shape::from(result_dims));
                     let (result_id, result_tensor) = create_builder_tensor(result_layout, requires_grad);
                     results.push(result_tensor);
@@ -179,7 +177,7 @@ impl Tensor {
                 .iter()
                 .map(|&size| {
                     let mut result_dims = shape_dims.to_vec();
-                    result_dims[dim_usize] = size as u32;
+                    result_dims[dim_usize] = size;
                     Layout::from_shape(&Shape::from(result_dims))
                 })
                 .collect();
@@ -212,15 +210,15 @@ impl Tensor {
             Ok(results)
         } else {
             let mut results = Vec::new();
-            let mut start = 0u32;
+            let mut start = 0;
 
             for (output_index, &size) in sizes.iter().enumerate() {
                 let storage = self.with_storage(|storage| {
-                    storage.call_ops_split(&self.layout(), dim_u32, start, size as u32, Op::Split(SplitOp::Split))
+                    storage.call_ops_split(&self.layout(), dim_usize, start, size, Op::Split(SplitOp::Split))
                 })?;
 
                 let mut result_dims = shape_dims.to_vec();
-                result_dims[dim_usize] = size as u32;
+                result_dims[dim_usize] = size;
                 let result_layout = Layout::from_shape(&Shape::from(result_dims));
                 let result = from_storage(storage, result_layout, true, requires_grad);
 
@@ -236,7 +234,7 @@ impl Tensor {
                 }
 
                 results.push(result);
-                start += size as u32;
+                start += size;
             }
 
             Ok(results)
@@ -254,7 +252,7 @@ impl Tensor {
         };
         let shape = self.shape();
         let shape_dims = shape.dims();
-        let dim_size = shape_dims[dim_usize] as usize;
+        let dim_size = shape_dims[dim_usize];
 
         let chunk_size = dim_size.div_ceil(chunks);
         let sizes: Vec<usize> = (0..chunks)

@@ -27,29 +27,29 @@ pub fn call_ops_binary(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shapes
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", binary_op, lhs_storage.dtype());
@@ -58,7 +58,7 @@ pub fn call_ops_binary(
 
     // Create output storage
     let dtype = lhs_storage.dtype();
-    let mut output = CpuDevice::allocate(num_els as usize, dtype)?;
+    let mut output = CpuDevice::allocate(num_els, dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -156,29 +156,29 @@ pub fn call_ops_binary_logical(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shapes
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", binary_op, lhs_storage.dtype());
@@ -186,7 +186,7 @@ pub fn call_ops_binary_logical(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (logical ops return BOOL)
-    let mut output = CpuDevice::allocate(num_els as usize, crate::types::DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els, crate::types::DType::BOOL)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {
@@ -280,29 +280,29 @@ pub fn call_ops_cmp(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shapes
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", cmp_op, lhs_storage.dtype());
@@ -310,7 +310,7 @@ pub fn call_ops_cmp(
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
     // Create output storage (cmp ops return BOOL)
-    let mut output = CpuDevice::allocate(num_els as usize, crate::types::DType::BOOL)?;
+    let mut output = CpuDevice::allocate(num_els, crate::types::DType::BOOL)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

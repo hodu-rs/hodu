@@ -19,17 +19,17 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &stride in layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
@@ -154,17 +154,17 @@ pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: 
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &stride in layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
@@ -226,17 +226,17 @@ pub fn call_ops_unary_scalar(
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &stride in layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
@@ -306,17 +306,17 @@ pub fn call_ops_cmp_scalar(
     let num_els = shape.size();
     let num_dims = shape.ndim();
 
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims as usize + 1);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     for &dim in shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &stride in layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
-    metadata.push(layout.offset() as usize);
+    metadata.push(layout.offset());
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();

@@ -26,35 +26,35 @@ pub fn call_ops_binary(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shapes
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "binary_output")?;
+    let output_buffer = device.new_buffer(num_els, dtype, "binary_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", binary_op, dtype);
@@ -78,12 +78,7 @@ pub fn call_ops_binary(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
 }
 
 pub fn call_ops_binary_logical(
@@ -109,36 +104,36 @@ pub fn call_ops_binary_logical(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shapes
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let input_dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
     // Create output buffer (logical ops return BOOL)
     let output_dtype = DType::BOOL;
-    let output_buffer = device.new_buffer(num_els as usize, output_dtype, "binary_logical_output")?;
+    let output_buffer = device.new_buffer(num_els, output_dtype, "binary_logical_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", binary_op, input_dtype);
@@ -162,12 +157,7 @@ pub fn call_ops_binary_logical(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        output_dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, output_dtype))
 }
 
 pub fn call_ops_cmp(
@@ -189,36 +179,36 @@ pub fn call_ops_cmp(
     let num_dims = lhs_shape.ndim();
 
     // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims as usize + 2);
-    metadata.push(num_els as usize);
-    metadata.push(num_dims as usize);
+    let mut metadata = Vec::with_capacity(2 + 4 * num_dims + 2);
+    metadata.push(num_els);
+    metadata.push(num_dims);
 
     // Add shapes
     for &dim in lhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
     for &dim in rhs_shape.dims() {
-        metadata.push(dim as usize);
+        metadata.push(dim);
     }
 
     // Add strides
     for &stride in lhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
     for &stride in rhs_layout.strides() {
-        metadata.push(stride as usize);
+        metadata.push(stride);
     }
 
     // Add offsets
-    metadata.push(lhs_layout.offset() as usize);
-    metadata.push(rhs_layout.offset() as usize);
+    metadata.push(lhs_layout.offset());
+    metadata.push(rhs_layout.offset());
 
     let input_dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
     // Create output buffer (cmp ops return BOOL)
     let output_dtype = DType::BOOL;
-    let output_buffer = device.new_buffer(num_els as usize, output_dtype, "cmp_output")?;
+    let output_buffer = device.new_buffer(num_els, output_dtype, "cmp_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", cmp_op, input_dtype);
@@ -242,10 +232,5 @@ pub fn call_ops_cmp(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        output_dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, output_dtype))
 }

@@ -20,7 +20,7 @@ impl VjpCompute for IndexingOp {
                 "Indexing operation requires dimension parameter".to_string(),
             ));
         }
-        let dim = params[0].to_u32() as usize;
+        let dim = params[0].to_usize();
 
         match self {
             IndexingOp::IndexSelect => {

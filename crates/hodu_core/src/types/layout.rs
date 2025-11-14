@@ -14,13 +14,13 @@ use crate::{
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub struct Layout {
     shape: Shape,
-    strides: Vec<u32>,
-    offset: u32,
+    strides: Vec<usize>,
+    offset: usize,
 }
 
 impl Layout {
     /// Creates a new layout with given shape and strides.
-    pub fn new(shape: Shape, strides: Vec<u32>) -> Self {
+    pub fn new(shape: Shape, strides: Vec<usize>) -> Self {
         Self {
             shape,
             strides,
@@ -46,36 +46,43 @@ impl Layout {
 
     /// Returns the strides as a slice.
     #[inline]
-    pub fn strides(&self) -> &[u32] {
+    pub fn strides(&self) -> &[usize] {
         &self.strides
     }
 
     /// Returns the offset into the underlying storage.
     #[inline]
-    pub fn offset(&self) -> u32 {
+    pub fn offset(&self) -> usize {
         self.offset
     }
 
     /// Returns the number of dimensions.
     #[inline]
-    pub fn ndim(&self) -> u32 {
+    pub fn ndim(&self) -> usize {
         self.shape.ndim()
     }
 
     /// Returns the size of a specific dimension.
     #[inline]
-    pub fn dim(&self, index: u32) -> Option<u32> {
-        self.shape.dim(index)
+    pub fn dim_size(&self, index: i32) -> Option<usize> {
+        let ndim = self.ndim() as i32;
+        let normalized = if index < 0 { ndim + index } else { index };
+
+        if normalized >= 0 && normalized < ndim {
+            Some(self.shape[normalized as usize])
+        } else {
+            None
+        }
     }
 
     /// Returns the total number of elements.
     #[inline]
-    pub fn size(&self) -> u32 {
+    pub fn size(&self) -> usize {
         self.shape.size()
     }
 
     /// Returns the required buffer size (offset + size).
-    pub fn buffer_size(&self) -> u32 {
+    pub fn buffer_size(&self) -> usize {
         self.offset + self.size()
     }
 
@@ -85,12 +92,12 @@ impl Layout {
     }
 
     /// Sets new strides.
-    pub fn set_strides(&mut self, strides: Vec<u32>) {
+    pub fn set_strides(&mut self, strides: Vec<usize>) {
         self.strides = strides;
     }
 
     /// Sets a new offset.
-    pub fn set_offset(&mut self, offset: u32) {
+    pub fn set_offset(&mut self, offset: usize) {
         self.offset = offset;
     }
 
@@ -101,10 +108,9 @@ impl Layout {
             return true;
         }
 
-        let mut expected_stride: u32 = 1;
+        let mut expected_stride = 1;
         for i in (0..ndim).rev() {
-            let idx = i as usize;
-            if self.strides[idx] != expected_stride {
+            if self.strides[i] != expected_stride {
                 return false;
             }
             expected_stride *= self.shape[i];
@@ -114,18 +120,15 @@ impl Layout {
     }
 
     /// Computes contiguous strides for a given shape.
-    pub fn compute_strides(shape: &Shape) -> Vec<u32> {
+    pub fn compute_strides(shape: &Shape) -> Vec<usize> {
         let ndim = shape.ndim();
         if ndim == 0 {
             return vec![];
         }
 
-        let ndim_usize = ndim as usize;
-        let mut strides = vec![1; ndim_usize];
+        let mut strides = vec![1; ndim];
         for i in (0..ndim - 1).rev() {
-            let idx = i as usize;
-            let idx_next = (i + 1) as usize;
-            strides[idx] = strides[idx_next] * shape[i + 1];
+            strides[i] = strides[i + 1] * shape[i + 1];
         }
         strides
     }
@@ -188,7 +191,7 @@ impl Layout {
     /// If `dims` is not empty, only the specified dimensions are removed (if they have size 1).
     /// The layout must be contiguous for squeezing to succeed.
     pub fn squeeze(&self, dims_to_squeeze: &[i32]) -> HoduResult<Self> {
-        let ndim = self.ndim() as i32;
+        let ndim = self.ndim();
         let shape_dims = self.shape.dims();
 
         // Squeeze only works on contiguous tensors
@@ -205,13 +208,14 @@ impl Layout {
             // Normalize and validate dimensions to squeeze
             let mut actual_dims = Vec::new();
             for &dim in dims_to_squeeze {
-                let actual_dim = if dim < 0 { (ndim + dim) as usize } else { dim as usize };
+                let actual_dim = if dim < 0 {
+                    (ndim as i32 + dim) as usize
+                } else {
+                    dim as usize
+                };
 
-                if actual_dim >= ndim as usize {
-                    return Err(HoduError::InvalidAxis {
-                        axis: dim,
-                        ndim: self.ndim(),
-                    });
+                if actual_dim >= ndim {
+                    return Err(HoduError::InvalidAxis { axis: dim, ndim });
                 }
 
                 if shape_dims[actual_dim] != 1 {
@@ -246,7 +250,7 @@ impl Layout {
 
     /// Unsqueezes (adds) a dimension of size 1 at the specified position.
     pub fn unsqueeze(&self, dim: i32) -> HoduResult<Self> {
-        let ndim = self.ndim() as usize;
+        let ndim = self.ndim();
         let dims = self.shape.dims();
 
         // Convert negative dimension to positive
@@ -258,10 +262,7 @@ impl Layout {
 
         // Check bounds (can insert at position 0 to ndim inclusive)
         if actual_dim > ndim {
-            return Err(HoduError::InvalidAxis {
-                axis: dim,
-                ndim: self.ndim(),
-            });
+            return Err(HoduError::InvalidAxis { axis: dim, ndim });
         }
 
         // Create new shape with dimension of size 1 inserted
@@ -298,27 +299,24 @@ impl Layout {
         }
 
         let rank_diff = target_shape.ndim() - shape.ndim();
-        let rank_diff_usize = rank_diff as usize;
-        let mut padded_shape = vec![1; rank_diff_usize];
+        let mut padded_shape = vec![1; rank_diff];
         padded_shape.extend_from_slice(shape.dims());
 
         let target_ndim = target_shape.ndim();
-        let target_ndim_usize = target_ndim as usize;
-        let mut new_strides = vec![0; target_ndim_usize];
+        let mut new_strides = vec![0; target_ndim];
 
         for i in 0..target_ndim {
-            let i_usize = i as usize;
-            let src_dim = padded_shape[i_usize];
+            let src_dim = padded_shape[i];
             let tgt_dim = target_shape[i];
 
             if src_dim == tgt_dim {
                 if i < rank_diff {
-                    new_strides[i_usize] = 0;
+                    new_strides[i] = 0;
                 } else {
-                    new_strides[i_usize] = self.strides[i_usize - rank_diff_usize];
+                    new_strides[i] = self.strides[i - rank_diff];
                 }
             } else if src_dim == 1 {
-                new_strides[i_usize] = 0;
+                new_strides[i] = 0;
             } else {
                 return Err(HoduError::IncompatibleShapes {
                     lhs: shape.clone(),
@@ -371,10 +369,8 @@ impl Layout {
         let mut new_shape = self.shape.clone();
         let mut new_strides = self.strides.clone();
 
-        let dim1_usize = dim1 as usize;
-        let dim2_usize = dim2 as usize;
-        new_shape.dims_mut().swap(dim1_usize, dim2_usize);
-        new_strides.swap(dim1_usize, dim2_usize);
+        new_shape.dims_mut().swap(dim1, dim2);
+        new_strides.swap(dim1, dim2);
 
         Ok(Self {
             shape: new_shape,
@@ -385,9 +381,9 @@ impl Layout {
 
     /// Permutes dimensions according to the given axes.
     pub fn permute(&self, axes: &[i32]) -> HoduResult<Self> {
-        let ndim = self.ndim() as i32;
+        let ndim = self.ndim();
 
-        if axes.len() as i32 != ndim {
+        if axes.len() != ndim {
             return Err(HoduError::InternalError(format!(
                 "permute axes length {} must match tensor dimensions {}",
                 axes.len(),
@@ -396,23 +392,14 @@ impl Layout {
         }
 
         // Normalize negative axes and validate
-        let ndim_usize = ndim as usize;
-        let mut actual_axes = Vec::with_capacity(ndim_usize);
-        let mut seen = vec![false; ndim_usize];
+        let mut actual_axes = Vec::with_capacity(ndim);
+        let mut seen = vec![false; ndim];
 
         for &axis in axes {
-            let actual_axis = if axis < 0 {
-                (ndim + axis) as usize
-            } else {
-                axis as usize
-            };
-
-            if actual_axis >= ndim_usize {
-                return Err(HoduError::InvalidAxis {
-                    axis,
-                    ndim: self.ndim(),
-                });
-            }
+            let actual_axis = self
+                .shape
+                .normalize_axis(axis)
+                .ok_or(HoduError::InvalidAxis { axis, ndim })?;
 
             if seen[actual_axis] {
                 return Err(HoduError::InternalError(format!(
@@ -425,8 +412,8 @@ impl Layout {
         }
 
         // Permute shape and strides according to axes
-        let mut new_dims = Vec::with_capacity(ndim_usize);
-        let mut new_strides = Vec::with_capacity(ndim_usize);
+        let mut new_dims = Vec::with_capacity(ndim);
+        let mut new_strides = Vec::with_capacity(ndim);
 
         for &axis_idx in &actual_axes {
             new_dims.push(self.shape.dims()[axis_idx]);
@@ -442,16 +429,17 @@ impl Layout {
 
     /// Slices a dimension with start, end, and step.
     pub fn slice(&self, dim: i32, start: i32, end: Option<i32>, step: i32) -> HoduResult<Self> {
-        let ndim = self.ndim() as i32;
+        let ndim = self.ndim();
 
         // Normalize negative dim
-        let actual_dim = if dim < 0 { (ndim + dim) as usize } else { dim as usize };
+        let actual_dim = if dim < 0 {
+            (ndim as i32 + dim) as usize
+        } else {
+            dim as usize
+        };
 
-        if actual_dim >= ndim as usize {
-            return Err(HoduError::InvalidAxis {
-                axis: dim,
-                ndim: self.ndim(),
-            });
+        if actual_dim >= ndim {
+            return Err(HoduError::InvalidAxis { axis: dim, ndim });
         }
 
         if step == 0 {
@@ -508,11 +496,11 @@ impl Layout {
         let mut new_shape = self.shape.clone();
         let mut new_strides = self.strides.clone();
 
-        new_shape.dims_mut()[actual_dim] = new_size as u32;
-        new_strides[actual_dim] = self.strides[actual_dim] * step.unsigned_abs();
+        new_shape.dims_mut()[actual_dim] = new_size as usize;
+        new_strides[actual_dim] = self.strides[actual_dim] * step.unsigned_abs() as usize;
 
         // Calculate new offset
-        let new_offset = self.offset + clamped_start as u32 * self.strides[actual_dim];
+        let new_offset = self.offset + clamped_start as usize * self.strides[actual_dim];
 
         Ok(Self {
             shape: new_shape,

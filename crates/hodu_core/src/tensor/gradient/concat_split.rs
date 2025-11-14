@@ -25,7 +25,7 @@ impl VjpCompute for ConcatOp {
             .iter()
             .map(|&id| {
                 let tensor = tensor_from_id(id);
-                tensor.shape().dims()[dim.to_u32() as usize] as usize
+                tensor.shape().dims()[dim.to_usize()] as usize
             })
             .collect();
 
@@ -53,8 +53,8 @@ impl VjpCompute for SplitOp {
         let input_shape = input_tensor.shape();
         let dtype = input_tensor.dtype();
 
-        let dim = params[0].to_u32() as usize;
-        let sizes: Vec<usize> = params[1..].iter().map(|s| s.to_u32() as usize).collect();
+        let dim = params[0].to_usize();
+        let sizes: Vec<usize> = params[1..].iter().map(|s| s.to_usize()).collect();
 
         // Create zero tensors for all splits
         let mut grad_pieces = Vec::new();
@@ -64,8 +64,8 @@ impl VjpCompute for SplitOp {
                 grad_pieces.push(tensor_from_id(grad_output));
             } else {
                 // Create zeros for other outputs
-                let mut piece_shape_dims: Vec<u32> = input_shape.dims().to_vec();
-                piece_shape_dims[dim] = size as u32;
+                let mut piece_shape_dims: Vec<usize> = input_shape.dims().to_vec();
+                piece_shape_dims[dim] = size;
                 let piece_shape = Shape::from(piece_shape_dims);
                 let zeros = Tensor::zeros(&piece_shape, dtype)?;
                 grad_pieces.push(zeros);

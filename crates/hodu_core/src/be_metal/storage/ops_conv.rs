@@ -13,9 +13,9 @@ pub fn call_ops_conv(
     input_layout: &Layout,
     weight_storage: &MetalStorage,
     weight_layout: &Layout,
-    stride: &[u32],
-    padding: &[u32],
-    dilation: &[u32],
+    stride: &[usize],
+    padding: &[usize],
+    dilation: &[usize],
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
@@ -38,14 +38,14 @@ pub fn call_ops_conv(
     let spatial_dims = input_ndim - 2;
 
     // Compute output spatial dimensions
-    let mut output_shape_vec: Vec<u32> = vec![input_shape.dims()[0], weight_shape.dims()[0]];
+    let mut output_shape_vec: Vec<usize> = vec![input_shape.dims()[0], weight_shape.dims()[0]];
 
     for i in 0..spatial_dims {
-        let input_size = input_shape.dims()[(2 + i) as usize];
-        let kernel_size = weight_shape.dims()[(2 + i) as usize];
-        let s = stride[i as usize];
-        let p = padding[i as usize];
-        let d = dilation[i as usize];
+        let input_size = input_shape.dims()[2 + i];
+        let kernel_size = weight_shape.dims()[2 + i];
+        let s = stride[i];
+        let p = padding[i];
+        let d = dilation[i];
 
         let output_size = (input_size + 2 * p - d * (kernel_size - 1) - 1) / s + 1;
         output_shape_vec.push(output_size);
@@ -57,41 +57,41 @@ pub fn call_ops_conv(
     // Build metadata array
     let mut metadata = Vec::new();
     metadata.push(num_els as usize);
-    metadata.push(input_ndim as usize);
-    metadata.push(spatial_dims as usize);
+    metadata.push(input_ndim);
+    metadata.push(spatial_dims);
 
     // Add shapes
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in weight_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in &output_shape_vec {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add strides
     for &s in input_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &s in weight_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add offsets
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(weight_layout.offset() as usize);
+    metadata.push(input_layout.offset());
+    metadata.push(weight_layout.offset());
 
     // Add conv parameters
     for &s in stride {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &p in padding {
-        metadata.push(p as usize);
+        metadata.push(p);
     }
     for &d in dilation {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     let dtype = input_storage.dtype();
@@ -137,9 +137,9 @@ pub fn call_ops_conv_grad_weight(
     grad_output_storage: &MetalStorage,
     grad_output_layout: &Layout,
     weight_shape: &Shape,
-    stride: &[u32],
-    padding: &[u32],
-    dilation: &[u32],
+    stride: &[usize],
+    padding: &[usize],
+    dilation: &[usize],
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
@@ -158,53 +158,53 @@ pub fn call_ops_conv_grad_weight(
 
     // Build metadata array
     let mut metadata = Vec::new();
-    metadata.push(num_els as usize);
+    metadata.push(num_els);
 
     let input_ndim = input_shape.ndim();
     let spatial_dims = input_ndim - 2;
 
-    metadata.push(input_ndim as usize);
-    metadata.push(spatial_dims as usize);
+    metadata.push(input_ndim);
+    metadata.push(spatial_dims);
 
     // Add shapes
     for &d in input_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in grad_output_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
     for &d in weight_shape.dims() {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     // Add strides
     for &s in input_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &s in grad_output_layout.strides() {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
 
     // Add offsets
-    metadata.push(input_layout.offset() as usize);
-    metadata.push(grad_output_layout.offset() as usize);
+    metadata.push(input_layout.offset());
+    metadata.push(grad_output_layout.offset());
 
     // Add conv parameters
     for &s in stride {
-        metadata.push(s as usize);
+        metadata.push(s);
     }
     for &p in padding {
-        metadata.push(p as usize);
+        metadata.push(p);
     }
     for &d in dilation {
-        metadata.push(d as usize);
+        metadata.push(d);
     }
 
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(num_els as usize, dtype, "conv_grad_weight_output")?;
+    let output_buffer = device.new_buffer(num_els, dtype, "conv_grad_weight_output")?;
 
     // Get kernel name
     let kernel_name = format!("conv_grad_weight_{}", dtype);
@@ -228,10 +228,5 @@ pub fn call_ops_conv_grad_weight(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        num_els as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
 }
