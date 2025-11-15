@@ -13,6 +13,7 @@ from pathlib import Path
 # Try to import rich for beautiful output
 try:
     from rich import box
+    from rich.box import Box
     from rich.console import Console
     from rich.layout import Layout
     from rich.panel import Panel
@@ -24,6 +25,20 @@ try:
         TimeElapsedColumn,
     )
     from rich.table import Table
+
+    # Create custom box style with dotted lines for section separators
+    CUSTOM_BOX = Box(
+        """\
+╭─┬╮
+│ ││
+├─┼┤
+│ ││
+├╌┼┤
+│ ││
+│ ││
+╰─┴╯
+"""
+    )
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -191,8 +206,8 @@ class BenchmarkRunner:
     def _cleanup_after_benchmark(self):
         """Cleanup memory and force garbage collection between benchmarks."""
         import gc
-        import time
         import sys
+        import time
 
         # Force multiple rounds of garbage collection
         for _ in range(3):
@@ -260,27 +275,34 @@ class BenchmarkRunner:
             self.console.print("[red]No timing data found[/red]")
             return
 
-        # Create table
-        table = Table(
-            title=f"[bold cyan]{bench_type.upper()} Benchmark Results[/bold cyan]",
-            box=box.ROUNDED,
-            show_header=True,
-            header_style="bold magenta",
-            title_style="bold cyan",
-        )
-
-        table.add_column("Framework", style="cyan", width=14)
-        table.add_column("Mode", style="yellow", width=18)
-
-        # Add size columns
-        for size in sizes:
-            table.add_column(f"{size}\nTime", justify="right", width=12)
-            table.add_column("Ratio", justify="right", width=10)
-
-        # Add CPU results
+        # Create and display CPU table
         if cpu_results:
+            cpu_table = Table(
+                title=f"[bold cyan]{bench_type.upper()} Benchmark Results - CPU[/bold cyan]",
+                box=CUSTOM_BOX,
+                show_header=True,
+                header_style="bold magenta",
+                title_style="bold cyan",
+            )
+
+            cpu_table.add_column("Framework", style="cyan", width=14)
+            cpu_table.add_column("Mode", style="yellow", width=18)
+
+            # Add size columns
+            for size in sizes:
+                cpu_table.add_column(f"{size}\nTime", justify="right", width=12)
+                cpu_table.add_column("Ratio", justify="right", width=10)
+
             cpu_baseline_results = cpu_results.get(cpu_baseline, {})
-            for impl_name in sorted(cpu_results.keys()):
+            sorted_keys = sorted(cpu_results.keys())
+            hodu_started = False
+
+            for impl_name in sorted_keys:
+                # Add separator before Hodu group
+                if impl_name.startswith("Hodu") and not hodu_started:
+                    cpu_table.add_section()
+                    hodu_started = True
+
                 results = cpu_results[impl_name]
                 parts = impl_name.split(" - ")
                 framework = parts[0] if parts else impl_name
@@ -322,15 +344,49 @@ class BenchmarkRunner:
                     else:
                         row.append("[dim]-[/dim]")
 
-                table.add_row(*row)
+                cpu_table.add_row(*row)
 
-        # Add separator and GPU results
-        if cpu_results and gpu_results:
-            table.add_section()
+                # Add separator after Hodu group
+                if hodu_started and impl_name.startswith("Hodu"):
+                    next_idx = sorted_keys.index(impl_name) + 1
+                    if next_idx < len(sorted_keys) and not sorted_keys[
+                        next_idx
+                    ].startswith("Hodu"):
+                        cpu_table.add_section()
 
+            self.console.print(cpu_table)
+
+        # Create and display GPU table
         if gpu_results:
+            if cpu_results:
+                self.console.print()  # Add spacing between tables
+
+            gpu_table = Table(
+                title=f"[bold cyan]{bench_type.upper()} Benchmark Results - GPU[/bold cyan]",
+                box=CUSTOM_BOX,
+                show_header=True,
+                header_style="bold magenta",
+                title_style="bold cyan",
+            )
+
+            gpu_table.add_column("Framework", style="cyan", width=14)
+            gpu_table.add_column("Mode", style="yellow", width=18)
+
+            # Add size columns
+            for size in sizes:
+                gpu_table.add_column(f"{size}\nTime", justify="right", width=12)
+                gpu_table.add_column("Ratio", justify="right", width=10)
+
             gpu_baseline_results = gpu_results.get(gpu_baseline, {})
-            for impl_name in sorted(gpu_results.keys()):
+            sorted_keys = sorted(gpu_results.keys())
+            hodu_started = False
+
+            for impl_name in sorted_keys:
+                # Add separator before Hodu group
+                if impl_name.startswith("Hodu") and not hodu_started:
+                    gpu_table.add_section()
+                    hodu_started = True
+
                 results = gpu_results[impl_name]
                 parts = impl_name.split(" - ")
                 framework = parts[0] if parts else impl_name
@@ -372,9 +428,17 @@ class BenchmarkRunner:
                     else:
                         row.append("[dim]-[/dim]")
 
-                table.add_row(*row)
+                gpu_table.add_row(*row)
 
-        self.console.print(table)
+                # Add separator after Hodu group
+                if hodu_started and impl_name.startswith("Hodu"):
+                    next_idx = sorted_keys.index(impl_name) + 1
+                    if next_idx < len(sorted_keys) and not sorted_keys[
+                        next_idx
+                    ].startswith("Hodu"):
+                        gpu_table.add_section()
+
+            self.console.print(gpu_table)
 
     def _create_simple_table(
         self, bench_type, cpu_results, gpu_results, cpu_baseline, gpu_baseline
