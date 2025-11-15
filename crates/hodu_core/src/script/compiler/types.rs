@@ -51,6 +51,8 @@ pub struct CompiledModule {
     pub value_to_tensor: HashMap<ValueId, TensorId>,
     pub compiler: Compiler,
     pub device: Device,
+    /// Maximum ValueId used in this module (cached for efficient storage allocation)
+    pub max_value_id: usize,
 }
 
 #[derive(Debug, Clone)]

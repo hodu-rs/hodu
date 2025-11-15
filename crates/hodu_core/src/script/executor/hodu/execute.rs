@@ -15,19 +15,9 @@ use crate::{
 pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduResult<ExecutionOutputs> {
     validate_inputs(compiled, &inputs)?;
 
-    // Calculate max ValueId to pre-allocate storage
-    let max_value_id = compiled
-        .execution_plan
-        .iter()
-        .flat_map(|instr| instr.inputs.iter().chain(iter::once(&instr.result)))
-        .chain(compiled.input_mapping.values())
-        .chain(compiled.output_mapping.values())
-        .map(|vid| vid.0)
-        .max()
-        .unwrap_or(0);
-
     // Use Vec instead of HashMap for O(1) access
-    let mut value_storage: Vec<Option<Arc<BackendStorage>>> = vec![None; max_value_id + 1];
+    // max_value_id is pre-computed during compilation for efficiency
+    let mut value_storage: Vec<Option<Arc<BackendStorage>>> = vec![None; compiled.max_value_id + 1];
 
     // Load input values
     for (name, value_id) in &compiled.input_mapping {

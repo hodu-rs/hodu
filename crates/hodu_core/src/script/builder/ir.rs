@@ -248,11 +248,11 @@ impl Function {
     }
 
     pub fn get_block(&self, block_id: BlockId) -> Option<&BasicBlock> {
-        self.blocks.iter().find(|b| b.id == block_id)
+        self.blocks.get(block_id.0)
     }
 
     pub fn get_block_mut(&mut self, block_id: BlockId) -> Option<&mut BasicBlock> {
-        self.blocks.iter_mut().find(|b| b.id == block_id)
+        self.blocks.get_mut(block_id.0)
     }
 }
 

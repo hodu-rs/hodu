@@ -70,11 +70,20 @@ class BenchmarkRunner:
             )
         )
 
-    def run_command(self, command, cwd=None):
-        """Run a command and capture output."""
+    def run_command(self, command, cwd=None, clean_environment=False):
+        """Run a command and capture output with optional process isolation."""
         try:
+            # Create a clean environment if requested (for process isolation)
+            env = None
+            if clean_environment:
+                import os
+
+                env = os.environ.copy()
+                # Clear any cached library state
+                env["OPENBLAS_NUM_THREADS"] = str(os.cpu_count() or 4)
+
             result = subprocess.run(
-                command, check=False, capture_output=True, text=True, cwd=cwd
+                command, check=False, capture_output=True, text=True, cwd=cwd, env=env
             )
             return result
         except Exception as e:
@@ -153,7 +162,7 @@ class BenchmarkRunner:
         return framework_features.get("default", "")
 
     def run_rust_benchmark(self, bench_type, framework, mode):
-        """Run Rust-based benchmark."""
+        """Run Rust-based benchmark with process isolation."""
         features = self.get_rust_features(framework, mode)
         cmd = [
             "cargo",
@@ -168,11 +177,39 @@ class BenchmarkRunner:
             str(self.iterations),
         ]
 
-        result = self.run_command(cmd, cwd=Path(__file__).parent / bench_type)
+        result = self.run_command(
+            cmd, cwd=Path(__file__).parent / bench_type, clean_environment=True
+        )
 
         if result and result.returncode == 0:
-            return self.parse_benchmark_output(result.stdout)
+            parsed_result = self.parse_benchmark_output(result.stdout)
+            # Force garbage collection and memory cleanup after each benchmark
+            self._cleanup_after_benchmark()
+            return parsed_result
         return None, {}
+
+    def _cleanup_after_benchmark(self):
+        """Cleanup memory and force garbage collection between benchmarks."""
+        import gc
+        import time
+        import sys
+
+        # Force multiple rounds of garbage collection
+        for _ in range(3):
+            gc.collect()
+
+        # On macOS, try to hint the OS to reclaim memory
+        if sys.platform == "darwin":
+            try:
+                import subprocess
+
+                # Sync file system buffers
+                subprocess.run(["sync"], check=False, capture_output=True, timeout=1)
+            except:
+                pass
+
+        # Longer delay to allow OS to reclaim memory and cool down CPU
+        time.sleep(1.0)
 
     def get_python_executable(self, script):
         """Get the appropriate Python executable."""
@@ -185,14 +222,19 @@ class BenchmarkRunner:
         return "python3"
 
     def run_python_benchmark(self, bench_type, script, mode):
-        """Run Python-based benchmark."""
+        """Run Python-based benchmark with process isolation."""
         python_exe = self.get_python_executable(script)
         cmd = [python_exe, script, mode, str(self.warmup), str(self.iterations)]
 
-        result = self.run_command(cmd, cwd=Path(__file__).parent / bench_type)
+        result = self.run_command(
+            cmd, cwd=Path(__file__).parent / bench_type, clean_environment=True
+        )
 
         if result and result.returncode == 0:
-            return self.parse_benchmark_output(result.stdout)
+            parsed_result = self.parse_benchmark_output(result.stdout)
+            # Force garbage collection and memory cleanup after each benchmark
+            self._cleanup_after_benchmark()
+            return parsed_result
         else:
             error_msg = result.stderr if result else "Unknown error"
             if "ModuleNotFoundError" in error_msg or "ImportError" in error_msg:

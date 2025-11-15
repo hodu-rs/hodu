@@ -52,6 +52,16 @@ impl CompilerT for XlaCompiler {
         // XLA doesn't use constant_storages (XLA executor builds constants directly)
         let constant_storages = HashMap::new();
 
+        // Calculate max ValueId for efficient storage allocation during execution
+        let max_value_id = execution_plan
+            .iter()
+            .flat_map(|instr| instr.inputs.iter().chain(iter::once(&instr.result)))
+            .chain(input_mapping.values())
+            .chain(output_mapping.values())
+            .map(|vid| vid.0)
+            .max()
+            .unwrap_or(0);
+
         Ok(CompiledModule {
             module: module.clone(),
             execution_plan,
@@ -64,6 +74,7 @@ impl CompilerT for XlaCompiler {
             value_to_tensor,
             compiler: Compiler::XLA,
             device: options.device,
+            max_value_id,
         })
     }
 }

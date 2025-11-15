@@ -87,6 +87,16 @@ impl CompilerT for HoduCompiler {
         // Pre-convert constants to target device
         let constant_storages = self.convert_constants_to_device(&constant_data, options.device)?;
 
+        // Calculate max ValueId for efficient storage allocation during execution
+        let max_value_id = execution_plan
+            .iter()
+            .flat_map(|instr| instr.inputs.iter().chain(iter::once(&instr.result)))
+            .chain(input_mapping.values())
+            .chain(output_mapping.values())
+            .map(|vid| vid.0)
+            .max()
+            .unwrap_or(0);
+
         Ok(CompiledModule {
             module: module.clone(),
             execution_plan,
@@ -99,6 +109,7 @@ impl CompilerT for HoduCompiler {
             value_to_tensor,
             compiler: Compiler::HODU,
             device: options.device,
+            max_value_id,
         })
     }
 }
