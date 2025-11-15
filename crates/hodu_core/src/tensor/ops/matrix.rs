@@ -154,11 +154,14 @@ impl Tensor {
         }
 
         // Broadcast both tensors to have the same batch dimensions
-        let mut lhs_broadcast_dims = batch_dims.clone();
+        // Pre-allocate with exact capacity to avoid reallocation
+        let mut lhs_broadcast_dims = Vec::with_capacity(max_batch_ndim + 2);
+        lhs_broadcast_dims.extend_from_slice(&batch_dims);
         lhs_broadcast_dims.push(lhs_dims[lhs_ndim - 2]);
         lhs_broadcast_dims.push(lhs_dims[lhs_ndim - 1]);
 
-        let mut rhs_broadcast_dims = batch_dims.clone();
+        let mut rhs_broadcast_dims = Vec::with_capacity(max_batch_ndim + 2);
+        rhs_broadcast_dims.extend_from_slice(&batch_dims);
         rhs_broadcast_dims.push(rhs_dims[rhs_ndim - 2]);
         rhs_broadcast_dims.push(rhs_dims[rhs_ndim - 1]);
 
@@ -166,6 +169,7 @@ impl Tensor {
         let rhs_broadcasted = other.broadcast(Shape::from(rhs_broadcast_dims))?;
 
         // Result shape: batch_dims + [M, N]
+        // Reuse batch_dims vec instead of cloning
         let mut result_dims = batch_dims;
         result_dims.push(lhs_dims[lhs_ndim - 2]); // M
         result_dims.push(rhs_dims[rhs_ndim - 1]); // N
