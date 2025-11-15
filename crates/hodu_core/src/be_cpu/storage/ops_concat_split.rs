@@ -155,7 +155,7 @@ pub fn call_ops_concat(
     macro_rules! concat_impl {
         ($variant:ident, $inner_type:ty) => {{
             // Extract all data vectors
-            let mut input_vecs = Vec::new();
+            let mut input_vecs = Vec::with_capacity(num_inputs);
             for storage in &storages {
                 match storage {
                     CpuStorage::$variant(data) => input_vecs.push(data.as_slice()),
@@ -169,7 +169,8 @@ pub fn call_ops_concat(
             }
 
             // Pack into contiguous buffer
-            let mut input_buffer = Vec::new();
+            let total_size: usize = input_vecs.iter().map(|v| v.len()).sum();
+            let mut input_buffer = Vec::with_capacity(total_size);
             for data in input_vecs {
                 input_buffer.extend_from_slice(data);
             }
