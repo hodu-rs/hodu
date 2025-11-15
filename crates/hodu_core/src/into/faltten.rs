@@ -56,7 +56,8 @@ macro_rules! into_flattened_impl {
         impl IntoFlattened for Vec<Vec<$t>> {
             type Elem = $t;
             fn to_flatten_vec(self) -> Vec<$t> {
-                let mut flat = Vec::new();
+                let capacity = self.iter().map(|row| row.len()).sum();
+                let mut flat = Vec::with_capacity(capacity);
                 for row in self {
                     flat.extend(row);
                 }
@@ -82,7 +83,11 @@ macro_rules! into_flattened_impl {
         impl IntoFlattened for Vec<Vec<Vec<$t>>> {
             type Elem = $t;
             fn to_flatten_vec(self) -> Vec<$t> {
-                let mut flat = Vec::new();
+                let capacity = self
+                    .iter()
+                    .map(|matrix| matrix.iter().map(|row| row.len()).sum::<usize>())
+                    .sum();
+                let mut flat = Vec::with_capacity(capacity);
                 for matrix in self {
                     for row in matrix {
                         flat.extend(row);
@@ -110,7 +115,15 @@ macro_rules! into_flattened_impl {
         impl IntoFlattened for Vec<Vec<Vec<Vec<$t>>>> {
             type Elem = $t;
             fn to_flatten_vec(self) -> Vec<$t> {
-                let mut flat = Vec::new();
+                let capacity = self
+                    .iter()
+                    .map(|t3d| {
+                        t3d.iter()
+                            .map(|matrix| matrix.iter().map(|row| row.len()).sum::<usize>())
+                            .sum::<usize>()
+                    })
+                    .sum();
+                let mut flat = Vec::with_capacity(capacity);
                 for tensor3d in self {
                     for matrix in tensor3d {
                         for row in matrix {
@@ -140,7 +153,19 @@ macro_rules! into_flattened_impl {
         impl IntoFlattened for Vec<Vec<Vec<Vec<Vec<$t>>>>> {
             type Elem = $t;
             fn to_flatten_vec(self) -> Vec<$t> {
-                let mut flat = Vec::new();
+                let capacity = self
+                    .iter()
+                    .map(|t4d| {
+                        t4d.iter()
+                            .map(|t3d| {
+                                t3d.iter()
+                                    .map(|matrix| matrix.iter().map(|row| row.len()).sum::<usize>())
+                                    .sum::<usize>()
+                            })
+                            .sum::<usize>()
+                    })
+                    .sum();
+                let mut flat = Vec::with_capacity(capacity);
                 for tensor4d in self {
                     for tensor3d in tensor4d {
                         for matrix in tensor3d {
@@ -178,7 +203,23 @@ macro_rules! into_flattened_impl {
         impl IntoFlattened for Vec<Vec<Vec<Vec<Vec<Vec<$t>>>>>> {
             type Elem = $t;
             fn to_flatten_vec(self) -> Vec<$t> {
-                let mut flat = Vec::new();
+                let capacity = self
+                    .iter()
+                    .map(|t5d| {
+                        t5d.iter()
+                            .map(|t4d| {
+                                t4d.iter()
+                                    .map(|t3d| {
+                                        t3d.iter()
+                                            .map(|matrix| matrix.iter().map(|row| row.len()).sum::<usize>())
+                                            .sum::<usize>()
+                                    })
+                                    .sum::<usize>()
+                            })
+                            .sum::<usize>()
+                    })
+                    .sum();
+                let mut flat = Vec::with_capacity(capacity);
                 for tensor5d in self {
                     for tensor4d in tensor5d {
                         for tensor3d in tensor4d {
