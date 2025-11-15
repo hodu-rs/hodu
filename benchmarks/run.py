@@ -223,8 +223,34 @@ class BenchmarkRunner:
             except:
                 pass
 
-        # Longer delay to allow OS to reclaim memory and cool down CPU
-        time.sleep(1.0)
+        # Wait for system to stabilize
+        self._wait_for_system_stable()
+
+    def _wait_for_system_stable(self):
+        """Wait for CPU load to stabilize before next benchmark."""
+        import time
+        import psutil
+
+        max_wait = 10  # Maximum wait time in seconds
+        check_interval = 0.5  # Check every 0.5 seconds
+        cpu_threshold = 20.0  # CPU usage threshold (%)
+
+        elapsed = 0
+        while elapsed < max_wait:
+            # Check CPU usage
+            cpu_percent = psutil.cpu_percent(interval=0.1)
+
+            if cpu_percent < cpu_threshold:
+                # Additional cooldown after CPU stabilizes
+                time.sleep(2.0)
+                break
+
+            time.sleep(check_interval)
+            elapsed += check_interval
+
+        # Minimum delay even if CPU is stable
+        if elapsed < 1.0:
+            time.sleep(1.0 - elapsed)
 
     def get_python_executable(self, script):
         """Get the appropriate Python executable."""
