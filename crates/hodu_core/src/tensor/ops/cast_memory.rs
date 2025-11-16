@@ -14,8 +14,8 @@ impl Tensor {
         validate_dtype_for_device(dtype, self.device())?;
 
         if builder::is_builder_active() {
-            let layout = Layout::from_shape(&self.shape());
-            let (result_id, result_tensor) = create_builder_tensor(layout.clone(), false);
+            let input_layout = self.layout();
+            let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
 
             let op_params = OpParams {
                 dtype: Some(dtype),
@@ -27,8 +27,8 @@ impl Tensor {
                 Some(op_params),
                 vec![self.id()],
                 vec![result_id],
-                vec![self.layout()],
-                vec![layout],
+                vec![input_layout.clone()],
+                vec![input_layout],
             )?;
 
             Ok(result_tensor)
@@ -64,8 +64,8 @@ impl Tensor {
         }
 
         if builder::is_builder_active() {
-            let layout = Layout::from_shape(&self.shape());
-            let (result_id, result_tensor) = create_builder_tensor(layout.clone(), false);
+            let result_layout = Layout::from_shape(&self.shape());
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
             register_operation_in_builder(
                 Op::Memory(MemoryOp::Contiguous),
@@ -73,7 +73,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![self.layout()],
-                vec![layout],
+                vec![result_layout],
             )?;
 
             Ok(result_tensor)

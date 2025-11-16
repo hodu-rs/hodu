@@ -19,17 +19,16 @@ macro_rules! unary_op {
             let input_layout = self.layout();
 
             if builder::is_builder_active() {
-                let result_layout = Layout::from_shape(&self.shape());
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::Unary(UnaryOp::$op_name),
                     None,
                     vec![self.id()],
                     vec![result_id],
+                    vec![input_layout.clone()],
                     vec![input_layout],
-                    vec![result_layout],
                 )?;
 
                 if requires_grad {
@@ -66,16 +65,15 @@ macro_rules! unary_logical_op {
             let input_layout = self.layout();
 
             if builder::is_builder_active() {
-                let result_layout = Layout::from_shape(&self.shape());
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::UnaryLogical(UnaryLogicalOp::$op_name),
                     None,
                     vec![self.id()],
                     vec![result_id],
+                    vec![input_layout.clone()],
                     vec![input_layout],
-                    vec![result_layout],
                 )?;
 
                 Ok(result_tensor)
@@ -105,9 +103,8 @@ macro_rules! unary_scalar_op {
             let input_layout = self.layout();
 
             if builder::is_builder_active() {
-                let result_layout = Layout::from_shape(&self.shape());
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::UnaryScalar(UnaryScalarOp::$op_name),
@@ -117,8 +114,8 @@ macro_rules! unary_scalar_op {
                     }),
                     vec![self.id()],
                     vec![result_id],
+                    vec![input_layout.clone()],
                     vec![input_layout],
-                    vec![result_layout],
                 )?;
 
                 if requires_grad {

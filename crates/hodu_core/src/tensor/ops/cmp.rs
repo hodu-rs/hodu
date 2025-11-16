@@ -23,15 +23,16 @@ macro_rules! cmp_op {
             let rhs_layout = rhs.layout();
 
             if builder::is_builder_active() {
-                let (result_id, result_tensor) = create_builder_tensor(lhs_layout.clone(), false);
+                let result_layout = lhs_layout.clone();
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::Cmp(CmpOp::$op_name),
                     None,
                     vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![lhs_layout.clone(), rhs_layout],
-                    vec![lhs_layout.clone()],
+                    vec![lhs_layout, rhs_layout],
+                    vec![result_layout],
                 )?;
 
                 Ok(result_tensor)
@@ -42,7 +43,7 @@ macro_rules! cmp_op {
                     })
                 })?;
 
-                let result = from_storage(storage, lhs_layout.clone(), true, false);
+                let result = from_storage(storage, lhs_layout, true, false);
 
                 Ok(result)
             }
@@ -60,8 +61,7 @@ macro_rules! cmp_scalar_op {
             let input_layout = self.layout();
 
             if builder::is_builder_active() {
-                let result_layout = Layout::from_shape(&self.shape());
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
 
                 let mut op_params = crate::ops::OpParams::default();
                 op_params.scalar = Some(scalar);
@@ -71,8 +71,8 @@ macro_rules! cmp_scalar_op {
                     Some(op_params),
                     vec![self.id()],
                     vec![result_id],
+                    vec![input_layout.clone()],
                     vec![input_layout],
-                    vec![result_layout],
                 )?;
 
                 Ok(result_tensor)

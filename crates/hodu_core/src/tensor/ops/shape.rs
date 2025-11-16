@@ -17,14 +17,14 @@ impl Tensor {
         if current_size != new_size {
             return Err(HoduError::IncompatibleShapes {
                 lhs: self.shape(),
-                rhs: shape.clone(),
+                rhs: shape,
                 op: Op::Shape(ShapeOp::Reshape),
             });
         }
 
         if !self.is_contiguous() {
             let contiguous = self.contiguous()?;
-            return contiguous.reshape(&shape);
+            return contiguous.reshape(shape);
         }
 
         let current_layout = self.layout();
@@ -40,7 +40,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -83,7 +83,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -130,7 +130,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -172,7 +172,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -212,7 +212,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -270,7 +270,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -321,7 +321,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {
@@ -386,7 +386,7 @@ impl Tensor {
                 vec![self.id()],
                 vec![result_id],
                 vec![current_layout],
-                vec![new_layout.clone()],
+                vec![new_layout],
             )?;
 
             if requires_grad {

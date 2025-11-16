@@ -23,14 +23,14 @@ impl Tensor {
         // Weight: [out_channels, in_channels, kernel_size]
         if input_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv1d),
             });
         }
         if weight_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape.clone(),
+                lhs: weight_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv1d),
             });
@@ -44,8 +44,8 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[1] {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
-                rhs: weight_shape.clone(),
+                lhs: input_shape,
+                rhs: weight_shape,
                 op: Op::Conv(ConvOp::Conv1d),
             });
         }
@@ -154,14 +154,14 @@ impl Tensor {
         // Weight: [out_channels, in_channels, kernel_h, kernel_w]
         if input_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv2d),
             });
         }
         if weight_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape.clone(),
+                lhs: weight_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv2d),
             });
@@ -177,8 +177,8 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[1] {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
-                rhs: weight_shape.clone(),
+                lhs: input_shape,
+                rhs: weight_shape,
                 op: Op::Conv(ConvOp::Conv2d),
             });
         }
@@ -292,14 +292,14 @@ impl Tensor {
         // Weight: [out_channels, in_channels, kernel_d, kernel_h, kernel_w]
         if input_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv3d),
             });
         }
         if weight_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape.clone(),
+                lhs: weight_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv3d),
             });
@@ -317,8 +317,8 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[1] {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
-                rhs: weight_shape.clone(),
+                lhs: input_shape,
+                rhs: weight_shape,
                 op: Op::Conv(ConvOp::Conv3d),
             });
         }
@@ -444,14 +444,14 @@ impl Tensor {
         // Weight: [in_channels, out_channels, kernel_size] (note: different from conv!)
         if input_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose1d),
             });
         }
         if weight_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape.clone(),
+                lhs: weight_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose1d),
             });
@@ -465,8 +465,8 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[0] {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
-                rhs: weight_shape.clone(),
+                lhs: input_shape,
+                rhs: weight_shape,
                 op: Op::Conv(ConvOp::ConvTranspose1d),
             });
         }
@@ -585,14 +585,14 @@ impl Tensor {
         // Weight: [in_channels, out_channels, kernel_h, kernel_w]
         if input_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose2d),
             });
         }
         if weight_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape.clone(),
+                lhs: weight_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose2d),
             });
@@ -608,8 +608,8 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[0] {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
-                rhs: weight_shape.clone(),
+                lhs: input_shape,
+                rhs: weight_shape,
                 op: Op::Conv(ConvOp::ConvTranspose2d),
             });
         }
@@ -734,14 +734,14 @@ impl Tensor {
         // Weight: [in_channels, out_channels, kernel_d, kernel_h, kernel_w]
         if input_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose3d),
             });
         }
         if weight_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape.clone(),
+                lhs: weight_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose3d),
             });
@@ -759,8 +759,8 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[0] {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
-                rhs: weight_shape.clone(),
+                lhs: input_shape,
+                rhs: weight_shape,
                 op: Op::Conv(ConvOp::ConvTranspose3d),
             });
         }
@@ -893,14 +893,14 @@ impl Tensor {
         // Weight: [out_channels, in_channels, kernel_size]
         if input_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv1dGradWeight),
             });
         }
         if grad_output_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape.clone(),
+                lhs: grad_output_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv1dGradWeight),
             });
@@ -984,14 +984,14 @@ impl Tensor {
         // Weight: [out_channels, in_channels, kernel_h, kernel_w]
         if input_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv2dGradWeight),
             });
         }
         if grad_output_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape.clone(),
+                lhs: grad_output_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv2dGradWeight),
             });
@@ -1076,14 +1076,14 @@ impl Tensor {
         // Weight: [out_channels, in_channels, kernel_d, kernel_h, kernel_w]
         if input_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv3dGradWeight),
             });
         }
         if grad_output_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape.clone(),
+                lhs: grad_output_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::Conv3dGradWeight),
             });
@@ -1169,14 +1169,14 @@ impl Tensor {
         // Weight: [in_channels, out_channels, kernel_size]
         if input_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose1dGradWeight),
             });
         }
         if grad_output_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape.clone(),
+                lhs: grad_output_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose1dGradWeight),
             });
@@ -1260,14 +1260,14 @@ impl Tensor {
         // Weight: [in_channels, out_channels, kernel_height, kernel_width]
         if input_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose2dGradWeight),
             });
         }
         if grad_output_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape.clone(),
+                lhs: grad_output_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose2dGradWeight),
             });
@@ -1352,14 +1352,14 @@ impl Tensor {
         // Weight: [in_channels, out_channels, kernel_depth, kernel_height, kernel_width]
         if input_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape.clone(),
+                lhs: input_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose3dGradWeight),
             });
         }
         if grad_output_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape.clone(),
+                lhs: grad_output_shape,
                 rhs: Shape::from(vec![]),
                 op: Op::Conv(ConvOp::ConvTranspose3dGradWeight),
             });

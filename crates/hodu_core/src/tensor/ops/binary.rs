@@ -27,15 +27,16 @@ macro_rules! binary_op {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
                 let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor(lhs_layout.clone(), requires_grad);
+                let result_layout = lhs_layout.clone();
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
                 register_operation_in_builder(
                     Op::Binary(BinaryOp::$op_name),
                     None,
                     vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![lhs_layout.clone(), rhs_layout],
-                    vec![lhs_layout],
+                    vec![lhs_layout, rhs_layout],
+                    vec![result_layout],
                 )?;
 
                 if requires_grad {
@@ -91,15 +92,16 @@ macro_rules! binary_logical_op {
             if builder::is_builder_active() {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
-                let (result_id, result_tensor) = create_builder_tensor(lhs_layout.clone(), false);
+                let result_layout = lhs_layout.clone();
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
                 register_operation_in_builder(
                     Op::BinaryLogical(BinaryLogicalOp::$op_name),
                     None,
                     vec![lhs.id(), rhs.id()],
                     vec![result_id],
-                    vec![lhs_layout.clone(), rhs_layout],
-                    vec![lhs_layout],
+                    vec![lhs_layout, rhs_layout],
+                    vec![result_layout],
                 )?;
 
                 Ok(result_tensor)

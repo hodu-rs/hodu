@@ -30,8 +30,8 @@ impl Tensor {
         // Both tensors must be at least 1D
         if lhs_ndim < 1 || rhs_ndim < 1 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape.clone(),
-                rhs: rhs_shape.clone(),
+                lhs: lhs_shape,
+                rhs: rhs_shape,
                 op: Op::Matrix(MatrixOp::Matmul),
             });
         }
@@ -40,8 +40,8 @@ impl Tensor {
         if lhs_ndim == 1 && rhs_ndim == 1 {
             if lhs_dims[0] != rhs_dims[0] {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Matmul),
                 });
             }
@@ -55,8 +55,8 @@ impl Tensor {
 
             if k1 != k2 {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Matmul),
                 });
             }
@@ -73,8 +73,8 @@ impl Tensor {
 
             if k1 != k2 {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Matmul),
                 });
             }
@@ -106,8 +106,8 @@ impl Tensor {
 
         if lhs_ndim < 2 || rhs_ndim < 2 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape.clone(),
-                rhs: rhs_shape.clone(),
+                lhs: lhs_shape,
+                rhs: rhs_shape,
                 op: Op::Matrix(MatrixOp::Matmul),
             });
         }
@@ -118,8 +118,8 @@ impl Tensor {
 
         if lhs_inner != rhs_outer {
             return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape.clone(),
-                rhs: rhs_shape.clone(),
+                lhs: lhs_shape,
+                rhs: rhs_shape,
                 op: Op::Matrix(MatrixOp::Matmul),
             });
         }
@@ -145,8 +145,8 @@ impl Tensor {
 
             if lhs_dim != 1 && rhs_dim != 1 && lhs_dim != rhs_dim {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Matmul),
                 });
             }
@@ -188,7 +188,7 @@ impl Tensor {
                 vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
                 vec![result_id],
                 vec![lhs_layout, rhs_layout],
-                vec![result_layout.clone()],
+                vec![result_layout],
             )?;
 
             if requires_grad {
@@ -205,7 +205,7 @@ impl Tensor {
 
             let requires_grad = self.is_requires_grad() || other.is_requires_grad();
             let requires_grad = requires_grad && validate_requires_grad;
-            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Matrix(MatrixOp::Matmul);
@@ -235,8 +235,8 @@ impl Tensor {
         if lhs_ndim == 1 && rhs_ndim == 1 {
             if lhs_dims[0] != rhs_dims[0] {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Dot),
                 });
             }
@@ -250,8 +250,8 @@ impl Tensor {
 
             if k1 != k2 {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Dot),
                 });
             }
@@ -268,8 +268,8 @@ impl Tensor {
 
             if k1 != k2 {
                 return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape.clone(),
-                    rhs: rhs_shape.clone(),
+                    lhs: lhs_shape,
+                    rhs: rhs_shape,
                     op: Op::Matrix(MatrixOp::Dot),
                 });
             }
@@ -303,8 +303,8 @@ impl Tensor {
 
         if k1 != k2 {
             return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape.clone(),
-                rhs: rhs_shape.clone(),
+                lhs: lhs_shape,
+                rhs: rhs_shape,
                 op: Op::Matrix(MatrixOp::Dot),
             });
         }
@@ -326,7 +326,7 @@ impl Tensor {
                 vec![self.id(), other.id()],
                 vec![result_id],
                 vec![self_layout, other_layout],
-                vec![result_layout.clone()],
+                vec![result_layout],
             )?;
 
             if requires_grad {
@@ -343,7 +343,7 @@ impl Tensor {
 
             let requires_grad = self.is_requires_grad() || other.is_requires_grad();
             let requires_grad = requires_grad && validate_requires_grad;
-            let result = from_storage(storage, result_layout.clone(), true, requires_grad);
+            let result = from_storage(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Matrix(MatrixOp::Dot);
