@@ -19,7 +19,7 @@ std = [
     "rand_distr/std",
     "serde?/std",
 ]
-serde = ["dep:bincode", "dep:flate2", "dep:serde"]
+serde = ["dep:bincode", "dep:flate2", "dep:serde", "smallvec/serde"]
 rayon = ["std", "dep:rayon"]
 
 # optional dtype
@@ -53,4 +53,5 @@ rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
 rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
+smallvec = { workspace = true }
 spin = { workspace = true }
