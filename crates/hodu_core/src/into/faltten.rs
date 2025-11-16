@@ -256,6 +256,143 @@ macro_rules! into_flattened_impl {
             }
         }
 
+        // 7D Vector
+        impl IntoFlattened for Vec<Vec<Vec<Vec<Vec<Vec<Vec<$t>>>>>>> {
+            type Elem = $t;
+            fn to_flatten_vec(self) -> Vec<$t> {
+                let capacity = self
+                    .iter()
+                    .map(|t6d| {
+                        t6d.iter()
+                            .map(|t5d| {
+                                t5d.iter()
+                                    .map(|t4d| {
+                                        t4d.iter()
+                                            .map(|t3d| {
+                                                t3d.iter()
+                                                    .map(|matrix| matrix.iter().map(|row| row.len()).sum::<usize>())
+                                                    .sum::<usize>()
+                                            })
+                                            .sum::<usize>()
+                                    })
+                                    .sum::<usize>()
+                            })
+                            .sum::<usize>()
+                    })
+                    .sum();
+                let mut flat = Vec::with_capacity(capacity);
+                for tensor6d in self {
+                    for tensor5d in tensor6d {
+                        for tensor4d in tensor5d {
+                            for tensor3d in tensor4d {
+                                for matrix in tensor3d {
+                                    for row in matrix {
+                                        flat.extend(row);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                flat
+            }
+            fn get_shape_vec(&self) -> Vec<usize> {
+                if self.is_empty() {
+                    vec![0, 0, 0, 0, 0, 0, 0]
+                } else {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0].len(),
+                    ]
+                }
+            }
+            fn get_dtype(&self) -> DType {
+                $dtype
+            }
+            fn to_cpu_storage(self) -> CpuStorage {
+                let vec = self.to_flatten_vec();
+                CpuStorage::from_vec(vec)
+            }
+        }
+
+        // 8D Vector
+        impl IntoFlattened for Vec<Vec<Vec<Vec<Vec<Vec<Vec<Vec<$t>>>>>>>> {
+            type Elem = $t;
+            fn to_flatten_vec(self) -> Vec<$t> {
+                let capacity = self
+                    .iter()
+                    .map(|t7d| {
+                        t7d.iter()
+                            .map(|t6d| {
+                                t6d.iter()
+                                    .map(|t5d| {
+                                        t5d.iter()
+                                            .map(|t4d| {
+                                                t4d.iter()
+                                                    .map(|t3d| {
+                                                        t3d.iter()
+                                                            .map(|matrix| {
+                                                                matrix.iter().map(|row| row.len()).sum::<usize>()
+                                                            })
+                                                            .sum::<usize>()
+                                                    })
+                                                    .sum::<usize>()
+                                            })
+                                            .sum::<usize>()
+                                    })
+                                    .sum::<usize>()
+                            })
+                            .sum::<usize>()
+                    })
+                    .sum();
+                let mut flat = Vec::with_capacity(capacity);
+                for tensor7d in self {
+                    for tensor6d in tensor7d {
+                        for tensor5d in tensor6d {
+                            for tensor4d in tensor5d {
+                                for tensor3d in tensor4d {
+                                    for matrix in tensor3d {
+                                        for row in matrix {
+                                            flat.extend(row);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                flat
+            }
+            fn get_shape_vec(&self) -> Vec<usize> {
+                if self.is_empty() {
+                    vec![0, 0, 0, 0, 0, 0, 0, 0]
+                } else {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0][0].len(),
+                    ]
+                }
+            }
+            fn get_dtype(&self) -> DType {
+                $dtype
+            }
+            fn to_cpu_storage(self) -> CpuStorage {
+                let vec = self.to_flatten_vec();
+                CpuStorage::from_vec(vec)
+            }
+        }
+
         // 1D Fixed-size Array Reference
         impl<'a, const N: usize> IntoFlattened for &'a [$t; N] {
             type Elem = $t;
@@ -400,6 +537,93 @@ macro_rules! into_flattened_impl {
             }
             fn get_shape_vec(&self) -> Vec<usize> {
                 vec![I, J, K, L, M, N]
+            }
+            fn get_dtype(&self) -> DType {
+                $dtype
+            }
+            fn to_cpu_storage(self) -> CpuStorage {
+                let vec = self.to_flatten_vec();
+                CpuStorage::from_vec(vec)
+            }
+        }
+
+        // 7D Fixed-size Array Reference
+        impl<
+                'a,
+                const H: usize,
+                const I: usize,
+                const J: usize,
+                const K: usize,
+                const L: usize,
+                const M: usize,
+                const N: usize,
+            > IntoFlattened for &'a [[[[[[[$t; N]; M]; L]; K]; J]; I]; H]
+        {
+            type Elem = $t;
+            fn to_flatten_vec(self) -> Vec<$t> {
+                let mut flat = Vec::new();
+                for tensor6d in self {
+                    for tensor5d in tensor6d {
+                        for tensor4d in tensor5d {
+                            for tensor3d in tensor4d {
+                                for matrix in tensor3d {
+                                    for row in matrix {
+                                        flat.extend_from_slice(row);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                flat
+            }
+            fn get_shape_vec(&self) -> Vec<usize> {
+                vec![H, I, J, K, L, M, N]
+            }
+            fn get_dtype(&self) -> DType {
+                $dtype
+            }
+            fn to_cpu_storage(self) -> CpuStorage {
+                let vec = self.to_flatten_vec();
+                CpuStorage::from_vec(vec)
+            }
+        }
+
+        // 8D Fixed-size Array Reference
+        impl<
+                'a,
+                const G: usize,
+                const H: usize,
+                const I: usize,
+                const J: usize,
+                const K: usize,
+                const L: usize,
+                const M: usize,
+                const N: usize,
+            > IntoFlattened for &'a [[[[[[[[$t; N]; M]; L]; K]; J]; I]; H]; G]
+        {
+            type Elem = $t;
+            fn to_flatten_vec(self) -> Vec<$t> {
+                let mut flat = Vec::new();
+                for tensor7d in self {
+                    for tensor6d in tensor7d {
+                        for tensor5d in tensor6d {
+                            for tensor4d in tensor5d {
+                                for tensor3d in tensor4d {
+                                    for matrix in tensor3d {
+                                        for row in matrix {
+                                            flat.extend_from_slice(row);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                flat
+            }
+            fn get_shape_vec(&self) -> Vec<usize> {
+                vec![G, H, I, J, K, L, M, N]
             }
             fn get_dtype(&self) -> DType {
                 $dtype
@@ -658,6 +882,196 @@ macro_rules! into_flattened_impl {
                         self[0][0][0][0].len(),
                         self[0][0][0][0][0].len(),
                         self[0][0][0][0][0][0].len(),
+                    ]
+                }
+            }
+            fn get_dtype(&self) -> DType {
+                $dtype
+            }
+            fn to_cpu_storage(self) -> CpuStorage {
+                let vec = self.to_flatten_vec();
+                CpuStorage::from_vec(vec)
+            }
+        }
+
+        // 7D Slice of Slices
+        impl<'a> IntoFlattened for &'a [&'a [&'a [&'a [&'a [&'a [&'a [&'a [$t]]]]]]]] {
+            type Elem = $t;
+            fn to_flatten_vec(self) -> Vec<$t> {
+                let mut flat = Vec::new();
+                for tensor7d in self {
+                    for tensor6d in *tensor7d {
+                        for tensor5d in *tensor6d {
+                            for tensor4d in *tensor5d {
+                                for tensor3d in *tensor4d {
+                                    for matrix in *tensor3d {
+                                        for row in *matrix {
+                                            flat.extend_from_slice(row);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                flat
+            }
+            fn get_shape_vec(&self) -> Vec<usize> {
+                if self.is_empty() {
+                    vec![0, 0, 0, 0, 0, 0, 0, 0]
+                } else if self[0].is_empty() {
+                    vec![self.len(), 0, 0, 0, 0, 0, 0, 0]
+                } else if self[0][0].is_empty() {
+                    vec![self.len(), self[0].len(), 0, 0, 0, 0, 0, 0]
+                } else if self[0][0][0].is_empty() {
+                    vec![self.len(), self[0].len(), self[0][0].len(), 0, 0, 0, 0, 0]
+                } else if self[0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        0,
+                        0,
+                        0,
+                        0,
+                    ]
+                } else if self[0][0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        0,
+                        0,
+                        0,
+                    ]
+                } else if self[0][0][0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        0,
+                        0,
+                    ]
+                } else {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0][0].len(),
+                    ]
+                }
+            }
+            fn get_dtype(&self) -> DType {
+                $dtype
+            }
+            fn to_cpu_storage(self) -> CpuStorage {
+                let vec = self.to_flatten_vec();
+                CpuStorage::from_vec(vec)
+            }
+        }
+
+        // 8D Slice of Slices
+        impl<'a> IntoFlattened for &'a [&'a [&'a [&'a [&'a [&'a [&'a [&'a [&'a [$t]]]]]]]]] {
+            type Elem = $t;
+            fn to_flatten_vec(self) -> Vec<$t> {
+                let mut flat = Vec::new();
+                for tensor8d in self {
+                    for tensor7d in *tensor8d {
+                        for tensor6d in *tensor7d {
+                            for tensor5d in *tensor6d {
+                                for tensor4d in *tensor5d {
+                                    for tensor3d in *tensor4d {
+                                        for matrix in *tensor3d {
+                                            for row in *matrix {
+                                                flat.extend_from_slice(row);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                flat
+            }
+            fn get_shape_vec(&self) -> Vec<usize> {
+                if self.is_empty() {
+                    vec![0, 0, 0, 0, 0, 0, 0, 0, 0]
+                } else if self[0].is_empty() {
+                    vec![self.len(), 0, 0, 0, 0, 0, 0, 0, 0]
+                } else if self[0][0].is_empty() {
+                    vec![self.len(), self[0].len(), 0, 0, 0, 0, 0, 0, 0]
+                } else if self[0][0][0].is_empty() {
+                    vec![self.len(), self[0].len(), self[0][0].len(), 0, 0, 0, 0, 0, 0]
+                } else if self[0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    ]
+                } else if self[0][0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        0,
+                        0,
+                        0,
+                        0,
+                    ]
+                } else if self[0][0][0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        0,
+                        0,
+                        0,
+                    ]
+                } else if self[0][0][0][0][0][0][0].is_empty() {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0].len(),
+                        0,
+                        0,
+                    ]
+                } else {
+                    vec![
+                        self.len(),
+                        self[0].len(),
+                        self[0][0].len(),
+                        self[0][0][0].len(),
+                        self[0][0][0][0].len(),
+                        self[0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0][0].len(),
+                        self[0][0][0][0][0][0][0][0].len(),
                     ]
                 }
             }

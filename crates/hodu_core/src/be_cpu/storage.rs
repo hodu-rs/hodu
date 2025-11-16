@@ -291,7 +291,7 @@ impl BackendStorageT for CpuStorage {
             let strides = layout.strides();
             let offset = layout.offset();
 
-            if strides == Layout::compute_strides(shape) && offset == 0 {
+            if strides == Layout::compute_strides(shape).as_slice() && offset == 0 {
                 data.fill(value);
             } else {
                 let ndim = shape.ndim();

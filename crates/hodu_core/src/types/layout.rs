@@ -4,6 +4,7 @@ use crate::{
     ops::{Op, ShapeOp},
     types::shape::Shape,
 };
+use smallvec::SmallVec;
 
 /// Layout describes the memory layout of a tensor, including shape, strides, and offset.
 ///
@@ -11,11 +12,54 @@ use crate::{
 /// supporting non-contiguous views through stride manipulation.
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub struct Layout {
     shape: Shape,
-    strides: Vec<usize>,
+    strides: SmallVec<[usize; 8]>,
     offset: usize,
+}
+
+#[cfg(feature = "serde")]
+impl bincode::Encode for Layout {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> core::result::Result<(), bincode::error::EncodeError> {
+        bincode::Encode::encode(&self.shape, encoder)?;
+        bincode::Encode::encode(&self.strides.as_slice(), encoder)?;
+        bincode::Encode::encode(&self.offset, encoder)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<Context> bincode::Decode<Context> for Layout {
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> core::result::Result<Self, bincode::error::DecodeError> {
+        let shape: Shape = bincode::Decode::decode(decoder)?;
+        let strides_vec: Vec<usize> = bincode::Decode::decode(decoder)?;
+        let offset: usize = bincode::Decode::decode(decoder)?;
+        Ok(Layout {
+            shape,
+            strides: SmallVec::from_vec(strides_vec),
+            offset,
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, Context> bincode::BorrowDecode<'de, Context> for Layout {
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
+        decoder: &mut D,
+    ) -> core::result::Result<Self, bincode::error::DecodeError> {
+        let shape: Shape = bincode::BorrowDecode::borrow_decode(decoder)?;
+        let strides_vec: Vec<usize> = bincode::BorrowDecode::borrow_decode(decoder)?;
+        let offset: usize = bincode::BorrowDecode::borrow_decode(decoder)?;
+        Ok(Layout {
+            shape,
+            strides: SmallVec::from_vec(strides_vec),
+            offset,
+        })
+    }
 }
 
 impl Layout {
@@ -23,7 +67,7 @@ impl Layout {
     pub fn new(shape: Shape, strides: Vec<usize>) -> Self {
         Self {
             shape,
-            strides,
+            strides: SmallVec::from_vec(strides),
             offset: 0,
         }
     }
@@ -93,7 +137,7 @@ impl Layout {
 
     /// Sets new strides.
     pub fn set_strides(&mut self, strides: Vec<usize>) {
-        self.strides = strides;
+        self.strides = SmallVec::from_vec(strides);
     }
 
     /// Sets a new offset.
@@ -120,13 +164,13 @@ impl Layout {
     }
 
     /// Computes contiguous strides for a given shape.
-    pub fn compute_strides(shape: &Shape) -> Vec<usize> {
+    pub fn compute_strides(shape: &Shape) -> SmallVec<[usize; 8]> {
         let ndim = shape.ndim();
         if ndim == 0 {
-            return vec![];
+            return SmallVec::new();
         }
 
-        let mut strides = vec![1; ndim];
+        let mut strides = SmallVec::from_elem(1, ndim);
         for i in (0..ndim - 1).rev() {
             strides[i] = strides[i + 1] * shape[i + 1];
         }
@@ -206,7 +250,7 @@ impl Layout {
             shape_dims.iter().filter(|&&size| size != 1).copied().collect()
         } else {
             // Normalize and validate dimensions to squeeze
-            let mut actual_dims = Vec::new();
+            let mut actual_dims = Vec::with_capacity(dims_to_squeeze.len().min(8));
             for &dim in dims_to_squeeze {
                 let actual_dim = if dim < 0 {
                     (ndim as i32 + dim) as usize
@@ -266,7 +310,8 @@ impl Layout {
         }
 
         // Create new shape with dimension of size 1 inserted
-        let mut new_dims = dims.to_vec();
+        let mut new_dims = Vec::with_capacity((ndim + 1).min(8));
+        new_dims.extend_from_slice(dims);
         new_dims.insert(actual_dim, 1);
 
         // Unsqueeze only works on contiguous tensors
@@ -299,11 +344,13 @@ impl Layout {
         }
 
         let rank_diff = target_shape.ndim() - shape.ndim();
-        let mut padded_shape = vec![1; rank_diff];
+        let target_ndim = target_shape.ndim();
+        let mut padded_shape = Vec::with_capacity(target_ndim.min(8));
+        padded_shape.resize(rank_diff, 1);
         padded_shape.extend_from_slice(shape.dims());
 
-        let target_ndim = target_shape.ndim();
-        let mut new_strides = vec![0; target_ndim];
+        let mut new_strides = Vec::with_capacity(target_ndim.min(8));
+        new_strides.resize(target_ndim, 0);
 
         for i in 0..target_ndim {
             let src_dim = padded_shape[i];
@@ -328,7 +375,7 @@ impl Layout {
 
         Ok(Self {
             shape: target_shape.clone(),
-            strides: new_strides,
+            strides: SmallVec::from_vec(new_strides),
             offset: self.offset,
         })
     }
@@ -392,8 +439,9 @@ impl Layout {
         }
 
         // Normalize negative axes and validate
-        let mut actual_axes = Vec::with_capacity(ndim);
-        let mut seen = vec![false; ndim];
+        let mut actual_axes = Vec::with_capacity(ndim.min(8));
+        let mut seen = Vec::with_capacity(ndim.min(8));
+        seen.resize(ndim, false);
 
         for &axis in axes {
             let actual_axis = self
@@ -412,8 +460,8 @@ impl Layout {
         }
 
         // Permute shape and strides according to axes
-        let mut new_dims = Vec::with_capacity(ndim);
-        let mut new_strides = Vec::with_capacity(ndim);
+        let mut new_dims = Vec::with_capacity(ndim.min(8));
+        let mut new_strides = Vec::with_capacity(ndim.min(8));
 
         for &axis_idx in &actual_axes {
             new_dims.push(self.shape.dims()[axis_idx]);
@@ -422,7 +470,7 @@ impl Layout {
 
         Ok(Self {
             shape: Shape::from(new_dims),
-            strides: new_strides,
+            strides: SmallVec::from_vec(new_strides),
             offset: self.offset,
         })
     }

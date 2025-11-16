@@ -197,6 +197,114 @@ impl Tensor {
             })
             .collect())
     }
+
+    pub fn to_vec7d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<Vec<Vec<Vec<T>>>>>>>> {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 7 {
+            return Err(HoduError::InternalError(format!(
+                "Expected 7D tensor, but got {}D tensor",
+                dims.ndim()
+            )));
+        }
+
+        let flat_data = self.to_flatten_vec::<T>()?;
+        let (d0, d1, d2, d3, d4, d5, d6) = (dims[0], dims[1], dims[2], dims[3], dims[4], dims[5], dims[6]);
+        let stride1 = d1 * d2 * d3 * d4 * d5 * d6;
+        let stride2 = d2 * d3 * d4 * d5 * d6;
+        let stride3 = d3 * d4 * d5 * d6;
+        let stride4 = d4 * d5 * d6;
+        let stride5 = d5 * d6;
+
+        Ok((0..d0)
+            .map(|i| {
+                let offset_i = i * stride1;
+                (0..d1)
+                    .map(|j| {
+                        let offset_j = offset_i + j * stride2;
+                        (0..d2)
+                            .map(|k| {
+                                let offset_k = offset_j + k * stride3;
+                                (0..d3)
+                                    .map(|l| {
+                                        let offset_l = offset_k + l * stride4;
+                                        (0..d4)
+                                            .map(|m| {
+                                                let offset_m = offset_l + m * stride5;
+                                                (0..d5)
+                                                    .map(|n| {
+                                                        let start = offset_m + n * d6;
+                                                        flat_data[start..start + d6].to_vec()
+                                                    })
+                                                    .collect()
+                                            })
+                                            .collect()
+                                    })
+                                    .collect()
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect())
+    }
+
+    pub fn to_vec8d<T: Clone + 'static>(&self) -> HoduResult<Vec<Vec<Vec<Vec<Vec<Vec<Vec<Vec<T>>>>>>>>> {
+        let layout = self.layout();
+        let dims = layout.shape();
+        if dims.ndim() != 8 {
+            return Err(HoduError::InternalError(format!(
+                "Expected 8D tensor, but got {}D tensor",
+                dims.ndim()
+            )));
+        }
+
+        let flat_data = self.to_flatten_vec::<T>()?;
+        let (d0, d1, d2, d3, d4, d5, d6, d7) = (dims[0], dims[1], dims[2], dims[3], dims[4], dims[5], dims[6], dims[7]);
+        let stride1 = d1 * d2 * d3 * d4 * d5 * d6 * d7;
+        let stride2 = d2 * d3 * d4 * d5 * d6 * d7;
+        let stride3 = d3 * d4 * d5 * d6 * d7;
+        let stride4 = d4 * d5 * d6 * d7;
+        let stride5 = d5 * d6 * d7;
+        let stride6 = d6 * d7;
+
+        Ok((0..d0)
+            .map(|i| {
+                let offset_i = i * stride1;
+                (0..d1)
+                    .map(|j| {
+                        let offset_j = offset_i + j * stride2;
+                        (0..d2)
+                            .map(|k| {
+                                let offset_k = offset_j + k * stride3;
+                                (0..d3)
+                                    .map(|l| {
+                                        let offset_l = offset_k + l * stride4;
+                                        (0..d4)
+                                            .map(|m| {
+                                                let offset_m = offset_l + m * stride5;
+                                                (0..d5)
+                                                    .map(|n| {
+                                                        let offset_n = offset_m + n * stride6;
+                                                        (0..d6)
+                                                            .map(|o| {
+                                                                let start = offset_n + o * d7;
+                                                                flat_data[start..start + d7].to_vec()
+                                                            })
+                                                            .collect()
+                                                    })
+                                                    .collect()
+                                            })
+                                            .collect()
+                                    })
+                                    .collect()
+                            })
+                            .collect()
+                    })
+                    .collect()
+            })
+            .collect())
+    }
 }
 
 fn extract_vec_from_cpu_storage<T: Clone + 'static>(cpu_storage: &CpuStorage, layout: &Layout) -> HoduResult<Vec<T>> {

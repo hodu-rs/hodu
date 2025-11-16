@@ -1,4 +1,5 @@
 use crate::layer::compat::*;
+use smallvec::SmallVec;
 
 /// Shape represents the dimensions of a tensor using usize for native platform compatibility.
 ///
@@ -6,22 +7,57 @@ use crate::layer::compat::*;
 /// and includes utilities for shape manipulation and validation.
 #[derive(Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub struct Shape {
-    dims: Vec<usize>,
+    dims: SmallVec<[usize; 8]>,
+}
+
+#[cfg(feature = "serde")]
+impl bincode::Encode for Shape {
+    fn encode<E: bincode::enc::Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> core::result::Result<(), bincode::error::EncodeError> {
+        bincode::Encode::encode(&self.dims.as_slice(), encoder)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<Context> bincode::Decode<Context> for Shape {
+    fn decode<D: bincode::de::Decoder<Context = Context>>(
+        decoder: &mut D,
+    ) -> core::result::Result<Self, bincode::error::DecodeError> {
+        let vec: Vec<usize> = bincode::Decode::decode(decoder)?;
+        Ok(Shape {
+            dims: SmallVec::from_vec(vec),
+        })
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de, Context> bincode::BorrowDecode<'de, Context> for Shape {
+    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
+        decoder: &mut D,
+    ) -> core::result::Result<Self, bincode::error::DecodeError> {
+        let vec: Vec<usize> = bincode::BorrowDecode::borrow_decode(decoder)?;
+        Ok(Shape {
+            dims: SmallVec::from_vec(vec),
+        })
+    }
 }
 
 impl Shape {
     /// Creates a new shape from a slice of dimensions.
     #[inline]
     pub fn new(dims: &[usize]) -> Self {
-        Self { dims: dims.to_vec() }
+        Self {
+            dims: SmallVec::from_slice(dims),
+        }
     }
 
     /// Creates a scalar shape (0 dimensions).
     #[inline]
     pub fn scalar() -> Self {
-        Self { dims: Vec::new() }
+        Self { dims: SmallVec::new() }
     }
 
     /// Returns the dimensions as a slice.
@@ -32,14 +68,14 @@ impl Shape {
 
     /// Returns a mutable reference to the dimensions.
     #[inline]
-    pub fn dims_mut(&mut self) -> &mut Vec<usize> {
+    pub fn dims_mut(&mut self) -> &mut SmallVec<[usize; 8]> {
         &mut self.dims
     }
 
     /// Converts the shape to a Vec<usize>.
     #[inline]
     pub fn to_vec(&self) -> Vec<usize> {
-        self.dims.clone()
+        self.dims.to_vec()
     }
 
     /// Returns the last dimension, or None if the shape is scalar.
@@ -95,7 +131,7 @@ impl Shape {
     #[inline]
     pub fn broadcast_shape(lhs: &Shape, rhs: &Shape) -> Option<Shape> {
         let max_ndim = lhs.ndim().max(rhs.ndim());
-        let mut result_dims = Vec::with_capacity(max_ndim);
+        let mut result_dims = SmallVec::with_capacity(max_ndim);
 
         for i in 0..max_ndim {
             let lhs_idx = lhs.ndim().saturating_sub(max_ndim - i);
@@ -130,6 +166,14 @@ impl Shape {
 
 impl From<Vec<usize>> for Shape {
     fn from(dims: Vec<usize>) -> Self {
+        Self {
+            dims: SmallVec::from_vec(dims),
+        }
+    }
+}
+
+impl From<SmallVec<[usize; 8]>> for Shape {
+    fn from(dims: SmallVec<[usize; 8]>) -> Self {
         Self { dims }
     }
 }
@@ -155,14 +199,14 @@ impl From<&Shape> for Shape {
 // i8
 impl<const N: usize> From<[i8; N]> for Shape {
     fn from(dims: [i8; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[i8; N]> for Shape {
     fn from(dims: &[i8; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -171,7 +215,7 @@ impl<const N: usize> From<&[i8; N]> for Shape {
 #[cfg(feature = "i16")]
 impl<const N: usize> From<[i16; N]> for Shape {
     fn from(dims: [i16; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -179,7 +223,7 @@ impl<const N: usize> From<[i16; N]> for Shape {
 #[cfg(feature = "i16")]
 impl<const N: usize> From<&[i16; N]> for Shape {
     fn from(dims: &[i16; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -187,14 +231,14 @@ impl<const N: usize> From<&[i16; N]> for Shape {
 // i32
 impl<const N: usize> From<[i32; N]> for Shape {
     fn from(dims: [i32; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[i32; N]> for Shape {
     fn from(dims: &[i32; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -203,7 +247,7 @@ impl<const N: usize> From<&[i32; N]> for Shape {
 #[cfg(feature = "i64")]
 impl<const N: usize> From<[i64; N]> for Shape {
     fn from(dims: [i64; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -211,7 +255,7 @@ impl<const N: usize> From<[i64; N]> for Shape {
 #[cfg(feature = "i64")]
 impl<const N: usize> From<&[i64; N]> for Shape {
     fn from(dims: &[i64; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -219,14 +263,14 @@ impl<const N: usize> From<&[i64; N]> for Shape {
 // isize
 impl<const N: usize> From<[isize; N]> for Shape {
     fn from(dims: [isize; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[isize; N]> for Shape {
     fn from(dims: &[isize; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -234,14 +278,14 @@ impl<const N: usize> From<&[isize; N]> for Shape {
 // u8
 impl<const N: usize> From<[u8; N]> for Shape {
     fn from(dims: [u8; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[u8; N]> for Shape {
     fn from(dims: &[u8; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -250,7 +294,7 @@ impl<const N: usize> From<&[u8; N]> for Shape {
 #[cfg(feature = "u16")]
 impl<const N: usize> From<[u16; N]> for Shape {
     fn from(dims: [u16; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -258,7 +302,7 @@ impl<const N: usize> From<[u16; N]> for Shape {
 #[cfg(feature = "u16")]
 impl<const N: usize> From<&[u16; N]> for Shape {
     fn from(dims: &[u16; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -266,14 +310,14 @@ impl<const N: usize> From<&[u16; N]> for Shape {
 // u32
 impl<const N: usize> From<[u32; N]> for Shape {
     fn from(dims: [u32; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
 
 impl<const N: usize> From<&[u32; N]> for Shape {
     fn from(dims: &[u32; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -282,7 +326,7 @@ impl<const N: usize> From<&[u32; N]> for Shape {
 #[cfg(feature = "u64")]
 impl<const N: usize> From<[u64; N]> for Shape {
     fn from(dims: [u64; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
@@ -290,7 +334,7 @@ impl<const N: usize> From<[u64; N]> for Shape {
 #[cfg(feature = "u64")]
 impl<const N: usize> From<&[u64; N]> for Shape {
     fn from(dims: &[u64; N]) -> Self {
-        let dims: Vec<usize> = dims.iter().map(|&d| d as usize).collect();
+        let dims: SmallVec<[usize; 8]> = dims.iter().map(|&d| d as usize).collect();
         Self { dims }
     }
 }
