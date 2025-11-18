@@ -114,6 +114,7 @@ pub fn call_ops_conv(
 
             let metadata: Vec<usize> = vec![
                 num_els,
+                batch_size,
                 in_channels,
                 out_channels,
                 in_width,
@@ -157,6 +158,7 @@ pub fn call_ops_conv(
 
             let metadata: Vec<usize> = vec![
                 num_els,
+                batch_size,
                 in_channels,
                 out_channels,
                 in_height,
@@ -213,6 +215,7 @@ pub fn call_ops_conv(
 
             let metadata: Vec<usize> = vec![
                 num_els,
+                batch_size,
                 in_channels,
                 out_channels,
                 in_depth,
@@ -353,131 +356,56 @@ pub fn call_ops_conv_grad_weight(
         },
     };
 
-    let batch_size = input_shape.dims()[0];
-    let _in_channels = input_shape.dims()[1];
-    let out_channels = grad_output_shape.dims()[1];
+    let num_els = weight_shape.size();
+    let input_ndim = input_shape.ndim();
 
-    // Build metadata based on spatial dimensions
-    // Note: Same layout as forward pass, but metadata[1] contains batch_size instead of in_channels
-    let metadata: Vec<usize> = match spatial_dims {
-        1 => {
-            let in_width = input_shape.dims()[2];
-            let kernel_width = weight_shape.dims()[2];
-            let out_width = grad_output_shape.dims()[2];
-            let stride_w = stride[0];
-            let padding_w = padding[0];
-            let dilation_w = dilation[0];
+    // Build metadata array (matching Metal/CUDA structure)
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(input_ndim);
+    metadata.push(spatial_dims);
 
-            let num_els = weight_shape.size();
+    // Add shapes
+    for &d in input_shape.dims() {
+        metadata.push(d);
+    }
+    for &d in grad_output_shape.dims() {
+        metadata.push(d);
+    }
+    for &d in weight_shape.dims() {
+        metadata.push(d);
+    }
 
-            vec![
-                num_els,
-                batch_size, // metadata[1] = batch_size (instead of in_channels in forward pass)
-                out_channels,
-                in_width,
-                kernel_width,
-                out_width,
-                stride_w,
-                padding_w,
-                dilation_w,
-                input_layout.offset(),
-                grad_output_layout.offset(),
-            ]
-        },
-        2 => {
-            let in_height = input_shape.dims()[2];
-            let in_width = input_shape.dims()[3];
-            let kernel_height = weight_shape.dims()[2];
-            let kernel_width = weight_shape.dims()[3];
-            let out_height = grad_output_shape.dims()[2];
-            let out_width = grad_output_shape.dims()[3];
-            let stride_h = stride[0];
-            let stride_w = stride[1];
-            let padding_h = padding[0];
-            let padding_w = padding[1];
-            let dilation_h = dilation[0];
-            let dilation_w = dilation[1];
+    // Add strides
+    for &s in input_layout.strides() {
+        metadata.push(s);
+    }
+    for &s in grad_output_layout.strides() {
+        metadata.push(s);
+    }
 
-            let num_els = weight_shape.size();
+    // Add offsets
+    metadata.push(input_layout.offset());
+    metadata.push(grad_output_layout.offset());
 
-            vec![
-                num_els,
-                batch_size, // metadata[1] = batch_size (instead of in_channels in forward pass)
-                out_channels,
-                in_height,
-                in_width,
-                kernel_height,
-                kernel_width,
-                out_height,
-                out_width,
-                stride_h,
-                stride_w,
-                padding_h,
-                padding_w,
-                dilation_h,
-                dilation_w,
-                input_layout.offset(),
-                grad_output_layout.offset(),
-            ]
-        },
-        3 => {
-            let in_depth = input_shape.dims()[2];
-            let in_height = input_shape.dims()[3];
-            let in_width = input_shape.dims()[4];
-            let kernel_depth = weight_shape.dims()[2];
-            let kernel_height = weight_shape.dims()[3];
-            let kernel_width = weight_shape.dims()[4];
-            let out_depth = grad_output_shape.dims()[2];
-            let out_height = grad_output_shape.dims()[3];
-            let out_width = grad_output_shape.dims()[4];
-            let stride_d = stride[0];
-            let stride_h = stride[1];
-            let stride_w = stride[2];
-            let padding_d = padding[0];
-            let padding_h = padding[1];
-            let padding_w = padding[2];
-            let dilation_d = dilation[0];
-            let dilation_h = dilation[1];
-            let dilation_w = dilation[2];
-
-            let num_els = weight_shape.size();
-
-            vec![
-                num_els,
-                batch_size, // metadata[1] = batch_size (instead of in_channels in forward pass)
-                out_channels,
-                in_depth,
-                in_height,
-                in_width,
-                kernel_depth,
-                kernel_height,
-                kernel_width,
-                out_depth,
-                out_height,
-                out_width,
-                stride_d,
-                stride_h,
-                stride_w,
-                padding_d,
-                padding_h,
-                padding_w,
-                dilation_d,
-                dilation_h,
-                dilation_w,
-                input_layout.offset(),
-                grad_output_layout.offset(),
-            ]
-        },
-        _ => unreachable!(),
-    };
+    // Add conv parameters
+    for &s in stride {
+        metadata.push(s);
+    }
+    for &p in padding {
+        metadata.push(p);
+    }
+    for &d in dilation {
+        metadata.push(d);
+    }
 
     // Generate kernel name
     let kernel_name = format!("{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
-    // Create output storage (gradient weights)
-    let mut grad_weight = CpuDevice::allocate(weight_shape.size(), dtype)?;
+    // Create output storage (gradient weights) - must be zeroed for atomic accumulation
+    let mut grad_weight = CpuDevice::zeros(weight_shape.size(), dtype)?;
 
     // Get raw pointers and call kernel
     macro_rules! call_kernel {

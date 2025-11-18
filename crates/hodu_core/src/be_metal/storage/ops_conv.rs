@@ -19,10 +19,10 @@ pub fn call_ops_conv(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    match op {
-        Op::Conv(_) => (),
-        _ => return Err(HoduError::BackendError("Lcall_ops_convE expects LconvE op".to_string())),
-    }
+    let conv_op = match op {
+        Op::Conv(conv_op) => conv_op,
+        _ => return Err(HoduError::BackendError("call_ops_conv expects conv op".to_string())),
+    };
 
     let input_shape = input_layout.shape();
     let weight_shape = weight_layout.shape();
@@ -101,7 +101,7 @@ pub fn call_ops_conv(
     let output_buffer = device.new_buffer(num_els as usize, dtype, "conv_output")?;
 
     // Get kernel name
-    let kernel_name = format!("conv_{}", dtype);
+    let kernel_name = format!("{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -143,14 +143,14 @@ pub fn call_ops_conv_grad_weight(
     op: Op,
 ) -> HoduResult<MetalStorage> {
     // Validate op
-    match op {
-        Op::Conv(_) => (),
+    let conv_op = match op {
+        Op::Conv(conv_op) => conv_op,
         _ => {
             return Err(HoduError::BackendError(
                 "call_ops_conv_grad_weight expects conv op".to_string(),
             ))
         },
-    }
+    };
 
     let input_shape = input_layout.shape();
     let grad_output_shape = grad_output_layout.shape();
@@ -207,7 +207,7 @@ pub fn call_ops_conv_grad_weight(
     let output_buffer = device.new_buffer(num_els, dtype, "conv_grad_weight_output")?;
 
     // Get kernel name
-    let kernel_name = format!("conv_grad_weight_{}", dtype);
+    let kernel_name = format!("{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

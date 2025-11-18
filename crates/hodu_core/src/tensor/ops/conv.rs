@@ -441,7 +441,7 @@ impl Tensor {
         let weight_dims = weight_shape.dims();
 
         // Input: [batch, in_channels, length]
-        // Weight: [in_channels, out_channels, kernel_size] (note: different from conv!)
+        // Weight: [out_channels, in_channels, kernel_size] (same as conv1d)
         if input_dims.len() != 3 {
             return Err(HoduError::IncompatibleShapes {
                 lhs: input_shape,
@@ -460,10 +460,11 @@ impl Tensor {
         let batch_size = input_dims[0];
         let _channels_input = input_dims[1];
         let length_input = input_dims[2];
-        let channels_output = weight_dims[1];
+        let channels_output = weight_dims[0]; // Weight: [out_channels, in_channels, K]
         let kernel_size = weight_dims[2];
 
-        if input_dims[1] != weight_dims[0] {
+        if input_dims[1] != weight_dims[1] {
+            // in_channels must match
             return Err(HoduError::IncompatibleShapes {
                 lhs: input_shape,
                 rhs: weight_shape,
@@ -582,7 +583,7 @@ impl Tensor {
         let weight_dims = weight_shape.dims();
 
         // Input: [batch, in_channels, height, width]
-        // Weight: [in_channels, out_channels, kernel_h, kernel_w]
+        // Weight: [out_channels, in_channels, kernel_h, kernel_w] (same as conv2d)
         if input_dims.len() != 4 {
             return Err(HoduError::IncompatibleShapes {
                 lhs: input_shape,
@@ -602,11 +603,12 @@ impl Tensor {
         let _channels_input = input_dims[1];
         let input_height = input_dims[2];
         let input_width = input_dims[3];
-        let channels_output = weight_dims[1];
+        let channels_output = weight_dims[0]; // Weight: [out_channels, in_channels, K, K]
         let kernel_height = weight_dims[2];
         let kernel_width = weight_dims[3];
 
-        if input_dims[1] != weight_dims[0] {
+        if input_dims[1] != weight_dims[1] {
+            // in_channels must match
             return Err(HoduError::IncompatibleShapes {
                 lhs: input_shape,
                 rhs: weight_shape,
@@ -731,7 +733,7 @@ impl Tensor {
         let weight_dims = weight_shape.dims();
 
         // Input: [batch, in_channels, depth, height, width]
-        // Weight: [in_channels, out_channels, kernel_d, kernel_h, kernel_w]
+        // Weight: [out_channels, in_channels, kernel_d, kernel_h, kernel_w] (same as conv3d)
         if input_dims.len() != 5 {
             return Err(HoduError::IncompatibleShapes {
                 lhs: input_shape,
@@ -752,12 +754,13 @@ impl Tensor {
         let input_depth = input_dims[2];
         let input_height = input_dims[3];
         let input_width = input_dims[4];
-        let channels_output = weight_dims[1];
+        let channels_output = weight_dims[0]; // Weight: [out_channels, in_channels, ...]
         let kernel_depth = weight_dims[2];
         let kernel_height = weight_dims[3];
         let kernel_width = weight_dims[4];
 
-        if input_dims[1] != weight_dims[0] {
+        if input_dims[1] != weight_dims[1] {
+            // in_channels must match
             return Err(HoduError::IncompatibleShapes {
                 lhs: input_shape,
                 rhs: weight_shape,

@@ -533,19 +533,20 @@ CONV_TRANSPOSE3D_OP(float, conv_transpose3d_f32)
 // Grad_output: (batch, out_channels, out_width)
 // Grad_weight: (out_channels, in_channels, kernel_width)
 //
-// Metadata layout:
-// - metadata[0]: num_els (total number of grad_weight elements)
-// - metadata[1]: batch
-// - metadata[2]: in_channels
-// - metadata[3]: out_channels
-// - metadata[4]: in_width
-// - metadata[5]: kernel_width
-// - metadata[6]: out_width
-// - metadata[7]: stride
-// - metadata[8]: padding
-// - metadata[9]: dilation
-// - metadata[10]: input_offset
-// - metadata[11]: grad_output_offset
+// Generic metadata layout (input_ndim=3, spatial_dims=1):
+// - metadata[0]: num_els
+// - metadata[1]: input_ndim
+// - metadata[2]: spatial_dims
+// - metadata[3..6]: input_shape (batch, in_channels, in_width)
+// - metadata[6..9]: grad_output_shape (batch, out_channels, out_width)
+// - metadata[9..12]: weight_shape (out_channels, in_channels, kernel_width)
+// - metadata[12..15]: input_strides
+// - metadata[15..18]: grad_output_strides
+// - metadata[18]: input_offset
+// - metadata[19]: grad_output_offset
+// - metadata[20]: stride
+// - metadata[21]: padding
+// - metadata[22]: dilation
 //
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
@@ -557,17 +558,28 @@ CONV_TRANSPOSE3D_OP(float, conv_transpose3d_f32)
                         uint thread_index [[thread_position_in_grid]],                             \
                         uint threads_per_grid [[threads_per_grid]]) {                              \
                                                                                                    \
-        const size_t batch = metadata[1];                                                          \
-        const size_t in_channels = metadata[2];                                                    \
-        const size_t out_channels = metadata[3];                                                   \
-        const size_t in_width = metadata[4];                                                       \
-        const size_t kernel_width = metadata[5];                                                   \
-        const size_t out_width = metadata[6];                                                      \
-        const size_t stride = metadata[7];                                                         \
-        const size_t padding = metadata[8];                                                        \
-        const size_t dilation = metadata[9];                                                       \
-        const size_t input_offset = metadata[10];                                                  \
-        const size_t grad_output_offset = metadata[11];                                            \
+        /* Parse generic metadata: Conv1D has input_ndim=3, spatial_dims=1 */                      \
+        const size_t input_ndim = metadata[1];                                                     \
+        const size_t spatial_dims = metadata[2];                                                   \
+        const size_t batch = metadata[3];                                                          \
+        const size_t in_channels = metadata[4];                                                    \
+        const size_t in_width = metadata[5];                                                       \
+        const size_t grad_output_base = 3 + input_ndim;                                            \
+        const size_t out_channels = metadata[grad_output_base + 1];                                \
+        const size_t out_width = metadata[grad_output_base + 2];                                   \
+        const size_t weight_base = 3 + 2 * input_ndim;                                             \
+        const size_t kernel_width = metadata[weight_base + 2];                                     \
+        const size_t grad_output_stride_base = 3 + 4 * input_ndim;                                 \
+        const size_t grad_output_stride_batch = metadata[grad_output_stride_base];                 \
+        const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];           \
+        const size_t grad_output_stride_w = metadata[grad_output_stride_base + 2];                 \
+        const size_t offsets_base = 3 + 5 * input_ndim;                                            \
+        const size_t input_offset = metadata[offsets_base];                                        \
+        const size_t grad_output_offset = metadata[offsets_base + 1];                              \
+        const size_t conv_params_base = offsets_base + 2;                                          \
+        const size_t stride = metadata[conv_params_base];                                          \
+        const size_t padding = metadata[conv_params_base + spatial_dims];                          \
+        const size_t dilation = metadata[conv_params_base + 2 * spatial_dims];                     \
                                                                                                    \
         /* Parallelize over batch * out_channels * out_width */                                    \
         const size_t total_output_els = batch * out_channels * out_width;                          \
@@ -576,8 +588,9 @@ CONV_TRANSPOSE3D_OP(float, conv_transpose3d_f32)
             const size_t oc = (idx / out_width) % out_channels;                                    \
             const size_t b = idx / (out_width * out_channels);                                     \
                                                                                                    \
-            const size_t grad_output_idx =                                                         \
-                grad_output_offset + b * out_channels * out_width + oc * out_width + ow;           \
+            const size_t grad_output_idx = grad_output_offset + b * grad_output_stride_batch +     \
+                                           oc * grad_output_stride_channel +                       \
+                                           ow * grad_output_stride_w;                              \
             const TYPENAME grad_out_val = grad_output[grad_output_idx];                            \
                                                                                                    \
             /* Contribute to all relevant weight gradients */                                      \
@@ -610,25 +623,20 @@ CONV1D_GRAD_WEIGHT_OP(float, conv1d_grad_weight_f32)
 // Grad_output: (batch, out_channels, out_height, out_width)
 // Grad_weight: (out_channels, in_channels, kernel_height, kernel_width)
 //
-// Metadata layout:
-// - metadata[0]: num_els (total number of grad_weight elements)
-// - metadata[1]: batch
-// - metadata[2]: in_channels
-// - metadata[3]: out_channels
-// - metadata[4]: in_height
-// - metadata[5]: in_width
-// - metadata[6]: kernel_height
-// - metadata[7]: kernel_width
-// - metadata[8]: out_height
-// - metadata[9]: out_width
-// - metadata[10]: stride_h
-// - metadata[11]: stride_w
-// - metadata[12]: padding_h
-// - metadata[13]: padding_w
-// - metadata[14]: dilation_h
-// - metadata[15]: dilation_w
-// - metadata[16]: input_offset
-// - metadata[17]: grad_output_offset
+// Generic metadata layout (input_ndim=4, spatial_dims=2):
+// - metadata[0]: num_els
+// - metadata[1]: input_ndim
+// - metadata[2]: spatial_dims
+// - metadata[3..7]: input_shape (batch, in_channels, in_height, in_width)
+// - metadata[7..11]: grad_output_shape (batch, out_channels, out_height, out_width)
+// - metadata[11..15]: weight_shape (out_channels, in_channels, kernel_height, kernel_width)
+// - metadata[15..19]: input_strides
+// - metadata[19..23]: grad_output_strides
+// - metadata[23]: input_offset
+// - metadata[24]: grad_output_offset
+// - metadata[25..27]: stride (stride_h, stride_w)
+// - metadata[27..29]: padding (padding_h, padding_w)
+// - metadata[29..31]: dilation (dilation_h, dilation_w)
 //
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
@@ -640,23 +648,35 @@ CONV1D_GRAD_WEIGHT_OP(float, conv1d_grad_weight_f32)
                         uint thread_index [[thread_position_in_grid]],                             \
                         uint threads_per_grid [[threads_per_grid]]) {                              \
                                                                                                    \
-        const size_t batch = metadata[1];                                                          \
-        const size_t in_channels = metadata[2];                                                    \
-        const size_t out_channels = metadata[3];                                                   \
-        const size_t in_height = metadata[4];                                                      \
-        const size_t in_width = metadata[5];                                                       \
-        const size_t kernel_height = metadata[6];                                                  \
-        const size_t kernel_width = metadata[7];                                                   \
-        const size_t out_height = metadata[8];                                                     \
-        const size_t out_width = metadata[9];                                                      \
-        const size_t stride_h = metadata[10];                                                      \
-        const size_t stride_w = metadata[11];                                                      \
-        const size_t padding_h = metadata[12];                                                     \
-        const size_t padding_w = metadata[13];                                                     \
-        const size_t dilation_h = metadata[14];                                                    \
-        const size_t dilation_w = metadata[15];                                                    \
-        const size_t input_offset = metadata[16];                                                  \
-        const size_t grad_output_offset = metadata[17];                                            \
+        /* Parse generic metadata: Conv2D has input_ndim=4, spatial_dims=2 */                      \
+        const size_t input_ndim = metadata[1];                                                     \
+        const size_t spatial_dims = metadata[2];                                                   \
+        const size_t batch = metadata[3];                                                          \
+        const size_t in_channels = metadata[4];                                                    \
+        const size_t in_height = metadata[5];                                                      \
+        const size_t in_width = metadata[6];                                                       \
+        const size_t grad_output_base = 3 + input_ndim;                                            \
+        const size_t out_channels = metadata[grad_output_base + 1];                                \
+        const size_t out_height = metadata[grad_output_base + 2];                                  \
+        const size_t out_width = metadata[grad_output_base + 3];                                   \
+        const size_t weight_base = 3 + 2 * input_ndim;                                             \
+        const size_t kernel_height = metadata[weight_base + 2];                                    \
+        const size_t kernel_width = metadata[weight_base + 3];                                     \
+        const size_t grad_output_stride_base = 3 + 4 * input_ndim;                                 \
+        const size_t grad_output_stride_batch = metadata[grad_output_stride_base];                 \
+        const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];           \
+        const size_t grad_output_stride_h = metadata[grad_output_stride_base + 2];                 \
+        const size_t grad_output_stride_w = metadata[grad_output_stride_base + 3];                 \
+        const size_t offsets_base = 3 + 5 * input_ndim;                                            \
+        const size_t input_offset = metadata[offsets_base];                                        \
+        const size_t grad_output_offset = metadata[offsets_base + 1];                              \
+        const size_t conv_params_base = offsets_base + 2;                                          \
+        const size_t stride_h = metadata[conv_params_base];                                        \
+        const size_t stride_w = metadata[conv_params_base + 1];                                    \
+        const size_t padding_h = metadata[conv_params_base + spatial_dims];                        \
+        const size_t padding_w = metadata[conv_params_base + spatial_dims + 1];                    \
+        const size_t dilation_h = metadata[conv_params_base + 2 * spatial_dims];                   \
+        const size_t dilation_w = metadata[conv_params_base + 2 * spatial_dims + 1];               \
                                                                                                    \
         /* Parallelize over batch * out_channels * out_height * out_width */                       \
         const size_t total_output_els = batch * out_channels * out_height * out_width;             \
@@ -666,9 +686,9 @@ CONV1D_GRAD_WEIGHT_OP(float, conv1d_grad_weight_f32)
             const size_t oc = (idx / (out_width * out_height)) % out_channels;                     \
             const size_t b = idx / (out_width * out_height * out_channels);                        \
                                                                                                    \
-            const size_t grad_output_idx = grad_output_offset +                                    \
-                                           b * out_channels * out_height * out_width +             \
-                                           oc * out_height * out_width + oh * out_width + ow;      \
+            const size_t grad_output_idx = grad_output_offset + b * grad_output_stride_batch +     \
+                                           oc * grad_output_stride_channel +                       \
+                                           oh * grad_output_stride_h + ow * grad_output_stride_w;  \
             const TYPENAME grad_out_val = grad_output[grad_output_idx];                            \
                                                                                                    \
             /* Contribute to all relevant weight gradients */                                      \
@@ -708,31 +728,21 @@ CONV2D_GRAD_WEIGHT_OP(float, conv2d_grad_weight_f32)
 // Grad_output: (batch, out_channels, out_depth, out_height, out_width)
 // Grad_weight: (out_channels, in_channels, kernel_depth, kernel_height, kernel_width)
 //
-// Metadata layout:
-// - metadata[0]: num_els (total number of grad_weight elements)
-// - metadata[1]: batch
-// - metadata[2]: in_channels
-// - metadata[3]: out_channels
-// - metadata[4]: in_depth
-// - metadata[5]: in_height
-// - metadata[6]: in_width
-// - metadata[7]: kernel_depth
-// - metadata[8]: kernel_height
-// - metadata[9]: kernel_width
-// - metadata[10]: out_depth
-// - metadata[11]: out_height
-// - metadata[12]: out_width
-// - metadata[13]: stride_d
-// - metadata[14]: stride_h
-// - metadata[15]: stride_w
-// - metadata[16]: padding_d
-// - metadata[17]: padding_h
-// - metadata[18]: padding_w
-// - metadata[19]: dilation_d
-// - metadata[20]: dilation_h
-// - metadata[21]: dilation_w
-// - metadata[22]: input_offset
-// - metadata[23]: grad_output_offset
+// Generic metadata layout (input_ndim=5, spatial_dims=3):
+// - metadata[0]: num_els
+// - metadata[1]: input_ndim
+// - metadata[2]: spatial_dims
+// - metadata[3..8]: input_shape (batch, in_channels, in_depth, in_height, in_width)
+// - metadata[8..13]: grad_output_shape (batch, out_channels, out_depth, out_height, out_width)
+// - metadata[13..18]: weight_shape (out_channels, in_channels, kernel_depth, kernel_height,
+// kernel_width)
+// - metadata[18..23]: input_strides
+// - metadata[23..28]: grad_output_strides
+// - metadata[28]: input_offset
+// - metadata[29]: grad_output_offset
+// - metadata[30..33]: stride (stride_d, stride_h, stride_w)
+// - metadata[33..36]: padding (padding_d, padding_h, padding_w)
+// - metadata[36..39]: dilation (dilation_d, dilation_h, dilation_w)
 //
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
@@ -744,29 +754,42 @@ CONV2D_GRAD_WEIGHT_OP(float, conv2d_grad_weight_f32)
                         uint thread_index [[thread_position_in_grid]],                             \
                         uint threads_per_grid [[threads_per_grid]]) {                              \
                                                                                                    \
-        const size_t batch = metadata[1];                                                          \
-        const size_t in_channels = metadata[2];                                                    \
-        const size_t out_channels = metadata[3];                                                   \
-        const size_t in_depth = metadata[4];                                                       \
-        const size_t in_height = metadata[5];                                                      \
-        const size_t in_width = metadata[6];                                                       \
-        const size_t kernel_depth = metadata[7];                                                   \
-        const size_t kernel_height = metadata[8];                                                  \
-        const size_t kernel_width = metadata[9];                                                   \
-        const size_t out_depth = metadata[10];                                                     \
-        const size_t out_height = metadata[11];                                                    \
-        const size_t out_width = metadata[12];                                                     \
-        const size_t stride_d = metadata[13];                                                      \
-        const size_t stride_h = metadata[14];                                                      \
-        const size_t stride_w = metadata[15];                                                      \
-        const size_t padding_d = metadata[16];                                                     \
-        const size_t padding_h = metadata[17];                                                     \
-        const size_t padding_w = metadata[18];                                                     \
-        const size_t dilation_d = metadata[19];                                                    \
-        const size_t dilation_h = metadata[20];                                                    \
-        const size_t dilation_w = metadata[21];                                                    \
-        const size_t input_offset = metadata[22];                                                  \
-        const size_t grad_output_offset = metadata[23];                                            \
+        /* Parse generic metadata: Conv3D has input_ndim=5, spatial_dims=3 */                      \
+        const size_t input_ndim = metadata[1];                                                     \
+        const size_t spatial_dims = metadata[2];                                                   \
+        const size_t batch = metadata[3];                                                          \
+        const size_t in_channels = metadata[4];                                                    \
+        const size_t in_depth = metadata[5];                                                       \
+        const size_t in_height = metadata[6];                                                      \
+        const size_t in_width = metadata[7];                                                       \
+        const size_t grad_output_base = 3 + input_ndim;                                            \
+        const size_t out_channels = metadata[grad_output_base + 1];                                \
+        const size_t out_depth = metadata[grad_output_base + 2];                                   \
+        const size_t out_height = metadata[grad_output_base + 3];                                  \
+        const size_t out_width = metadata[grad_output_base + 4];                                   \
+        const size_t weight_base = 3 + 2 * input_ndim;                                             \
+        const size_t kernel_depth = metadata[weight_base + 2];                                     \
+        const size_t kernel_height = metadata[weight_base + 3];                                    \
+        const size_t kernel_width = metadata[weight_base + 4];                                     \
+        const size_t grad_output_stride_base = 3 + 4 * input_ndim;                                 \
+        const size_t grad_output_stride_batch = metadata[grad_output_stride_base];                 \
+        const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];           \
+        const size_t grad_output_stride_d = metadata[grad_output_stride_base + 2];                 \
+        const size_t grad_output_stride_h = metadata[grad_output_stride_base + 3];                 \
+        const size_t grad_output_stride_w = metadata[grad_output_stride_base + 4];                 \
+        const size_t offsets_base = 3 + 5 * input_ndim;                                            \
+        const size_t input_offset = metadata[offsets_base];                                        \
+        const size_t grad_output_offset = metadata[offsets_base + 1];                              \
+        const size_t conv_params_base = offsets_base + 2;                                          \
+        const size_t stride_d = metadata[conv_params_base];                                        \
+        const size_t stride_h = metadata[conv_params_base + 1];                                    \
+        const size_t stride_w = metadata[conv_params_base + 2];                                    \
+        const size_t padding_d = metadata[conv_params_base + spatial_dims];                        \
+        const size_t padding_h = metadata[conv_params_base + spatial_dims + 1];                    \
+        const size_t padding_w = metadata[conv_params_base + spatial_dims + 2];                    \
+        const size_t dilation_d = metadata[conv_params_base + 2 * spatial_dims];                   \
+        const size_t dilation_h = metadata[conv_params_base + 2 * spatial_dims + 1];               \
+        const size_t dilation_w = metadata[conv_params_base + 2 * spatial_dims + 2];               \
                                                                                                    \
         /* Parallelize over batch * out_channels * out_depth * out_height * out_width */           \
         const size_t total_output_els = batch * out_channels * out_depth * out_height * out_width; \
@@ -777,10 +800,10 @@ CONV2D_GRAD_WEIGHT_OP(float, conv2d_grad_weight_f32)
             const size_t oc = (idx / (out_width * out_height * out_depth)) % out_channels;         \
             const size_t b = idx / (out_width * out_height * out_depth * out_channels);            \
                                                                                                    \
-            const size_t grad_output_idx = grad_output_offset +                                    \
-                                           b * out_channels * out_depth * out_height * out_width + \
-                                           oc * out_depth * out_height * out_width +               \
-                                           od * out_height * out_width + oh * out_width + ow;      \
+            const size_t grad_output_idx = grad_output_offset + b * grad_output_stride_batch +     \
+                                           oc * grad_output_stride_channel +                       \
+                                           od * grad_output_stride_d + oh * grad_output_stride_h + \
+                                           ow * grad_output_stride_w;                              \
             const TYPENAME grad_out_val = grad_output[grad_output_idx];                            \
                                                                                                    \
             /* Contribute to all relevant weight gradients */                                      \
@@ -829,19 +852,20 @@ CONV3D_GRAD_WEIGHT_OP(float, conv3d_grad_weight_f32)
 // Grad_output: (batch, out_channels, out_width)
 // Grad_weight: (in_channels, out_channels, kernel_width)
 //
-// Metadata layout:
-// - metadata[0]: num_els (total number of grad_weight elements)
-// - metadata[1]: batch
-// - metadata[2]: in_channels
-// - metadata[3]: out_channels
-// - metadata[4]: in_width
-// - metadata[5]: kernel_width
-// - metadata[6]: out_width
-// - metadata[7]: stride
-// - metadata[8]: padding
-// - metadata[9]: dilation
-// - metadata[10]: input_offset
-// - metadata[11]: grad_output_offset
+// Generic metadata layout (input_ndim=3, spatial_dims=1):
+// - metadata[0]: num_els
+// - metadata[1]: input_ndim
+// - metadata[2]: spatial_dims
+// - metadata[3..6]: input_shape (batch, in_channels, in_width)
+// - metadata[6..9]: grad_output_shape (batch, out_channels, out_width)
+// - metadata[9..12]: weight_shape (in_channels, out_channels, kernel_width)
+// - metadata[12..15]: input_strides
+// - metadata[15..18]: grad_output_strides
+// - metadata[18]: input_offset
+// - metadata[19]: grad_output_offset
+// - metadata[20]: stride
+// - metadata[21]: padding
+// - metadata[22]: dilation
 //
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
@@ -853,17 +877,28 @@ CONV3D_GRAD_WEIGHT_OP(float, conv3d_grad_weight_f32)
                         uint thread_index [[thread_position_in_grid]],                             \
                         uint threads_per_grid [[threads_per_grid]]) {                              \
                                                                                                    \
-        const size_t batch = metadata[1];                                                          \
-        const size_t in_channels = metadata[2];                                                    \
-        const size_t out_channels = metadata[3];                                                   \
-        const size_t in_width = metadata[4];                                                       \
-        const size_t kernel_width = metadata[5];                                                   \
-        const size_t out_width = metadata[6];                                                      \
-        const size_t stride = metadata[7];                                                         \
-        const size_t padding = metadata[8];                                                        \
-        const size_t dilation = metadata[9];                                                       \
-        const size_t input_offset = metadata[10];                                                  \
-        const size_t grad_output_offset = metadata[11];                                            \
+        /* Parse generic metadata: ConvTranspose1D has input_ndim=3, spatial_dims=1 */             \
+        const size_t input_ndim = metadata[1];                                                     \
+        const size_t spatial_dims = metadata[2];                                                   \
+        const size_t batch = metadata[3];                                                          \
+        const size_t in_channels = metadata[4];                                                    \
+        const size_t in_width = metadata[5];                                                       \
+        const size_t grad_output_base = 3 + input_ndim;                                            \
+        const size_t out_channels = metadata[grad_output_base + 1];                                \
+        const size_t out_width = metadata[grad_output_base + 2];                                   \
+        const size_t weight_base = 3 + 2 * input_ndim;                                             \
+        const size_t kernel_width = metadata[weight_base + 2];                                     \
+        const size_t grad_output_stride_base = 3 + 4 * input_ndim;                                 \
+        const size_t grad_output_stride_batch = metadata[grad_output_stride_base];                 \
+        const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];           \
+        const size_t grad_output_stride_w = metadata[grad_output_stride_base + 2];                 \
+        const size_t offsets_base = 3 + 5 * input_ndim;                                            \
+        const size_t input_offset = metadata[offsets_base];                                        \
+        const size_t grad_output_offset = metadata[offsets_base + 1];                              \
+        const size_t conv_params_base = offsets_base + 2;                                          \
+        const size_t stride = metadata[conv_params_base];                                          \
+        const size_t padding = metadata[conv_params_base + spatial_dims];                          \
+        const size_t dilation = metadata[conv_params_base + 2 * spatial_dims];                     \
                                                                                                    \
         /* Parallelize over batch * out_channels * out_width */                                    \
         const size_t total_output_els = batch * out_channels * out_width;                          \
@@ -872,8 +907,9 @@ CONV3D_GRAD_WEIGHT_OP(float, conv3d_grad_weight_f32)
             const size_t oc = (idx / out_width) % out_channels;                                    \
             const size_t b = idx / (out_width * out_channels);                                     \
                                                                                                    \
-            const size_t grad_output_idx =                                                         \
-                grad_output_offset + b * out_channels * out_width + oc * out_width + ow;           \
+            const size_t grad_output_idx = grad_output_offset + b * grad_output_stride_batch +     \
+                                           oc * grad_output_stride_channel +                       \
+                                           ow * grad_output_stride_w;                              \
             const TYPENAME grad_out_val = grad_output[grad_output_idx];                            \
                                                                                                    \
             /* Contribute to all relevant weight gradients */                                      \
@@ -909,25 +945,20 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(float, conv_transpose1d_grad_weight_f32)
 // Grad_output: (batch, out_channels, out_height, out_width)
 // Grad_weight: (in_channels, out_channels, kernel_height, kernel_width)
 //
-// Metadata layout:
-// - metadata[0]: num_els (total number of grad_weight elements)
-// - metadata[1]: batch
-// - metadata[2]: in_channels
-// - metadata[3]: out_channels
-// - metadata[4]: in_height
-// - metadata[5]: in_width
-// - metadata[6]: kernel_height
-// - metadata[7]: kernel_width
-// - metadata[8]: out_height
-// - metadata[9]: out_width
-// - metadata[10]: stride_h
-// - metadata[11]: stride_w
-// - metadata[12]: padding_h
-// - metadata[13]: padding_w
-// - metadata[14]: dilation_h
-// - metadata[15]: dilation_w
-// - metadata[16]: input_offset
-// - metadata[17]: grad_output_offset
+// Generic metadata layout (input_ndim=4, spatial_dims=2):
+// - metadata[0]: num_els
+// - metadata[1]: input_ndim
+// - metadata[2]: spatial_dims
+// - metadata[3..7]: input_shape (batch, in_channels, in_height, in_width)
+// - metadata[7..11]: grad_output_shape (batch, out_channels, out_height, out_width)
+// - metadata[11..15]: weight_shape (in_channels, out_channels, kernel_height, kernel_width)
+// - metadata[15..19]: input_strides
+// - metadata[19..23]: grad_output_strides
+// - metadata[23]: input_offset
+// - metadata[24]: grad_output_offset
+// - metadata[25..27]: stride (stride_h, stride_w)
+// - metadata[27..29]: padding (padding_h, padding_w)
+// - metadata[29..31]: dilation (dilation_h, dilation_w)
 //
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
@@ -939,23 +970,35 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(float, conv_transpose1d_grad_weight_f32)
                         uint thread_index [[thread_position_in_grid]],                             \
                         uint threads_per_grid [[threads_per_grid]]) {                              \
                                                                                                    \
-        const size_t batch = metadata[1];                                                          \
-        const size_t in_channels = metadata[2];                                                    \
-        const size_t out_channels = metadata[3];                                                   \
-        const size_t in_height = metadata[4];                                                      \
-        const size_t in_width = metadata[5];                                                       \
-        const size_t kernel_height = metadata[6];                                                  \
-        const size_t kernel_width = metadata[7];                                                   \
-        const size_t out_height = metadata[8];                                                     \
-        const size_t out_width = metadata[9];                                                      \
-        const size_t stride_h = metadata[10];                                                      \
-        const size_t stride_w = metadata[11];                                                      \
-        const size_t padding_h = metadata[12];                                                     \
-        const size_t padding_w = metadata[13];                                                     \
-        const size_t dilation_h = metadata[14];                                                    \
-        const size_t dilation_w = metadata[15];                                                    \
-        const size_t input_offset = metadata[16];                                                  \
-        const size_t grad_output_offset = metadata[17];                                            \
+        /* Parse generic metadata: ConvTranspose2D has input_ndim=4, spatial_dims=2 */             \
+        const size_t input_ndim = metadata[1];                                                     \
+        const size_t spatial_dims = metadata[2];                                                   \
+        const size_t batch = metadata[3];                                                          \
+        const size_t in_channels = metadata[4];                                                    \
+        const size_t in_height = metadata[5];                                                      \
+        const size_t in_width = metadata[6];                                                       \
+        const size_t grad_output_base = 3 + input_ndim;                                            \
+        const size_t out_channels = metadata[grad_output_base + 1];                                \
+        const size_t out_height = metadata[grad_output_base + 2];                                  \
+        const size_t out_width = metadata[grad_output_base + 3];                                   \
+        const size_t weight_base = 3 + 2 * input_ndim;                                             \
+        const size_t kernel_height = metadata[weight_base + 2];                                    \
+        const size_t kernel_width = metadata[weight_base + 3];                                     \
+        const size_t grad_output_stride_base = 3 + 4 * input_ndim;                                 \
+        const size_t grad_output_stride_batch = metadata[grad_output_stride_base];                 \
+        const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];           \
+        const size_t grad_output_stride_h = metadata[grad_output_stride_base + 2];                 \
+        const size_t grad_output_stride_w = metadata[grad_output_stride_base + 3];                 \
+        const size_t offsets_base = 3 + 5 * input_ndim;                                            \
+        const size_t input_offset = metadata[offsets_base];                                        \
+        const size_t grad_output_offset = metadata[offsets_base + 1];                              \
+        const size_t conv_params_base = offsets_base + 2;                                          \
+        const size_t stride_h = metadata[conv_params_base];                                        \
+        const size_t stride_w = metadata[conv_params_base + 1];                                    \
+        const size_t padding_h = metadata[conv_params_base + spatial_dims];                        \
+        const size_t padding_w = metadata[conv_params_base + spatial_dims + 1];                    \
+        const size_t dilation_h = metadata[conv_params_base + 2 * spatial_dims];                   \
+        const size_t dilation_w = metadata[conv_params_base + 2 * spatial_dims + 1];               \
                                                                                                    \
         /* Parallelize over batch * out_channels * out_height * out_width */                       \
         const size_t total_output_els = batch * out_channels * out_height * out_width;             \
@@ -965,9 +1008,9 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(float, conv_transpose1d_grad_weight_f32)
             const size_t oc = (idx / (out_width * out_height)) % out_channels;                     \
             const size_t b = idx / (out_width * out_height * out_channels);                        \
                                                                                                    \
-            const size_t grad_output_idx = grad_output_offset +                                    \
-                                           b * out_channels * out_height * out_width +             \
-                                           oc * out_height * out_width + oh * out_width + ow;      \
+            const size_t grad_output_idx = grad_output_offset + b * grad_output_stride_batch +     \
+                                           oc * grad_output_stride_channel +                       \
+                                           oh * grad_output_stride_h + ow * grad_output_stride_w;  \
             const TYPENAME grad_out_val = grad_output[grad_output_idx];                            \
                                                                                                    \
             /* Contribute to all relevant weight gradients */                                      \
@@ -1009,31 +1052,21 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(float, conv_transpose2d_grad_weight_f32)
 // Grad_output: (batch, out_channels, out_depth, out_height, out_width)
 // Grad_weight: (in_channels, out_channels, kernel_depth, kernel_height, kernel_width)
 //
-// Metadata layout:
-// - metadata[0]: num_els (total number of grad_weight elements)
-// - metadata[1]: batch
-// - metadata[2]: in_channels
-// - metadata[3]: out_channels
-// - metadata[4]: in_depth
-// - metadata[5]: in_height
-// - metadata[6]: in_width
-// - metadata[7]: kernel_depth
-// - metadata[8]: kernel_height
-// - metadata[9]: kernel_width
-// - metadata[10]: out_depth
-// - metadata[11]: out_height
-// - metadata[12]: out_width
-// - metadata[13]: stride_d
-// - metadata[14]: stride_h
-// - metadata[15]: stride_w
-// - metadata[16]: padding_d
-// - metadata[17]: padding_h
-// - metadata[18]: padding_w
-// - metadata[19]: dilation_d
-// - metadata[20]: dilation_h
-// - metadata[21]: dilation_w
-// - metadata[22]: input_offset
-// - metadata[23]: grad_output_offset
+// Generic metadata layout (input_ndim=5, spatial_dims=3):
+// - metadata[0]: num_els
+// - metadata[1]: input_ndim
+// - metadata[2]: spatial_dims
+// - metadata[3..8]: input_shape (batch, in_channels, in_depth, in_height, in_width)
+// - metadata[8..13]: grad_output_shape (batch, out_channels, out_depth, out_height, out_width)
+// - metadata[13..18]: weight_shape (in_channels, out_channels, kernel_depth, kernel_height,
+// kernel_width)
+// - metadata[18..23]: input_strides
+// - metadata[23..28]: grad_output_strides
+// - metadata[28]: input_offset
+// - metadata[29]: grad_output_offset
+// - metadata[30..33]: stride (stride_d, stride_h, stride_w)
+// - metadata[33..36]: padding (padding_d, padding_h, padding_w)
+// - metadata[36..39]: dilation (dilation_d, dilation_h, dilation_w)
 //
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
@@ -1045,29 +1078,42 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(float, conv_transpose2d_grad_weight_f32)
                         uint thread_index [[thread_position_in_grid]],                             \
                         uint threads_per_grid [[threads_per_grid]]) {                              \
                                                                                                    \
-        const size_t batch = metadata[1];                                                          \
-        const size_t in_channels = metadata[2];                                                    \
-        const size_t out_channels = metadata[3];                                                   \
-        const size_t in_depth = metadata[4];                                                       \
-        const size_t in_height = metadata[5];                                                      \
-        const size_t in_width = metadata[6];                                                       \
-        const size_t kernel_depth = metadata[7];                                                   \
-        const size_t kernel_height = metadata[8];                                                  \
-        const size_t kernel_width = metadata[9];                                                   \
-        const size_t out_depth = metadata[10];                                                     \
-        const size_t out_height = metadata[11];                                                    \
-        const size_t out_width = metadata[12];                                                     \
-        const size_t stride_d = metadata[13];                                                      \
-        const size_t stride_h = metadata[14];                                                      \
-        const size_t stride_w = metadata[15];                                                      \
-        const size_t padding_d = metadata[16];                                                     \
-        const size_t padding_h = metadata[17];                                                     \
-        const size_t padding_w = metadata[18];                                                     \
-        const size_t dilation_d = metadata[19];                                                    \
-        const size_t dilation_h = metadata[20];                                                    \
-        const size_t dilation_w = metadata[21];                                                    \
-        const size_t input_offset = metadata[22];                                                  \
-        const size_t grad_output_offset = metadata[23];                                            \
+        /* Parse generic metadata: ConvTranspose3D has input_ndim=5, spatial_dims=3 */             \
+        const size_t input_ndim = metadata[1];                                                     \
+        const size_t spatial_dims = metadata[2];                                                   \
+        const size_t batch = metadata[3];                                                          \
+        const size_t in_channels = metadata[4];                                                    \
+        const size_t in_depth = metadata[5];                                                       \
+        const size_t in_height = metadata[6];                                                      \
+        const size_t in_width = metadata[7];                                                       \
+        const size_t grad_output_base = 3 + input_ndim;                                            \
+        const size_t out_channels = metadata[grad_output_base + 1];                                \
+        const size_t out_depth = metadata[grad_output_base + 2];                                   \
+        const size_t out_height = metadata[grad_output_base + 3];                                  \
+        const size_t out_width = metadata[grad_output_base + 4];                                   \
+        const size_t weight_base = 3 + 2 * input_ndim;                                             \
+        const size_t kernel_depth = metadata[weight_base + 2];                                     \
+        const size_t kernel_height = metadata[weight_base + 3];                                    \
+        const size_t kernel_width = metadata[weight_base + 4];                                     \
+        const size_t grad_output_stride_base = 3 + 4 * input_ndim;                                 \
+        const size_t grad_output_stride_batch = metadata[grad_output_stride_base];                 \
+        const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];           \
+        const size_t grad_output_stride_d = metadata[grad_output_stride_base + 2];                 \
+        const size_t grad_output_stride_h = metadata[grad_output_stride_base + 3];                 \
+        const size_t grad_output_stride_w = metadata[grad_output_stride_base + 4];                 \
+        const size_t offsets_base = 3 + 5 * input_ndim;                                            \
+        const size_t input_offset = metadata[offsets_base];                                        \
+        const size_t grad_output_offset = metadata[offsets_base + 1];                              \
+        const size_t conv_params_base = offsets_base + 2;                                          \
+        const size_t stride_d = metadata[conv_params_base];                                        \
+        const size_t stride_h = metadata[conv_params_base + 1];                                    \
+        const size_t stride_w = metadata[conv_params_base + 2];                                    \
+        const size_t padding_d = metadata[conv_params_base + spatial_dims];                        \
+        const size_t padding_h = metadata[conv_params_base + spatial_dims + 1];                    \
+        const size_t padding_w = metadata[conv_params_base + spatial_dims + 2];                    \
+        const size_t dilation_d = metadata[conv_params_base + 2 * spatial_dims];                   \
+        const size_t dilation_h = metadata[conv_params_base + 2 * spatial_dims + 1];               \
+        const size_t dilation_w = metadata[conv_params_base + 2 * spatial_dims + 2];               \
                                                                                                    \
         /* Parallelize over batch * out_channels * out_depth * out_height * out_width */           \
         const size_t total_output_els = batch * out_channels * out_depth * out_height * out_width; \
@@ -1078,10 +1124,10 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(float, conv_transpose2d_grad_weight_f32)
             const size_t oc = (idx / (out_width * out_height * out_depth)) % out_channels;         \
             const size_t b = idx / (out_width * out_height * out_depth * out_channels);            \
                                                                                                    \
-            const size_t grad_output_idx = grad_output_offset +                                    \
-                                           b * out_channels * out_depth * out_height * out_width + \
-                                           oc * out_depth * out_height * out_width +               \
-                                           od * out_height * out_width + oh * out_width + ow;      \
+            const size_t grad_output_idx = grad_output_offset + b * grad_output_stride_batch +     \
+                                           oc * grad_output_stride_channel +                       \
+                                           od * grad_output_stride_d + oh * grad_output_stride_h + \
+                                           ow * grad_output_stride_w;                              \
             const TYPENAME grad_out_val = grad_output[grad_output_idx];                            \
                                                                                                    \
             /* Contribute to all relevant weight gradients */                                      \

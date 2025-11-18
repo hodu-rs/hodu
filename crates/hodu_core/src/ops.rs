@@ -220,8 +220,8 @@ pub enum UnaryScalarOp {
     MulScalar,
     DivScalar,
     PowScalar,
-    MaximumScalar, // no-backprop
-    MinimumScalar, // no-backprop
+    MaximumScalar,
+    MinimumScalar,
 
     LeakyRelu,
     Elu,
@@ -280,8 +280,8 @@ impl fmt::Debug for MatrixOp {
 pub enum ReduceOp {
     Sum,
     Mean,
-    Max, // no-backprop
-    Min, // no-backprop
+    Max,
+    Min,
     Prod,
     Std,
     Var,
@@ -660,4 +660,7 @@ pub struct OpParams {
 
     /// Data type (for Cast operations)
     pub dtype: Option<crate::types::DType>,
+
+    /// Auxiliary tensor IDs (for storing indices from max/min pooling, etc.)
+    pub aux_tensors: Vec<crate::tensor::TensorId>,
 }

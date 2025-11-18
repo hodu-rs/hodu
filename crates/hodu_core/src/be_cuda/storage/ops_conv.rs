@@ -143,14 +143,14 @@ pub fn call_ops_conv_grad_weight(
     op: Op,
 ) -> HoduResult<CudaStorage> {
     // Validate op
-    match op {
-        Op::Conv(_) => (),
+    let conv_op = match op {
+        Op::Conv(conv_op) => conv_op,
         _ => {
             return Err(HoduError::BackendError(
                 "call_ops_conv_grad_weight expects conv op".to_string(),
             ))
         },
-    }
+    };
 
     let input_shape = input_layout.shape();
     let grad_output_shape = grad_output_layout.shape();
@@ -205,7 +205,7 @@ pub fn call_ops_conv_grad_weight(
     let device_id = input_storage.device_id();
     let device_arc = Arc::clone(&input_storage.device);
 
-    let kernel_name = format!("conv_grad_weight_{}", dtype);
+    let kernel_name = format!("{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

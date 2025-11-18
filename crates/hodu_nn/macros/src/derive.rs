@@ -89,9 +89,6 @@ pub fn derive_optimizer_impl(input: TokenStream) -> TokenStream {
                     param.zero_grad()?;
                 }
 
-                // Clear default context tape (context 0)
-                #hodu_core_path::tensor::gradient::clear_default_context_tape();
-
                 Ok(())
             }
             fn set_learning_rate(&mut self, learning_rate: impl Into<#hodu_core_path::scalar::Scalar>) {

@@ -39,10 +39,9 @@ impl VjpCompute for ConvOp {
                 let dilation = scalars[7].to_usize();
 
                 // Gradient w.r.t. input: use transposed convolution
-                // For conv1d: y = conv1d(x, w), grad_x = conv_transpose1d(grad_y, w, same params)
-                // Weight for conv_transpose needs to be transposed: [Co, Ci, K] -> [Ci, Co, K]
-                let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
-
+                // Conv1d weight: [Co, Ci, K], Conv_transpose1d (backend): w [Co_out, Ci_in, K]
+                // Transpose needed: [Co, Ci, K] -> [Ci, Co, K]
+                let weight_transposed = weight.transpose(0, 1)?;
                 let grad_input =
                     grad_output_tensor.conv_transpose1d(&weight_transposed, stride, padding, 0, dilation)?;
 
@@ -77,10 +76,11 @@ impl VjpCompute for ConvOp {
                 let dilation = scalars[9].to_usize();
 
                 // Gradient w.r.t. input: use transposed convolution
-                // For conv2d: y = conv2d(x, w), grad_x = conv_transpose2d(grad_y, w, same params)
-                // Weight for conv_transpose needs to be transposed: [Co, Ci, Kh, Kw] -> [Ci, Co, Kh, Kw]
-                let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
-
+                // Conv2d: x [N, Ci, H, W] * w [Co, Ci, K, K] -> y [N, Co, H', W']
+                // Backward: grad_y [N, Co, H', W'] -> grad_x [N, Ci, H, W]
+                // Conv_transpose2d (backend): input [N, Ci_in, H, W] * w [Co_out, Ci_in, K, K] -> output [N, Co_out, H', W']
+                // For backward: grad_y [N, Co, H', W'] needs w [Ci, Co, K, K] (transpose needed!)
+                let weight_transposed = weight.transpose(0, 1)?; // [Co, Ci, K, K] -> [Ci, Co, K, K]
                 let grad_input =
                     grad_output_tensor.conv_transpose2d(&weight_transposed, stride, padding, 0, dilation)?;
 
@@ -116,10 +116,9 @@ impl VjpCompute for ConvOp {
                 let dilation = scalars[11].to_usize();
 
                 // Gradient w.r.t. input: use transposed convolution
-                // For conv3d: y = conv3d(x, w), grad_x = conv_transpose3d(grad_y, w, same params)
-                // Weight for conv_transpose needs to be transposed: [Co, Ci, Kd, Kh, Kw] -> [Ci, Co, Kd, Kh, Kw]
-                let weight_transposed = weight.transpose(0, 1)?; // Swap Co and Ci dimensions
-
+                // Conv3d weight: [Co, Ci, Kd, Kh, Kw], Conv_transpose3d (backend): w [Co_out, Ci_in, ...]
+                // Transpose needed: [Co, Ci, ...] -> [Ci, Co, ...]
+                let weight_transposed = weight.transpose(0, 1)?;
                 let grad_input =
                     grad_output_tensor.conv_transpose3d(&weight_transposed, stride, padding, 0, dilation)?;
 

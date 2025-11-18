@@ -15,52 +15,144 @@ impl VjpCompute for WindowingOp {
         grad_output: TensorId,
         scalars: &[Scalar],
     ) -> HoduResult<Vec<TensorId>> {
+        // Parameters: rank, window_shape[rank], strides[rank], padding[rank*2]
+        if scalars.is_empty() {
+            return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
+        }
+
+        let rank = scalars[0].to_usize();
+        if scalars.len() < 1 + rank * 4 {
+            return Err(HoduError::InternalError(
+                "ReduceWindow requires sufficient parameters".to_string(),
+            ));
+        }
+
+        // Extract window_shape
+        let window_shape: Vec<usize> = (0..rank).map(|i| scalars[1 + i].to_usize()).collect();
+
+        let input = inputs[0];
+        let input_tensor = tensor_from_id(input);
+        let input_shape = input_tensor.shape();
+        let dtype = input_tensor.dtype();
+
         match self {
             WindowingOp::ReduceWindowMax | WindowingOp::ReduceWindowMin => {
-                // Max and Min reductions are not differentiable (discrete operations)
-                Err(HoduError::GradientComputationFailed(
-                    "Max and Min reductions are not differentiable (discrete operations)".to_string(),
-                ))
-            },
-            WindowingOp::ReduceWindowMean | WindowingOp::ReduceWindowSum => {
-                // Parameters: rank, window_shape[rank], strides[rank], padding[rank*2], reduction_type
-                if scalars.is_empty() {
-                    return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
-                }
+                // For max/min pooling, gradient flows only through positions that were max/min
+                // Upsample both output and gradient by repeating each element by stride amount
 
-                let rank = scalars[0].to_usize();
-                if scalars.len() < 1 + rank * 4 + 1 {
-                    return Err(HoduError::InternalError(
-                        "ReduceWindow requires sufficient parameters".to_string(),
-                    ));
-                }
+                // Extract strides
+                let strides: Vec<usize> = (0..rank).map(|i| scalars[1 + rank + i].to_usize()).collect();
 
-                // Extract window_shape
-                let window_shape: Vec<usize> = (0..rank).map(|i| scalars[1 + i].to_usize()).collect();
+                // Upsample output
+                let output_tensor = tensor_from_id(_output);
+                let mut upsampled_output = output_tensor.clone();
 
-                let input = inputs[0];
-                let input_tensor = tensor_from_id(input);
-                let input_shape = input_tensor.shape();
-                let dtype = input_tensor.dtype();
-
-                // For pooling gradient, we need to broadcast the gradient back to input shape
+                // Upsample gradient
                 let grad_tensor = tensor_from_id(grad_output);
-                let broadcasted_grad = grad_tensor.broadcast(&input_shape)?;
+                let mut upsampled_grad = grad_tensor.clone();
 
-                match self {
-                    WindowingOp::ReduceWindowMean => {
-                        // Mean: divide by window size
-                        let window_size: usize = window_shape.iter().product();
-                        let scale = Scalar::from_f32(1.0 / window_size as f32, dtype);
-                        let scaled_grad = broadcasted_grad.mul_scalar(scale)?;
-                        Ok(vec![scaled_grad.id()])
-                    },
-                    WindowingOp::ReduceWindowSum => {
-                        // Sum: just broadcast
-                        Ok(vec![broadcasted_grad.id()])
-                    },
-                    _ => unreachable!(),
+                // For each dimension, if stride > 1, insert a dimension after it and broadcast
+                for (dim_idx, &stride) in strides.iter().enumerate().rev() {
+                    if stride > 1 {
+                        // Upsample output
+                        let current_shape = upsampled_output.shape();
+                        let current_dims = current_shape.dims();
+
+                        let mut expanded_shape = current_dims.to_vec();
+                        expanded_shape.insert(dim_idx + 1, 1);
+                        upsampled_output = upsampled_output.reshape(&expanded_shape)?;
+
+                        let mut broadcast_shape = expanded_shape.clone();
+                        broadcast_shape[dim_idx + 1] = stride;
+                        upsampled_output = upsampled_output.broadcast(&broadcast_shape)?;
+
+                        let mut final_shape = current_dims.to_vec();
+                        final_shape[dim_idx] *= stride;
+                        upsampled_output = upsampled_output.reshape(&final_shape)?;
+
+                        // Upsample gradient (same process)
+                        upsampled_grad = upsampled_grad.reshape(&expanded_shape)?;
+                        upsampled_grad = upsampled_grad.broadcast(&broadcast_shape)?;
+                        upsampled_grad = upsampled_grad.reshape(&final_shape)?;
+                    }
                 }
+
+                // Broadcast to exact input shape (handles padding differences)
+                upsampled_output = upsampled_output.broadcast(&input_shape)?;
+                upsampled_grad = upsampled_grad.broadcast(&input_shape)?;
+
+                // Create mask: input == upsampled_output
+                let mask = input_tensor.eq(&upsampled_output)?;
+                let mask_f = mask.to_dtype(dtype)?;
+
+                // Multiply gradient by mask
+                let result = upsampled_grad.mul(&mask_f)?;
+
+                Ok(vec![result.id()])
+            },
+            WindowingOp::ReduceWindowMean => {
+                // Mean: divide by window size and upsample gradient
+                let strides: Vec<usize> = (0..rank).map(|i| scalars[1 + rank + i].to_usize()).collect();
+
+                let grad_tensor = tensor_from_id(grad_output);
+                let mut upsampled_grad = grad_tensor.clone();
+
+                // Upsample gradient same way as Max/Min
+                for (dim_idx, &stride) in strides.iter().enumerate().rev() {
+                    if stride > 1 {
+                        let current_shape = upsampled_grad.shape();
+                        let current_dims = current_shape.dims();
+
+                        let mut expanded_shape = current_dims.to_vec();
+                        expanded_shape.insert(dim_idx + 1, 1);
+                        upsampled_grad = upsampled_grad.reshape(&expanded_shape)?;
+
+                        let mut broadcast_shape = expanded_shape.clone();
+                        broadcast_shape[dim_idx + 1] = stride;
+                        upsampled_grad = upsampled_grad.broadcast(&broadcast_shape)?;
+
+                        let mut final_shape = current_dims.to_vec();
+                        final_shape[dim_idx] *= stride;
+                        upsampled_grad = upsampled_grad.reshape(&final_shape)?;
+                    }
+                }
+
+                upsampled_grad = upsampled_grad.broadcast(&input_shape)?;
+
+                let window_size: usize = window_shape.iter().product();
+                let scale = Scalar::from_f32(1.0 / window_size as f32, dtype);
+                let scaled_grad = upsampled_grad.mul_scalar(scale)?;
+                Ok(vec![scaled_grad.id()])
+            },
+            WindowingOp::ReduceWindowSum => {
+                // Sum: just upsample gradient
+                let strides: Vec<usize> = (0..rank).map(|i| scalars[1 + rank + i].to_usize()).collect();
+
+                let grad_tensor = tensor_from_id(grad_output);
+                let mut upsampled_grad = grad_tensor.clone();
+
+                // Upsample gradient same way as Max/Min
+                for (dim_idx, &stride) in strides.iter().enumerate().rev() {
+                    if stride > 1 {
+                        let current_shape = upsampled_grad.shape();
+                        let current_dims = current_shape.dims();
+
+                        let mut expanded_shape = current_dims.to_vec();
+                        expanded_shape.insert(dim_idx + 1, 1);
+                        upsampled_grad = upsampled_grad.reshape(&expanded_shape)?;
+
+                        let mut broadcast_shape = expanded_shape.clone();
+                        broadcast_shape[dim_idx + 1] = stride;
+                        upsampled_grad = upsampled_grad.broadcast(&broadcast_shape)?;
+
+                        let mut final_shape = current_dims.to_vec();
+                        final_shape[dim_idx] *= stride;
+                        upsampled_grad = upsampled_grad.reshape(&final_shape)?;
+                    }
+                }
+
+                upsampled_grad = upsampled_grad.broadcast(&input_shape)?;
+                Ok(vec![upsampled_grad.id()])
             },
         }
     }

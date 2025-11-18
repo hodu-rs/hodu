@@ -199,24 +199,50 @@ void conv2d_grad_weight_f32(const void *input_ptr, const void *grad_output_ptr,
     const float *grad_output = (const float *)grad_output_ptr;
     float *grad_weight = (float *)grad_weight_ptr;
 
+    // Parse generic metadata: Conv2D has input_ndim=4, spatial_dims=2
     const size_t num_els = metadata[0];
-    const size_t batch = metadata[1];
-    const size_t in_channels = metadata[2];
-    const size_t out_channels = metadata[3];
-    const size_t in_height = metadata[4];
-    const size_t in_width = metadata[5];
-    const size_t kernel_height = metadata[6];
-    const size_t kernel_width = metadata[7];
-    const size_t out_height = metadata[8];
-    const size_t out_width = metadata[9];
-    const size_t stride_h = metadata[10];
-    const size_t stride_w = metadata[11];
-    const size_t padding_h = metadata[12];
-    const size_t padding_w = metadata[13];
-    const size_t dilation_h = metadata[14];
-    const size_t dilation_w = metadata[15];
-    const size_t input_offset = metadata[16];
-    const size_t grad_output_offset = metadata[17];
+    const size_t input_ndim = metadata[1];
+    const size_t spatial_dims = metadata[2];
+    const size_t batch = metadata[3];
+    const size_t in_channels = metadata[4];
+    const size_t in_height = metadata[5];
+    const size_t in_width = metadata[6];
+    const size_t grad_output_base = 3 + input_ndim;
+    const size_t out_channels = metadata[grad_output_base + 1];
+    const size_t out_height = metadata[grad_output_base + 2];
+    const size_t out_width = metadata[grad_output_base + 3];
+    const size_t weight_base = 3 + 2 * input_ndim;
+    const size_t kernel_height = metadata[weight_base + 2];
+    const size_t kernel_width = metadata[weight_base + 3];
+    const size_t grad_output_stride_base = 3 + 4 * input_ndim;
+    const size_t grad_output_stride_batch = metadata[grad_output_stride_base];
+    const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];
+    const size_t grad_output_stride_h = metadata[grad_output_stride_base + 2];
+    const size_t grad_output_stride_w = metadata[grad_output_stride_base + 3];
+    const size_t offsets_base = 3 + 5 * input_ndim;
+    const size_t input_offset = metadata[offsets_base];
+    const size_t grad_output_offset = metadata[offsets_base + 1];
+    const size_t conv_params_base = offsets_base + 2;
+    const size_t stride_h = metadata[conv_params_base];
+    const size_t stride_w = metadata[conv_params_base + 1];
+    const size_t padding_h = metadata[conv_params_base + spatial_dims];
+    const size_t padding_w = metadata[conv_params_base + spatial_dims + 1];
+    const size_t dilation_h = metadata[conv_params_base + 2 * spatial_dims];
+    const size_t dilation_w = metadata[conv_params_base + 2 * spatial_dims + 1];
+
+    // Check if grad_output is contiguous (required for im2col + GEMM approach)
+    const size_t expected_stride_w = 1;
+    const size_t expected_stride_h = out_width;
+    const size_t expected_stride_channel = out_height * out_width;
+    const size_t expected_stride_batch = out_channels * out_height * out_width;
+
+    if (grad_output_stride_w != expected_stride_w || grad_output_stride_h != expected_stride_h ||
+        grad_output_stride_channel != expected_stride_channel ||
+        grad_output_stride_batch != expected_stride_batch) {
+        // grad_output is not contiguous (e.g., broadcasted), use fallback
+        conv2d_grad_weight_f32_fallback(input_ptr, grad_output_ptr, grad_weight_ptr, metadata);
+        return;
+    }
 
     memset(grad_weight, 0, num_els * sizeof(float));
 
@@ -258,24 +284,50 @@ void conv2d_grad_weight_f64(const void *input_ptr, const void *grad_output_ptr,
     const double *grad_output = (const double *)grad_output_ptr;
     double *grad_weight = (double *)grad_weight_ptr;
 
+    // Parse generic metadata: Conv2D has input_ndim=4, spatial_dims=2
     const size_t num_els = metadata[0];
-    const size_t batch = metadata[1];
-    const size_t in_channels = metadata[2];
-    const size_t out_channels = metadata[3];
-    const size_t in_height = metadata[4];
-    const size_t in_width = metadata[5];
-    const size_t kernel_height = metadata[6];
-    const size_t kernel_width = metadata[7];
-    const size_t out_height = metadata[8];
-    const size_t out_width = metadata[9];
-    const size_t stride_h = metadata[10];
-    const size_t stride_w = metadata[11];
-    const size_t padding_h = metadata[12];
-    const size_t padding_w = metadata[13];
-    const size_t dilation_h = metadata[14];
-    const size_t dilation_w = metadata[15];
-    const size_t input_offset = metadata[16];
-    const size_t grad_output_offset = metadata[17];
+    const size_t input_ndim = metadata[1];
+    const size_t spatial_dims = metadata[2];
+    const size_t batch = metadata[3];
+    const size_t in_channels = metadata[4];
+    const size_t in_height = metadata[5];
+    const size_t in_width = metadata[6];
+    const size_t grad_output_base = 3 + input_ndim;
+    const size_t out_channels = metadata[grad_output_base + 1];
+    const size_t out_height = metadata[grad_output_base + 2];
+    const size_t out_width = metadata[grad_output_base + 3];
+    const size_t weight_base = 3 + 2 * input_ndim;
+    const size_t kernel_height = metadata[weight_base + 2];
+    const size_t kernel_width = metadata[weight_base + 3];
+    const size_t grad_output_stride_base = 3 + 4 * input_ndim;
+    const size_t grad_output_stride_batch = metadata[grad_output_stride_base];
+    const size_t grad_output_stride_channel = metadata[grad_output_stride_base + 1];
+    const size_t grad_output_stride_h = metadata[grad_output_stride_base + 2];
+    const size_t grad_output_stride_w = metadata[grad_output_stride_base + 3];
+    const size_t offsets_base = 3 + 5 * input_ndim;
+    const size_t input_offset = metadata[offsets_base];
+    const size_t grad_output_offset = metadata[offsets_base + 1];
+    const size_t conv_params_base = offsets_base + 2;
+    const size_t stride_h = metadata[conv_params_base];
+    const size_t stride_w = metadata[conv_params_base + 1];
+    const size_t padding_h = metadata[conv_params_base + spatial_dims];
+    const size_t padding_w = metadata[conv_params_base + spatial_dims + 1];
+    const size_t dilation_h = metadata[conv_params_base + 2 * spatial_dims];
+    const size_t dilation_w = metadata[conv_params_base + 2 * spatial_dims + 1];
+
+    // Check if grad_output is contiguous (required for im2col + GEMM approach)
+    const size_t expected_stride_w = 1;
+    const size_t expected_stride_h = out_width;
+    const size_t expected_stride_channel = out_height * out_width;
+    const size_t expected_stride_batch = out_channels * out_height * out_width;
+
+    if (grad_output_stride_w != expected_stride_w || grad_output_stride_h != expected_stride_h ||
+        grad_output_stride_channel != expected_stride_channel ||
+        grad_output_stride_batch != expected_stride_batch) {
+        // grad_output is not contiguous (e.g., broadcasted), use fallback
+        conv2d_grad_weight_f64_fallback(input_ptr, grad_output_ptr, grad_weight_ptr, metadata);
+        return;
+    }
 
     memset(grad_weight, 0, num_els * sizeof(double));
 

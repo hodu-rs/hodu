@@ -499,10 +499,12 @@ pub fn call_ops_scatter(
 
     // Validate op
     match op {
-        Op::Indexing(IndexingOp::Scatter) => (),
+        Op::Indexing(
+            IndexingOp::Scatter | IndexingOp::ScatterAdd | IndexingOp::ScatterMax | IndexingOp::ScatterMin,
+        ) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "Lcall_scatterE expects LScatterE op".to_string(),
+                "Lcall_scatterE expects scatter-type op".to_string(),
             ))
         },
     };

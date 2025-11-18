@@ -341,6 +341,49 @@ impl Tensor {
         }
     }
 
+    pub fn repeat(&self, repeats: &[usize]) -> HoduResult<Self> {
+        let input_shape = self.shape();
+        let ndim = input_shape.ndim();
+
+        if repeats.len() != ndim {
+            return Err(HoduError::InvalidLayout {
+                reason: format!("repeats length {} must match tensor rank {}", repeats.len(), ndim),
+            });
+        }
+
+        // Use tile operation: repeat each element before moving to next
+        // For each dimension, we expand then reshape
+        let mut result = self.clone();
+
+        for (dim_idx, &repeat_count) in repeats.iter().enumerate() {
+            if repeat_count == 1 {
+                continue; // No need to repeat
+            }
+
+            let current_shape = result.shape();
+            let current_dims = current_shape.dims();
+
+            // Add a new dimension after current dim and broadcast
+            let mut expanded_shape = current_dims.to_vec();
+            expanded_shape.insert(dim_idx + 1, 1);
+
+            // Reshape to add singleton dimension
+            result = result.reshape(&expanded_shape)?;
+
+            // Broadcast the singleton dimension
+            let mut broadcast_shape = expanded_shape.clone();
+            broadcast_shape[dim_idx + 1] = repeat_count;
+            result = result.broadcast(&broadcast_shape)?;
+
+            // Reshape to merge the repeated dimension
+            let mut final_shape = current_dims.to_vec();
+            final_shape[dim_idx] *= repeat_count;
+            result = result.reshape(&final_shape)?;
+        }
+
+        Ok(result)
+    }
+
     pub fn slice<D: Into<Scalar>, S: Into<Scalar> + Copy>(
         &self,
         dim: D,

@@ -64,6 +64,38 @@ where
 }
 
 /// Execute a convolution weight gradient operation for backpropagation
+///
+/// # Metadata layout (Generic, dimension-agnostic)
+///
+/// All grad_weight operations use a unified metadata structure:
+///
+/// - metadata[0]: num_els (total grad_weight elements)
+/// - metadata[1]: input_ndim
+/// - metadata[2]: spatial_dims
+/// - metadata[3..3+input_ndim]: input_shape
+/// - metadata[3+input_ndim..3+2*input_ndim]: grad_output_shape
+/// - metadata[3+2*input_ndim..3+3*input_ndim]: weight_shape
+/// - metadata[3+3*input_ndim..3+4*input_ndim]: input_strides
+/// - metadata[3+4*input_ndim..3+5*input_ndim]: grad_output_strides
+/// - metadata[3+5*input_ndim]: input_offset
+/// - metadata[3+5*input_ndim+1]: grad_output_offset
+/// - metadata[3+5*input_ndim+2..]: stride, padding, dilation (spatial_dims elements each)
+///
+/// ## Examples:
+///
+/// Conv1D (input_ndim=3, spatial_dims=1):
+/// - metadata[18]: input_offset, metadata[19]: grad_output_offset
+/// - metadata[20]: stride, metadata[21]: padding, metadata[22]: dilation
+///
+/// Conv2D (input_ndim=4, spatial_dims=2):
+/// - metadata[23]: input_offset, metadata[24]: grad_output_offset
+/// - metadata[25..27]: stride, metadata[27..29]: padding, metadata[29..31]: dilation
+///
+/// Conv3D (input_ndim=5, spatial_dims=3):
+/// - metadata[28]: input_offset, metadata[29]: grad_output_offset
+/// - metadata[30..33]: stride, metadata[33..36]: padding, metadata[36..39]: dilation
+///
+/// Transpose convolutions use the same layout.
 pub fn call_ops_conv_grad_weight<T>(
     kernel: crate::kernels::macros::Kernel,
     kernels: &Kernels,

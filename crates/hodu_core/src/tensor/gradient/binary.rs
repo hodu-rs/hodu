@@ -62,10 +62,13 @@ impl VjpCompute for BinaryOp {
             },
             BinaryOp::Maximum => {
                 // gradient goes to the larger input
-                let a_ge_b = create_ge_tensor(inputs[0], inputs[1])?; // a >= b mask
-                let b_gt_a = create_gt_tensor(inputs[1], inputs[0])?; // b > a mask
-                let grad_a_raw = create_mul_tensor(grad_output, a_ge_b)?;
-                let grad_b_raw = create_mul_tensor(grad_output, b_gt_a)?;
+                let a_ge_b = create_ge_tensor(inputs[0], inputs[1])?; // a >= b mask (bool)
+                let b_gt_a = create_gt_tensor(inputs[1], inputs[0])?; // b > a mask (bool)
+                let grad_tensor = tensor_from_id(grad_output);
+                let a_ge_b_f = tensor_from_id(a_ge_b).to_dtype(grad_tensor.dtype())?;
+                let b_gt_a_f = tensor_from_id(b_gt_a).to_dtype(grad_tensor.dtype())?;
+                let grad_a_raw = create_mul_tensor(grad_output, a_ge_b_f.id())?;
+                let grad_b_raw = create_mul_tensor(grad_output, b_gt_a_f.id())?;
                 Ok(vec![
                     create_sum_to_shape_tensor(grad_a_raw, &input_a_shape)?,
                     create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,
@@ -73,10 +76,13 @@ impl VjpCompute for BinaryOp {
             },
             BinaryOp::Minimum => {
                 // gradient goes to the smaller input
-                let a_le_b = create_le_tensor(inputs[0], inputs[1])?; // a <= b mask
-                let b_lt_a = create_lt_tensor(inputs[1], inputs[0])?; // b < a mask
-                let grad_a_raw = create_mul_tensor(grad_output, a_le_b)?;
-                let grad_b_raw = create_mul_tensor(grad_output, b_lt_a)?;
+                let a_le_b = create_le_tensor(inputs[0], inputs[1])?; // a <= b mask (bool)
+                let b_lt_a = create_lt_tensor(inputs[1], inputs[0])?; // b < a mask (bool)
+                let grad_tensor = tensor_from_id(grad_output);
+                let a_le_b_f = tensor_from_id(a_le_b).to_dtype(grad_tensor.dtype())?;
+                let b_lt_a_f = tensor_from_id(b_lt_a).to_dtype(grad_tensor.dtype())?;
+                let grad_a_raw = create_mul_tensor(grad_output, a_le_b_f.id())?;
+                let grad_b_raw = create_mul_tensor(grad_output, b_lt_a_f.id())?;
                 Ok(vec![
                     create_sum_to_shape_tensor(grad_a_raw, &input_a_shape)?,
                     create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,

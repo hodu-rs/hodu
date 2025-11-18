@@ -80,8 +80,8 @@ sum_all@
 sum_to_shape@
 mean
 mean_all@
-max!
-min!
+max
+min
 prod
 std
 std_all@
@@ -132,7 +132,7 @@ conv_transpose1d_grad_weight^
 conv_transpose2d_grad_weight^
 conv_transpose3d_grad_weight^
 // windowing
-{reduce_window} max!, mean, sum, min!
+{reduce_window} max, mean, sum, min
 // shape
 reshape
 view@
@@ -145,6 +145,7 @@ broadcast_left@
 transpose
 t@
 permute
+repeat?
 // shape with scalars
 slice
 // cast

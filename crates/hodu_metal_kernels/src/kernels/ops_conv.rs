@@ -147,69 +147,37 @@ pub fn call_ops_conv(
 /// * `grad_weight` - Output buffer for weight gradients
 /// * `metadata` - Metadata describing gradient computation parameters
 ///
-/// # Metadata Layout
+/// # Metadata Layout (Generic, dimension-agnostic)
 ///
-/// ## Conv1D Grad Weight
+/// All grad_weight operations use a unified metadata structure:
+///
 /// - `metadata[0]`: num_els (total grad_weight elements)
-/// - `metadata[1]`: batch
-/// - `metadata[2]`: in_channels
-/// - `metadata[3]`: out_channels
-/// - `metadata[4]`: input_length
-/// - `metadata[5]`: kernel_width
-/// - `metadata[6]`: output_length
-/// - `metadata[7]`: stride
-/// - `metadata[8]`: padding
-/// - `metadata[9]`: dilation
-/// - `metadata[10]`: input_offset
-/// - `metadata[11]`: grad_output_offset
+/// - `metadata[1]`: input_ndim
+/// - `metadata[2]`: spatial_dims
+/// - `metadata[3..3+input_ndim]`: input_shape
+/// - `metadata[3+input_ndim..3+2*input_ndim]`: grad_output_shape
+/// - `metadata[3+2*input_ndim..3+3*input_ndim]`: weight_shape
+/// - `metadata[3+3*input_ndim..3+4*input_ndim]`: input_strides
+/// - `metadata[3+4*input_ndim..3+5*input_ndim]`: grad_output_strides
+/// - `metadata[3+5*input_ndim]`: input_offset
+/// - `metadata[3+5*input_ndim+1]`: grad_output_offset
+/// - `metadata[3+5*input_ndim+2..]`: stride, padding, dilation (spatial_dims elements each)
 ///
-/// ## Conv2D Grad Weight
-/// - `metadata[0]`: num_els
-/// - `metadata[1]`: batch
-/// - `metadata[2]`: in_channels
-/// - `metadata[3]`: out_channels
-/// - `metadata[4]`: input_height
-/// - `metadata[5]`: input_width
-/// - `metadata[6]`: kernel_height
-/// - `metadata[7]`: kernel_width
-/// - `metadata[8]`: output_height
-/// - `metadata[9]`: output_width
-/// - `metadata[10]`: stride_h
-/// - `metadata[11]`: stride_w
-/// - `metadata[12]`: padding_h
-/// - `metadata[13]`: padding_w
-/// - `metadata[14]`: dilation_h
-/// - `metadata[15]`: dilation_w
-/// - `metadata[16]`: input_offset
-/// - `metadata[17]`: grad_output_offset
+/// ## Examples:
 ///
-/// ## Conv3D Grad Weight
-/// - `metadata[0]`: num_els
-/// - `metadata[1]`: batch
-/// - `metadata[2]`: in_channels
-/// - `metadata[3]`: out_channels
-/// - `metadata[4]`: input_depth
-/// - `metadata[5]`: input_height
-/// - `metadata[6]`: input_width
-/// - `metadata[7]`: kernel_depth
-/// - `metadata[8]`: kernel_height
-/// - `metadata[9]`: kernel_width
-/// - `metadata[10]`: output_depth
-/// - `metadata[11]`: output_height
-/// - `metadata[12]`: output_width
-/// - `metadata[13]`: stride_d
-/// - `metadata[14]`: stride_h
-/// - `metadata[15]`: stride_w
-/// - `metadata[16]`: padding_d
-/// - `metadata[17]`: padding_h
-/// - `metadata[18]`: padding_w
-/// - `metadata[19]`: dilation_d
-/// - `metadata[20]`: dilation_h
-/// - `metadata[21]`: dilation_w
-/// - `metadata[22]`: input_offset
-/// - `metadata[23]`: grad_output_offset
+/// Conv1D (input_ndim=3, spatial_dims=1):
+/// - `metadata[18]`: input_offset, `metadata[19]`: grad_output_offset
+/// - `metadata[20]`: stride, `metadata[21]`: padding, `metadata[22]`: dilation
 ///
-/// Transpose convolutions have similar layouts with additional output_padding parameters.
+/// Conv2D (input_ndim=4, spatial_dims=2):
+/// - `metadata[23]`: input_offset, `metadata[24]`: grad_output_offset
+/// - `metadata[25..27]`: stride, `metadata[27..29]`: padding, `metadata[29..31]`: dilation
+///
+/// Conv3D (input_ndim=5, spatial_dims=3):
+/// - `metadata[28]`: input_offset, `metadata[29]`: grad_output_offset
+/// - `metadata[30..33]`: stride, `metadata[33..36]`: padding, `metadata[36..39]`: dilation
+///
+/// Transpose convolutions use the same layout.
 ///
 /// Note: These operations use atomic operations for parallel reduction across batch and spatial dimensions.
 #[allow(clippy::too_many_arguments)]

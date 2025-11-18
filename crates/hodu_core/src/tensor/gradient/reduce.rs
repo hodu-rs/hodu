@@ -103,6 +103,28 @@ impl VjpCompute for ReduceOp {
                 let result = derivative.mul(&broadcasted_grad)?;
                 Ok(vec![result.id()])
             },
+            ReduceOp::Max | ReduceOp::Min => {
+                // d/dx max(x) or min(x): gradient flows only to the positions that were max/min
+                // Create a mask where input equals output (broadcasted)
+                let output_tensor = tensor_from_id(output);
+                let broadcasted_output = output_tensor.broadcast(&input_shape)?;
+
+                // Create mask: 1 where input == output, 0 elsewhere
+                let mask = input_tensor.eq(&broadcasted_output)?;
+                let grad_tensor = tensor_from_id(grad_output);
+                let mask_f = mask.to_dtype(grad_tensor.dtype())?;
+
+                // Count how many elements are equal to max/min (for gradient distribution)
+                let count_per_position = mask_f.sum(&reduce_dims, true)?;
+                let broadcasted_count = count_per_position.broadcast(&input_shape)?;
+
+                // Distribute gradient: grad * mask / count
+                let broadcasted_grad = grad_tensor.broadcast(&input_shape)?;
+                let masked_grad = broadcasted_grad.mul(&mask_f)?;
+                let result = masked_grad.div(&broadcasted_count)?;
+
+                Ok(vec![result.id()])
+            },
             _ => Err(HoduError::GradientComputationFailed(format!(
                 "{:?} is not differentiable - cannot compute gradients for discrete index operations",
                 self

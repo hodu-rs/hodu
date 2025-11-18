@@ -118,6 +118,7 @@ impl Tensor {
 
             if requires_grad {
                 let mut grad_scalars = Vec::new();
+                grad_scalars.push(Scalar::from(rank));
                 for &dim in window_dims {
                     grad_scalars.push(Scalar::from(dim));
                 }
@@ -154,6 +155,7 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let mut scalars = Vec::new();
+                scalars.push(Scalar::from(rank));
                 for &dim in window_dims {
                     scalars.push(Scalar::from(dim));
                 }

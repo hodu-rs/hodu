@@ -57,11 +57,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::IndexSelect),
                     vec![self.id(), indices.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -84,11 +85,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::IndexSelect);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -135,11 +137,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::IndexPut),
                     vec![self.id(), indices.id(), values.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -166,11 +169,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::IndexPut);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id(), values.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -216,11 +220,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::Gather),
                     vec![self.id(), indices.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -243,11 +248,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::Gather);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -295,11 +301,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::Scatter),
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -326,11 +333,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::Scatter);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -375,11 +383,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::ScatterAdd),
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -406,11 +415,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::ScatterAdd);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -455,11 +465,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::ScatterMax),
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -486,11 +497,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::ScatterMax);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -535,11 +547,12 @@ impl Tensor {
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result_id,
                     Op::Indexing(IndexingOp::ScatterMin),
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 
@@ -566,11 +579,12 @@ impl Tensor {
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Indexing(IndexingOp::ScatterMin);
-                gradient::record_operation_with_scalars(
+                gradient::record_operation_with_dims(
                     result.id(),
                     op,
                     vec![self.id(), indices.id(), src.id()],
                     vec![dim_scalar],
+                    None,
                 )?;
             }
 

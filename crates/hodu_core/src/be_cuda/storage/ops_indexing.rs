@@ -380,10 +380,12 @@ pub fn call_ops_scatter(
 
     // Validate op
     match op {
-        Op::Indexing(IndexingOp::Scatter) => (),
+        Op::Indexing(
+            IndexingOp::Scatter | IndexingOp::ScatterAdd | IndexingOp::ScatterMax | IndexingOp::ScatterMin,
+        ) => (),
         _ => {
             return Err(HoduError::BackendError(
-                "call_ops_scatter expects Scatter op".to_string(),
+                "call_ops_scatter expects scatter-type op".to_string(),
             ))
         },
     }

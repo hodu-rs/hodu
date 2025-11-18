@@ -187,13 +187,14 @@ impl VjpCompute for IndexingOp {
                 };
 
                 // Gradient w.r.t. src: flows through where src won
-                let grad_src = scattered_values.mul(&src_won)?;
+                let src_won_f = src_won.to_dtype(grad_tensor.dtype())?;
+                let grad_src = scattered_values.mul(&src_won_f)?;
 
                 // Gradient w.r.t. self: flows through where self won
                 // Create mask where self won (opposite of src_won)
                 let dtype = self_tensor.dtype();
-                let ones = Tensor::ones(src_won.shape(), dtype)?;
-                let self_won = ones.sub(&src_won)?;
+                let ones = Tensor::ones(src_won_f.shape(), dtype)?;
+                let self_won = ones.sub(&src_won_f)?;
 
                 // Scatter the masked gradient back
                 let grad_src_scattered = grad_tensor.gather(dim, &indices_tensor)?;

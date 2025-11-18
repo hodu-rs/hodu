@@ -33,7 +33,9 @@ impl VjpCompute for UnaryOp {
                 let dtype = input_tensor.dtype();
                 let zero = Scalar::zero(dtype);
                 let mask = create_gt_scalar_tensor(input, zero)?;
-                Ok(vec![create_mul_tensor(grad_output, mask)?])
+                let grad_tensor = tensor_from_id(grad_output);
+                let mask_f = tensor_from_id(mask).to_dtype(grad_tensor.dtype())?;
+                Ok(vec![create_mul_tensor(grad_output, mask_f.id())?])
             },
             UnaryOp::Sigmoid => {
                 // d/dx sigmoid(x) = sigmoid(x) * (1 - sigmoid(x))
@@ -335,51 +337,64 @@ impl VjpCompute for UnaryScalarOp {
             UnaryScalarOp::MaximumScalar => {
                 // d/dx max(x, scalar) = 1 if x >= scalar, else 0
                 let mask = create_ge_scalar_tensor(input, scalar)?;
-                Ok(vec![create_mul_tensor(grad_output, mask)?])
+                let grad_tensor = tensor_from_id(grad_output);
+                let mask_f = tensor_from_id(mask).to_dtype(grad_tensor.dtype())?;
+                Ok(vec![create_mul_tensor(grad_output, mask_f.id())?])
             },
             UnaryScalarOp::MinimumScalar => {
                 // d/dx min(x, scalar) = 1 if x <= scalar, else 0
                 let mask = create_le_scalar_tensor(input, scalar)?;
-                Ok(vec![create_mul_tensor(grad_output, mask)?])
+                let grad_tensor = tensor_from_id(grad_output);
+                let mask_f = tensor_from_id(mask).to_dtype(grad_tensor.dtype())?;
+                Ok(vec![create_mul_tensor(grad_output, mask_f.id())?])
             },
             UnaryScalarOp::LeakyRelu => {
                 // d/dx leaky_relu(x, alpha) = 1 if x > 0, else alpha
                 let input_tensor = tensor_from_id(input);
+                let grad_tensor = tensor_from_id(grad_output);
                 let dtype = input_tensor.dtype();
                 let zero = Scalar::zero(dtype);
                 let alpha = scalar;
                 let mask_pos = create_gt_scalar_tensor(input, zero)?;
                 let mask_neg = create_le_scalar_tensor(input, zero)?;
-                let alpha_grad = create_mul_scalar_tensor(mask_neg, alpha)?;
-                let total_grad = create_add_tensor(mask_pos, alpha_grad)?;
+                let mask_pos_f = tensor_from_id(mask_pos).to_dtype(grad_tensor.dtype())?;
+                let mask_neg_f = tensor_from_id(mask_neg).to_dtype(grad_tensor.dtype())?;
+                let alpha_grad = create_mul_scalar_tensor(mask_neg_f.id(), alpha)?;
+                let total_grad = create_add_tensor(mask_pos_f.id(), alpha_grad)?;
                 Ok(vec![create_mul_tensor(grad_output, total_grad)?])
             },
             UnaryScalarOp::Elu => {
                 // d/dx elu(x, alpha) = 1 if x > 0, else alpha * exp(x)
                 let input_tensor = tensor_from_id(input);
+                let grad_tensor = tensor_from_id(grad_output);
                 let dtype = input_tensor.dtype();
                 let zero = Scalar::zero(dtype);
                 let alpha = scalar;
                 let mask_pos = create_gt_scalar_tensor(input, zero)?;
                 let mask_neg = create_le_scalar_tensor(input, zero)?;
+                let mask_pos_f = tensor_from_id(mask_pos).to_dtype(grad_tensor.dtype())?;
+                let mask_neg_f = tensor_from_id(mask_neg).to_dtype(grad_tensor.dtype())?;
                 let exp_input = create_exp_tensor(input)?;
                 let alpha_exp = create_mul_scalar_tensor(exp_input, alpha)?;
-                let neg_grad = create_mul_tensor(mask_neg, alpha_exp)?;
-                let total_grad = create_add_tensor(mask_pos, neg_grad)?;
+                let neg_grad = create_mul_tensor(mask_neg_f.id(), alpha_exp)?;
+                let total_grad = create_add_tensor(mask_pos_f.id(), neg_grad)?;
                 Ok(vec![create_mul_tensor(grad_output, total_grad)?])
             },
             UnaryScalarOp::Prelu => {
                 // d/dx prelu(x, alpha) = 1 if x > 0, else alpha
                 let input_tensor = tensor_from_id(input);
+                let grad_tensor = tensor_from_id(grad_output);
                 let dtype = input_tensor.dtype();
                 let zero = Scalar::zero(dtype);
                 let alpha = scalar;
                 let mask_pos = create_gt_scalar_tensor(input, zero)?;
                 let mask_neg = create_le_scalar_tensor(input, zero)?;
+                let mask_pos_f = tensor_from_id(mask_pos).to_dtype(grad_tensor.dtype())?;
+                let mask_neg_f = tensor_from_id(mask_neg).to_dtype(grad_tensor.dtype())?;
                 let ones_like_input = create_ones_like_tensor(input)?;
                 let alpha_tensor = create_mul_scalar_tensor(ones_like_input, alpha)?;
-                let neg_grad = create_mul_tensor(mask_neg, alpha_tensor)?;
-                let total_grad = create_add_tensor(mask_pos, neg_grad)?;
+                let neg_grad = create_mul_tensor(mask_neg_f.id(), alpha_tensor)?;
+                let total_grad = create_add_tensor(mask_pos_f.id(), neg_grad)?;
                 Ok(vec![create_mul_tensor(grad_output, total_grad)?])
             },
         }

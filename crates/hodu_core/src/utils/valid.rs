@@ -303,15 +303,7 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         Op::UnaryLogical(_) => false, // !
 
         // Unary with scalar
-        Op::UnaryScalar(inner_op) => match inner_op {
-            UnaryScalarOp::AddScalar
-            | UnaryScalarOp::SubScalar
-            | UnaryScalarOp::MulScalar
-            | UnaryScalarOp::DivScalar
-            | UnaryScalarOp::PowScalar => true,
-            UnaryScalarOp::MaximumScalar | UnaryScalarOp::MinimumScalar => false, // !
-            UnaryScalarOp::LeakyRelu | UnaryScalarOp::Elu | UnaryScalarOp::Prelu => true,
-        },
+        Op::UnaryScalar(_) => true,
 
         // Matrix operations
         Op::Matrix(_) => true,
@@ -319,7 +311,7 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         // Reduce operations
         Op::Reduce(inner_op) => match inner_op {
             ReduceOp::Sum | ReduceOp::Mean | ReduceOp::Prod | ReduceOp::Std | ReduceOp::Var | ReduceOp::Norm => true,
-            ReduceOp::Max | ReduceOp::Min => false,       // !
+            ReduceOp::Max | ReduceOp::Min => true,
             ReduceOp::ArgMax | ReduceOp::ArgMin => false, // !
             ReduceOp::Any | ReduceOp::All => false,       // !
         },
@@ -334,10 +326,7 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         Op::Conv(_) => true,
 
         // Windowing operations
-        Op::Windowing(inner_op) => match inner_op {
-            WindowingOp::ReduceWindowMean | WindowingOp::ReduceWindowSum => true,
-            WindowingOp::ReduceWindowMax | WindowingOp::ReduceWindowMin => false, // !
-        },
+        Op::Windowing(_) => true,
 
         // Shape operations
         Op::Shape(_) | Op::ShapeScalars(_) => true,
@@ -348,6 +337,6 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         // Memory operations - no backprop
         Op::Memory(_) => false, // !
 
-        Op::Dummy => true,
+        Op::Dummy => false,
     }
 }
