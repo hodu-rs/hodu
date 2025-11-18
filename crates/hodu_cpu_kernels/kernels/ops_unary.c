@@ -1,6 +1,7 @@
 #include "ops_unary.h"
 #include "simd_utils.h"
 #include "thread_utils.h"
+#include "types.h"
 #include <math.h>
 
 // BLAS-specific implementations are in separate files:
@@ -300,11 +301,11 @@
 /**
  * @brief Macro to implement unary operations for low-precision float types
  *
- * Generates a function for FP8/FP16/BF16 types that converts to float32,
+ * Generates a function for f8/f16/BF16 types that converts to float32,
  * performs the operation, and converts back. Used when native operations
  * are not available for these types.
  *
- * @param TYPE C type of the tensor elements (e.g., uint8_t for FP8)
+ * @param TYPE C type of the tensor elements (e.g., uint8_t for f8)
  * @param TYPE_SUFFIX Suffix for the function name
  * @param OP_NAME Operation name
  * @param FUNC Expression using float variable 'x'
@@ -1162,239 +1163,225 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(uint8_t, bool, gt_scalar, x && !const_val)
 IMPL_UNARY_CMP_SCALAR_TO_BOOL(uint8_t, bool, ge_scalar, x || !const_val)
 
 // ============================================================================
-// FP8 E4M3 OPERATIONS
+// f8E4M3 OPERATIONS
 // ============================================================================
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, neg, -x, fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, abs, fabsf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
-                      fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, square, x *x, fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, sqrt, sqrtf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, recip, 1.0f / x, fp8_e4m3_to_float, float_to_fp8_e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, neg, -x, f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, abs, fabsf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
+                      f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, square, x *x, f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sqrt, sqrtf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, recip, 1.0f / x, f8e4m3_to_float, float_to_f8e4m3)
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, relu, (x > 0.0f) ? x : 0.0f, fp8_e4m3_to_float,
-                      float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, sigmoid, 1.0f / (1.0f + expf(-x)), fp8_e4m3_to_float,
-                      float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, tanh, tanhf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, gelu, gelu_helper_f32(x), fp8_e4m3_to_float,
-                      float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, softplus, softplus_helper_f32(x), fp8_e4m3_to_float,
-                      float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, silu, silu_helper_f32(x), fp8_e4m3_to_float,
-                      float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, mish, mish_helper_f32(x), fp8_e4m3_to_float,
-                      float_to_fp8_e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, relu, (x > 0.0f) ? x : 0.0f, f8e4m3_to_float,
+                      float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sigmoid, 1.0f / (1.0f + expf(-x)), f8e4m3_to_float,
+                      float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, tanh, tanhf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, gelu, gelu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, softplus, softplus_helper_f32(x), f8e4m3_to_float,
+                      float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, silu, silu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, mish, mish_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, sin, sinf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, cos, cosf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, tan, tanf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sin, sinf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, cos, cosf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, tan, tanf(x), f8e4m3_to_float, float_to_f8e4m3)
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, exp, expf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, exp2, exp2f(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, exp10, exp10f(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, ln, logf(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, log2, log2f(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e4m3, log10, log10f(x), fp8_e4m3_to_float, float_to_fp8_e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, exp, expf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, exp2, exp2f(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, exp10, exp10f(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, ln, logf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, log2, log2f(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, log10, log10f(x), f8e4m3_to_float, float_to_f8e4m3)
 
-IMPL_UNARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, logical_not, x == 0.0f, fp8_e4m3_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_not, x == 0.0f, f8e4m3_to_float)
 
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, add_scalar, x + const_val, fp8_e4m3_to_float,
-                               float_to_fp8_e4m3)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, sub_scalar, x - const_val, fp8_e4m3_to_float,
-                               float_to_fp8_e4m3)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, mul_scalar, x *const_val, fp8_e4m3_to_float,
-                               float_to_fp8_e4m3)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, div_scalar, x / const_val, fp8_e4m3_to_float,
-                               float_to_fp8_e4m3)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, pow_scalar, powf(x, const_val), fp8_e4m3_to_float,
-                               float_to_fp8_e4m3)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, maximum_scalar, MAXIMUM(x, const_val),
-                               fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e4m3, minimum_scalar, MINIMUM(x, const_val),
-                               fp8_e4m3_to_float, float_to_fp8_e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, add_scalar, x + const_val, f8e4m3_to_float,
+                               float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, sub_scalar, x - const_val, f8e4m3_to_float,
+                               float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, mul_scalar, x *const_val, f8e4m3_to_float,
+                               float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, div_scalar, x / const_val, f8e4m3_to_float,
+                               float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, pow_scalar, powf(x, const_val), f8e4m3_to_float,
+                               float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, maximum_scalar, MAXIMUM(x, const_val),
+                               f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, minimum_scalar, MINIMUM(x, const_val),
+                               f8e4m3_to_float, float_to_f8e4m3)
 
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e4m3, eq_scalar, x == const_val, fp8_e4m3_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e4m3, ne_scalar, x != const_val, fp8_e4m3_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e4m3, lt_scalar, x < const_val, fp8_e4m3_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e4m3, le_scalar, x <= const_val, fp8_e4m3_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e4m3, gt_scalar, x > const_val, fp8_e4m3_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e4m3, ge_scalar, x >= const_val, fp8_e4m3_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, eq_scalar, x == const_val, f8e4m3_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, ne_scalar, x != const_val, f8e4m3_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, lt_scalar, x < const_val, f8e4m3_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, le_scalar, x <= const_val, f8e4m3_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, gt_scalar, x > const_val, f8e4m3_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, ge_scalar, x >= const_val, f8e4m3_to_float)
 
 // ============================================================================
-// FP8 E5M2 OPERATIONS
+// f8E5M2 OPERATIONS
 // ============================================================================
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, neg, -x, fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, abs, fabsf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
-                      fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, square, x *x, fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, sqrt, sqrtf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, recip, 1.0f / x, fp8_e5m2_to_float, float_to_fp8_e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, neg, -x, f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, abs, fabsf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
+                      f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, square, x *x, f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sqrt, sqrtf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, recip, 1.0f / x, f8e5m2_to_float, float_to_f8e5m2)
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, relu, (x > 0.0f) ? x : 0.0f, fp8_e5m2_to_float,
-                      float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, sigmoid, 1.0f / (1.0f + expf(-x)), fp8_e5m2_to_float,
-                      float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, tanh, tanhf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, gelu, gelu_helper_f32(x), fp8_e5m2_to_float,
-                      float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, softplus, softplus_helper_f32(x), fp8_e5m2_to_float,
-                      float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, silu, silu_helper_f32(x), fp8_e5m2_to_float,
-                      float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, mish, mish_helper_f32(x), fp8_e5m2_to_float,
-                      float_to_fp8_e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, relu, (x > 0.0f) ? x : 0.0f, f8e5m2_to_float,
+                      float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sigmoid, 1.0f / (1.0f + expf(-x)), f8e5m2_to_float,
+                      float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, tanh, tanhf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, gelu, gelu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, softplus, softplus_helper_f32(x), f8e5m2_to_float,
+                      float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, silu, silu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, mish, mish_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, sin, sinf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, cos, cosf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, tan, tanf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sin, sinf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, cos, cosf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, tan, tanf(x), f8e5m2_to_float, float_to_f8e5m2)
 
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, exp, expf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, exp2, exp2f(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, exp10, exp10f(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, ln, logf(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, log2, log2f(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_OP_CONVERT(uint8_t, f8e5m2, log10, log10f(x), fp8_e5m2_to_float, float_to_fp8_e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, exp, expf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, exp2, exp2f(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, exp10, exp10f(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, ln, logf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, log2, log2f(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, log10, log10f(x), f8e5m2_to_float, float_to_f8e5m2)
 
-IMPL_UNARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, logical_not, x == 0.0f, fp8_e5m2_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_not, x == 0.0f, f8e5m2_to_float)
 
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, add_scalar, x + const_val, fp8_e5m2_to_float,
-                               float_to_fp8_e5m2)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, sub_scalar, x - const_val, fp8_e5m2_to_float,
-                               float_to_fp8_e5m2)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, mul_scalar, x *const_val, fp8_e5m2_to_float,
-                               float_to_fp8_e5m2)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, div_scalar, x / const_val, fp8_e5m2_to_float,
-                               float_to_fp8_e5m2)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, pow_scalar, powf(x, const_val), fp8_e5m2_to_float,
-                               float_to_fp8_e5m2)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, maximum_scalar, MAXIMUM(x, const_val),
-                               fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint8_t, f8e5m2, minimum_scalar, MINIMUM(x, const_val),
-                               fp8_e5m2_to_float, float_to_fp8_e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, add_scalar, x + const_val, f8e5m2_to_float,
+                               float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, sub_scalar, x - const_val, f8e5m2_to_float,
+                               float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, mul_scalar, x *const_val, f8e5m2_to_float,
+                               float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, div_scalar, x / const_val, f8e5m2_to_float,
+                               float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, pow_scalar, powf(x, const_val), f8e5m2_to_float,
+                               float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, maximum_scalar, MAXIMUM(x, const_val),
+                               f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, minimum_scalar, MINIMUM(x, const_val),
+                               f8e5m2_to_float, float_to_f8e5m2)
 
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e5m2, eq_scalar, x == const_val, fp8_e5m2_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e5m2, ne_scalar, x != const_val, fp8_e5m2_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e5m2, lt_scalar, x < const_val, fp8_e5m2_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e5m2, le_scalar, x <= const_val, fp8_e5m2_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e5m2, gt_scalar, x > const_val, fp8_e5m2_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint8_t, f8e5m2, ge_scalar, x >= const_val, fp8_e5m2_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, eq_scalar, x == const_val, f8e5m2_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, ne_scalar, x != const_val, f8e5m2_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, lt_scalar, x < const_val, f8e5m2_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, le_scalar, x <= const_val, f8e5m2_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, gt_scalar, x > const_val, f8e5m2_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, ge_scalar, x >= const_val, f8e5m2_to_float)
 
 // ============================================================================
 // BF16 OPERATIONS
 // ============================================================================
 
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, neg, -x, bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, abs, fabsf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, neg, -x, bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, abs, fabsf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
                       bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, square, x *x, bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, sqrt, sqrtf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, recip, 1.0f / x, bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, square, x *x, bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sqrt, sqrtf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, recip, 1.0f / x, bf16_to_float, float_to_bf16)
 
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, relu, (x > 0.0f) ? x : 0.0f, bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, sigmoid, 1.0f / (1.0f + expf(-x)), bf16_to_float,
-                      float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, tanh, tanhf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, gelu, gelu_helper_f32(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, softplus, softplus_helper_f32(x), bf16_to_float,
-                      float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, silu, silu_helper_f32(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, mish, mish_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, relu, (x > 0.0f) ? x : 0.0f, bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sigmoid, 1.0f / (1.0f + expf(-x)), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, tanh, tanhf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, gelu, gelu_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, softplus, softplus_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, silu, silu_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, mish, mish_helper_f32(x), bf16_to_float, float_to_bf16)
 
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, sin, sinf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, cos, cosf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, tan, tanf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sin, sinf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, cos, cosf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, tan, tanf(x), bf16_to_float, float_to_bf16)
 
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, exp, expf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, exp2, exp2f(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, exp10, exp10f(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, ln, logf(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, log2, log2f(x), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(uint16_t, bf16, log10, log10f(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, exp, expf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, exp2, exp2f(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, exp10, exp10f(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, ln, logf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, log2, log2f(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, log10, log10f(x), bf16_to_float, float_to_bf16)
 
-IMPL_UNARY_TO_BOOL_CONVERT(uint16_t, bf16, logical_not, x == 0.0f, bf16_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_not, x == 0.0f, bf16_to_float)
 
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, add_scalar, x + const_val, bf16_to_float,
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, add_scalar, x + const_val, bf16_to_float,
                                float_to_bf16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, sub_scalar, x - const_val, bf16_to_float,
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, sub_scalar, x - const_val, bf16_to_float,
                                float_to_bf16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, mul_scalar, x *const_val, bf16_to_float,
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, mul_scalar, x *const_val, bf16_to_float, float_to_bf16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, div_scalar, x / const_val, bf16_to_float,
                                float_to_bf16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, div_scalar, x / const_val, bf16_to_float,
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, pow_scalar, powf(x, const_val), bf16_to_float,
                                float_to_bf16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, pow_scalar, powf(x, const_val), bf16_to_float,
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, maximum_scalar, MAXIMUM(x, const_val), bf16_to_float,
                                float_to_bf16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, maximum_scalar, MAXIMUM(x, const_val), bf16_to_float,
-                               float_to_bf16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, bf16, minimum_scalar, MINIMUM(x, const_val), bf16_to_float,
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, minimum_scalar, MINIMUM(x, const_val), bf16_to_float,
                                float_to_bf16)
 
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, bf16, eq_scalar, x == const_val, bf16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, bf16, ne_scalar, x != const_val, bf16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, bf16, lt_scalar, x < const_val, bf16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, bf16, le_scalar, x <= const_val, bf16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, bf16, gt_scalar, x > const_val, bf16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, bf16, ge_scalar, x >= const_val, bf16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(bf16_t, bf16, eq_scalar, x == const_val, bf16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(bf16_t, bf16, ne_scalar, x != const_val, bf16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(bf16_t, bf16, lt_scalar, x < const_val, bf16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(bf16_t, bf16, le_scalar, x <= const_val, bf16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(bf16_t, bf16, gt_scalar, x > const_val, bf16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(bf16_t, bf16, ge_scalar, x >= const_val, bf16_to_float)
 
 // ============================================================================
-// FP16 OPERATIONS
+// f16 OPERATIONS
 // ============================================================================
 
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, neg, -x, fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, abs, fabsf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
-                      fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, square, x *x, fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, sqrt, sqrtf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, recip, 1.0f / x, fp16_to_float, float_to_fp16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, neg, -x, f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, abs, fabsf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
+                      f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, square, x *x, f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, sqrt, sqrtf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, recip, 1.0f / x, f16_to_float, float_to_f16)
 
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, relu, (x > 0.0f) ? x : 0.0f, fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, sigmoid, 1.0f / (1.0f + expf(-x)), fp16_to_float,
-                      float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, tanh, tanhf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, gelu, gelu_helper_f32(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, softplus, softplus_helper_f32(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, silu, silu_helper_f32(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, mish, mish_helper_f32(x), fp16_to_float, float_to_fp16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, relu, (x > 0.0f) ? x : 0.0f, f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, sigmoid, 1.0f / (1.0f + expf(-x)), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, tanh, tanhf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, gelu, gelu_helper_f32(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, softplus, softplus_helper_f32(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, silu, silu_helper_f32(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, mish, mish_helper_f32(x), f16_to_float, float_to_f16)
 
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, sin, sinf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, cos, cosf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, tan, tanf(x), fp16_to_float, float_to_fp16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, sin, sinf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, cos, cosf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, tan, tanf(x), f16_to_float, float_to_f16)
 
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, exp, expf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, exp2, exp2f(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, exp10, exp10f(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, ln, logf(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, log2, log2f(x), fp16_to_float, float_to_fp16)
-IMPL_UNARY_OP_CONVERT(uint16_t, f16, log10, log10f(x), fp16_to_float, float_to_fp16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, exp, expf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, exp2, exp2f(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, exp10, exp10f(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, ln, logf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, log2, log2f(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, log10, log10f(x), f16_to_float, float_to_f16)
 
-IMPL_UNARY_TO_BOOL_CONVERT(uint16_t, f16, logical_not, x == 0.0f, fp16_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, logical_not, x == 0.0f, f16_to_float)
 
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, add_scalar, x + const_val, fp16_to_float,
-                               float_to_fp16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, sub_scalar, x - const_val, fp16_to_float,
-                               float_to_fp16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, mul_scalar, x *const_val, fp16_to_float,
-                               float_to_fp16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, div_scalar, x / const_val, fp16_to_float,
-                               float_to_fp16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, pow_scalar, powf(x, const_val), fp16_to_float,
-                               float_to_fp16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, maximum_scalar, MAXIMUM(x, const_val), fp16_to_float,
-                               float_to_fp16)
-IMPL_UNARY_WITH_SCALAR_CONVERT(uint16_t, f16, minimum_scalar, MINIMUM(x, const_val), fp16_to_float,
-                               float_to_fp16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, add_scalar, x + const_val, f16_to_float, float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, sub_scalar, x - const_val, f16_to_float, float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, mul_scalar, x *const_val, f16_to_float, float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, div_scalar, x / const_val, f16_to_float, float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, pow_scalar, powf(x, const_val), f16_to_float,
+                               float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, maximum_scalar, MAXIMUM(x, const_val), f16_to_float,
+                               float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, minimum_scalar, MINIMUM(x, const_val), f16_to_float,
+                               float_to_f16)
 
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, f16, eq_scalar, x == const_val, fp16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, f16, ne_scalar, x != const_val, fp16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, f16, lt_scalar, x < const_val, fp16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, f16, le_scalar, x <= const_val, fp16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, f16, gt_scalar, x > const_val, fp16_to_float)
-IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(uint16_t, f16, ge_scalar, x >= const_val, fp16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, eq_scalar, x == const_val, f16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, ne_scalar, x != const_val, f16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, lt_scalar, x < const_val, f16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, le_scalar, x <= const_val, f16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, gt_scalar, x > const_val, f16_to_float)
+IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, ge_scalar, x >= const_val, f16_to_float)
 
 // ============================================================================
 // UNSIGNED INTEGER OPERATIONS (U8, U16, U32, U64)

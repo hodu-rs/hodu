@@ -124,10 +124,10 @@
         }                                                                                          \
     }
 
-REDUCE_OP(f8e4m3_t, f8e4m3_t, sum_f8e4m3, 0, acc += val)
-REDUCE_OP(f8e5m2_t, f8e5m2_t, sum_f8e5m2, 0, acc += val)
-REDUCE_OP(bf16_t, bf16_t, sum_bf16, 0, acc += val)
-REDUCE_OP(f16_t, f16_t, sum_f16, 0, acc += val)
+REDUCE_OP(f8e4m3_t, f8e4m3_t, sum_f8e4m3, F8E4M3_ZERO, acc = f8e4m3_add(acc, val))
+REDUCE_OP(f8e5m2_t, f8e5m2_t, sum_f8e5m2, F8E5M2_ZERO, acc = f8e5m2_add(acc, val))
+REDUCE_OP(bf16_t, bf16_t, sum_bf16, BF16_ZERO, acc = bf16_add(acc, val))
+REDUCE_OP(f16_t, f16_t, sum_f16, F16_ZERO, acc = f16_add(acc, val))
 
 // SIMD-optimized sum_f32
 void sum_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -352,10 +352,10 @@ REDUCE_OP(uint32_t, uint32_t, sum_u32, 0u, acc += val)
 REDUCE_OP(uint64_t, uint64_t, sum_u64, 0u, acc += val)
 
 // Max reduction operations
-REDUCE_OP(f8e4m3_t, f8e4m3_t, max_f8e4m3, F8E4M3_NEG_INF, acc = MAX(acc, val))
-REDUCE_OP(f8e5m2_t, f8e5m2_t, max_f8e5m2, F8E5M2_NEG_INF, acc = MAX(acc, val))
-REDUCE_OP(bf16_t, bf16_t, max_bf16, BF16_NEG_INF, acc = MAX(acc, val))
-REDUCE_OP(f16_t, f16_t, max_f16, F16_NEG_INF, acc = MAX(acc, val))
+REDUCE_OP(f8e4m3_t, f8e4m3_t, max_f8e4m3, F8E4M3_NEG_INF, acc = f8e4m3_max(acc, val))
+REDUCE_OP(f8e5m2_t, f8e5m2_t, max_f8e5m2, F8E5M2_NEG_INF, acc = f8e5m2_max(acc, val))
+REDUCE_OP(bf16_t, bf16_t, max_bf16, BF16_NEG_INF, acc = bf16_max(acc, val))
+REDUCE_OP(f16_t, f16_t, max_f16, F16_NEG_INF, acc = f16_max(acc, val))
 
 // SIMD-optimized max_f32
 void max_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -576,10 +576,10 @@ REDUCE_OP(uint32_t, uint32_t, max_u32, 0u, acc = MAX(acc, val))
 REDUCE_OP(uint64_t, uint64_t, max_u64, 0u, acc = MAX(acc, val))
 
 // Min reduction operations
-REDUCE_OP(f8e4m3_t, f8e4m3_t, min_f8e4m3, F8E4M3_POS_INF, acc = MIN(acc, val))
-REDUCE_OP(f8e5m2_t, f8e5m2_t, min_f8e5m2, F8E5M2_POS_INF, acc = MIN(acc, val))
-REDUCE_OP(bf16_t, bf16_t, min_bf16, BF16_POS_INF, acc = MIN(acc, val))
-REDUCE_OP(f16_t, f16_t, min_f16, F16_POS_INF, acc = MIN(acc, val))
+REDUCE_OP(f8e4m3_t, f8e4m3_t, min_f8e4m3, F8E4M3_POS_INF, acc = f8e4m3_min(acc, val))
+REDUCE_OP(f8e5m2_t, f8e5m2_t, min_f8e5m2, F8E5M2_POS_INF, acc = f8e5m2_min(acc, val))
+REDUCE_OP(bf16_t, bf16_t, min_bf16, BF16_POS_INF, acc = bf16_min(acc, val))
+REDUCE_OP(f16_t, f16_t, min_f16, F16_POS_INF, acc = f16_min(acc, val))
 
 // SIMD-optimized min_f32
 void min_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -800,10 +800,10 @@ REDUCE_OP(uint32_t, uint32_t, min_u32, UINT32_MAX, acc = MIN(acc, val))
 REDUCE_OP(uint64_t, uint64_t, min_u64, UINT64_MAX, acc = MIN(acc, val))
 
 // Product reduction operations
-REDUCE_OP(f8e4m3_t, f8e4m3_t, prod_f8e4m3, 1, acc *= val)
-REDUCE_OP(f8e5m2_t, f8e5m2_t, prod_f8e5m2, 1, acc *= val)
-REDUCE_OP(bf16_t, bf16_t, prod_bf16, 1, acc *= val)
-REDUCE_OP(f16_t, f16_t, prod_f16, 1, acc *= val)
+REDUCE_OP(f8e4m3_t, f8e4m3_t, prod_f8e4m3, F8E4M3_ONE, acc = f8e4m3_mul(acc, val))
+REDUCE_OP(f8e5m2_t, f8e5m2_t, prod_f8e5m2, F8E5M2_ONE, acc = f8e5m2_mul(acc, val))
+REDUCE_OP(bf16_t, bf16_t, prod_bf16, BF16_ONE, acc = bf16_mul(acc, val))
+REDUCE_OP(f16_t, f16_t, prod_f16, F16_ONE, acc = f16_mul(acc, val))
 REDUCE_OP(f32_t, f32_t, prod_f32, 1.0f, acc *= val)
 REDUCE_OP(f64_t, f64_t, prod_f64, 1.0, acc *= val)
 REDUCE_OP(int8_t, int8_t, prod_i8, 1, acc *= val)
@@ -911,10 +911,107 @@ REDUCE_OP(uint64_t, uint64_t, prod_u64, 1u, acc *= val)
         }                                                                                          \
     }
 
-REDUCE_STD_OP(f8e4m3_t, f8e4m3)
-REDUCE_STD_OP(f8e5m2_t, f8e5m2)
-REDUCE_STD_OP(bf16_t, bf16)
-REDUCE_STD_OP(f16_t, f16)
+/// Macro to implement standard deviation reduction for exotic types
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ZERO Zero constant for the type
+/// @param ADD_FN Addition function
+/// @param MUL_FN Multiplication function
+/// @param DIV_FN Division function
+/// @param SUB_FN Subtraction function
+/// @param SQRT_FN Square root function
+#define REDUCE_STD_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN, DIV_FN, SUB_FN, SQRT_FN)     \
+    void std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+        const TYPE *input = (const TYPE *)input_ptr;                                               \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
+        const size_t keep_dim_val =                                                                \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
+            TYPE sum = ZERO;                                                                       \
+            TYPE sum_squares = ZERO;                                                               \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                                                                                                   \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                                                                                                   \
+                TYPE val = input[flat_index];                                                      \
+                sum = ADD_FN(sum, val);                                                            \
+                sum_squares = ADD_FN(sum_squares, MUL_FN(val, val));                               \
+            }                                                                                      \
+                                                                                                   \
+            float reduce_size_f = (float)reduce_size;                                              \
+            TYPE reduce_size_typed = float_to_##TYPE_SUFFIX(reduce_size_f);                        \
+            TYPE mean = DIV_FN(sum, reduce_size_typed);                                            \
+            TYPE variance = SUB_FN(DIV_FN(sum_squares, reduce_size_typed), MUL_FN(mean, mean));    \
+            output[output_idx] = SQRT_FN(variance);                                                \
+        }                                                                                          \
+    }
+
+REDUCE_STD_OP_EXOTIC(f8e4m3_t, f8e4m3, F8E4M3_ZERO, f8e4m3_add, f8e4m3_mul, f8e4m3_div, f8e4m3_sub,
+                     f8e4m3_sqrt)
+REDUCE_STD_OP_EXOTIC(f8e5m2_t, f8e5m2, F8E5M2_ZERO, f8e5m2_add, f8e5m2_mul, f8e5m2_div, f8e5m2_sub,
+                     f8e5m2_sqrt)
+REDUCE_STD_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul, bf16_div, bf16_sub, bf16_sqrt)
+REDUCE_STD_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul, f16_div, f16_sub, f16_sqrt)
 REDUCE_STD_OP(f32_t, f32)
 REDUCE_STD_OP(f64_t, f64)
 
@@ -1013,10 +1110,104 @@ REDUCE_STD_OP(f64_t, f64)
         }                                                                                          \
     }
 
-REDUCE_VAR_OP(f8e4m3_t, f8e4m3)
-REDUCE_VAR_OP(f8e5m2_t, f8e5m2)
-REDUCE_VAR_OP(bf16_t, bf16)
-REDUCE_VAR_OP(f16_t, f16)
+/// Macro to implement variance reduction for exotic types
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ZERO Zero constant for the type
+/// @param ADD_FN Addition function
+/// @param MUL_FN Multiplication function
+/// @param DIV_FN Division function
+/// @param SUB_FN Subtraction function
+#define REDUCE_VAR_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN, DIV_FN, SUB_FN)              \
+    void var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+        const TYPE *input = (const TYPE *)input_ptr;                                               \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
+        const size_t keep_dim_val =                                                                \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
+            TYPE sum = ZERO;                                                                       \
+            TYPE sum_squares = ZERO;                                                               \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                                                                                                   \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                                                                                                   \
+                TYPE val = input[flat_index];                                                      \
+                sum = ADD_FN(sum, val);                                                            \
+                sum_squares = ADD_FN(sum_squares, MUL_FN(val, val));                               \
+            }                                                                                      \
+                                                                                                   \
+            float reduce_size_f = (float)reduce_size;                                              \
+            TYPE reduce_size_typed = float_to_##TYPE_SUFFIX(reduce_size_f);                        \
+            TYPE mean = DIV_FN(sum, reduce_size_typed);                                            \
+            output[output_idx] =                                                                   \
+                SUB_FN(DIV_FN(sum_squares, reduce_size_typed), MUL_FN(mean, mean));                \
+        }                                                                                          \
+    }
+
+REDUCE_VAR_OP_EXOTIC(f8e4m3_t, f8e4m3, F8E4M3_ZERO, f8e4m3_add, f8e4m3_mul, f8e4m3_div, f8e4m3_sub)
+REDUCE_VAR_OP_EXOTIC(f8e5m2_t, f8e5m2, F8E5M2_ZERO, f8e5m2_add, f8e5m2_mul, f8e5m2_div, f8e5m2_sub)
+REDUCE_VAR_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul, bf16_div, bf16_sub)
+REDUCE_VAR_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul, f16_div, f16_sub)
 
 // SIMD-optimized var_f32 (variance: E[X^2] - E[X]^2)
 void var_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -1273,10 +1464,36 @@ void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         }                                                                                          \
     }
 
-REDUCE_MEAN_OP(f8e4m3_t, f8e4m3)
-REDUCE_MEAN_OP(f8e5m2_t, f8e5m2)
-REDUCE_MEAN_OP(bf16_t, bf16)
-REDUCE_MEAN_OP(f16_t, f16)
+/// Macro to implement mean reduction for exotic types
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param DIV_FN Division function
+#define REDUCE_MEAN_OP_EXOTIC(TYPE, TYPE_SUFFIX, DIV_FN)                                           \
+    void mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+        sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                                        \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+        float reduce_size_f = (float)reduce_size;                                                  \
+        TYPE reduce_size_typed = float_to_##TYPE_SUFFIX(reduce_size_f);                            \
+        for (size_t i = 0; i < num_els; i++) {                                                     \
+            output[i] = DIV_FN(output[i], reduce_size_typed);                                      \
+        }                                                                                          \
+    }
+
+REDUCE_MEAN_OP_EXOTIC(f8e4m3_t, f8e4m3, f8e4m3_div)
+REDUCE_MEAN_OP_EXOTIC(f8e5m2_t, f8e5m2, f8e5m2_div)
+REDUCE_MEAN_OP_EXOTIC(bf16_t, bf16, bf16_div)
+REDUCE_MEAN_OP_EXOTIC(f16_t, f16, f16_div)
 REDUCE_MEAN_OP(f32_t, f32)
 REDUCE_MEAN_OP(f64_t, f64)
 
@@ -1371,10 +1588,97 @@ REDUCE_MEAN_OP(f64_t, f64)
         }                                                                                          \
     }
 
-REDUCE_NORM_OP(f8e4m3_t, f8e4m3)
-REDUCE_NORM_OP(f8e5m2_t, f8e5m2)
-REDUCE_NORM_OP(bf16_t, bf16)
-REDUCE_NORM_OP(f16_t, f16)
+/// Macro to implement L2 norm reduction for exotic types
+///
+/// @param TYPE C float type
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param ZERO Zero constant for the type
+/// @param ADD_FN Addition function
+/// @param MUL_FN Multiplication function
+/// @param SQRT_FN Square root function
+#define REDUCE_NORM_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN, SQRT_FN)                    \
+    void norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
+        const TYPE *input = (const TYPE *)input_ptr;                                               \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
+        const size_t keep_dim_val =                                                                \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
+            TYPE sum_squares = ZERO;                                                               \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                                                                                                   \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                                                                                                   \
+                TYPE val = input[flat_index];                                                      \
+                sum_squares = ADD_FN(sum_squares, MUL_FN(val, val));                               \
+            }                                                                                      \
+                                                                                                   \
+            output[output_idx] = SQRT_FN(sum_squares);                                             \
+        }                                                                                          \
+    }
+
+REDUCE_NORM_OP_EXOTIC(f8e4m3_t, f8e4m3, F8E4M3_ZERO, f8e4m3_add, f8e4m3_mul, f8e4m3_sqrt)
+REDUCE_NORM_OP_EXOTIC(f8e5m2_t, f8e5m2, F8E5M2_ZERO, f8e5m2_add, f8e5m2_mul, f8e5m2_sqrt)
+REDUCE_NORM_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul, bf16_sqrt)
+REDUCE_NORM_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul, f16_sqrt)
 
 // SIMD-optimized norm_f32 (L2 norm: sqrt(sum(x^2)))
 void norm_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
@@ -1686,6 +1990,98 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         }                                                                                          \
     }
 
+/// Macro to implement argmax reduction for exotic types (returns int32 indices)
+///
+/// @param IN_TYPE Input C type
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param GT_FN Greater-than comparison function
+#define REDUCE_ARGMAX_OP_EXOTIC(IN_TYPE, TYPE_SUFFIX, GT_FN)                                       \
+    void argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+        const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
+        int32_t *output = (int32_t *)output_ptr;                                                   \
+                                                                                                   \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
+        const size_t keep_dim_val =                                                                \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
+            IN_TYPE max_val;                                                                       \
+            int32_t max_idx = 0;                                                                   \
+            bool first = true;                                                                     \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                                                                                                   \
+                size_t actual_dim_idx = input_indices[reduce_dims[0]];                             \
+                                                                                                   \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                                                                                                   \
+                IN_TYPE val = input[flat_index];                                                   \
+                if (first || GT_FN(val, max_val)) {                                                \
+                    max_val = val;                                                                 \
+                    max_idx = (int32_t)actual_dim_idx;                                             \
+                    first = false;                                                                 \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            output[output_idx] = max_idx;                                                          \
+        }                                                                                          \
+    }
+
 // ============================================================================
 // ARGMIN REDUCTION
 // ============================================================================
@@ -1786,11 +2182,103 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         }                                                                                          \
     }
 
+/// Macro to implement argmin reduction for exotic types (returns int32 indices)
+///
+/// @param IN_TYPE Input C type
+/// @param TYPE_SUFFIX Suffix for function naming
+/// @param LT_FN Less-than comparison function
+#define REDUCE_ARGMIN_OP_EXOTIC(IN_TYPE, TYPE_SUFFIX, LT_FN)                                       \
+    void argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+        const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
+        int32_t *output = (int32_t *)output_ptr;                                                   \
+                                                                                                   \
+        const size_t num_dims = metadata[0];                                                       \
+        const size_t *dims = metadata + 1;                                                         \
+        const size_t *strides = metadata + 1 + num_dims;                                           \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;                \
+        const size_t keep_dim_val =                                                                \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        const bool keep_dim = (keep_dim_val != 0);                                                 \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (size_t output_idx = 0; output_idx < num_els; output_idx++) {                          \
+            IN_TYPE min_val;                                                                       \
+            int32_t min_idx = 0;                                                                   \
+            bool first = true;                                                                     \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                                                                                                   \
+                size_t actual_dim_idx = input_indices[reduce_dims[0]];                             \
+                                                                                                   \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                                                                                                   \
+                IN_TYPE val = input[flat_index];                                                   \
+                if (first || LT_FN(val, min_val)) {                                                \
+                    min_val = val;                                                                 \
+                    min_idx = (int32_t)actual_dim_idx;                                             \
+                    first = false;                                                                 \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            output[output_idx] = min_idx;                                                          \
+        }                                                                                          \
+    }
+
 REDUCE_ARGMAX_OP(bool, bool)
-REDUCE_ARGMAX_OP(f8e4m3_t, f8e4m3)
-REDUCE_ARGMAX_OP(f8e5m2_t, f8e5m2)
-REDUCE_ARGMAX_OP(bf16_t, bf16)
-REDUCE_ARGMAX_OP(f16_t, f16)
+REDUCE_ARGMAX_OP_EXOTIC(f8e4m3_t, f8e4m3, f8e4m3_gt)
+REDUCE_ARGMAX_OP_EXOTIC(f8e5m2_t, f8e5m2, f8e5m2_gt)
+REDUCE_ARGMAX_OP_EXOTIC(bf16_t, bf16, bf16_gt)
+REDUCE_ARGMAX_OP_EXOTIC(f16_t, f16, f16_gt)
 REDUCE_ARGMAX_OP(f32_t, f32)
 REDUCE_ARGMAX_OP(f64_t, f64)
 REDUCE_ARGMAX_OP(int8_t, i8)
@@ -1803,10 +2291,10 @@ REDUCE_ARGMAX_OP(uint32_t, u32)
 REDUCE_ARGMAX_OP(uint64_t, u64)
 
 REDUCE_ARGMIN_OP(bool, bool)
-REDUCE_ARGMIN_OP(f8e4m3_t, f8e4m3)
-REDUCE_ARGMIN_OP(f8e5m2_t, f8e5m2)
-REDUCE_ARGMIN_OP(bf16_t, bf16)
-REDUCE_ARGMIN_OP(f16_t, f16)
+REDUCE_ARGMIN_OP_EXOTIC(f8e4m3_t, f8e4m3, f8e4m3_lt)
+REDUCE_ARGMIN_OP_EXOTIC(f8e5m2_t, f8e5m2, f8e5m2_lt)
+REDUCE_ARGMIN_OP_EXOTIC(bf16_t, bf16, bf16_lt)
+REDUCE_ARGMIN_OP_EXOTIC(f16_t, f16, f16_lt)
 REDUCE_ARGMIN_OP(f32_t, f32)
 REDUCE_ARGMIN_OP(f64_t, f64)
 REDUCE_ARGMIN_OP(int8_t, i8)

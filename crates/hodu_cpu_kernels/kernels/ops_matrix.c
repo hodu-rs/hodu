@@ -192,6 +192,152 @@
         }                                                                                          \
     }
 
+// Exotic floating-point matmul (same as MATMUL_OP but with proper float arithmetic)
+#define MATMUL_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                                  \
+    typedef struct {                                                                               \
+        const TYPE *lhs;                                                                           \
+        const TYPE *rhs;                                                                           \
+        TYPE *output;                                                                              \
+        size_t start_row;                                                                          \
+        size_t end_row;                                                                            \
+        size_t M, K, N;                                                                            \
+    } matmul_##TYPE_SUFFIX##_args_t;                                                               \
+                                                                                                   \
+    static void *matmul_##TYPE_SUFFIX##_worker(void *arg) {                                        \
+        matmul_##TYPE_SUFFIX##_args_t *args = (matmul_##TYPE_SUFFIX##_args_t *)arg;                \
+        for (size_t i = args->start_row; i < args->end_row; i++) {                                 \
+            for (size_t j = 0; j < args->N; j++) {                                                 \
+                TYPE sum = ZERO;                                                                   \
+                for (size_t k = 0; k < args->K; k++) {                                             \
+                    sum = ADD_FN(sum,                                                              \
+                                 MUL_FN(args->lhs[i * args->K + k], args->rhs[k * args->N + j]));  \
+                }                                                                                  \
+                args->output[i * args->N + j] = sum;                                               \
+            }                                                                                      \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
+    void matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,          \
+                              const size_t *metadata) {                                            \
+        const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
+        const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t lhs_ndim = metadata[1];                                                       \
+        const size_t rhs_ndim = metadata[2];                                                       \
+        const size_t batch_ndim = metadata[3];                                                     \
+                                                                                                   \
+        const size_t *lhs_shape = metadata + 4;                                                    \
+        const size_t *rhs_shape = lhs_shape + lhs_ndim;                                            \
+        const size_t *batch_shape = rhs_shape + rhs_ndim;                                          \
+        const size_t *lhs_strides = batch_shape + batch_ndim;                                      \
+        const size_t *rhs_strides = lhs_strides + lhs_ndim;                                        \
+        const size_t lhs_offset = *(rhs_strides + rhs_ndim);                                       \
+        const size_t rhs_offset = *(rhs_strides + rhs_ndim + 1);                                   \
+        const size_t M = *(rhs_strides + rhs_ndim + 2);                                            \
+        const size_t K = *(rhs_strides + rhs_ndim + 3);                                            \
+        const size_t N = *(rhs_strides + rhs_ndim + 4);                                            \
+                                                                                                   \
+        size_t lhs_batch_ndim = lhs_ndim - 2;                                                      \
+        size_t rhs_batch_ndim = rhs_ndim - 2;                                                      \
+                                                                                                   \
+        bool is_contiguous = (lhs_strides[lhs_ndim - 1] == 1 && rhs_strides[rhs_ndim - 1] == 1 &&  \
+                              lhs_strides[lhs_ndim - 2] == K && rhs_strides[rhs_ndim - 2] == N &&  \
+                              lhs_offset == 0 && rhs_offset == 0);                                 \
+                                                                                                   \
+        if (is_contiguous && batch_ndim == 0) {                                                    \
+            size_t num_threads = get_optimal_threads(M, 128);                                      \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                thread_t threads[32];                                                              \
+                matmul_##TYPE_SUFFIX##_args_t thread_args[32];                                     \
+                if (num_threads > 32)                                                              \
+                    num_threads = 32;                                                              \
+                                                                                                   \
+                size_t rows_per_thread = M / num_threads;                                          \
+                size_t remaining_rows = M % num_threads;                                           \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    thread_args[t].lhs = lhs;                                                      \
+                    thread_args[t].rhs = rhs;                                                      \
+                    thread_args[t].output = output;                                                \
+                    thread_args[t].M = M;                                                          \
+                    thread_args[t].K = K;                                                          \
+                    thread_args[t].N = N;                                                          \
+                    thread_args[t].start_row = t * rows_per_thread;                                \
+                    thread_args[t].end_row = (t + 1) * rows_per_thread;                            \
+                    if (t == num_threads - 1)                                                      \
+                        thread_args[t].end_row += remaining_rows;                                  \
+                                                                                                   \
+                    thread_create(&threads[t], matmul_##TYPE_SUFFIX##_worker, &thread_args[t]);    \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    thread_join(threads[t]);                                                       \
+                }                                                                                  \
+            } else {                                                                               \
+                for (size_t i = 0; i < M; i++) {                                                   \
+                    for (size_t j = 0; j < N; j++) {                                               \
+                        TYPE sum = ZERO;                                                           \
+                        for (size_t k = 0; k < K; k++) {                                           \
+                            sum = ADD_FN(sum, MUL_FN(lhs[i * K + k], rhs[k * N + j]));             \
+                        }                                                                          \
+                        output[i * N + j] = sum;                                                   \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+        } else {                                                                                   \
+            for (size_t idx = 0; idx < num_els; idx++) {                                           \
+                size_t mn = idx % (M * N);                                                         \
+                size_t batch_idx = idx / (M * N);                                                  \
+                size_t i = mn / N;                                                                 \
+                size_t j = mn % N;                                                                 \
+                                                                                                   \
+                size_t batch_indices[16];                                                          \
+                size_t temp = batch_idx;                                                           \
+                for (int d = (int)batch_ndim - 1; d >= 0; d--) {                                   \
+                    batch_indices[d] = temp % batch_shape[d];                                      \
+                    temp /= batch_shape[d];                                                        \
+                }                                                                                  \
+                                                                                                   \
+                size_t lhs_batch_indices[16];                                                      \
+                for (size_t d = 0; d < lhs_batch_ndim; d++) {                                      \
+                    size_t batch_dim_idx = batch_ndim - lhs_batch_ndim + d;                        \
+                    lhs_batch_indices[d] = (lhs_shape[d] == 1) ? 0 : batch_indices[batch_dim_idx]; \
+                }                                                                                  \
+                                                                                                   \
+                size_t rhs_batch_indices[16];                                                      \
+                for (size_t d = 0; d < rhs_batch_ndim; d++) {                                      \
+                    size_t batch_dim_idx = batch_ndim - rhs_batch_ndim + d;                        \
+                    rhs_batch_indices[d] = (rhs_shape[d] == 1) ? 0 : batch_indices[batch_dim_idx]; \
+                }                                                                                  \
+                                                                                                   \
+                TYPE sum = ZERO;                                                                   \
+                for (size_t k = 0; k < K; k++) {                                                   \
+                    size_t lhs_idx = lhs_offset;                                                   \
+                    for (size_t d = 0; d < lhs_batch_ndim; d++) {                                  \
+                        lhs_idx += lhs_batch_indices[d] * lhs_strides[d];                          \
+                    }                                                                              \
+                    lhs_idx += i * lhs_strides[lhs_ndim - 2];                                      \
+                    lhs_idx += k * lhs_strides[lhs_ndim - 1];                                      \
+                                                                                                   \
+                    size_t rhs_idx = rhs_offset;                                                   \
+                    for (size_t d = 0; d < rhs_batch_ndim; d++) {                                  \
+                        rhs_idx += rhs_batch_indices[d] * rhs_strides[d];                          \
+                    }                                                                              \
+                    rhs_idx += k * rhs_strides[rhs_ndim - 2];                                      \
+                    rhs_idx += j * rhs_strides[rhs_ndim - 1];                                      \
+                                                                                                   \
+                    sum = ADD_FN(sum, MUL_FN(lhs[lhs_idx], rhs[rhs_idx]));                         \
+                }                                                                                  \
+                                                                                                   \
+                output[idx] = sum;                                                                 \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
 // Generate fallback implementations for all types first
 MATMUL_OP(f32_t, f32_fallback)
 MATMUL_OP(f64_t, f64_fallback)
@@ -201,11 +347,11 @@ MATMUL_OP(f64_t, f64_fallback)
 // - ops_matrix_blas_aarch64_apple_darwin.c (Accelerate framework)
 // These files provide matmul_f32() and matmul_f64() implementations
 
-// All other types use generic MATMUL_OP
-MATMUL_OP(f8e4m3_t, f8e4m3)
-MATMUL_OP(f8e5m2_t, f8e5m2)
-MATMUL_OP(bf16_t, bf16)
-MATMUL_OP(f16_t, f16)
+// Exotic floating-point types use proper arithmetic
+MATMUL_OP_EXOTIC(f8e4m3_t, f8e4m3, F8E4M3_ZERO, f8e4m3_add, f8e4m3_mul)
+MATMUL_OP_EXOTIC(f8e5m2_t, f8e5m2, F8E5M2_ZERO, f8e5m2_add, f8e5m2_mul)
+MATMUL_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul)
+MATMUL_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul)
 MATMUL_OP(int8_t, i8)
 MATMUL_OP(int16_t, i16)
 MATMUL_OP(int32_t, i32)
@@ -406,6 +552,154 @@ MATMUL_OP(uint64_t, u64)
 // DOT IMPLEMENTATIONS
 // ============================================================================
 
+// Exotic dot (same as DOT_OP but with proper float arithmetic)
+#define DOT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                                     \
+    typedef struct {                                                                               \
+        const TYPE *lhs;                                                                           \
+        const TYPE *rhs;                                                                           \
+        TYPE *output;                                                                              \
+        size_t start_row;                                                                          \
+        size_t end_row;                                                                            \
+        size_t M, K, N;                                                                            \
+    } dot_##TYPE_SUFFIX##_args_t;                                                                  \
+                                                                                                   \
+    static void *dot_##TYPE_SUFFIX##_worker(void *arg) {                                           \
+        dot_##TYPE_SUFFIX##_args_t *args = (dot_##TYPE_SUFFIX##_args_t *)arg;                      \
+        for (size_t i = args->start_row; i < args->end_row; i++) {                                 \
+            for (size_t j = 0; j < args->N; j++) {                                                 \
+                TYPE sum = ZERO;                                                                   \
+                for (size_t k = 0; k < args->K; k++) {                                             \
+                    sum = ADD_FN(sum,                                                              \
+                                 MUL_FN(args->lhs[i * args->K + k], args->rhs[k * args->N + j]));  \
+                }                                                                                  \
+                args->output[i * args->N + j] = sum;                                               \
+            }                                                                                      \
+        }                                                                                          \
+        return NULL;                                                                               \
+    }                                                                                              \
+                                                                                                   \
+    void dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,             \
+                           const size_t *metadata) {                                               \
+        const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
+        const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t M = metadata[0];                                                              \
+        const size_t K = metadata[1];                                                              \
+        const size_t N = metadata[2];                                                              \
+        const size_t lhs_stride_m = metadata[3];                                                   \
+        const size_t lhs_stride_k = metadata[4];                                                   \
+        const size_t rhs_stride_k = metadata[5];                                                   \
+        const size_t rhs_stride_n = metadata[6];                                                   \
+        const size_t lhs_offset = metadata[7];                                                     \
+        const size_t rhs_offset = metadata[8];                                                     \
+                                                                                                   \
+        for (size_t i = 0; i < M * N; i++) {                                                       \
+            output[i] = ZERO;                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        const size_t BLOCK_M = 32;                                                                 \
+        const size_t BLOCK_N = 32;                                                                 \
+        const size_t BLOCK_K = 256;                                                                \
+        const size_t REG_M = 4;                                                                    \
+        const size_t REG_N = 4;                                                                    \
+                                                                                                   \
+        bool is_contiguous =                                                                       \
+            (lhs_stride_k == 1 && rhs_stride_n == 1 && lhs_stride_m == K && rhs_stride_k == N);    \
+                                                                                                   \
+        if (is_contiguous && lhs_offset == 0 && rhs_offset == 0) {                                 \
+            size_t num_threads = get_optimal_threads(M, 256);                                      \
+                                                                                                   \
+            if (num_threads > 1) {                                                                 \
+                thread_t threads[32];                                                              \
+                dot_##TYPE_SUFFIX##_args_t thread_args[32];                                        \
+                if (num_threads > 32)                                                              \
+                    num_threads = 32;                                                              \
+                                                                                                   \
+                size_t rows_per_thread = M / num_threads;                                          \
+                size_t remaining_rows = M % num_threads;                                           \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    thread_args[t].lhs = lhs;                                                      \
+                    thread_args[t].rhs = rhs;                                                      \
+                    thread_args[t].output = output;                                                \
+                    thread_args[t].M = M;                                                          \
+                    thread_args[t].K = K;                                                          \
+                    thread_args[t].N = N;                                                          \
+                    thread_args[t].start_row = t * rows_per_thread;                                \
+                    thread_args[t].end_row = (t + 1) * rows_per_thread;                            \
+                    if (t == num_threads - 1)                                                      \
+                        thread_args[t].end_row += remaining_rows;                                  \
+                                                                                                   \
+                    thread_create(&threads[t], dot_##TYPE_SUFFIX##_worker, &thread_args[t]);       \
+                }                                                                                  \
+                                                                                                   \
+                for (size_t t = 0; t < num_threads; t++) {                                         \
+                    thread_join(threads[t]);                                                       \
+                }                                                                                  \
+            } else {                                                                               \
+                for (size_t ii = 0; ii < M; ii += BLOCK_M) {                                       \
+                    size_t i_end = (ii + BLOCK_M < M) ? (ii + BLOCK_M) : M;                        \
+                    for (size_t kk = 0; kk < K; kk += BLOCK_K) {                                   \
+                        size_t k_end = (kk + BLOCK_K < K) ? (kk + BLOCK_K) : K;                    \
+                        for (size_t jj = 0; jj < N; jj += BLOCK_N) {                               \
+                            size_t j_end = (jj + BLOCK_N < N) ? (jj + BLOCK_N) : N;                \
+                            for (size_t i = ii; i < i_end; i += REG_M) {                           \
+                                size_t i_reg_end = (i + REG_M < i_end) ? (i + REG_M) : i_end;      \
+                                for (size_t j = jj; j < j_end; j += REG_N) {                       \
+                                    size_t j_reg_end = (j + REG_N < j_end) ? (j + REG_N) : j_end;  \
+                                    TYPE acc[4][4];                                                \
+                                    for (size_t ir = 0; ir < (i_reg_end - i); ir++) {              \
+                                        for (size_t jr = 0; jr < (j_reg_end - j); jr++) {          \
+                                            acc[ir][jr] = output[(i + ir) * N + (j + jr)];         \
+                                        }                                                          \
+                                    }                                                              \
+                                    for (size_t k = kk; k < k_end; k++) {                          \
+                                        for (size_t ir = 0; ir < (i_reg_end - i); ir++) {          \
+                                            TYPE a_val = lhs[(i + ir) * K + k];                    \
+                                            for (size_t jr = 0; jr < (j_reg_end - j); jr++) {      \
+                                                acc[ir][jr] =                                      \
+                                                    ADD_FN(acc[ir][jr],                            \
+                                                           MUL_FN(a_val, rhs[k * N + (j + jr)]));  \
+                                            }                                                      \
+                                        }                                                          \
+                                    }                                                              \
+                                    for (size_t ir = 0; ir < (i_reg_end - i); ir++) {              \
+                                        for (size_t jr = 0; jr < (j_reg_end - j); jr++) {          \
+                                            output[(i + ir) * N + (j + jr)] = acc[ir][jr];         \
+                                        }                                                          \
+                                    }                                                              \
+                                }                                                                  \
+                            }                                                                      \
+                        }                                                                          \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+        } else {                                                                                   \
+            for (size_t ii = 0; ii < M; ii += BLOCK_M) {                                           \
+                size_t i_end = (ii + BLOCK_M < M) ? (ii + BLOCK_M) : M;                            \
+                for (size_t kk = 0; kk < K; kk += BLOCK_K) {                                       \
+                    size_t k_end = (kk + BLOCK_K < K) ? (kk + BLOCK_K) : K;                        \
+                    for (size_t jj = 0; jj < N; jj += BLOCK_N) {                                   \
+                        size_t j_end = (jj + BLOCK_N < N) ? (jj + BLOCK_N) : N;                    \
+                        for (size_t i = ii; i < i_end; i++) {                                      \
+                            for (size_t k = kk; k < k_end; k++) {                                  \
+                                size_t lhs_idx = lhs_offset + i * lhs_stride_m + k * lhs_stride_k; \
+                                TYPE a_val = lhs[lhs_idx];                                         \
+                                for (size_t j = jj; j < j_end; j++) {                              \
+                                    size_t rhs_idx =                                               \
+                                        rhs_offset + k * rhs_stride_k + j * rhs_stride_n;          \
+                                    output[i * N + j] =                                            \
+                                        ADD_FN(output[i * N + j], MUL_FN(a_val, rhs[rhs_idx]));    \
+                                }                                                                  \
+                            }                                                                      \
+                        }                                                                          \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
 // Generate fallback implementations for all types first
 DOT_OP(f32_t, f32_fallback)
 DOT_OP(f64_t, f64_fallback)
@@ -415,11 +709,11 @@ DOT_OP(f64_t, f64_fallback)
 // - ops_matrix_blas_aarch64_apple_darwin.c (Accelerate framework)
 // These files provide dot_f32() and dot_f64() implementations
 
-// All other types use generic DOT_OP
-DOT_OP(f8e4m3_t, f8e4m3)
-DOT_OP(f8e5m2_t, f8e5m2)
-DOT_OP(bf16_t, bf16)
-DOT_OP(f16_t, f16)
+// Exotic floating-point types use simple correct implementation
+DOT_OP_EXOTIC(f8e4m3_t, f8e4m3, F8E4M3_ZERO, f8e4m3_add, f8e4m3_mul)
+DOT_OP_EXOTIC(f8e5m2_t, f8e5m2, F8E5M2_ZERO, f8e5m2_add, f8e5m2_mul)
+DOT_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul)
+DOT_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul)
 DOT_OP(int8_t, i8)
 DOT_OP(int16_t, i16)
 DOT_OP(int32_t, i32)

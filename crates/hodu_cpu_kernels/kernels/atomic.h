@@ -49,9 +49,9 @@ static inline void atomic_add_f16(f16_t *addr, f16_t val) {
     old_val.i = atomic_load_explicit((_Atomic uint16_t *)addr, memory_order_relaxed);
 
     do {
-        float old_f = fp16_to_float(old_val.i);
-        float val_f = fp16_to_float(val);
-        new_val.i = float_to_fp16(old_f + val_f);
+        float old_f = f16_to_float(old_val.i);
+        float val_f = f16_to_float(val);
+        new_val.i = float_to_f16(old_f + val_f);
     } while (!atomic_compare_exchange_weak_explicit((_Atomic uint16_t *)addr, &old_val.i, new_val.i,
                                                     memory_order_relaxed, memory_order_relaxed));
 }
@@ -79,9 +79,9 @@ static inline void atomic_add_f8e4m3(f8e4m3_t *addr, f8e4m3_t val) {
     old_val.i = atomic_load_explicit((_Atomic uint8_t *)addr, memory_order_relaxed);
 
     do {
-        float old_f = fp8_e4m3_to_float(old_val.i);
-        float val_f = fp8_e4m3_to_float(val);
-        new_val.i = float_to_fp8_e4m3(old_f + val_f);
+        float old_f = f8e4m3_to_float(old_val.i);
+        float val_f = f8e4m3_to_float(val);
+        new_val.i = float_to_f8e4m3(old_f + val_f);
     } while (!atomic_compare_exchange_weak_explicit((_Atomic uint8_t *)addr, &old_val.i, new_val.i,
                                                     memory_order_relaxed, memory_order_relaxed));
 }
@@ -94,9 +94,9 @@ static inline void atomic_add_f8e5m2(f8e5m2_t *addr, f8e5m2_t val) {
     old_val.i = atomic_load_explicit((_Atomic uint8_t *)addr, memory_order_relaxed);
 
     do {
-        float old_f = fp8_e5m2_to_float(old_val.i);
-        float val_f = fp8_e5m2_to_float(val);
-        new_val.i = float_to_fp8_e5m2(old_f + val_f);
+        float old_f = f8e5m2_to_float(old_val.i);
+        float val_f = f8e5m2_to_float(val);
+        new_val.i = float_to_f8e5m2(old_f + val_f);
     } while (!atomic_compare_exchange_weak_explicit((_Atomic uint8_t *)addr, &old_val.i, new_val.i,
                                                     memory_order_relaxed, memory_order_relaxed));
 }

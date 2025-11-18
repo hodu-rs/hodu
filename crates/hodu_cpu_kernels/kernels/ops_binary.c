@@ -1,6 +1,8 @@
 #include "ops_binary.h"
 #include "simd_utils.h"
+#include "t_f8e4m3.h"
 #include "thread_utils.h"
+#include "types.h"
 #include <math.h>
 
 // ============================================================================
@@ -194,16 +196,16 @@
 
 /// Macro to implement a binary operation with type conversion for reduced-precision floats
 ///
-/// For FP8, FP16, and BF16 types, operations are performed in FP32 for accuracy.
+/// For f8, f16, and BF16 types, operations are performed in FP32 for accuracy.
 /// Values are converted to float, operation is performed, then converted back.
 ///
-/// @param TYPE Storage type (uint8_t for FP8, uint16_t for FP16/BF16)
+/// @param TYPE Storage type (uint8_t for f8, uint16_t for f16/BF16)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param OP_NAME Operation name
 /// @param FUNC Expression defining the operation (in float precision)
 /// @param TO_FLOAT Function to convert from storage type to float
 /// @param FROM_FLOAT Function to convert from float to storage type
-// Macros for FP8/FP16/BF16 with float conversion
+// Macros for f8/f16/BF16 with float conversion
 #define IMPL_BINARY_OP_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)             \
     void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
                                  const size_t *metadata) {                                         \
@@ -262,7 +264,7 @@
 ///
 /// Combines IMPL_BINARY_TO_BOOL and type conversion for reduced-precision floats.
 ///
-/// @param TYPE Storage type (uint8_t for FP8, uint16_t for FP16/BF16)
+/// @param TYPE Storage type (uint8_t for f8, uint16_t for f16/BF16)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param OP_NAME Operation name
 /// @param FUNC Boolean expression (evaluated in float precision)
@@ -533,106 +535,100 @@ IMPL_BINARY_TO_BOOL(uint8_t, bool, gt, x && !y)
 IMPL_BINARY_TO_BOOL(uint8_t, bool, ge, x || !y)
 
 // ============================================================================
-// FP8 E4M3 OPERATIONS
+// f8 E4M3 OPERATIONS
 // ============================================================================
 
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, add, x + y, fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, sub, x - y, fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, mul, x *y, fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, div, x / y, fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, pow, powf(x, y), fp8_e4m3_to_float, float_to_fp8_e4m3)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, maximum, MAXIMUM(x, y), fp8_e4m3_to_float,
-                       float_to_fp8_e4m3)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e4m3, minimum, MINIMUM(x, y), fp8_e4m3_to_float,
-                       float_to_fp8_e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, add, x + y, f8e4m3_to_float, float_to_f8e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, sub, x - y, f8e4m3_to_float, float_to_f8e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, mul, x *y, f8e4m3_to_float, float_to_f8e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, div, x / y, f8e4m3_to_float, float_to_f8e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, pow, powf(x, y), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, maximum, MAXIMUM(x, y), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_BINARY_OP_CONVERT(f8e4m3_t, f8e4m3, minimum, MINIMUM(x, y), f8e4m3_to_float, float_to_f8e4m3)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, logical_and, (x != 0.0f && y != 0.0f),
-                            fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, logical_or, (x != 0.0f || y != 0.0f),
-                            fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, logical_xor, (x != 0.0f) != (y != 0.0f),
-                            fp8_e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_and, (x != 0.0f && y != 0.0f),
+                            f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_or, (x != 0.0f || y != 0.0f), f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_xor, (x != 0.0f) != (y != 0.0f),
+                            f8e4m3_to_float)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, eq, x == y, fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, ne, x != y, fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, lt, x < y, fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, le, x <= y, fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, gt, x > y, fp8_e4m3_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e4m3, ge, x >= y, fp8_e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, eq, x == y, f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, ne, x != y, f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, lt, x < y, f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, le, x <= y, f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, gt, x > y, f8e4m3_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, ge, x >= y, f8e4m3_to_float)
 
 // ============================================================================
-// FP8 E5M2 OPERATIONS
+// f8 E5M2 OPERATIONS
 // ============================================================================
 
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, add, x + y, fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, sub, x - y, fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, mul, x *y, fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, div, x / y, fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, pow, powf(x, y), fp8_e5m2_to_float, float_to_fp8_e5m2)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, maximum, MAXIMUM(x, y), fp8_e5m2_to_float,
-                       float_to_fp8_e5m2)
-IMPL_BINARY_OP_CONVERT(uint8_t, f8e5m2, minimum, MINIMUM(x, y), fp8_e5m2_to_float,
-                       float_to_fp8_e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, add, x + y, f8e5m2_to_float, float_to_f8e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, sub, x - y, f8e5m2_to_float, float_to_f8e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, mul, x *y, f8e5m2_to_float, float_to_f8e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, div, x / y, f8e5m2_to_float, float_to_f8e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, pow, powf(x, y), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, maximum, MAXIMUM(x, y), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_BINARY_OP_CONVERT(f8e5m2_t, f8e5m2, minimum, MINIMUM(x, y), f8e5m2_to_float, float_to_f8e5m2)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, logical_and, (x != 0.0f && y != 0.0f),
-                            fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, logical_or, (x != 0.0f || y != 0.0f),
-                            fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, logical_xor, (x != 0.0f) != (y != 0.0f),
-                            fp8_e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_and, (x != 0.0f && y != 0.0f),
+                            f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_or, (x != 0.0f || y != 0.0f), f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_xor, (x != 0.0f) != (y != 0.0f),
+                            f8e5m2_to_float)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, eq, x == y, fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, ne, x != y, fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, lt, x < y, fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, le, x <= y, fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, gt, x > y, fp8_e5m2_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint8_t, f8e5m2, ge, x >= y, fp8_e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, eq, x == y, f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, ne, x != y, f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, lt, x < y, f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, le, x <= y, f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, gt, x > y, f8e5m2_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, ge, x >= y, f8e5m2_to_float)
 
 // ============================================================================
 // BF16 OPERATIONS
 // ============================================================================
 
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, add, x + y, bf16_to_float, float_to_bf16)
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, sub, x - y, bf16_to_float, float_to_bf16)
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, mul, x *y, bf16_to_float, float_to_bf16)
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, div, x / y, bf16_to_float, float_to_bf16)
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, pow, powf(x, y), bf16_to_float, float_to_bf16)
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, maximum, MAXIMUM(x, y), bf16_to_float, float_to_bf16)
-IMPL_BINARY_OP_CONVERT(uint16_t, bf16, minimum, MINIMUM(x, y), bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, add, x + y, bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, sub, x - y, bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, mul, x *y, bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, div, x / y, bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, pow, powf(x, y), bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, maximum, MAXIMUM(x, y), bf16_to_float, float_to_bf16)
+IMPL_BINARY_OP_CONVERT(bf16_t, bf16, minimum, MINIMUM(x, y), bf16_to_float, float_to_bf16)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, logical_and, (x != 0.0f && y != 0.0f), bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, logical_or, (x != 0.0f || y != 0.0f), bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, logical_xor, (x != 0.0f) != (y != 0.0f), bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_and, (x != 0.0f && y != 0.0f), bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_or, (x != 0.0f || y != 0.0f), bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_xor, (x != 0.0f) != (y != 0.0f), bf16_to_float)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, eq, x == y, bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, ne, x != y, bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, lt, x < y, bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, le, x <= y, bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, gt, x > y, bf16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, bf16, ge, x >= y, bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, eq, x == y, bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, ne, x != y, bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, lt, x < y, bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, le, x <= y, bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, gt, x > y, bf16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(bf16_t, bf16, ge, x >= y, bf16_to_float)
 
 // ============================================================================
-// FP16 OPERATIONS
+// f16 OPERATIONS
 // ============================================================================
 
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, add, x + y, fp16_to_float, float_to_fp16)
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, sub, x - y, fp16_to_float, float_to_fp16)
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, mul, x *y, fp16_to_float, float_to_fp16)
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, div, x / y, fp16_to_float, float_to_fp16)
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, pow, powf(x, y), fp16_to_float, float_to_fp16)
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, maximum, MAXIMUM(x, y), fp16_to_float, float_to_fp16)
-IMPL_BINARY_OP_CONVERT(uint16_t, f16, minimum, MINIMUM(x, y), fp16_to_float, float_to_fp16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, add, x + y, f16_to_float, float_to_f16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, sub, x - y, f16_to_float, float_to_f16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, mul, x *y, f16_to_float, float_to_f16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, div, x / y, f16_to_float, float_to_f16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, pow, powf(x, y), f16_to_float, float_to_f16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, maximum, MAXIMUM(x, y), f16_to_float, float_to_f16)
+IMPL_BINARY_OP_CONVERT(f16_t, f16, minimum, MINIMUM(x, y), f16_to_float, float_to_f16)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, logical_and, (x != 0.0f && y != 0.0f), fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, logical_or, (x != 0.0f || y != 0.0f), fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, logical_xor, (x != 0.0f) != (y != 0.0f), fp16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, logical_and, (x != 0.0f && y != 0.0f), f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, logical_or, (x != 0.0f || y != 0.0f), f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, logical_xor, (x != 0.0f) != (y != 0.0f), f16_to_float)
 
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, eq, x == y, fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, ne, x != y, fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, lt, x < y, fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, le, x <= y, fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, gt, x > y, fp16_to_float)
-IMPL_BINARY_TO_BOOL_CONVERT(uint16_t, f16, ge, x >= y, fp16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, eq, x == y, f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, ne, x != y, f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, lt, x < y, f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, le, x <= y, f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, gt, x > y, f16_to_float)
+IMPL_BINARY_TO_BOOL_CONVERT(f16_t, f16, ge, x >= y, f16_to_float)
 
 // ============================================================================
 // UNSIGNED INTEGER OPERATIONS (U8, U16, U32, U64)

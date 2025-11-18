@@ -537,10 +537,97 @@ SCATTER_OP(uint64_t, scatter_u64)
         }                                                                                          \
     }
 
-SCATTER_ADD_OP(f8e4m3_t, scatter_add_f8e4m3)
-SCATTER_ADD_OP(f8e5m2_t, scatter_add_f8e5m2)
-SCATTER_ADD_OP(bf16_t, scatter_add_bf16)
-SCATTER_ADD_OP(f16_t, scatter_add_f16)
+// Exotic floating-point scatter_add (uses proper float arithmetic)
+#define SCATTER_ADD_OP_EXOTIC(TYPE, FN_NAME, ADD_FN)                                               \
+    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,               \
+                 void *output_ptr, const size_t *metadata) {                                       \
+        const TYPE *input = (const TYPE *)input_ptr;                                               \
+        const TYPE *src = (const TYPE *)src_ptr;                                                   \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t *src_shape = metadata + 2 + 2 * num_dims;                                     \
+        const size_t *src_strides = metadata + 2 + 3 * num_dims;                                   \
+        const size_t *indices_strides = metadata + 2 + 4 * num_dims;                               \
+        const size_t input_offset = metadata[2 + 5 * num_dims];                                    \
+        const size_t src_offset = metadata[2 + 5 * num_dims + 1];                                  \
+        const size_t indices_offset = metadata[2 + 5 * num_dims + 2];                              \
+        const size_t dim = metadata[2 + 5 * num_dims + 3];                                         \
+                                                                                                   \
+        size_t input_total_els = 1;                                                                \
+        for (size_t i = 0; i < num_dims; i++) {                                                    \
+            input_total_els *= input_shape[i];                                                     \
+        }                                                                                          \
+        for (size_t i = 0; i < input_total_els; i++) {                                             \
+            size_t flat_idx = input_offset;                                                        \
+            size_t temp = i;                                                                       \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t idx_in_dim = temp % input_shape[d];                                         \
+                temp /= input_shape[d];                                                            \
+                flat_idx += idx_in_dim * input_strides[d];                                         \
+            }                                                                                      \
+            output[i] = input[flat_idx];                                                           \
+        }                                                                                          \
+                                                                                                   \
+        for (size_t id = 0; id < num_els; id++) {                                                  \
+            size_t indices_flat_idx = indices_offset;                                              \
+            size_t temp = id;                                                                      \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t src_idx = temp % src_shape[d];                                              \
+                temp /= src_shape[d];                                                              \
+                indices_flat_idx += src_idx * indices_strides[d];                                  \
+            }                                                                                      \
+                                                                                                   \
+            int32_t target_idx = indices[indices_flat_idx];                                        \
+                                                                                                   \
+            if (target_idx < 0) {                                                                  \
+                target_idx += (int32_t)input_shape[dim];                                           \
+            }                                                                                      \
+                                                                                                   \
+            if (target_idx < 0 || (size_t)target_idx >= input_shape[dim]) {                        \
+                continue;                                                                          \
+            }                                                                                      \
+                                                                                                   \
+            size_t multi_idx[32];                                                                  \
+            temp = id;                                                                             \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                multi_idx[d] = temp % src_shape[d];                                                \
+                temp /= src_shape[d];                                                              \
+            }                                                                                      \
+            multi_idx[dim] = (size_t)target_idx;                                                   \
+                                                                                                   \
+            size_t output_flat_idx = 0;                                                            \
+            for (size_t d = 0; d < num_dims; d++) {                                                \
+                size_t stride = 1;                                                                 \
+                for (size_t dd = d + 1; dd < num_dims; dd++) {                                     \
+                    stride *= input_shape[dd];                                                     \
+                }                                                                                  \
+                output_flat_idx += multi_idx[d] * stride;                                          \
+            }                                                                                      \
+                                                                                                   \
+            if (output_flat_idx >= input_total_els) {                                              \
+                continue;                                                                          \
+            }                                                                                      \
+                                                                                                   \
+            size_t src_flat_idx = src_offset;                                                      \
+            temp = id;                                                                             \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t src_idx = temp % src_shape[d];                                              \
+                temp /= src_shape[d];                                                              \
+                src_flat_idx += src_idx * src_strides[d];                                          \
+            }                                                                                      \
+                                                                                                   \
+            output[output_flat_idx] = ADD_FN(output[output_flat_idx], src[src_flat_idx]);          \
+        }                                                                                          \
+    }
+
+SCATTER_ADD_OP_EXOTIC(f8e4m3_t, scatter_add_f8e4m3, f8e4m3_add)
+SCATTER_ADD_OP_EXOTIC(f8e5m2_t, scatter_add_f8e5m2, f8e5m2_add)
+SCATTER_ADD_OP_EXOTIC(bf16_t, scatter_add_bf16, bf16_add)
+SCATTER_ADD_OP_EXOTIC(f16_t, scatter_add_f16, f16_add)
 SCATTER_ADD_OP(float, scatter_add_f32)
 SCATTER_ADD_OP(int8_t, scatter_add_i8)
 SCATTER_ADD_OP(int16_t, scatter_add_i16)
