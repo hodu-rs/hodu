@@ -83,7 +83,7 @@ pub fn call_ops_reduce_window(
     //         window_shape, strides, padding, output_shape
     let mut metadata = Vec::with_capacity(3 + ndim * 7);
 
-    metadata.push(output_size as usize);
+    metadata.push(output_size);
     metadata.push(ndim);
 
     // Add input shape
@@ -123,7 +123,7 @@ pub fn call_ops_reduce_window(
     let device = input_storage.backend_device();
 
     // Create output buffer
-    let output_buffer = device.new_buffer(output_size as usize, dtype, "reduce_window_output")?;
+    let output_buffer = device.new_buffer(output_size, dtype, "reduce_window_output")?;
 
     // Get kernel name
     let kernel_name = format!("{}_{}", windowing_op, dtype);
@@ -145,10 +145,5 @@ pub fn call_ops_reduce_window(
         &metadata,
     )?;
 
-    Ok(MetalStorage::new(
-        output_buffer,
-        device.clone(),
-        output_size as usize,
-        dtype,
-    ))
+    Ok(MetalStorage::new(output_buffer, device.clone(), output_size, dtype))
 }

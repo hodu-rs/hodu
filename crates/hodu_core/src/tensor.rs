@@ -97,7 +97,7 @@ impl Drop for Tensor {
                     // Increment removal counter and shrink periodically
                     let removals = REMOVAL_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
                     // Shrink every 256 removals to avoid fragmentation
-                    if removals % 256 == 0 {
+                    if removals.is_multiple_of(256) {
                         TENSORS.shrink_to_fit();
                     }
                 }
