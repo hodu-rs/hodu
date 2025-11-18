@@ -26,43 +26,94 @@ pub fn call_ops_reduce_window(
     };
 
     let input_shape = input_layout.shape();
-    let input_ndim = input_shape.ndim();
-    let spatial_dims = input_ndim - 2;
+    let ndim = input_shape.ndim();
 
-    let mut output_shape_vec: Vec<usize> = vec![input_shape[0], input_shape[1]];
-    for i in 0..spatial_dims {
-        let input_size = input_shape[2 + i];
+    // Validate window_shape, strides, padding dimensions
+    if window_shape.len() != ndim {
+        return Err(HoduError::BackendError(format!(
+            "window_shape length {} does not match tensor ndim {}",
+            window_shape.len(),
+            ndim
+        )));
+    }
+
+    if strides.len() != ndim {
+        return Err(HoduError::BackendError(format!(
+            "strides length {} does not match tensor ndim {}",
+            strides.len(),
+            ndim
+        )));
+    }
+
+    if padding.len() != ndim * 2 {
+        return Err(HoduError::BackendError(format!(
+            "padding length {} does not match tensor ndim * 2 ({})",
+            padding.len(),
+            ndim * 2
+        )));
+    }
+
+    // Compute output shape
+    let mut output_shape_vec = Vec::with_capacity(ndim);
+    for i in 0..ndim {
+        let in_size = input_shape.dims()[i];
         let window_size = window_shape[i];
         let stride = strides[i];
-        let pad = padding[i];
-        let output_size = (input_size + 2 * pad - window_size) / stride + 1;
-        output_shape_vec.push(output_size);
+        let pad_before = padding[i * 2];
+        let pad_after = padding[i * 2 + 1];
+
+        // Output size formula: floor((in_size + pad_before + pad_after - window_size) / stride) + 1
+        let padded_size = in_size + pad_before + pad_after;
+        if padded_size < window_size {
+            return Err(HoduError::BackendError(format!(
+                "padded size {} is less than window size {} in dimension {}",
+                padded_size, window_size, i
+            )));
+        }
+
+        let out_size = (padded_size - window_size) / stride + 1;
+        output_shape_vec.push(out_size);
     }
 
     let output_size: usize = output_shape_vec.iter().product();
 
-    let mut metadata = Vec::new();
-    metadata.push(output_size);
-    metadata.push(input_ndim);
+    // Build metadata array
+    // Layout: output_size, num_dims, input_shape, input_strides, offset,
+    //         window_shape, strides, padding, output_shape
+    let mut metadata = Vec::with_capacity(3 + ndim * 7);
 
-    for &d in input_shape.dims() {
-        metadata.push(d);
+    metadata.push(output_size);
+    metadata.push(ndim);
+
+    // Add input shape
+    for &dim in input_shape.dims() {
+        metadata.push(dim);
     }
-    for &s in input_layout.strides() {
-        metadata.push(s);
+
+    // Add input strides
+    for &stride in input_layout.strides() {
+        metadata.push(stride);
     }
+
+    // Add offset
     metadata.push(input_layout.offset());
 
+    // Add window shape
     for &w in window_shape {
         metadata.push(w);
     }
+
+    // Add strides
     for &s in strides {
         metadata.push(s);
     }
+
+    // Add padding (already flattened)
     for &p in padding {
         metadata.push(p);
-        metadata.push(p);
     }
+
+    // Add output shape
     for &d in &output_shape_vec {
         metadata.push(d);
     }
