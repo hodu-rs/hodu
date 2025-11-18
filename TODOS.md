@@ -14,6 +14,11 @@ Items may be added at any time.
 - [x] CPU parallelization support
 - [x] CUDA support
 - [x] Metal support
+- [ ] OS-provided BLAS support
+  - [x] aarch64-apple-darwin (Accelerate framework)
+  - [ ] x86_64-apple-darwin (Accelerate framework)
+  - [ ] x86_64-unknown-linux-gnu (system BLAS)
+  - [ ] aarch64-unknown-linux-gnu (system BLAS)
 
 **Scripting:** (🟢 Nice-to-have)
 - [ ] XLA optimization

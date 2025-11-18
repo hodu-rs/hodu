@@ -10,6 +10,7 @@ repository = "https://github.com/hodu-rs/hodu"
 
 [features]
 std = []
+openblas = []
 
 [build-dependencies]
 cc = "1.0"

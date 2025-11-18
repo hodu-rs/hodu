@@ -93,6 +93,13 @@ impl Drop for Tensor {
                     gradient::cleanup_dropped_tensor(tensor_id);
                     // Now remove from global HashMap
                     TENSORS.remove(&tensor_id);
+
+                    // Increment removal counter and shrink periodically
+                    let removals = REMOVAL_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+                    // Shrink every 256 removals to avoid fragmentation
+                    if removals % 256 == 0 {
+                        TENSORS.shrink_to_fit();
+                    }
                 }
             }
         }
@@ -115,6 +122,13 @@ impl Drop for Tensor {
                 gradient::cleanup_dropped_tensor(tensor_id);
                 let mut tensors = TENSORS.write();
                 tensors.remove(&tensor_id);
+
+                // Increment removal counter and shrink periodically
+                let removals = REMOVAL_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+                // Shrink every 256 removals to avoid fragmentation
+                if removals % 256 == 0 {
+                    tensors.shrink_to_fit();
+                }
             }
         }
     }
@@ -145,15 +159,23 @@ static TENSORS: LazyLock<RwLock<HashMap<TensorId, Tensor_>>> = LazyLock::new(|| 
     RwLock::new(HashMap::new())
 });
 
+// Counter for tracking removals and triggering periodic shrinking
 #[cfg(feature = "std")]
-pub fn insert(tensor_id: TensorId, tensor_: Tensor_) {
-    TENSORS.insert(tensor_id, tensor_);
-}
+static REMOVAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[cfg(not(feature = "std"))]
+static REMOVAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
 pub fn insert(tensor_id: TensorId, tensor_: Tensor_) {
-    let mut tensors = TENSORS.write();
-    tensors.insert(tensor_id, tensor_);
+    #[cfg(feature = "std")]
+    {
+        TENSORS.insert(tensor_id, tensor_);
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let mut tensors = TENSORS.write();
+        tensors.insert(tensor_id, tensor_);
+    }
 }
 
 // Check if a tensor exists in the global store
@@ -182,6 +204,33 @@ pub fn get(tensor_id: TensorId) -> Option<()> {
         Some(())
     } else {
         None
+    }
+}
+
+// Shrink the TENSORS map to reduce memory fragmentation
+// This is useful after heavy tensor operations to reclaim memory
+pub fn shrink_tensor_storage() {
+    #[cfg(feature = "std")]
+    {
+        TENSORS.shrink_to_fit();
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let mut tensors = TENSORS.write();
+        tensors.shrink_to_fit();
+    }
+}
+
+// Get the number of tensors currently stored (for debugging)
+pub fn tensor_count() -> usize {
+    #[cfg(feature = "std")]
+    {
+        TENSORS.len()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let tensors = TENSORS.read();
+        tensors.len()
     }
 }
 

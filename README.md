@@ -176,6 +176,7 @@ let mut script = builder.build()?;
 ### Optional Features
 | Feature | Description | Dependencies | Required Features |
 |---------|-------------|--------------|-------------------|
+| `openblas` | Use OpenBLAS for CPU backend (instead of OS-provided BLAS) | OpenBLAS library | - |
 | `cuda` | NVIDIA CUDA GPU support | CUDA toolkit | - |
 | `metal` | Apple Metal GPU support | Metal framework | `std` |
 | `xla` | Google XLA compiler backend | XLA libraries | `std` |
@@ -293,13 +294,12 @@ cargo build --target aarch64-unknown-none --no-default-features --features cuda
 
 #### Environment Variables
 
-Common environment variables for cross-compilation:
+Common environment variables for build configuration:
 
-- `OPENBLAS_DIR`, `OPENBLAS_INCLUDE_DIR`, `OPENBLAS_LIB_DIR` - OpenBLAS paths for cross-compilation
-- `HODU_DISABLE_BLAS` - Force disable OpenBLAS
-- `HODU_DISABLE_NATIVE` - Disable native CPU optimizations
-- `HODU_DISABLE_SIMD` - Disable SIMD auto-detection
-- `HODU_DISABLE_THREADS` - Disable pthread multi-threading for CPU kernels
+- `HODU_DISABLE_NATIVE` - Disable `-march=native` CPU optimizations
+- `HODU_DISABLE_SIMD` - Disable SIMD vectorization
+- `HODU_DISABLE_THREADS` - Disable multi-threading
+- `OPENBLAS_DIR`, `OPENBLAS_INCLUDE_DIR`, `OPENBLAS_LIB_DIR` - Custom OpenBLAS paths (for `openblas` feature)
 
 ## Docs
 

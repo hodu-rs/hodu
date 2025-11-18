@@ -30,6 +30,9 @@ u64 = []
 i16 = []
 i64 = []
 
+# optional cpu backends
+openblas = ["hodu_cpu_kernels/openblas"]
+
 # optional backend
 cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
 metal = ["std", "dep:hodu_metal_kernels"]

@@ -69,6 +69,8 @@ u64 = ["hodu_internal/u64"]
 i16 = ["hodu_internal/i16"]
 i64 = ["hodu_internal/i64"]
 
+openblas = ["hodu_internal/openblas"]
+
 cuda = ["hodu_internal/cuda"]
 metal = ["std", "hodu_internal/metal"]
 

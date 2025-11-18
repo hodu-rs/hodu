@@ -3,9 +3,9 @@
 #include "thread_utils.h"
 #include <math.h>
 
-#ifdef USE_BLAS
-#include <cblas.h>
-#endif
+// BLAS-specific implementations are in separate files:
+// - ops_unary_openblas.c for OpenBLAS
+// - ops_unary_blas_aarch64_apple_darwin.c for macOS Accelerate
 
 // ============================================================================
 // UNARY OPERATION IMPLEMENTATION MACROS
@@ -718,8 +718,9 @@ IMPL_UNARY_TO_BOOL(f32_t, f32, logical_not, x == 0.0f)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, sub_scalar, x - const_val)
 
-// mul_scalar_f32: BLAS-optimized version
-void mul_scalar_f32(const void *input, void *output, const size_t *metadata, const void *scalar) {
+// mul_scalar_f32: Fallback implementation (BLAS versions in separate files)
+void mul_scalar_f32_fallback(const void *input, void *output, const size_t *metadata,
+                             const void *scalar) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -732,23 +733,6 @@ void mul_scalar_f32(const void *input, void *output, const size_t *metadata, con
 
     bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
 
-#ifdef USE_BLAS
-    // BLAS path: Use cblas_sscal for in-place scalar multiplication
-    if (contiguous && in == NULL) {
-        // In-place operation
-        cblas_sscal(num_els, const_val, out, 1);
-        return;
-    } else if (contiguous && in != NULL && offset == 0) {
-        // Copy input to output, then scale in-place
-        if (in != out) {
-            cblas_scopy(num_els, in, 1, out, 1);
-        }
-        cblas_sscal(num_els, const_val, out, 1);
-        return;
-    }
-#endif
-
-    // Fallback path: Handle non-contiguous or offset cases
     if (contiguous) {
         if (in) {
             for (size_t i = 0; i < num_els; i++) {
@@ -769,6 +753,13 @@ void mul_scalar_f32(const void *input, void *output, const size_t *metadata, con
         }
     }
 }
+
+#ifndef USE_BLAS
+// Non-BLAS version just calls fallback
+void mul_scalar_f32(const void *input, void *output, const size_t *metadata, const void *scalar) {
+    mul_scalar_f32_fallback(input, output, metadata, scalar);
+}
+#endif
 
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, div_scalar, x / const_val)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, pow_scalar, powf_opt(x, const_val))
@@ -1068,8 +1059,9 @@ IMPL_UNARY_TO_BOOL(f64_t, f64, logical_not, x == 0.0)
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, sub_scalar, x - const_val)
 
-// mul_scalar_f64: BLAS-optimized version
-void mul_scalar_f64(const void *input, void *output, const size_t *metadata, const void *scalar) {
+// mul_scalar_f64: Fallback implementation (BLAS versions in separate files)
+void mul_scalar_f64_fallback(const void *input, void *output, const size_t *metadata,
+                             const void *scalar) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -1082,23 +1074,6 @@ void mul_scalar_f64(const void *input, void *output, const size_t *metadata, con
 
     bool contiguous = (metadata == NULL) || is_contiguous(num_dims, dims, strides);
 
-#ifdef USE_BLAS
-    // BLAS path: Use cblas_dscal for in-place scalar multiplication
-    if (contiguous && in == NULL) {
-        // In-place operation
-        cblas_dscal(num_els, const_val, out, 1);
-        return;
-    } else if (contiguous && in != NULL && offset == 0) {
-        // Copy input to output, then scale in-place
-        if (in != out) {
-            cblas_dcopy(num_els, in, 1, out, 1);
-        }
-        cblas_dscal(num_els, const_val, out, 1);
-        return;
-    }
-#endif
-
-    // Fallback path: Handle non-contiguous or offset cases
     if (contiguous) {
         if (in) {
             for (size_t i = 0; i < num_els; i++) {
@@ -1119,6 +1094,13 @@ void mul_scalar_f64(const void *input, void *output, const size_t *metadata, con
         }
     }
 }
+
+#ifndef USE_BLAS
+// Non-BLAS version just calls fallback
+void mul_scalar_f64(const void *input, void *output, const size_t *metadata, const void *scalar) {
+    mul_scalar_f64_fallback(input, output, metadata, scalar);
+}
+#endif
 
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, div_scalar, x / const_val)
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, pow_scalar, pow_opt(x, const_val))

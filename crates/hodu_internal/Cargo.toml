@@ -20,6 +20,8 @@ u64 = ["hodu_core/u64"]
 i16 = ["hodu_core/i16"]
 i64 = ["hodu_core/i64"]
 
+openblas = ["hodu_core/openblas"]
+
 cuda = ["hodu_core/cuda"]
 metal = ["hodu_core/metal"]
 
