@@ -1,5 +1,5 @@
 use crate::{
-    layer::compat::*,
+    compat::*,
     tensor::{Tensor, TensorId},
     types::DType,
 };

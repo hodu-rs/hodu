@@ -1,5 +1,5 @@
 use super::{super::context::BuilderState, super::ir::*};
-use crate::{error::HoduResult, layer::compat::*};
+use crate::{compat::*, error::HoduResult};
 
 use super::tracing::allocate_value_id;
 

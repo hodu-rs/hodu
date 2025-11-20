@@ -1,5 +1,5 @@
 use super::{BuilderId, BuilderState};
-use crate::{error::HoduError, error::HoduResult, layer::compat::*};
+use crate::{compat::*, error::HoduError, error::HoduResult};
 
 #[cfg(feature = "std")]
 use dashmap::DashMap;

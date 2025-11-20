@@ -1,4 +1,4 @@
-use crate::layer::compat::*;
+use crate::compat::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Device {

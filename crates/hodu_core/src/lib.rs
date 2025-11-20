@@ -13,7 +13,6 @@ pub(crate) mod be_metal;
 pub(crate) mod cache;
 pub mod error;
 pub(crate) mod into;
-pub mod layer;
 pub mod ops;
 pub mod prelude;
 pub mod scalar;
@@ -21,3 +20,5 @@ pub mod script;
 pub mod tensor;
 pub mod types;
 pub(crate) mod utils;
+
+pub(crate) use hodu_compat as compat;

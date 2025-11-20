@@ -1,5 +1,5 @@
 use super::core::{TensorId, Tensor_};
-use crate::layer::compat::*;
+use crate::compat::*;
 
 #[cfg(feature = "std")]
 use dashmap::DashMap;

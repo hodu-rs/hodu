@@ -1,4 +1,4 @@
-use crate::layer::compat::*;
+use crate::compat::*;
 
 /// Maximum number of kernel names to cache before warning
 const MAX_KERNEL_NAMES: usize = 1024;

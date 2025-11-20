@@ -1,8 +1,8 @@
 use crate::{
     be::{device::BackendDeviceT, storage::BackendStorageT},
     be_cpu::{device::CpuDevice, storage::CpuStorage},
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::{ConvOp, Op},
     types::{Layout, Shape},
 };

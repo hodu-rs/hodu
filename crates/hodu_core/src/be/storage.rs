@@ -4,8 +4,8 @@
 use crate::{
     be::device::{BackendDevice, BackendDeviceT},
     be_cpu::storage::CpuStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout, Shape},

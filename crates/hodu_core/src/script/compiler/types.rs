@@ -1,6 +1,6 @@
 use crate::{
     be::storage::BackendStorage,
-    layer::compat::*,
+    compat::*,
     ops::Op,
     script::builder::ir::*,
     tensor::TensorId,

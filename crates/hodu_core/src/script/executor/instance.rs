@@ -1,7 +1,7 @@
 use super::{hodu::HoduExecutor, types::*};
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     script::compiler::CompiledModule,
     types::{Compiler, Device},
 };

@@ -2,7 +2,7 @@
 // BinaryLogicalOp -> binary_logical_and (not binary_logical_logical_and)
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
-use crate::layer::compat::{fmt, Vec};
+use crate::compat::{fmt, Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

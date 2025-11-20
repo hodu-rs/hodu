@@ -1,8 +1,8 @@
 use crate::{
     be::device::BackendDeviceT,
     be_cpu::storage::CpuStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     types::DType,
 };
 use float8::F8E4M3;

@@ -10,8 +10,8 @@ mod input_manager;
 mod io;
 
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     tensor::Tensor,
     types::{Compiler, Device},
 };

@@ -1,4 +1,4 @@
-use crate::{layer::compat::*, types::DType};
+use crate::{compat::*, types::DType};
 use float8::{F8E4M3, F8E5M2};
 use half::{bf16, f16};
 use num_traits::float::Float;

@@ -4,8 +4,8 @@ use super::{
 };
 use crate::{
     be::storage::BackendStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     types::Layout,
 };
 

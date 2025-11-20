@@ -1,7 +1,7 @@
 use super::{Builder, BuilderState};
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::{Op, OpParams},
     tensor::{Tensor, TensorId},
     types::Layout,

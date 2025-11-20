@@ -4,8 +4,8 @@ use super::{
     vjp::VjpCompute,
 };
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::{Op, OpParams},
     scalar::Scalar,
     tensor::{self, set_grad_tensor_id, tensor_from_id, Tensor, TensorId},

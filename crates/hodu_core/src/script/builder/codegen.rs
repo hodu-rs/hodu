@@ -1,5 +1,5 @@
 use super::{context::BuilderState, ir::*};
-use crate::{error::HoduResult, layer::compat::*, tensor::TensorId};
+use crate::{compat::*, error::HoduResult, tensor::TensorId};
 
 mod blocks;
 mod constants;

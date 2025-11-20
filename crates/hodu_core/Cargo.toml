@@ -12,6 +12,7 @@ repository = "https://github.com/hodu-rs/hodu"
 std = [
     "dep:dashmap",
     "half/std",
+    "hodu_compat/std",
     "hodu_cpu_kernels/std",
     "hodu_cuda_kernels?/std",
     "num-traits/std",
@@ -46,6 +47,7 @@ dashmap = { workspace = true, optional = true }
 flate2 = { workspace = true, optional = true }
 float8 = { workspace = true }
 half = { workspace = true, default-features = false }
+hodu_compat = { workspace = true }
 hodu_cpu_kernels = { workspace = true }
 hodu_cuda_kernels = { workspace = true, optional = true }
 hodu_metal_kernels = { workspace = true, optional = true }
@@ -57,4 +59,3 @@ rand_distr = { workspace = true, default-features = false }
 rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 smallvec = { workspace = true }
-spin = { workspace = true }

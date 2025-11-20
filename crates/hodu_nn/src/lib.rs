@@ -1,7 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::result_large_err)]
 
-pub(crate) mod compat;
 mod losses;
 pub mod module;
 mod modules;
@@ -9,6 +8,7 @@ pub mod optimizer;
 mod optimizers;
 pub mod prelude;
 
+pub(crate) use hodu_compat as compat;
 pub use losses::{
     binary_cross_entropy::{BCELoss, BCEWithLogitsLoss},
     cross_entropy::CrossEntropyLoss,

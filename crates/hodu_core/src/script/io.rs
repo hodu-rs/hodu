@@ -1,5 +1,5 @@
 use super::builder::ir::Module;
-use crate::{error::HoduResult, layer::compat::*};
+use crate::{compat::*, error::HoduResult};
 
 /// Serialize a module to bytes (no_std compatible)
 #[cfg(feature = "serde")]

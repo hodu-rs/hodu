@@ -1,6 +1,6 @@
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::{CastOp, MemoryOp, Op, OpParams},
     script::builder,
     tensor::{create_builder_tensor, from_storage_with_context, register_operation_in_builder, Tensor},

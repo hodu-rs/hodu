@@ -1,4 +1,4 @@
-use crate::{error::HoduResult, layer::compat::*, tensor::Tensor, types::Device};
+use crate::{compat::*, error::HoduResult, tensor::Tensor, types::Device};
 
 /// Input manager - handles runtime input tensors
 #[derive(Debug, Clone)]

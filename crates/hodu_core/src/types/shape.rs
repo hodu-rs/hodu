@@ -1,4 +1,4 @@
-use crate::layer::compat::*;
+use crate::compat::*;
 use smallvec::SmallVec;
 
 /// Shape represents the dimensions of a tensor using usize for native platform compatibility.

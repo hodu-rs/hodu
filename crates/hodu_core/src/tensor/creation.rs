@@ -1,8 +1,8 @@
 use crate::{
     be::device::BackendDevice,
+    compat::*,
     error::{HoduError, HoduResult},
     into::faltten::IntoFlattened,
-    layer::compat::*,
     scalar::Scalar,
     script::builder::is_builder_active,
     tensor::{from_storage, Tensor},

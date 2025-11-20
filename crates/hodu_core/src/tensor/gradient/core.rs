@@ -1,4 +1,4 @@
-use crate::layer::compat::*;
+use crate::compat::*;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

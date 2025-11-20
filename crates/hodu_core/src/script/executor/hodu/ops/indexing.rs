@@ -1,7 +1,7 @@
 use crate::{
     be::storage::BackendStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::{IndexingOp, Op},
     script::builder::ir::Attribute,
     types::Layout,

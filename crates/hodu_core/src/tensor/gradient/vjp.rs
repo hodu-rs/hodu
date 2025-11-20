@@ -1,6 +1,6 @@
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     scalar::Scalar,
     tensor::TensorId,
 };

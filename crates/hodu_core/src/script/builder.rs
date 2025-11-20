@@ -4,7 +4,7 @@ pub mod ir;
 mod printer;
 
 #[cfg(any(feature = "std", feature = "serde"))]
-use crate::{error::HoduResult, layer::compat::*};
+use crate::{compat::*, error::HoduResult};
 pub use context::{get_active_builder, is_builder_active, with_active_builder, Builder, BuilderState};
 pub use ir::{
     Attribute, BasicBlock, BlockId, CompressionType, ConstantData, Function, FunctionSignature, Instruction, Module,
@@ -80,7 +80,7 @@ impl Module {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::layer::compat::String;
+    use crate::compat::String;
 
     #[test]
     fn test_builder_creation() {

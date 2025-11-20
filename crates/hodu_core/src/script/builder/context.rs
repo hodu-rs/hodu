@@ -1,7 +1,7 @@
 use super::ir::*;
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     tensor::{Tensor, TensorId},
 };
 

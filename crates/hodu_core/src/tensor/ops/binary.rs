@@ -1,6 +1,6 @@
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     ops::{BinaryLogicalOp, BinaryOp, Op},
     script::builder,
     tensor::{

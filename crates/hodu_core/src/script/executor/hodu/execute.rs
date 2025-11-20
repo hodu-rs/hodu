@@ -4,8 +4,8 @@ use super::{
 };
 use crate::{
     be::storage::BackendStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     script::{builder::ir::Attribute, compiler::CompiledModule},
     tensor::from_storage,
     types::Layout,

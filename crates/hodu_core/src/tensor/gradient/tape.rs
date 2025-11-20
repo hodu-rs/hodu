@@ -2,8 +2,8 @@ use super::core::ContextId;
 #[cfg(feature = "std")]
 use crate::error::HoduError;
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     ops::{Op, OpParams},
     tensor::TensorId,
 };
@@ -62,7 +62,7 @@ pub(super) fn remove_tape(context_id: ContextId) {
 
 /// Clean up tensors owned by a specific context
 fn cleanup_context_tensors(context_id: ContextId, _tape: &[TapeEntry]) {
-    use crate::layer::compat::Ordering;
+    use crate::compat::Ordering;
     use crate::tensor;
 
     // Collect ALL tensor IDs owned by this context with ref_count=0

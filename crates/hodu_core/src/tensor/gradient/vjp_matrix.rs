@@ -1,7 +1,7 @@
 use super::{vjp_utils::*, VjpCompute};
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     ops::MatrixOp,
     tensor::{tensor_from_id, TensorId},
 };

@@ -1,7 +1,7 @@
 use super::VjpCompute;
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::WindowingOp,
     scalar::Scalar,
     tensor::{tensor_from_id, TensorId},

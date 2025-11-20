@@ -1,6 +1,6 @@
 use crate::{
+    compat::AtomicUsize,
     error::{HoduError, HoduResult},
-    layer::compat::AtomicUsize,
     script::builder::{get_active_builder, is_builder_active},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::{DType, Layout, Shape},

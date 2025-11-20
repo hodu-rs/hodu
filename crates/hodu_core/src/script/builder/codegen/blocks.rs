@@ -1,5 +1,5 @@
 use super::{super::context::BuilderState, super::ir::*};
-use crate::{error::HoduResult, layer::compat::*, tensor::TensorId};
+use crate::{compat::*, error::HoduResult, tensor::TensorId};
 
 use super::tracing::trace_tensor_operations;
 

@@ -4,7 +4,7 @@ use super::{
     executor::{ExecutionInputs, ExecutorInstance, ExecutorT},
     input_manager::InputManager,
 };
-use crate::{error::HoduResult, layer::compat::*, tensor::Tensor};
+use crate::{compat::*, error::HoduResult, tensor::Tensor};
 
 /// Execution manager - handles script execution and executor caching
 pub(crate) struct ExecutionManager {

@@ -1,6 +1,6 @@
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     script::builder::ir::*,
     tensor::TensorId,
     types::{DType, Layout},

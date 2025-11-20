@@ -1,7 +1,7 @@
 use super::{base, instance::CompilerT, types::*};
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     script::builder::ir::*,
     types::{Compiler, Device},
 };

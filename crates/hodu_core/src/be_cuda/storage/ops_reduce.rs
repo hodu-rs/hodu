@@ -1,8 +1,8 @@
 use crate::{
     be::storage::BackendStorageT,
     be_cuda::storage::{CudaSlice, CudaStorage, CudaStorageData},
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::Op,
     types::Layout,
 };

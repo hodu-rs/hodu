@@ -5,8 +5,8 @@ use super::{
     input_manager::InputManager,
 };
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
 };
 
 /// Compilation manager - handles module compilation and caching

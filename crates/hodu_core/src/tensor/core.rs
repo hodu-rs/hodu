@@ -1,8 +1,8 @@
 use super::{gradient, registry};
 use crate::{
     be::storage::BackendStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     types::{DType, Device, Layout, Shape},
 };
 pub use gradient::ContextId;

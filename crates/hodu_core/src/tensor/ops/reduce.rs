@@ -1,6 +1,6 @@
 use crate::{
+    compat::*,
     error::HoduResult,
-    layer::compat::*,
     ops::{Op, OpParams, ReduceOp},
     scalar::Scalar,
     script::builder,

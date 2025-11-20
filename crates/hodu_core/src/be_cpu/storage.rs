@@ -12,8 +12,8 @@ mod ops_windowing;
 use crate::{
     be::storage::BackendStorageT,
     be_cpu::device::CpuDevice,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout},

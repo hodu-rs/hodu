@@ -1,5 +1,5 @@
 use super::ir::*;
-use crate::layer::compat::*;
+use crate::compat::*;
 
 /// Print Module to readable text format (.hds.ir)
 pub fn print_module(module: &Module) -> String {

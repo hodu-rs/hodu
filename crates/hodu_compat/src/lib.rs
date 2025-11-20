@@ -2,7 +2,10 @@
 //!
 //! Internal module for handling differences between std and no-std environments.
 
-#![allow(unused_imports)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
 
 // Basic types and formatting
 #[cfg(not(feature = "std"))]
@@ -68,7 +71,3 @@ pub use std::{
 // Debug printing
 #[cfg(feature = "std")]
 pub use std::{eprintln, println};
-
-// Parallel iteration
-#[cfg(all(feature = "std", feature = "rayon"))]
-pub use rayon::prelude::*;

@@ -1,0 +1,15 @@
+[package]
+name = "hodu_compat"
+version = "0.2.4"
+description = "hodu compat"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu"
+
+[features]
+std = []
+
+[dependencies]
+spin = { workspace = true }

@@ -2,8 +2,8 @@
 use super::xla::XlaCompiler;
 use super::{hodu::HoduCompiler, types::*};
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     script::builder::ir::Module,
     types::{Compiler, Device},
 };

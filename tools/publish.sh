@@ -8,6 +8,8 @@ internal_crates=(
     hodu_cuda_kernels
     hodu_metal_kernels
 
+    hodu_compat
+    hodu_script
     hodu_core
     hodu_nn/macros
     hodu_nn

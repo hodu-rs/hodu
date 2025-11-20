@@ -1,4 +1,4 @@
-use crate::{be_cpu::storage::CpuStorage, layer::compat::*, types::DType};
+use crate::{be_cpu::storage::CpuStorage, compat::*, types::DType};
 use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
 use float8::F8E5M2;

@@ -1,7 +1,7 @@
 use super::{storage, BuilderId, BuilderState};
 use crate::{
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
 };
 
 /// Builder handle that provides access to builder state

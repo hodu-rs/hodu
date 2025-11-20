@@ -1,4 +1,4 @@
-use crate::{layer::compat::*, tensor::Tensor};
+use crate::{compat::*, tensor::Tensor};
 
 /// Execution inputs - map of input names to tensors
 pub type ExecutionInputs<'a> = HashMap<&'a str, Tensor>;

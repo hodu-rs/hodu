@@ -3,8 +3,8 @@
 use crate::{
     be::storage::BackendStorageT,
     be_cpu::storage::CpuStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     tensor::Tensor,
     types::{DType, Layout},
 };

@@ -8,8 +8,7 @@ mod shape_cast_memory;
 mod unary;
 
 use crate::{
-    be::storage::BackendStorage, error::HoduResult, layer::compat::*, ops::Op, script::builder::ir::Attribute,
-    types::Layout,
+    be::storage::BackendStorage, compat::*, error::HoduResult, ops::Op, script::builder::ir::Attribute, types::Layout,
 };
 
 /// Execute a single operation by dispatching to the appropriate module

@@ -1,8 +1,8 @@
 use crate::{
     be::device::BackendDeviceT,
     be_cuda::storage::CudaStorage,
+    compat::*,
     error::{HoduError, HoduResult},
-    layer::compat::*,
     types::DType,
 };
 use hodu_cuda_kernels::{
