@@ -1,8 +1,4 @@
-//! Gradient tape management
-//!
-//! This module handles the recording and cleanup of operations on the gradient tape.
-
-use super::context::ContextId;
+use super::core::ContextId;
 use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,

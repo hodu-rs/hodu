@@ -3,18 +3,19 @@
 //! This module provides automatic differentiation via reverse-mode gradient computation.
 //! It consists of several submodules:
 //!
-//! - `backprop`: Gradient computation engine (backward pass)
-//! - `context`: Gradient context management for nested scopes
+//! - `core`: Core types (ContextId) and global flags
+//! - `compute`: Gradient computation engine (compute_gradients, record_operation)
+//! - `context`: Gradient context management (GradientContext RAII guard)
 //! - `tape`: Tape recording and cleanup for computational graph
 //! - `vjp`: VJP (Vector-Jacobian Product) trait definition
 //! - `vjp_*`: VJP implementations for each operation type
 
-mod backprop;
+mod compute;
 mod context;
+mod core;
 mod tape;
 mod vjp;
 
-// VJP implementations for different operation types
 mod vjp_binary;
 mod vjp_cmp;
 mod vjp_concat_split;
@@ -27,19 +28,16 @@ mod vjp_unary;
 mod vjp_utils;
 mod vjp_windowing;
 
-// Re-export public APIs
-pub use backprop::{
-    compute_gradients, is_computing_gradients, is_in_optimizer_step, record_operation, record_operation_with_dims,
-    record_operation_with_scalar, record_operation_with_scalars, record_operation_with_split_info,
-    set_optimizer_step_flag,
+pub use compute::{
+    compute_gradients, record_operation, record_operation_with_dims, record_operation_with_scalar,
+    record_operation_with_scalars, record_operation_with_split_info,
 };
-pub use context::{ContextId, GradientContext};
+pub use context::GradientContext;
+pub use core::{is_computing_gradients, is_in_optimizer_step, set_optimizer_step_flag, ContextId};
 
-// Internal use only
-pub(crate) use context::get_active_context;
+pub(crate) use core::get_active_context;
 pub(crate) use vjp::VjpCompute;
 
-// Tape cleanup (called from Tensor::drop)
 pub(crate) fn cleanup_tape_for_dropped_tensor(tensor_id: crate::tensor::TensorId) {
     let context_id = get_active_context();
     tape::remove_entries_with_input(context_id, tensor_id);

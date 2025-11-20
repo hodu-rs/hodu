@@ -1,8 +1,3 @@
-//! Vector-Jacobian Product (VJP) computation trait
-//!
-//! This module defines the trait that all differentiable operations must implement
-//! to support automatic differentiation.
-
 use crate::{
     error::{HoduError, HoduResult},
     scalar::Scalar,
