@@ -211,13 +211,13 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
 // Metadata layout:
 // - metadata[0]: num_els (total number of output elements)
 // - metadata[1]: num_dims (number of dimensions)
-// - metadata[2..2+num_dims]: input_shape
-// - metadata[2+num_dims..2+2*num_dims]: input_strides
-// - metadata[2+2*num_dims..2+3*num_dims]: indices_strides
-// - metadata[2+3*num_dims]: input_offset
-// - metadata[2+3*num_dims+1]: indices_offset
-// - metadata[2+3*num_dims+2]: dim (dimension along which to gather)
-// - metadata[2+3*num_dims+3]: num_indices (total number of indices)
+// - metadata[2..2+num_dims]: output_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_shape
+// - metadata[2+2*num_dims..2+3*num_dims]: input_strides
+// - metadata[2+3*num_dims..2+4*num_dims]: indices_strides
+// - metadata[2+4*num_dims]: input_offset
+// - metadata[2+4*num_dims+1]: indices_offset
+// - metadata[2+4*num_dims+2]: dim (dimension along which to gather)
 
 #define GATHER_OP(TYPENAME, FN_NAME)                                                               \
     kernel void FN_NAME(                                                                           \
@@ -232,28 +232,27 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
         /* Grid-stride loop for better GPU utilization */                                          \
         for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
                                                                                                    \
-            const constant size_t *input_shape = metadata + 2;                                     \
-            const constant size_t *input_strides = metadata + 2 + num_dims;                        \
-            const constant size_t *indices_strides = metadata + 2 + 2 * num_dims;                  \
-            const size_t input_offset = metadata[2 + 3 * num_dims];                                \
-            const size_t indices_offset = metadata[2 + 3 * num_dims + 1];                          \
-            const size_t dim = metadata[2 + 3 * num_dims + 2];                                     \
+            const constant size_t *output_shape = metadata + 2;                                    \
+            const constant size_t *input_shape = metadata + 2 + num_dims;                          \
+            const constant size_t *input_strides = metadata + 2 + 2 * num_dims;                    \
+            const constant size_t *indices_strides = metadata + 2 + 3 * num_dims;                  \
+            const size_t input_offset = metadata[2 + 4 * num_dims];                                \
+            const size_t indices_offset = metadata[2 + 4 * num_dims + 1];                          \
+            const size_t dim = metadata[2 + 4 * num_dims + 2];                                     \
                                                                                                    \
-            /* Calculate which index in the gather dimension we're accessing */                    \
+            /* Calculate output indices */                                                         \
             size_t temp = id;                                                                      \
-            size_t idx_in_gather_dim = 0;                                                          \
-            size_t num_indices = metadata[2 + 3 * num_dims + 3];                                   \
+            size_t output_indices[16];                                                             \
             for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
-                size_t output_shape_d = (d == (int)dim) ? num_indices : input_shape[d];            \
-                size_t idx_in_dim = temp % output_shape_d;                                         \
-                temp /= output_shape_d;                                                            \
-                if (d == (int)dim) {                                                               \
-                    idx_in_gather_dim = idx_in_dim;                                                \
-                }                                                                                  \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
             }                                                                                      \
                                                                                                    \
             /* Get the index from indices tensor */                                                \
-            size_t indices_flat_idx = indices_offset + idx_in_gather_dim * indices_strides[0];     \
+            size_t indices_flat_idx = indices_offset;                                              \
+            for (size_t d = 0; d < num_dims; d++) {                                                \
+                indices_flat_idx += output_indices[d] * indices_strides[d];                        \
+            }                                                                                      \
             int32_t selected_idx = indices[indices_flat_idx];                                      \
                                                                                                    \
             /* Handle negative indices */                                                          \
@@ -269,15 +268,11 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
                                                                                                    \
             /* Calculate input flat index */                                                       \
             size_t input_flat_idx = input_offset;                                                  \
-            temp = id;                                                                             \
-            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
-                size_t output_shape_d = (d == (int)dim) ? num_indices : input_shape[d];            \
-                size_t idx_in_dim = temp % output_shape_d;                                         \
-                temp /= output_shape_d;                                                            \
-                if (d == (int)dim) {                                                               \
+            for (size_t d = 0; d < num_dims; d++) {                                                \
+                if (d == dim) {                                                                    \
                     input_flat_idx += ((size_t)selected_idx) * input_strides[d];                   \
                 } else {                                                                           \
-                    input_flat_idx += idx_in_dim * input_strides[d];                               \
+                    input_flat_idx += output_indices[d] * input_strides[d];                        \
                 }                                                                                  \
             }                                                                                      \
                                                                                                    \

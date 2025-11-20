@@ -305,10 +305,10 @@ pub fn call_ops_gather(
 
     // Build metadata
     let num_dims = input_shape.ndim();
-    let num_indices = indices_shape.size();
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 3 + 4);
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 4 + 3);
     metadata.push(num_els);
     metadata.push(num_dims);
+    metadata.extend(output_shape.dims().iter().copied());
     metadata.extend(input_shape.dims().iter().copied());
     metadata.extend(input_layout.strides().iter().copied());
 
@@ -324,7 +324,6 @@ pub fn call_ops_gather(
     metadata.push(input_layout.offset());
     metadata.push(indices_layout.offset());
     metadata.push(dim);
-    metadata.push(num_indices);
 
     // Extract indices
     let indices = match &indices_storage.data {

@@ -212,12 +212,12 @@ pub fn call_ops_gather(
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
-    // Build metadata: [num_els, num_dims, input_shape..., input_strides..., indices_strides..., input_offset, indices_offset, dim, num_indices]
+    // Build metadata: [num_els, num_dims, output_shape..., input_shape..., input_strides..., indices_strides..., input_offset, indices_offset, dim]
     let num_dims = input_shape.ndim();
-    let num_indices = indices_shape.size();
-    let mut metadata = Vec::with_capacity(2 + num_dims * 3 + 4);
+    let mut metadata = Vec::with_capacity(2 + num_dims * 4 + 3);
     metadata.push(num_els);
     metadata.push(num_dims);
+    metadata.extend(output_shape.dims().iter().copied());
     metadata.extend(input_shape.dims().iter().copied());
     metadata.extend(input_layout.strides().iter().copied());
 
@@ -233,7 +233,6 @@ pub fn call_ops_gather(
     metadata.push(input_layout.offset());
     metadata.push(indices_layout.offset());
     metadata.push(dim);
-    metadata.push(num_indices);
 
     // Create buffer offsets
     let input_offset_buf = BufferOffset::zero_offset(input_storage.buffer());

@@ -384,18 +384,22 @@ pub fn call_ops_gather(
     // Build metadata array according to C kernel specification:
     // - metadata[0]: num_els
     // - metadata[1]: num_dims
-    // - metadata[2..2+num_dims]: input_shape
-    // - metadata[2+num_dims..2+2*num_dims]: input_strides
-    // - metadata[2+2*num_dims..2+3*num_dims]: indices_strides
-    // - metadata[2+3*num_dims]: input_offset
-    // - metadata[2+3*num_dims+1]: indices_offset
-    // - metadata[2+3*num_dims+2]: dim
-    // - metadata[2+3*num_dims+3]: num_indices
-    let num_indices = indices_shape.size();
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 3 * ndim + 4);
+    // - metadata[2..2+num_dims]: output_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_shape
+    // - metadata[2+2*num_dims..2+3*num_dims]: input_strides
+    // - metadata[2+3*num_dims..2+4*num_dims]: indices_strides (padded)
+    // - metadata[2+4*num_dims]: input_offset
+    // - metadata[2+4*num_dims+1]: indices_offset
+    // - metadata[2+4*num_dims+2]: dim
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * ndim + 3);
 
     metadata.push(num_els);
     metadata.push(ndim);
+
+    // Output shape
+    for &d in output_shape.dims() {
+        metadata.push(d);
+    }
 
     // Input shape
     for &d in input_shape.dims() {
@@ -419,7 +423,6 @@ pub fn call_ops_gather(
     metadata.push(layout.offset()); // input_offset
     metadata.push(indices_layout.offset()); // indices_offset
     metadata.push(dim); // gather dimension
-    metadata.push(num_indices); // total number of indices
 
     // Generate kernel name
     let dtype = storage.dtype();
