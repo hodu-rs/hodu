@@ -1,0 +1,19 @@
+[package]
+name = "hodu-cli"
+version = "0.2.4"
+description = "hodu cli"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu/tree/main/hodu-cli"
+documentation = "https://docs.rs/hodu-cli"
+readme = "README.md"
+keywords = ["tensor", "machine-learning", "hodu"]
+categories = ["science"]
+
+[[bin]]
+name = "hodu"
+path = "src/main.rs"
+
+[features]

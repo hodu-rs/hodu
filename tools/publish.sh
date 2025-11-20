@@ -1,6 +1,7 @@
 #!/bin/bash
 
-crates=(
+# Internal crates (published first, in dependency order)
+internal_crates=(
     hodu_macro_utils
 
     hodu_cpu_kernels
@@ -16,16 +17,23 @@ crates=(
     hodu_internal
 )
 
+# Public crates (published after internal crates)
+public_crates=(
+    hodu
+    hodu-cli
+)
+
 if [ -n "$(git status --porcelain)" ]; then
     echo "You have local changes!"
     exit 1
 fi
 
+# Publish internal crates
 pushd crates
 
-for crate in "${crates[@]}"
+for crate in "${internal_crates[@]}"
 do
-  echo "Publishing ${crate}"
+  echo "Publishing crates/${crate}"
   cp ../LICENSE "$crate"
   pushd "$crate"
   git add LICENSE
@@ -36,8 +44,17 @@ done
 
 popd
 
-echo "Publishing root crate"
-cargo publish --allow-dirty
+# Publish public crates
+for crate in "${public_crates[@]}"
+do
+  echo "Publishing ${crate}"
+  cp LICENSE "$crate"
+  pushd "$crate"
+  git add LICENSE
+  cargo publish --allow-dirty
+  popd
+  sleep 20
+done
 
 echo "Cleaning local state"
 git reset HEAD --hard

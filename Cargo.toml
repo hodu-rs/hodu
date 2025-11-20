@@ -1,20 +1,7 @@
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "hodu", "hodu-cli"]
 exclude = ["benchmarks", "crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
-
-[package]
-name = "hodu"
-version = "0.2.4"
-description = "A user-friendly ML framework built in Rust for rapid prototyping and embedded deployment"
-license = "BSD-3-Clause"
-authors = ["Han Damin <miniex@daminstudio.net>"]
-edition = "2021"
-publish = true
-repository = "https://github.com/hodu-rs/hodu"
-documentation = "https://docs.rs/hodu"
-readme = "README.md"
-keywords = ["tensor", "machine-learning", "hodu"]
-categories = ["science"]
+resolver = "2"
 
 [workspace.dependencies]
 bincode = "2.0.1"
@@ -31,6 +18,7 @@ half = { version = "2.7.1", default-features = false, features = [
 hodu_core = { path = "crates/hodu_core", version = "0.2.4" }
 hodu_cpu_kernels = { path = "crates/hodu_cpu_kernels", version = "0.2.4" }
 hodu_cuda_kernels = { path = "crates/hodu_cuda_kernels", version = "0.2.4" }
+hodu_internal = { path = "crates/hodu_internal", version = "0.2.4" }
 hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.2.4" }
 hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.2.4" }
 hodu_nn = { path = "crates/hodu_nn", version = "0.2.4" }
@@ -55,26 +43,3 @@ syn = { version = "2.0", features = ["full"] }
 toml_edit = { version = "0.23.6", default-features = false, features = [
     "parse",
 ] }
-
-[features]
-default = ["std", "serde", "rayon"]
-std = ["hodu_internal/std"]
-serde = ["hodu_internal/serde"]
-rayon = ["std", "hodu_internal/rayon"]
-
-f8e5m2 = ["hodu_internal/f8e5m2"]
-f64 = ["hodu_internal/f64"]
-u16 = ["hodu_internal/u16"]
-u64 = ["hodu_internal/u64"]
-i16 = ["hodu_internal/i16"]
-i64 = ["hodu_internal/i64"]
-
-openblas = ["hodu_internal/openblas"]
-
-cuda = ["hodu_internal/cuda"]
-metal = ["std", "hodu_internal/metal"]
-
-xla = ["std", "hodu_internal/xla"]
-
-[dependencies]
-hodu_internal = { path = "crates/hodu_internal", version = "0.2.4" }
