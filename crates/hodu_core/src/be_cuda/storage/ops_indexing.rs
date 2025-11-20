@@ -184,7 +184,16 @@ pub fn call_ops_index_put(
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().copied());
     metadata.extend(input_layout.strides().iter().copied());
-    metadata.extend(values_layout.strides().iter().copied());
+
+    // Values strides (pad to num_dims elements)
+    for i in 0..num_dims {
+        if i < values_layout.strides().len() {
+            metadata.push(values_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
+    }
+
     metadata.push(input_layout.offset());
     metadata.push(values_layout.offset());
     metadata.push(dim);
@@ -302,7 +311,16 @@ pub fn call_ops_gather(
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().copied());
     metadata.extend(input_layout.strides().iter().copied());
-    metadata.extend(indices_layout.strides().iter().copied());
+
+    // Indices strides (pad to num_dims elements)
+    for i in 0..num_dims {
+        if i < indices_layout.strides().len() {
+            metadata.push(indices_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
+    }
+
     metadata.push(input_layout.offset());
     metadata.push(indices_layout.offset());
     metadata.push(dim);
@@ -420,9 +438,34 @@ pub fn call_ops_scatter(
     metadata.push(num_dims);
     metadata.extend(input_shape.dims().iter().copied());
     metadata.extend(input_layout.strides().iter().copied());
-    metadata.extend(src_shape.dims().iter().copied());
-    metadata.extend(src_layout.strides().iter().copied());
-    metadata.extend(indices_layout.strides().iter().copied());
+
+    // Src shape (pad to num_dims elements)
+    for i in 0..num_dims {
+        if i < src_shape.ndim() {
+            metadata.push(src_shape.dims()[i]);
+        } else {
+            metadata.push(1);
+        }
+    }
+
+    // Src strides (pad to num_dims elements)
+    for i in 0..num_dims {
+        if i < src_layout.strides().len() {
+            metadata.push(src_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
+    }
+
+    // Indices strides (pad to num_dims elements)
+    for i in 0..num_dims {
+        if i < indices_layout.strides().len() {
+            metadata.push(indices_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
+    }
+
     metadata.push(input_layout.offset());
     metadata.push(src_layout.offset());
     metadata.push(indices_layout.offset());

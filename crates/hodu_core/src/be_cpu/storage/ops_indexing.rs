@@ -204,42 +204,46 @@ pub fn call_ops_index_put(
     let output_shape = input_shape.clone();
     let num_els = output_shape.size();
 
-    // Build metadata array
-    // Layout: num_els, num_dims, input_shape, input_strides, input_offset,
-    //         values_shape, values_strides, values_offset, dim, num_indices
-    let values_shape = values_layout.shape();
-    let values_ndim = values_shape.ndim();
-
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + values_ndim + values_ndim + 1 + 1 + 1);
+    // Build metadata array according to C kernel specification:
+    // - metadata[0]: num_els
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims..2+3*num_dims]: values_strides
+    // - metadata[2+3*num_dims]: input_offset
+    // - metadata[2+3*num_dims+1]: values_offset
+    // - metadata[2+3*num_dims+2]: dim
+    // - metadata[2+3*num_dims+3]: num_indices
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 3 * ndim + 4);
 
     metadata.push(num_els);
     metadata.push(ndim);
 
+    // Input shape
     for &d in input_shape.dims() {
         metadata.push(d);
     }
 
+    // Input strides
     for &s in layout.strides() {
         metadata.push(s);
     }
 
-    metadata.push(layout.offset());
-
-    // Add values info
-    metadata.push(values_ndim);
-    for &d in values_shape.dims() {
-        metadata.push(d);
+    // Values strides (pad to ndim elements)
+    for i in 0..ndim {
+        if i < values_layout.strides().len() {
+            metadata.push(values_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
     }
 
-    for &s in values_layout.strides() {
-        metadata.push(s);
-    }
-
-    metadata.push(values_layout.offset());
+    metadata.push(layout.offset()); // input_offset
+    metadata.push(values_layout.offset()); // values_offset
 
     let num_indices = indices_layout.shape().size();
-    metadata.push(dim);
-    metadata.push(num_indices);
+    metadata.push(dim); // dimension
+    metadata.push(num_indices); // num_indices
 
     // Generate kernel name
     let dtype = storage.dtype();
@@ -377,34 +381,45 @@ pub fn call_ops_gather(
     let output_shape = indices_shape.clone();
     let num_els = output_shape.size();
 
-    // Build metadata array
-    let indices_ndim = indices_shape.ndim();
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + indices_ndim + indices_ndim + 1 + 1);
+    // Build metadata array according to C kernel specification:
+    // - metadata[0]: num_els
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims..2+3*num_dims]: indices_strides
+    // - metadata[2+3*num_dims]: input_offset
+    // - metadata[2+3*num_dims+1]: indices_offset
+    // - metadata[2+3*num_dims+2]: dim
+    // - metadata[2+3*num_dims+3]: num_indices
+    let num_indices = indices_shape.size();
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 3 * ndim + 4);
 
     metadata.push(num_els);
     metadata.push(ndim);
 
+    // Input shape
     for &d in input_shape.dims() {
         metadata.push(d);
     }
 
+    // Input strides
     for &s in layout.strides() {
         metadata.push(s);
     }
 
-    metadata.push(layout.offset());
-
-    metadata.push(indices_ndim);
-    for &d in indices_shape.dims() {
-        metadata.push(d);
+    // Indices strides (need to pad to ndim elements)
+    for i in 0..ndim {
+        if i < indices_layout.strides().len() {
+            metadata.push(indices_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
     }
 
-    for &s in indices_layout.strides() {
-        metadata.push(s);
-    }
-
-    metadata.push(indices_layout.offset());
-    metadata.push(dim);
+    metadata.push(layout.offset()); // input_offset
+    metadata.push(indices_layout.offset()); // indices_offset
+    metadata.push(dim); // gather dimension
+    metadata.push(num_indices); // total number of indices
 
     // Generate kernel name
     let dtype = storage.dtype();
@@ -528,52 +543,66 @@ pub fn call_ops_scatter(
     }
 
     let output_shape = input_shape.clone();
-    let num_els = output_shape.size();
+    let src_num_els = src_shape.size();
 
-    // Build metadata array
-    let indices_ndim = indices_shape.ndim();
-    let src_ndim = src_shape.ndim();
+    // Build metadata array according to C kernel specification:
+    // - metadata[0]: num_els (number of elements in src tensor)
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims..2+3*num_dims]: src_shape
+    // - metadata[2+3*num_dims..2+4*num_dims]: src_strides
+    // - metadata[2+4*num_dims..2+5*num_dims]: indices_strides
+    // - metadata[2+5*num_dims]: input_offset
+    // - metadata[2+5*num_dims+1]: src_offset
+    // - metadata[2+5*num_dims+2]: indices_offset
+    // - metadata[2+5*num_dims+3]: dim
+    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 5 * ndim + 4);
 
-    let mut metadata: Vec<usize> =
-        Vec::with_capacity(2 + ndim + ndim + 1 + indices_ndim + indices_ndim + 1 + src_ndim + src_ndim + 1 + 1);
-
-    metadata.push(num_els);
+    metadata.push(src_num_els); // num_els for src (not output)
     metadata.push(ndim);
 
+    // Input shape
     for &d in input_shape.dims() {
         metadata.push(d);
     }
 
+    // Input strides
     for &s in layout.strides() {
         metadata.push(s);
     }
 
-    metadata.push(layout.offset());
-
-    // Add indices info
-    metadata.push(indices_ndim);
-    for &d in indices_shape.dims() {
-        metadata.push(d);
+    // Src shape (pad to ndim elements)
+    for i in 0..ndim {
+        if i < src_shape.ndim() {
+            metadata.push(src_shape.dims()[i]);
+        } else {
+            metadata.push(1);
+        }
     }
 
-    for &s in indices_layout.strides() {
-        metadata.push(s);
+    // Src strides (pad to ndim elements)
+    for i in 0..ndim {
+        if i < src_layout.strides().len() {
+            metadata.push(src_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
     }
 
-    metadata.push(indices_layout.offset());
-
-    // Add src info
-    metadata.push(src_ndim);
-    for &d in src_shape.dims() {
-        metadata.push(d);
+    // Indices strides (pad to ndim elements)
+    for i in 0..ndim {
+        if i < indices_layout.strides().len() {
+            metadata.push(indices_layout.strides()[i]);
+        } else {
+            metadata.push(0);
+        }
     }
 
-    for &s in src_layout.strides() {
-        metadata.push(s);
-    }
-
-    metadata.push(src_layout.offset());
-    metadata.push(dim);
+    metadata.push(layout.offset()); // input_offset
+    metadata.push(src_layout.offset()); // src_offset
+    metadata.push(indices_layout.offset()); // indices_offset
+    metadata.push(dim); // dimension
 
     // Generate kernel name
     let dtype = storage.dtype();
