@@ -550,10 +550,10 @@ pub(crate) fn from_storage_with_context(
     is_runtime: bool,
     requires_grad: bool,
 ) -> Tensor {
-    let owner_context = if gradient::is_computing_gradients() {
-        None // Managed by GradientComputationGuard's keep_alive
-    } else if gradient::is_in_optimizer_step() {
-        None // Optimizer intermediate tensors should be cleaned up immediately
+    let owner_context = if gradient::is_computing_gradients() || gradient::is_in_optimizer_step() {
+        // Managed by GradientComputationGuard's keep_alive
+        // Optimizer intermediate tensors should be cleaned up immediately
+        None
     } else {
         Some(gradient::get_active_context())
     };
@@ -566,10 +566,10 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
 
     // Runtime tensors (operation results) should be owned by current context
     // This ensures they are not removed until backward completes
-    let owner_context = if gradient::is_computing_gradients() {
-        None // Managed by GradientComputationGuard's keep_alive
-    } else if gradient::is_in_optimizer_step() {
-        None // Optimizer intermediate tensors should be cleaned up immediately
+    let owner_context = if gradient::is_computing_gradients() || gradient::is_in_optimizer_step() {
+        // Managed by GradientComputationGuard's keep_alive
+        // Optimizer intermediate tensors should be cleaned up immediately
+        None
     } else {
         Some(gradient::get_active_context())
     };

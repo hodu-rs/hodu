@@ -526,7 +526,7 @@ pub fn call_ops_scatter(
 
     let input_shape = layout.shape();
     let ndim = input_shape.ndim();
-    let indices_shape = indices_layout.shape();
+    // let indices_shape = indices_layout.shape();
     let src_shape = src_layout.shape();
 
     // Validate dim
@@ -542,7 +542,7 @@ pub fn call_ops_scatter(
         });
     }
 
-    let output_shape = input_shape.clone();
+    // let output_shape = input_shape.clone();
     let src_num_els = src_shape.size();
 
     // Build metadata array according to C kernel specification:
