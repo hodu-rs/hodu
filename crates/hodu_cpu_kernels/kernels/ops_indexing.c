@@ -245,10 +245,10 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
         const size_t *input_shape = metadata + 2;                                                  \
         const size_t *input_strides = metadata + 2 + num_dims;                                     \
         const size_t *indices_strides = metadata + 2 + 2 * num_dims;                               \
-        const size_t input_offset = metadata[2 + 2 * num_dims + 1];                                \
-        const size_t indices_offset = metadata[2 + 2 * num_dims + 2];                              \
-        const size_t dim = metadata[2 + 2 * num_dims + 3];                                         \
-        const size_t num_indices = metadata[2 + 2 * num_dims + 4];                                 \
+        const size_t input_offset = metadata[2 + 3 * num_dims];                                    \
+        const size_t indices_offset = metadata[2 + 3 * num_dims + 1];                              \
+        const size_t dim = metadata[2 + 3 * num_dims + 2];                                         \
+        const size_t num_indices = metadata[2 + 3 * num_dims + 3];                                 \
                                                                                                    \
         for (size_t id = 0; id < num_els; id++) {                                                  \
             size_t temp = id;                                                                      \
