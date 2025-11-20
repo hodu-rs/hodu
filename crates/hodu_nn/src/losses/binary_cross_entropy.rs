@@ -27,7 +27,7 @@ impl BCELoss {
         }
     }
 
-    pub fn forward(&self, (pred, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
+    fn forward(&self, (pred, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
         // Clamp predictions to avoid log(0)
         // pred_clamped = clamp(pred, epsilon, 1 - epsilon)
         let one_minus_eps_scalar = Scalar::one(self.epsilon.dtype()) - self.epsilon;
@@ -63,7 +63,7 @@ impl BCEWithLogitsLoss {
         Self
     }
 
-    pub fn forward(&self, (logits, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
+    fn forward(&self, (logits, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
         // More numerically stable: BCE(sigmoid(x)) = log(1 + exp(-x)) if target=1
         //                                            = log(1 + exp(x))  if target=0
         // This can be simplified to: max(x, 0) - x * target + log(1 + exp(-|x|))

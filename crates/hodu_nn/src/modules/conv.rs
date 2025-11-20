@@ -70,9 +70,9 @@ impl Conv1D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params
@@ -145,9 +145,9 @@ impl Conv2D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params
@@ -224,9 +224,9 @@ impl Conv3D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params
@@ -308,9 +308,9 @@ impl ConvTranspose1D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params
@@ -392,9 +392,9 @@ impl ConvTranspose2D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params
@@ -480,9 +480,9 @@ impl ConvTranspose3D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params

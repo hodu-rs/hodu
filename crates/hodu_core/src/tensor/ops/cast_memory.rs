@@ -87,7 +87,7 @@ impl Tensor {
         }
     }
 
-    pub fn set_(&mut self, src: &Self) -> HoduResult<()> {
+    pub fn set_(&self, src: &Self) -> HoduResult<()> {
         // Replace storage of self with src's storage, preserving TensorId and gradient
         use crate::tensor::{with_tensor, with_tensor_mut};
 

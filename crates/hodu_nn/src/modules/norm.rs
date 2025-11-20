@@ -167,13 +167,13 @@ impl BatchNorm1D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         let mut params = Vec::new();
         if self.affine {
-            if let Some(ref mut gamma) = self.gamma {
+            if let Some(ref gamma) = self.gamma {
                 params.push(gamma);
             }
-            if let Some(ref mut beta) = self.beta {
+            if let Some(ref beta) = self.beta {
                 params.push(beta);
             }
         }
@@ -309,13 +309,13 @@ impl BatchNorm2D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         let mut params = Vec::new();
         if self.affine {
-            if let Some(ref mut gamma) = self.gamma {
+            if let Some(ref gamma) = self.gamma {
                 params.push(gamma);
             }
-            if let Some(ref mut beta) = self.beta {
+            if let Some(ref beta) = self.beta {
                 params.push(beta);
             }
         }
@@ -451,13 +451,13 @@ impl BatchNorm3D {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         let mut params = Vec::new();
         if self.affine {
-            if let Some(ref mut gamma) = self.gamma {
+            if let Some(ref gamma) = self.gamma {
                 params.push(gamma);
             }
-            if let Some(ref mut beta) = self.beta {
+            if let Some(ref beta) = self.beta {
                 params.push(beta);
             }
         }
@@ -552,13 +552,13 @@ impl LayerNorm {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         let mut params = Vec::new();
         if self.elementwise_affine {
-            if let Some(ref mut gamma) = self.gamma {
+            if let Some(ref gamma) = self.gamma {
                 params.push(gamma);
             }
-            if let Some(ref mut beta) = self.beta {
+            if let Some(ref beta) = self.beta {
                 params.push(beta);
             }
         }

@@ -36,7 +36,7 @@ impl AdaptiveAvgPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -78,7 +78,7 @@ impl AdaptiveAvgPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -123,7 +123,7 @@ impl AdaptiveAvgPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -163,7 +163,7 @@ impl AdaptiveMaxPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -205,7 +205,7 @@ impl AdaptiveMaxPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -250,7 +250,7 @@ impl AdaptiveMaxPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -290,7 +290,7 @@ impl AvgPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -335,7 +335,7 @@ impl AvgPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -381,7 +381,7 @@ impl AvgPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -422,7 +422,7 @@ impl MaxPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -467,7 +467,7 @@ impl MaxPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -513,7 +513,7 @@ impl MaxPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }

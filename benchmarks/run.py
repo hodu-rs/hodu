@@ -74,6 +74,7 @@ class BenchmarkRunner:
         title = {
             "matmul": "Matrix Multiplication Benchmark",
             "mlp": "MLP Block Benchmark (3-layer with GELU and Residual)",
+            "cnn-training": "CNN Training Benchmark (Forward + Backward)",
         }.get(bench_type, f"{bench_type.upper()} Benchmark")
 
         self.console.print(
@@ -634,7 +635,7 @@ def main():
     """Main entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python run.py --bench=matmul|mlp [--cpu] [--metal] [--cuda] [--xla] [--quiet] [-w=N] [-i=N]"
+            "Usage: python run.py --bench=matmul|mlp|cnn-training [--cpu] [--metal] [--cuda] [--xla] [--quiet] [-w=N] [-i=N]"
         )
         print("  -w=N: warmup iterations (default: 5)")
         print("  -i=N: benchmark iterations (default: 50)")
@@ -666,8 +667,10 @@ def main():
                 print(f"Error: Invalid iterations value: {arg}")
                 sys.exit(1)
 
-    if not bench_type or bench_type not in ["matmul", "mlp"]:
-        print("Error: Must specify --bench=matmul or --bench=mlp")
+    if not bench_type or bench_type not in ["matmul", "mlp", "cnn-training"]:
+        print(
+            "Error: Must specify --bench=matmul, --bench=mlp, or --bench=cnn-training"
+        )
         sys.exit(1)
 
     # Setup runner

@@ -168,8 +168,8 @@ fn benchmark_static(
     let builder = Builder::new("matmul_bench".to_string());
     builder.start()?;
 
-    let a = Tensor::input("a", &[m, k])?;
-    let b = Tensor::input("b", &[k, n])?;
+    let a = Tensor::input("a", &[m, k], DType::F32)?;
+    let b = Tensor::input("b", &[k, n], DType::F32)?;
     let result = a.matmul(&b)?;
 
     builder.add_output("result", result)?;

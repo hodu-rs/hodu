@@ -47,9 +47,9 @@ impl Linear {
         }
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        let mut params = vec![&mut self.weight];
-        if let Some(ref mut bias) = self.bias {
+    fn parameters(&self) -> Vec<&Tensor> {
+        let mut params = vec![&self.weight];
+        if let Some(ref bias) = self.bias {
             params.push(bias);
         }
         params

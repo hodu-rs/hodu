@@ -13,7 +13,7 @@ impl HuberLoss {
         Self { delta: delta.into() }
     }
 
-    pub fn forward(&self, (pred, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
+    fn forward(&self, (pred, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
         let diff = pred.sub(target)?;
         let abs_diff = diff.abs()?;
 

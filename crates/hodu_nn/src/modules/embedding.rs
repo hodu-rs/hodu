@@ -172,8 +172,8 @@ impl Embedding {
         embeddings.mul(&float_mask)
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
-        vec![&mut self.weight]
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![&self.weight]
     }
 
     pub fn weight(&self) -> &Tensor {

@@ -20,13 +20,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let builder = Builder::new("linear_training".to_string());
     builder.start()?;
 
-    let mut linear = Linear::new(3, 1, true, DType::F32)?;
+    let linear = Linear::new(3, 1, true, DType::F32)?;
     let mse_loss = MSELoss::new();
     let mut optimizer = SGD::new(0.01);
 
-    let input = Tensor::input("input", [10000, 3])?;
+    let input = Tensor::input("input", [10000, 3], DType::F32)?;
     input.requires_grad()?;
-    let target = Tensor::input("target", [10000, 1])?;
+    let target = Tensor::input("target", [10000, 1], DType::F32)?;
 
     let epochs = 1000;
     let mut final_loss = Tensor::scalar(0.0)?;
@@ -37,8 +37,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         loss.backward()?;
 
-        optimizer.step(&mut linear.parameters())?;
-        optimizer.zero_grad(&mut linear.parameters())?;
+        optimizer.step(&linear.parameters())?;
+        optimizer.zero_grad(&linear.parameters())?;
 
         final_loss = loss;
     }

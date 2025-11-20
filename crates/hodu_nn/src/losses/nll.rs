@@ -23,7 +23,7 @@ impl NLLLoss {
         Self { dim }
     }
 
-    pub fn forward(&self, (log_probs, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
+    fn forward(&self, (log_probs, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
         // Normalize dim to positive index
         let rank = log_probs.shape().ndim() as i32;
         let gather_dim = if self.dim < 0 { rank + self.dim } else { self.dim };

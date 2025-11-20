@@ -38,7 +38,7 @@ cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
 metal = ["std", "dep:hodu_metal_kernels"]
 
 # optional compiler
-xla = ["std", "dep:hodu_xla"]
+xla = ["std", "i64", "dep:hodu_xla"]
 
 [dependencies]
 bincode = { workspace = true, optional = true }

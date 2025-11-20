@@ -23,7 +23,7 @@ impl CrossEntropyLoss {
         Self { dim }
     }
 
-    pub fn forward(&self, (logits, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
+    fn forward(&self, (logits, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
         // Apply log_softmax to logits
         let log_probs = logits.log_softmax(self.dim)?;
 

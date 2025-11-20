@@ -17,7 +17,7 @@ impl ReLU {
         input.relu()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -34,7 +34,7 @@ impl Sigmoid {
         input.sigmoid()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -51,7 +51,7 @@ impl Tanh {
         input.tanh()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -68,7 +68,7 @@ impl Gelu {
         input.gelu()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -85,7 +85,7 @@ impl Softplus {
         input.softplus()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -102,7 +102,7 @@ impl SiLU {
         input.silu()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -119,7 +119,7 @@ impl Swish {
         input.swish()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -136,7 +136,7 @@ impl Mish {
         input.mish()
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -158,7 +158,7 @@ impl LeakyReLU {
         input.leaky_relu(exponent)
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -180,7 +180,7 @@ impl ELU {
         input.elu(exponent)
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -200,7 +200,7 @@ impl PReLU {
         input.prelu(weight)
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }
@@ -245,7 +245,7 @@ impl RReLU {
         positive_part.add(&negative_part)
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         vec![]
     }
 }

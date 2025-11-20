@@ -4,5 +4,5 @@ pub use hodu_nn_macros::Module;
 
 pub trait Module<I = &'static Tensor> {
     fn forward(&self, input: I) -> HoduResult<Tensor>;
-    fn parameters(&mut self) -> Vec<&mut Tensor>;
+    fn parameters(&self) -> Vec<&Tensor>;
 }

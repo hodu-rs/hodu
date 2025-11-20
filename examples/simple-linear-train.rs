@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let target = Tensor::new(target_data)?;
     input.requires_grad()?;
 
-    let mut linear = Linear::new(3, 1, true, DType::F32)?;
+    let linear = Linear::new(3, 1, true, DType::F32)?;
     let mse_loss = MSELoss::new();
     let mut optimizer = SGD::new(0.01);
     let epochs = 1000;
@@ -34,8 +34,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let loss = mse_loss.forward((&pred, &target))?;
         loss.backward()?;
 
-        optimizer.step(&mut linear.parameters())?;
-        optimizer.zero_grad(&mut linear.parameters())?;
+        optimizer.step(&linear.parameters())?;
+        optimizer.zero_grad(&linear.parameters())?;
 
         if (epoch + 1) % 100 == 0 {
             let hundred_elapsed = hundred_epochs_start.elapsed();

@@ -50,6 +50,13 @@ enum BenchMode {
     DynamicCUDA,
     #[cfg(feature = "metal")]
     DynamicMetal,
+    StaticCPU,
+    #[cfg(feature = "cuda")]
+    StaticCUDA,
+    #[cfg(feature = "metal")]
+    StaticMetal,
+    #[cfg(feature = "xla")]
+    StaticXLACPU,
 }
 
 impl BenchMode {
@@ -60,6 +67,13 @@ impl BenchMode {
             "dynamic-cuda" => Some(Self::DynamicCUDA),
             #[cfg(feature = "metal")]
             "dynamic-metal" => Some(Self::DynamicMetal),
+            "static-cpu" => Some(Self::StaticCPU),
+            #[cfg(feature = "cuda")]
+            "static-cuda" => Some(Self::StaticCUDA),
+            #[cfg(feature = "metal")]
+            "static-metal" => Some(Self::StaticMetal),
+            #[cfg(feature = "xla")]
+            "static-xla-cpu" => Some(Self::StaticXLACPU),
             _ => None,
         }
     }
@@ -71,6 +85,13 @@ impl BenchMode {
             Self::DynamicCUDA => "Dynamic CUDA",
             #[cfg(feature = "metal")]
             Self::DynamicMetal => "Dynamic Metal",
+            Self::StaticCPU => "Static CPU",
+            #[cfg(feature = "cuda")]
+            Self::StaticCUDA => "Static CUDA",
+            #[cfg(feature = "metal")]
+            Self::StaticMetal => "Static Metal",
+            #[cfg(feature = "xla")]
+            Self::StaticXLACPU => "Static XLA CPU",
         }
     }
 }
@@ -128,7 +149,7 @@ impl SimpleCNN {
         self.fc2.forward(&x) // [batch, 10]
     }
 
-    fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&self) -> Vec<&Tensor> {
         let mut params = Vec::new();
         params.extend(self.conv1.parameters());
         params.extend(self.conv2.parameters());
@@ -138,7 +159,7 @@ impl SimpleCNN {
     }
 }
 
-fn benchmark_training(
+fn benchmark_dynamic(
     mode: BenchMode,
     batch_size: usize,
     warmup: usize,
@@ -156,9 +177,10 @@ fn benchmark_training(
         BenchMode::DynamicMetal => {
             set_runtime_device(Device::Metal);
         },
+        _ => unreachable!(),
     }
 
-    let mut model = SimpleCNN::new(DType::F32)?;
+    let model = SimpleCNN::new(DType::F32)?;
 
     // Optimizer
     let mut optimizer = Adam::new(0.001, 0.9, 0.999, 1e-8);
@@ -179,9 +201,9 @@ fn benchmark_training(
         let logits = model.forward(&x)?;
         let loss = loss_fn.forward((&logits, &target))?;
         loss.backward()?;
-        let mut params = model.parameters();
-        optimizer.step(&mut params)?;
-        optimizer.zero_grad(&mut params)?;
+        let params = model.parameters();
+        optimizer.step(&params)?;
+        optimizer.zero_grad(&params)?;
     }
 
     let mem_before = get_memory_usage_kb();
@@ -197,6 +219,97 @@ fn benchmark_training(
         let mut params = model.parameters();
         optimizer.step(&mut params)?;
         optimizer.zero_grad(&mut params)?;
+        step_times.push(start.elapsed().as_secs_f64());
+
+        if bench_start.elapsed().as_secs_f64() > 60.0 {
+            return Err(format!("TIMEOUT: Exceeded 60 seconds after {} iterations", i + 1).into());
+        }
+    }
+
+    let mem_after = get_memory_usage_kb();
+    let mem_used = match (mem_before, mem_after) {
+        (Some(before), Some(after)) => Some(after.saturating_sub(before)),
+        _ => mem_after,
+    };
+
+    Ok((trimmed_mean(&mut step_times, 0.1), mem_used))
+}
+
+fn benchmark_static(
+    mode: BenchMode,
+    batch_size: usize,
+    warmup: usize,
+    iterations: usize,
+) -> Result<(f64, Option<usize>), Box<dyn std::error::Error>> {
+    // Create input data
+    let x_data = Tensor::randn(&[batch_size, 3, 32, 32], 0f32, 1.)?;
+    let target_data: Vec<i32> = (0..batch_size).map(|i| ((i * 7) % 10) as i32).collect();
+    let target_data_tensor = Tensor::from_slice(target_data, &[batch_size])?;
+
+    let model = SimpleCNN::new(DType::F32)?;
+    let mut optimizer = Adam::new(0.001, 0.9, 0.999, 1e-8);
+    let loss_fn = CrossEntropyLoss::new();
+
+    // Build static graph
+    let builder = Builder::new(format!("cnn_train_bench_{}", batch_size));
+    builder.start()?;
+
+    let x = Tensor::input("x", &[batch_size, 3, 32, 32], DType::F32)?;
+    let target = Tensor::input("target", &[batch_size], DType::I32)?;
+    x.requires_grad()?;
+
+    let logits = model.forward(&x)?;
+    let loss = loss_fn.forward((&logits, &target))?;
+    loss.backward()?;
+
+    let params = model.parameters();
+    optimizer.step(&params)?;
+    optimizer.zero_grad(&params)?;
+
+    builder.add_output("loss", loss)?;
+    builder.end()?;
+
+    let mut script = builder.build()?;
+
+    match mode {
+        BenchMode::StaticCPU => {
+            script.set_device(Device::CPU);
+        },
+        #[cfg(feature = "cuda")]
+        BenchMode::StaticCUDA => {
+            script.set_device(Device::CUDA(0));
+        },
+        #[cfg(feature = "metal")]
+        BenchMode::StaticMetal => {
+            script.set_device(Device::Metal);
+        },
+        #[cfg(feature = "xla")]
+        BenchMode::StaticXLACPU => {
+            script.set_device(Device::CPU);
+            script.set_compiler(Compiler::XLA);
+        },
+        _ => unreachable!(),
+    }
+
+    script.set_input("x", x_data);
+    script.set_input("target", target_data_tensor);
+
+    // Compile
+    script.compile()?;
+
+    // Warmup
+    for _ in 0..warmup {
+        let _ = script.run()?;
+    }
+
+    let mem_before = get_memory_usage_kb();
+
+    // Benchmark
+    let mut step_times = Vec::with_capacity(iterations);
+    let bench_start = Instant::now();
+    for i in 0..iterations {
+        let start = Instant::now();
+        let _ = script.run()?;
         step_times.push(start.elapsed().as_secs_f64());
 
         if bench_start.elapsed().as_secs_f64() > 60.0 {
@@ -231,7 +344,20 @@ fn run_benchmark(
             continue;
         }
 
-        let result = benchmark_training(mode, batch_size, warmup, iterations);
+        let result = match mode {
+            BenchMode::DynamicCPU => benchmark_dynamic(mode, batch_size, warmup, iterations),
+            #[cfg(feature = "cuda")]
+            BenchMode::DynamicCUDA => benchmark_dynamic(mode, batch_size, warmup, iterations),
+            #[cfg(feature = "metal")]
+            BenchMode::DynamicMetal => benchmark_dynamic(mode, batch_size, warmup, iterations),
+            BenchMode::StaticCPU => benchmark_static(mode, batch_size, warmup, iterations),
+            #[cfg(feature = "cuda")]
+            BenchMode::StaticCUDA => benchmark_static(mode, batch_size, warmup, iterations),
+            #[cfg(feature = "metal")]
+            BenchMode::StaticMetal => benchmark_static(mode, batch_size, warmup, iterations),
+            #[cfg(feature = "xla")]
+            BenchMode::StaticXLACPU => benchmark_static(mode, batch_size, warmup, iterations),
+        };
 
         match result {
             Ok((step_time, mem)) => {
@@ -263,6 +389,13 @@ fn print_usage() {
     println!("  dynamic-cuda    - Dynamic execution on CUDA");
     #[cfg(feature = "metal")]
     println!("  dynamic-metal   - Dynamic execution on Metal");
+    println!("  static-cpu      - Static graph on CPU");
+    #[cfg(feature = "cuda")]
+    println!("  static-cuda     - Static graph on CUDA");
+    #[cfg(feature = "metal")]
+    println!("  static-metal    - Static graph on Metal");
+    #[cfg(feature = "xla")]
+    println!("  static-xla-cpu  - Static graph on XLA CPU");
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

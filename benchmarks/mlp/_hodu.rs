@@ -223,7 +223,7 @@ fn benchmark_static(
     let builder = Builder::new("mlp_bench".to_string());
     builder.start()?;
 
-    let x = Tensor::input("x", &[batch_size, in_features])?;
+    let x = Tensor::input("x", &[batch_size, in_features], DType::F32)?;
 
     // Build static graph
     let result = mlp.forward(&x)?;

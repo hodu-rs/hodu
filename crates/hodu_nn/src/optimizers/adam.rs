@@ -31,7 +31,7 @@ impl Adam {
         }
     }
 
-    fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+    fn step(&mut self, parameters: &[&Tensor]) -> HoduResult<()> {
         if self.m.is_empty() || self.v.is_empty() {
             self.m = parameters
                 .iter()
@@ -45,7 +45,7 @@ impl Adam {
 
         self.t += 1;
 
-        for ((param, m), v) in parameters.iter_mut().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
+        for ((param, m), v) in parameters.iter().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
             let grad = param.grad()?;
             let lr = self.learning_rate.to_dtype(grad.dtype());
             let beta1 = self.beta1.to_dtype(grad.dtype());
@@ -122,7 +122,7 @@ impl AdamW {
         }
     }
 
-    fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+    fn step(&mut self, parameters: &[&Tensor]) -> HoduResult<()> {
         // Initialize momentum buffers on first call
         if self.m.is_empty() || self.v.is_empty() {
             self.m = parameters
@@ -137,7 +137,7 @@ impl AdamW {
 
         self.t += 1;
 
-        for ((param, m), v) in parameters.iter_mut().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
+        for ((param, m), v) in parameters.iter().zip(self.m.iter_mut()).zip(self.v.iter_mut()) {
             let grad = param.grad()?;
 
             // Convert scalars to match gradient dtype

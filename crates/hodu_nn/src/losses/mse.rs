@@ -11,7 +11,7 @@ impl MSELoss {
         Self
     }
 
-    pub fn forward(&self, (pred, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
+    fn forward(&self, (pred, target): (&Tensor, &Tensor)) -> HoduResult<Tensor> {
         let diff = pred.sub(target)?;
         let squared = diff.pow_scalar(Scalar::from_f32(2.0, diff.dtype()))?;
 

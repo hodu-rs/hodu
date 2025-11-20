@@ -52,6 +52,13 @@ pub fn validate_same_dtype(tensors: &[&Tensor], op: Op) -> HoduResult<()> {
         return Ok(());
     }
 
+    // Skip validation if any tensor is a builder input (no storage)
+    for tensor in tensors.iter() {
+        if !tensor.has_storage() {
+            return Ok(());
+        }
+    }
+
     let first_dtype = tensors[0].dtype();
 
     for tensor in tensors.iter().skip(1) {
@@ -69,6 +76,11 @@ pub fn validate_same_dtype(tensors: &[&Tensor], op: Op) -> HoduResult<()> {
 }
 
 pub fn validate_indices_dtype(indices: &Tensor, op: Op) -> HoduResult<()> {
+    // Skip validation for builder input tensors (no storage)
+    if !indices.has_storage() {
+        return Ok(());
+    }
+
     let dtype = indices.dtype();
     if !dtype.is_int() && !dtype.is_uint() {
         return Err(HoduError::UnsupportedDTypeForOp { dtype, op });

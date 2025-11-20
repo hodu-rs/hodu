@@ -19,6 +19,7 @@ pub(crate) fn from_storage(
     let tensor_ = Tensor_ {
         storage: Some(Arc::new(storage)),
         layout,
+        dtype: None, // Runtime tensors get dtype from storage
         requires_grad,
         grad_tensor_id: None,
         is_runtime,
@@ -58,6 +59,7 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
     let tensor_ = Tensor_ {
         storage: storage_arc,
         layout,
+        dtype: None, // Runtime tensors get dtype from storage
         requires_grad,
         grad_tensor_id: None,
         is_runtime: true,
@@ -75,6 +77,7 @@ pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (Ten
     let tensor_ = Tensor_ {
         storage: None,
         layout,
+        dtype: None, // Builder tensors will get dtype from operations
         requires_grad,
         grad_tensor_id: None,
         is_runtime: false,

@@ -99,6 +99,7 @@ impl Drop for Tensor {
 pub struct Tensor_ {
     pub(super) storage: Option<Arc<BackendStorage>>,
     pub(super) layout: Layout,
+    pub(super) dtype: Option<DType>, // For builder tensors without storage
     pub(super) requires_grad: bool,
     pub(super) grad_tensor_id: Option<TensorId>,
     pub(super) is_runtime: bool,
@@ -178,7 +179,19 @@ impl Tensor {
     }
 
     pub fn dtype(&self) -> DType {
-        self.with_storage(|storage| Ok(storage.dtype())).unwrap_or(DType::F32)
+        registry::with_tensor(self.0, |t| {
+            // For builder tensors with explicit dtype
+            if let Some(dtype) = t.dtype {
+                return dtype;
+            }
+            // For runtime tensors with storage
+            if let Some(ref storage) = t.storage {
+                return storage.dtype();
+            }
+            // Default
+            DType::F32
+        })
+        .unwrap_or(DType::F32)
     }
 
     pub fn set_requires_grad(&self, requires: bool) -> HoduResult<()> {
