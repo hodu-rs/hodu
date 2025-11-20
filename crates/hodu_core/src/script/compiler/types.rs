@@ -4,7 +4,7 @@ use crate::{
     ops::Op,
     script::builder::ir::*,
     tensor::TensorId,
-    types::{Compiler, DType, Device, Layout},
+    types::{Compiler, DType, Device, Layout, Runtime},
 };
 
 /// Compilation options
@@ -50,6 +50,7 @@ pub struct CompiledModule {
     pub value_dtypes: HashMap<ValueId, DType>,
     pub value_to_tensor: HashMap<ValueId, TensorId>,
     pub compiler: Compiler,
+    pub runtime: Runtime,
     pub device: Device,
     /// Maximum ValueId used in this module (cached for efficient storage allocation)
     pub max_value_id: usize,

@@ -1,22 +1,20 @@
 use super::{
     compilation::CompilationManager,
     config::ScriptConfig,
-    executor::{ExecutionInputs, ExecutorInstance, ExecutorT},
     input_manager::InputManager,
+    runtime::{ExecutionInputs, RuntimeInstance, RuntimeT},
 };
 use crate::{compat::*, error::HoduResult, tensor::Tensor};
 
 /// Execution manager - handles script execution and executor caching
 pub(crate) struct ExecutionManager {
-    executor_instance: Option<ExecutorInstance>,
+    runtime_instance: Option<RuntimeInstance>,
 }
 
 impl ExecutionManager {
     /// Create a new execution manager
     pub fn new() -> Self {
-        Self {
-            executor_instance: None,
-        }
+        Self { runtime_instance: None }
     }
 
     /// Execute the compiled module
@@ -29,11 +27,11 @@ impl ExecutionManager {
         let compiled = compilation.get_compiled()?;
 
         // Create or reuse executor instance
-        if self.executor_instance.is_none() {
-            self.executor_instance = Some(ExecutorInstance::new(config.compiler_type, config.device)?);
+        if self.runtime_instance.is_none() {
+            self.runtime_instance = Some(RuntimeInstance::new(config.runtime_type, config.device)?);
         }
 
-        let executor = self.executor_instance.as_ref().unwrap();
+        let executor = self.runtime_instance.as_ref().unwrap();
 
         // Convert inputs to ExecutionInputs format
         let execution_inputs: ExecutionInputs<'_> = inputs.as_execution_inputs().collect();
@@ -46,7 +44,7 @@ impl ExecutionManager {
 
     /// Invalidate executor cache (called when config changes)
     pub fn invalidate(&mut self) {
-        self.executor_instance = None;
+        self.runtime_instance = None;
     }
 }
 

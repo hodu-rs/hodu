@@ -7,6 +7,7 @@ use super::{
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
+    types::Compiler,
 };
 
 /// Compilation manager - handles module compilation and caching
@@ -34,7 +35,12 @@ impl CompilationManager {
 
         // Create or reuse compiler instance
         if self.compiler_instance.is_none() {
-            self.compiler_instance = Some(CompilerInstance::new(config.compiler_type, config.device)?);
+            // Currently only HoduScript compiler is available
+            self.compiler_instance = Some(CompilerInstance::new(
+                Compiler::HoduScript,
+                config.runtime_type,
+                config.device,
+            )?);
         }
 
         let compiler = self

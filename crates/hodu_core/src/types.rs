@@ -2,12 +2,14 @@ mod compiler;
 mod device;
 mod dtype;
 mod layout;
+mod runtime;
 mod shape;
 
 pub use compiler::Compiler;
 pub use device::Device;
 pub use dtype::DType;
 pub use layout::Layout;
+pub use runtime::Runtime;
 pub use shape::Shape;
 
 mod dtypes {

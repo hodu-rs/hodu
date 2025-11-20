@@ -286,7 +286,7 @@ fn benchmark_static(
         #[cfg(feature = "xla")]
         BenchMode::StaticXLACPU => {
             script.set_device(Device::CPU);
-            script.set_compiler(Compiler::XLA);
+            script.set_runtime(Runtime::XLA);
         },
         _ => unreachable!(),
     }

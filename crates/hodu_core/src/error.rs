@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     ops::Op,
     tensor::TensorId,
-    types::{Compiler, DType, Device, Shape},
+    types::{DType, Device, Runtime, Shape},
 };
 
 /// Main error type for hodu_core.
@@ -18,8 +18,8 @@ pub enum HoduError {
     DeviceConflictInOp { left: Device, right: Device, op: Op },
     /// Unsupported device type.
     UnsupportedDevice(Device),
-    /// Unsupported device type for a specific compiler
-    UnsupportedDeviceForCompiler(Device, Compiler),
+    /// Unsupported device type for a specificRuntime
+    UnsupportedDeviceForRuntime(Device, Runtime),
 
     // ===== DType Errors =====
     /// Data type mismatch between expected and actual dtype.
@@ -32,8 +32,8 @@ pub enum HoduError {
     UnsupportedDTypeForOp { dtype: DType, op: Op },
     /// Unsupported dtype for a specific device.
     UnsupportedDTypeForDevice { dtype: DType, device: Device },
-    /// Unsupported dtype for a specific compiler.
-    UnsupportedDTypeForCompiler { dtype: DType, compiler: Compiler },
+    /// Unsupported dtype for a specific Runtime.
+    UnsupportedDTypeForRuntime { dtype: DType, runtime: Runtime },
 
     // ===== Shape and Layout Errors =====
     /// Shape mismatch between expected and actual shapes.
@@ -132,8 +132,8 @@ impl fmt::Display for HoduError {
             Self::UnsupportedDevice(device) => {
                 write!(f, "unsupported {:?} device", device)
             },
-            Self::UnsupportedDeviceForCompiler(device, compiler) => {
-                write!(f, "unsupported {:?} device for {:?} compiler", device, compiler)
+            Self::UnsupportedDeviceForRuntime(device, runtime) => {
+                write!(f, "unsupported {:?} device for {:?} runtime", device, runtime)
             },
 
             // DType Errors
@@ -156,8 +156,8 @@ impl fmt::Display for HoduError {
             Self::UnsupportedDTypeForDevice { dtype, device } => {
                 write!(f, "unsupported dtype {:?} for {:?} device", dtype, device)
             },
-            Self::UnsupportedDTypeForCompiler { dtype, compiler } => {
-                write!(f, "unsupported dtype {:?} for {:?} compiler", dtype, compiler)
+            Self::UnsupportedDTypeForRuntime { dtype, runtime } => {
+                write!(f, "unsupported dtype {:?} for {:?} runtime", dtype, runtime)
             },
 
             // Shape and Layout Errors

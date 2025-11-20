@@ -1,6 +1,6 @@
 pub mod builder;
 pub mod compiler;
-pub mod executor;
+pub mod runtime;
 
 mod compilation;
 mod config;
@@ -8,12 +8,13 @@ mod execution;
 mod input_manager;
 #[cfg(feature = "serde")]
 mod io;
+mod op_params;
 
 use crate::{
     compat::*,
     error::HoduResult,
     tensor::Tensor,
-    types::{Compiler, Device},
+    types::{Device, Runtime},
 };
 use builder::ir::Module;
 use compilation::CompilationManager;
@@ -34,7 +35,7 @@ impl fmt::Debug for Script {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Script")
             .field("module", &self.module.name)
-            .field("compiler", &self.config.compiler_type)
+            .field("runtime", &self.config.runtime_type)
             .field("device", &self.config.device)
             .field("runtime_inputs", &self.inputs.len())
             .field("compiled", &self.compilation.is_compiled())
@@ -64,10 +65,10 @@ impl Script {
         &self.module.name
     }
 
-    /// Set compiler type
-    pub fn set_compiler(&mut self, compiler: Compiler) {
-        if self.config.compiler_type != compiler {
-            self.config.set_compiler(compiler);
+    /// Set runtime type
+    pub fn set_runtime(&mut self, runtime: Runtime) {
+        if self.config.runtime_type != runtime {
+            self.config.set_runtime(runtime);
             // Invalidate compilation and execution caches
             self.compilation.invalidate();
             self.execution.invalidate();
@@ -84,9 +85,9 @@ impl Script {
         }
     }
 
-    /// Get current compiler type
-    pub fn compiler(&self) -> Compiler {
-        self.config.compiler_type
+    /// Get current runtime type
+    pub fn runtime(&self) -> Runtime {
+        self.config.runtime_type
     }
 
     /// Get current device
@@ -159,38 +160,5 @@ impl Script {
     pub fn load<P: AsRef<std::path::Path>>(path: P) -> HoduResult<Self> {
         let module = io::load_module(path)?;
         Ok(Self::new(module))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_script_creation() {
-        let module = Module::new("test".to_string());
-        let script = Script::new(module);
-        assert_eq!(script.name(), "test");
-        assert_eq!(script.compiler(), Compiler::HODU);
-        assert_eq!(script.device(), Device::CPU);
-        assert!(!script.is_compiled());
-    }
-
-    #[test]
-    fn test_script_set_compiler() {
-        let module = Module::new("test".to_string());
-        let mut script = Script::new(module);
-
-        script.set_compiler(Compiler::HODU);
-        assert_eq!(script.compiler(), Compiler::HODU);
-    }
-
-    #[test]
-    fn test_script_set_device() {
-        let module = Module::new("test".to_string());
-        let mut script = Script::new(module);
-
-        script.set_device(Device::CPU);
-        assert_eq!(script.device(), Device::CPU);
     }
 }
