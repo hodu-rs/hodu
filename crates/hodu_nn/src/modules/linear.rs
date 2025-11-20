@@ -36,7 +36,7 @@ impl Linear {
         Ok(Self { weight, bias })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // Linear transformation: input @ weight.T + bias
         let output = input.matmul(&self.weight.transpose(-2, -1)?)?;
 
@@ -47,7 +47,7 @@ impl Linear {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);

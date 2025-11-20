@@ -4,7 +4,8 @@ use crate::{
     ops::{BinaryLogicalOp, BinaryOp, Op},
     script::builder,
     tensor::{
-        create_builder_tensor, from_storage, gradient, register_operation_in_builder, utils::broadcast_tensors2, Tensor,
+        create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder,
+        utils::broadcast_tensors2, Tensor,
     },
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -66,7 +67,7 @@ macro_rules! binary_op {
                 let requires_grad = lhs.is_requires_grad() || rhs.is_requires_grad();
                 let requires_grad = requires_grad && validate_requires_grad;
 
-                let result = from_storage(storage, lhs_layout, true, requires_grad);
+                let result = from_storage_with_context(storage, lhs_layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
                     let op = Op::Binary(BinaryOp::$op_name);
@@ -120,7 +121,7 @@ macro_rules! binary_logical_op {
                     })
                 })?;
 
-                let result = from_storage(storage, lhs_layout, true, false);
+                let result = from_storage_with_context(storage, lhs_layout, true, false);
 
                 Ok(result)
             }

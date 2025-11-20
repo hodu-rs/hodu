@@ -4,7 +4,10 @@ use crate::{
     ops::{CmpOp, CmpScalarOp, Op},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor, from_storage, register_operation_in_builder, utils::broadcast_tensors2, Tensor},
+    tensor::{
+        create_builder_tensor, from_storage_with_context, register_operation_in_builder, utils::broadcast_tensors2,
+        Tensor,
+    },
     types::Layout,
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_same_device, validate_same_dtype},
 };
@@ -43,7 +46,7 @@ macro_rules! cmp_op {
                     })
                 })?;
 
-                let result = from_storage(storage, lhs_layout, true, false);
+                let result = from_storage_with_context(storage, lhs_layout, true, false);
 
                 Ok(result)
             }
@@ -83,7 +86,7 @@ macro_rules! cmp_scalar_op {
 
                 let layout = Layout::from_shape(&self.shape());
 
-                let result = from_storage(storage, layout, true, false);
+                let result = from_storage_with_context(storage, layout, true, false);
 
                 Ok(result)
             }

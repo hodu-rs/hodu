@@ -80,19 +80,24 @@ pub fn derive_optimizer_impl(input: TokenStream) -> TokenStream {
         impl #impl_generics #hodu_nn_path::optimizer::Optimizer for #name #ty_generics #where_clause {
             fn step(&mut self, parameters: &mut [&mut #hodu_core_path::tensor::Tensor])
                 -> #hodu_core_path::error::HoduResult<()> {
-                self.step(parameters)
+                // Set flag to prevent recording optimizer operations on tape
+                #hodu_core_path::tensor::set_optimizer_step_flag(true);
+                let result = self.step(parameters);
+                #hodu_core_path::tensor::set_optimizer_step_flag(false);
+                result
             }
             fn zero_grad(&mut self, parameters: &mut [&mut #hodu_core_path::tensor::Tensor])
                 -> #hodu_core_path::error::HoduResult<()> {
+                // Set flag to prevent recording zero_grad operations on tape
+                #hodu_core_path::tensor::set_optimizer_step_flag(true);
+
                 // Zero out gradients for each parameter
                 for param in parameters.iter_mut() {
                     param.zero_grad()?;
                 }
 
+                #hodu_core_path::tensor::set_optimizer_step_flag(false);
                 Ok(())
-            }
-            fn set_learning_rate(&mut self, learning_rate: impl Into<#hodu_core_path::scalar::Scalar>) {
-                self.set_learning_rate(learning_rate)
             }
         }
     };

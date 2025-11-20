@@ -1,4 +1,4 @@
-use super::{utils::*, VjpCompute};
+use super::{vjp_utils::*, VjpCompute};
 use crate::{
     error::{HoduError, HoduResult},
     layer::compat::*,

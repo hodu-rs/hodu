@@ -4,7 +4,7 @@ use crate::{
     ops::{Op, OpParams, ReduceOp},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -204,7 +204,7 @@ impl Tensor {
             })?;
 
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Reduce(reduce_op);

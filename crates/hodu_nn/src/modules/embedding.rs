@@ -88,7 +88,7 @@ impl Embedding {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // input: indices of shape [batch_size] or [batch_size, seq_len] or any shape
         // output: embeddings of shape [..., embedding_dim]
 
@@ -172,7 +172,7 @@ impl Embedding {
         embeddings.mul(&float_mask)
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![&mut self.weight]
     }
 

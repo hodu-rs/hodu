@@ -177,7 +177,13 @@ pub fn literal_to_tensor(literal: &Literal, dtype: DType) -> HoduResult<crate::t
     let shape_usize: Vec<usize> = shape.to_vec();
     let shape_obj = crate::types::Shape::new(&shape_usize);
     let layout = Layout::from_shape(&shape_obj);
-    Ok(from_storage(BackendStorage::CPU(cpu_storage), layout, true, false))
+    Ok(from_storage(
+        BackendStorage::CPU(cpu_storage),
+        layout,
+        true,
+        false,
+        None,
+    ))
 }
 
 /// Create a constant XLA operation from ConstantData

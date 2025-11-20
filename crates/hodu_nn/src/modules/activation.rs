@@ -13,11 +13,11 @@ impl ReLU {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.relu()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -30,11 +30,11 @@ impl Sigmoid {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.sigmoid()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -47,11 +47,11 @@ impl Tanh {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.tanh()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -64,11 +64,11 @@ impl Gelu {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.gelu()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -81,11 +81,11 @@ impl Softplus {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.softplus()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -98,11 +98,11 @@ impl SiLU {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.silu()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -115,11 +115,11 @@ impl Swish {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.swish()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -132,11 +132,11 @@ impl Mish {
         Self
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         input.mish()
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -153,12 +153,12 @@ impl LeakyReLU {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let exponent = self.exponent.to_dtype(input.dtype());
         input.leaky_relu(exponent)
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -175,12 +175,12 @@ impl ELU {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let exponent = self.exponent.to_dtype(input.dtype());
         input.elu(exponent)
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -195,12 +195,12 @@ impl PReLU {
         Self { weight: weight.into() }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let weight = self.weight.to_dtype(input.dtype());
         input.prelu(weight)
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -219,7 +219,7 @@ impl RReLU {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let dtype = input.dtype();
         let zero = Scalar::zero(dtype);
 
@@ -245,7 +245,7 @@ impl RReLU {
         positive_part.add(&negative_part)
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     error::{HoduError, HoduResult},
-    layer::compat::{AtomicBool, AtomicUsize},
+    layer::compat::AtomicUsize,
     script::builder::{get_active_builder, is_builder_active},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::{Layout, Shape},
@@ -16,12 +16,13 @@ impl Tensor {
         let layout = Layout::from_shape(&shape);
         let tensor_ = Tensor_ {
             storage: None,
-            is_runtime: false,
             layout,
             requires_grad: false,
             grad_tensor_id: None,
+            is_runtime: false,
+            is_gradient: false,
+            owner_context: None, // Builder input tensors are user-created
             ref_count: AtomicUsize::new(1),
-            is_managed: AtomicBool::new(true),
         };
         let tensor_id = TensorId::new();
         insert(tensor_id, tensor_);

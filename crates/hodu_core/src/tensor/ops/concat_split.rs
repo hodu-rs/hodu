@@ -4,7 +4,7 @@ use crate::{
     ops::{ConcatOp, Op, OpParams, SplitOp},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -100,7 +100,7 @@ impl Tensor {
 
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Concat(ConcatOp::Concat);
@@ -220,7 +220,7 @@ impl Tensor {
                 let mut result_dims = shape_dims.to_vec();
                 result_dims[dim_usize] = size;
                 let result_layout = Layout::from_shape(&Shape::from(result_dims));
-                let result = from_storage(storage, result_layout, true, requires_grad);
+                let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
                     let op = Op::Split(SplitOp::Split);

@@ -31,7 +31,7 @@ impl Adam {
         }
     }
 
-    pub fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+    fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
         if self.m.is_empty() || self.v.is_empty() {
             self.m = parameters
                 .iter()
@@ -122,7 +122,7 @@ impl AdamW {
         }
     }
 
-    pub fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
+    fn step(&mut self, parameters: &mut [&mut Tensor]) -> HoduResult<()> {
         // Initialize momentum buffers on first call
         if self.m.is_empty() || self.v.is_empty() {
             self.m = parameters

@@ -12,7 +12,7 @@ impl AdaptiveAvgPool1D {
         Self { output_size }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveAvgPool1D: input [N, C, L]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -36,7 +36,7 @@ impl AdaptiveAvgPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -51,7 +51,7 @@ impl AdaptiveAvgPool2D {
         Self { output_size }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveAvgPool2D: input [N, C, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -78,7 +78,7 @@ impl AdaptiveAvgPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -93,7 +93,7 @@ impl AdaptiveAvgPool3D {
         Self { output_size }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveAvgPool3D: input [N, C, D, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -123,7 +123,7 @@ impl AdaptiveAvgPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -138,7 +138,7 @@ impl AdaptiveMaxPool1D {
         Self { output_size }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveMaxPool1D: input [N, C, L]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -163,7 +163,7 @@ impl AdaptiveMaxPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -178,7 +178,7 @@ impl AdaptiveMaxPool2D {
         Self { output_size }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveMaxPool2D: input [N, C, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -205,7 +205,7 @@ impl AdaptiveMaxPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -220,7 +220,7 @@ impl AdaptiveMaxPool3D {
         Self { output_size }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AdaptiveMaxPool3D: input [N, C, D, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -250,7 +250,7 @@ impl AdaptiveMaxPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -271,7 +271,7 @@ impl AvgPool1D {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AvgPool1D: input [N, C, L]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -290,7 +290,7 @@ impl AvgPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -311,7 +311,7 @@ impl AvgPool2D {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AvgPool2D: input [N, C, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -335,7 +335,7 @@ impl AvgPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -356,7 +356,7 @@ impl AvgPool3D {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // AvgPool3D: input [N, C, D, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -381,7 +381,7 @@ impl AvgPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "mean")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -402,7 +402,7 @@ impl MaxPool1D {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // MaxPool1D: input [N, C, L]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -422,7 +422,7 @@ impl MaxPool1D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -443,7 +443,7 @@ impl MaxPool2D {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // MaxPool2D: input [N, C, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -467,7 +467,7 @@ impl MaxPool2D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }
@@ -488,7 +488,7 @@ impl MaxPool3D {
         }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // MaxPool3D: input [N, C, D, H, W]
         let input_shape = input.shape();
         let rank = input_shape.ndim();
@@ -513,7 +513,7 @@ impl MaxPool3D {
         input.reduce_window(&window_shape, &strides, &padding, "max")
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         vec![]
     }
 }

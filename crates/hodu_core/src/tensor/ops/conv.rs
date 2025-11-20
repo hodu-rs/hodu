@@ -4,7 +4,7 @@ use crate::{
     ops::{ConvOp, Op, OpParams},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -122,7 +122,7 @@ impl Tensor {
                 })
             })?;
 
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Conv(ConvOp::Conv1d);
@@ -258,7 +258,7 @@ impl Tensor {
                 })
             })?;
 
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Conv(ConvOp::Conv2d);
@@ -401,7 +401,7 @@ impl Tensor {
                 })
             })?;
 
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Conv(ConvOp::Conv3d);
@@ -546,7 +546,7 @@ impl Tensor {
                 })
             })?;
 
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Conv(ConvOp::ConvTranspose1d);
@@ -694,7 +694,7 @@ impl Tensor {
                 })
             })?;
 
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Conv(ConvOp::ConvTranspose2d);
@@ -850,7 +850,7 @@ impl Tensor {
                 })
             })?;
 
-            let result = from_storage(storage, result_layout, true, requires_grad);
+            let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
                 let op = Op::Conv(ConvOp::ConvTranspose3d);
@@ -963,7 +963,7 @@ impl Tensor {
             })?;
 
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let result = from_storage(storage, result_layout, true, false);
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }
@@ -1055,7 +1055,7 @@ impl Tensor {
             })?;
 
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let result = from_storage(storage, result_layout, true, false);
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }
@@ -1148,7 +1148,7 @@ impl Tensor {
             })?;
 
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let result = from_storage(storage, result_layout, true, false);
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }
@@ -1239,7 +1239,7 @@ impl Tensor {
             })?;
 
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let result = from_storage(storage, result_layout, true, false);
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }
@@ -1331,7 +1331,7 @@ impl Tensor {
             })?;
 
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let result = from_storage(storage, result_layout, true, false);
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }
@@ -1424,7 +1424,7 @@ impl Tensor {
             })?;
 
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let result = from_storage(storage, result_layout, true, false);
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }

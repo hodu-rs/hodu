@@ -13,7 +13,7 @@ impl Dropout {
         Dropout { p: p.into() }
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // Only apply dropout in training mode
         if get_state() == State::Evaluation {
             return Ok(input.clone());

@@ -97,7 +97,7 @@ pub fn execute(compiled: &CompiledModule, inputs: ExecutionInputs<'_>) -> HoduRe
             .ok_or_else(|| HoduError::ExecutionError(format!("missing layout for output: {}", name)))?
             .clone();
 
-        let tensor = from_storage((**storage).clone(), layout, true, false);
+        let tensor = from_storage((**storage).clone(), layout, true, false, None);
         outputs.insert(name.clone(), tensor);
     }
 

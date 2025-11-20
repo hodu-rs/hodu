@@ -3,7 +3,7 @@ use crate::{
     layer::compat::*,
     ops::{CastOp, MemoryOp, Op, OpParams},
     script::builder,
-    tensor::{create_builder_tensor, from_storage, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage_with_context, register_operation_in_builder, Tensor},
     types::{DType, Device, Layout},
     utils::valid::validate_dtype_for_device,
 };
@@ -36,7 +36,7 @@ impl Tensor {
             let storage = self.with_storage(|storage| storage.to_dtype(&self.layout(), dtype))?;
             let layout = Layout::from_shape(&self.shape());
 
-            let result = from_storage(storage, layout, true, false);
+            let result = from_storage_with_context(storage, layout, true, false);
 
             Ok(result)
         }
@@ -51,7 +51,7 @@ impl Tensor {
             let layout = Layout::from_shape(&self.shape());
             let storage = self.with_storage(|storage| storage.to_device(&layout, device))?;
 
-            let result = from_storage(storage, layout, true, false);
+            let result = from_storage_with_context(storage, layout, true, false);
 
             Ok(result)
         }
@@ -81,16 +81,27 @@ impl Tensor {
             let storage = self.with_storage(|storage| storage.contiguous(&self.layout()))?;
             let layout = Layout::from_shape(&self.shape());
 
-            let result = from_storage(storage, layout, true, false);
+            let result = from_storage_with_context(storage, layout, true, false);
 
             Ok(result)
         }
     }
 
     pub fn set_(&mut self, src: &Self) -> HoduResult<()> {
-        // Clone src (increments ref_count) and assign to self
-        // Old self is automatically dropped (decrements its ref_count)
-        *self = src.clone();
+        // Replace storage of self with src's storage, preserving TensorId and gradient
+        use crate::tensor::{with_tensor, with_tensor_mut};
+
+        // Get src's storage (clone the Arc)
+        let src_storage = with_tensor(src.id(), |t| t.storage.clone()).ok_or(HoduError::TensorNotFound(src.id()))?;
+
+        let src_layout = src.layout().clone();
+
+        // Update self's storage and layout, keeping TensorId and gradient
+        with_tensor_mut(self.id(), |tensor_ref| {
+            tensor_ref.storage = src_storage;
+            tensor_ref.layout = src_layout;
+        })
+        .ok_or(HoduError::TensorNotFound(self.id()))?;
 
         Ok(())
     }

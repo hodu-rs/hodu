@@ -55,7 +55,7 @@ impl Conv1D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // Conv1D: input [N, Ci, L], weight [Co, Ci, K]
         let output = input.conv1d(&self.weight, self.stride, self.padding, self.dilation)?;
 
@@ -70,7 +70,7 @@ impl Conv1D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);
@@ -130,7 +130,7 @@ impl Conv2D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // Conv2D: input [N, Ci, H, W], weight [Co, Ci, Kh, Kw]
         let output = input.conv2d(&self.weight, self.stride, self.padding, self.dilation)?;
 
@@ -145,7 +145,7 @@ impl Conv2D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);
@@ -209,7 +209,7 @@ impl Conv3D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // Conv3D: input [N, Ci, D, H, W], weight [Co, Ci, Kd, Kh, Kw]
         let output = input.conv3d(&self.weight, self.stride, self.padding, self.dilation)?;
 
@@ -224,7 +224,7 @@ impl Conv3D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);
@@ -287,7 +287,7 @@ impl ConvTranspose1D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // ConvTranspose1D: input [N, Ci, L], weight [Ci, Co, K]
         let output = input.conv_transpose1d(
             &self.weight,
@@ -308,7 +308,7 @@ impl ConvTranspose1D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);
@@ -371,7 +371,7 @@ impl ConvTranspose2D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // ConvTranspose2D: input [N, Ci, H, W], weight [Ci, Co, Kh, Kw]
         let output = input.conv_transpose2d(
             &self.weight,
@@ -392,7 +392,7 @@ impl ConvTranspose2D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);
@@ -459,7 +459,7 @@ impl ConvTranspose3D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         // ConvTranspose3D: input [N, Ci, D, H, W], weight [Ci, Co, Kd, Kh, Kw]
         let output = input.conv_transpose3d(
             &self.weight,
@@ -480,7 +480,7 @@ impl ConvTranspose3D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = vec![&mut self.weight];
         if let Some(ref mut bias) = self.bias {
             params.push(bias);

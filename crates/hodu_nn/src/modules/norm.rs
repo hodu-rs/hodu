@@ -53,7 +53,7 @@ impl BatchNorm1D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let input_shape = input.shape();
 
         if get_state() == State::Training {
@@ -167,7 +167,7 @@ impl BatchNorm1D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = Vec::new();
         if self.affine {
             if let Some(ref mut gamma) = self.gamma {
@@ -231,7 +231,7 @@ impl BatchNorm2D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let input_shape = input.shape();
 
         if input_shape.ndim() != 4 {
@@ -309,7 +309,7 @@ impl BatchNorm2D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = Vec::new();
         if self.affine {
             if let Some(ref mut gamma) = self.gamma {
@@ -373,7 +373,7 @@ impl BatchNorm3D {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let input_shape = input.shape();
 
         if input_shape.ndim() != 5 {
@@ -451,7 +451,7 @@ impl BatchNorm3D {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = Vec::new();
         if self.affine {
             if let Some(ref mut gamma) = self.gamma {
@@ -504,7 +504,7 @@ impl LayerNorm {
         })
     }
 
-    pub fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
         let input_shape = input.shape();
         let input_rank = input_shape.ndim();
         let norm_rank = self.normalized_shape.len();
@@ -552,7 +552,7 @@ impl LayerNorm {
         }
     }
 
-    pub fn parameters(&mut self) -> Vec<&mut Tensor> {
+    fn parameters(&mut self) -> Vec<&mut Tensor> {
         let mut params = Vec::new();
         if self.elementwise_affine {
             if let Some(ref mut gamma) = self.gamma {

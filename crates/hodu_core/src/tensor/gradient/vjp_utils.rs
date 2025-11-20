@@ -160,14 +160,12 @@ pub fn create_zeros_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     let shape = tensor_a.shape();
     let dtype = tensor_a.dtype();
-    let zeros_tensor = Tensor::zeros(&shape, dtype)?;
-    Ok(zeros_tensor.id())
+    Tensor::zeros(&shape, dtype).map(|t| t.id())
 }
 
 pub fn create_ones_like_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     let shape = tensor_a.shape();
     let dtype = tensor_a.dtype();
-    let ones_tensor = Tensor::ones(&shape, dtype)?;
-    Ok(ones_tensor.id())
+    Tensor::ones(&shape, dtype).map(|t| t.id())
 }

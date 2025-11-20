@@ -4,7 +4,7 @@ use crate::{
     ops::{Op, OpParams, UnaryLogicalOp, UnaryOp, UnaryScalarOp},
     scalar::Scalar,
     script::builder,
-    tensor::{create_builder_tensor, from_storage, gradient, register_operation_in_builder, Tensor},
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
     types::Layout,
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -43,7 +43,7 @@ macro_rules! unary_op {
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
                 let layout = Layout::from_shape(&self.shape());
 
-                let result = from_storage(storage, layout, true, requires_grad);
+                let result = from_storage_with_context(storage, layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
                     let op = Op::Unary(UnaryOp::$op_name);
@@ -84,7 +84,7 @@ macro_rules! unary_logical_op {
 
                 let layout = Layout::from_shape(&self.shape());
 
-                let result = from_storage(storage, layout, true, false);
+                let result = from_storage_with_context(storage, layout, true, false);
 
                 Ok(result)
             }
@@ -140,7 +140,7 @@ macro_rules! unary_scalar_op {
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
                 let layout = Layout::from_shape(&self.shape());
 
-                let result = from_storage(storage, layout, true, requires_grad);
+                let result = from_storage_with_context(storage, layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
                     let op = Op::UnaryScalar(UnaryScalarOp::$op_name);

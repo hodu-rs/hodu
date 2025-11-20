@@ -16,7 +16,7 @@ use crate::{
 pub use creation::{get_runtime_device, set_runtime_device};
 #[cfg(feature = "std")]
 use dashmap::DashMap;
-pub use gradient::{is_computing_gradients, GradientContext};
+pub use gradient::{is_computing_gradients, is_in_optimizer_step, set_optimizer_step_flag, ContextId, GradientContext};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -47,101 +47,108 @@ impl AsRef<Tensor> for Tensor {
 
 impl Clone for Tensor {
     fn clone(&self) -> Self {
-        // Increment reference count and mark as unmanaged (user is explicitly holding this tensor)
-        #[cfg(feature = "std")]
-        {
-            if let Some(tensor_ref) = TENSORS.get(&self.0) {
-                tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
-                tensor_ref.is_managed.store(false, Ordering::Relaxed);
-            }
+        // Increment reference count if tensor still exists
+        // If it doesn't exist, it's already been cleaned up and we shouldn't clone it
+        // But since we're just copying TensorId, it's safe to create the handle
+        if let Some(()) = with_tensor(self.0, |t| {
+            t.ref_count.fetch_add(1, Ordering::Relaxed);
+        }) {
+            // Tensor exists, ref_count incremented
         }
-        #[cfg(not(feature = "std"))]
-        {
-            let tensors = TENSORS.read();
-            if let Some(tensor_ref) = tensors.get(&self.0) {
-                tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
-                tensor_ref.is_managed.store(false, Ordering::Relaxed);
-            }
-        }
+        // Note: Even if tensor was removed, we return a new handle
+        // The next access will fail with TensorNotFound error
         Tensor(self.0)
     }
 }
 
 impl Drop for Tensor {
     fn drop(&mut self) {
-        // Skip cleanup during gradient computation to avoid premature removal
-        // Tensors are kept alive in gradient.rs's keep_alive Vec and will be
-        // properly cleaned up after IS_COMPUTING_GRADIENTS is set to false
-        if gradient::is_computing_gradients() {
-            return;
-        }
+        // Always decrement ref_count for accurate tracking
+        let (should_remove, should_cleanup_tape, grad_id) = with_tensor(self.0, |t| {
+            let prev_count = t.ref_count.load(Ordering::Relaxed);
 
-        let tensor_id = self.0;
-
-        #[cfg(feature = "std")]
-        {
-            if let Some(tensor_ref) = TENSORS.get(&tensor_id) {
-                // Managed tensors are not dropped - they're cleaned up by gradient tape
-                if tensor_ref.is_managed.load(Ordering::Relaxed) {
-                    return;
-                }
-
-                let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
-                if prev_count == 1 {
-                    // Last reference - trigger cascade cleanup
-                    drop(tensor_ref);
-                    gradient::cleanup_dropped_tensor(tensor_id);
-                    // Now remove from global HashMap
-                    TENSORS.remove(&tensor_id);
-
-                    // Increment removal counter and shrink periodically
-                    let removals = REMOVAL_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
-                    // Shrink every 256 removals to avoid fragmentation
-                    if removals.is_multiple_of(256) {
-                        TENSORS.shrink_to_fit();
-                    }
-                }
+            // Only decrement if > 0 to avoid underflow
+            if prev_count > 0 {
+                t.ref_count.fetch_sub(1, Ordering::Relaxed);
             }
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            let should_remove = {
-                let tensors = TENSORS.read();
-                if let Some(tensor_ref) = tensors.get(&tensor_id) {
-                    let is_managed = tensor_ref.is_managed.load(Ordering::Relaxed);
-                    if is_managed {
-                        return; // Managed tensors are not dropped
-                    }
-                    let prev_count = tensor_ref.ref_count.fetch_sub(1, Ordering::Relaxed);
-                    prev_count == 1
-                } else {
-                    false
-                }
+
+            // Don't remove during gradient computation (managed by GradientComputationGuard)
+            let remove = if gradient::is_computing_gradients() {
+                false
+            } else {
+                // Remove if:
+                // 1. Last or already-zero reference (prev_count == 1 or 0)
+                //    prev_count==0 happens when VJP functions drop Tensor after extracting .id()
+                // 2. Runtime tensor (is_runtime == true)
+                // 3. NOT context-owned (owner_context == None)
+                // 4. NOT a gradient tensor (is_gradient == false)
+                (prev_count == 1 || prev_count == 0) && t.is_runtime && t.owner_context.is_none() && !t.is_gradient
             };
-            if should_remove {
-                gradient::cleanup_dropped_tensor(tensor_id);
-                let mut tensors = TENSORS.write();
-                tensors.remove(&tensor_id);
 
-                // Increment removal counter and shrink periodically
-                let removals = REMOVAL_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
-                // Shrink every 256 removals to avoid fragmentation
-                if removals % 256 == 0 {
-                    tensors.shrink_to_fit();
+            // Cleanup tape if:
+            // 1. Last reference (prevents cleanup on every clone drop)
+            // 2. Tensor requires grad (only these tensors are on the tape)
+            // 3. NOT context-owned (forward intermediates need to stay on tape)
+            // 4. NOT during gradient computation (tape is being used)
+            let cleanup =
+                prev_count == 1 && t.requires_grad && t.owner_context.is_none() && !gradient::is_computing_gradients();
+
+            (remove, cleanup, t.grad_tensor_id)
+        })
+        .unwrap_or((false, false, None));
+
+        if should_cleanup_tape {
+            gradient::cleanup_tape_for_dropped_tensor(self.0);
+        }
+
+        if should_remove {
+            // If this tensor has a gradient, decrement its ref_count and remove if necessary
+            if let Some(grad_id) = grad_id {
+                if let Some((should_remove_grad, should_cleanup_grad_tape)) = with_tensor(grad_id, |g| {
+                    let prev_count = g.ref_count.load(Ordering::Relaxed);
+                    if prev_count > 0 {
+                        g.ref_count.fetch_sub(1, Ordering::Relaxed);
+                    }
+                    let remove = (prev_count == 1 || prev_count == 0) && g.is_runtime && g.owner_context.is_none();
+                    let cleanup = (prev_count == 1 || prev_count == 0) && g.requires_grad && g.owner_context.is_none();
+                    (remove, cleanup)
+                }) {
+                    if should_cleanup_grad_tape {
+                        gradient::cleanup_tape_for_dropped_tensor(grad_id);
+                    }
+                    if should_remove_grad {
+                        remove(grad_id);
+                    }
                 }
             }
+
+            remove(self.0);
         }
     }
 }
 
 pub struct Tensor_ {
     storage: Option<Arc<BackendStorage>>,
-    is_runtime: bool,
     layout: Layout,
     requires_grad: bool,
     grad_tensor_id: Option<TensorId>,
+    is_runtime: bool,
+    /// Flag indicating this tensor is a gradient attached to a parameter
+    /// Gradient tensors should not be cleaned up by context cleanup
+    is_gradient: bool,
+    /// Owner context for memory management:
+    /// - None: User-created tensor (cleaned up when ref_count=0)
+    /// - Some(ContextId): Context-owned tensor (cleaned up on context drop)
+    owner_context: Option<ContextId>,
+    /// Reference count for tracking Tensor handles
     ref_count: AtomicUsize,
-    is_managed: AtomicBool, // True if tensor is managed by gradient tape (never held by user)
+}
+
+impl Tensor_ {
+    /// Get the owner context of this tensor
+    pub(crate) fn owner_context(&self) -> Option<ContextId> {
+        self.owner_context
+    }
 }
 
 #[cfg(feature = "std")]
@@ -159,13 +166,6 @@ static TENSORS: LazyLock<RwLock<HashMap<TensorId, Tensor_>>> = LazyLock::new(|| 
     RwLock::new(HashMap::new())
 });
 
-// Counter for tracking removals and triggering periodic shrinking
-#[cfg(feature = "std")]
-static REMOVAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-#[cfg(not(feature = "std"))]
-static REMOVAL_COUNTER: AtomicUsize = AtomicUsize::new(0);
-
 pub fn insert(tensor_id: TensorId, tensor_: Tensor_) {
     #[cfg(feature = "std")]
     {
@@ -178,7 +178,6 @@ pub fn insert(tensor_id: TensorId, tensor_: Tensor_) {
     }
 }
 
-// Check if a tensor exists in the global store
 pub fn exists(tensor_id: TensorId) -> bool {
     #[cfg(feature = "std")]
     {
@@ -188,6 +187,26 @@ pub fn exists(tensor_id: TensorId) -> bool {
     {
         let tensors = TENSORS.read();
         tensors.contains_key(&tensor_id)
+    }
+}
+
+pub(crate) fn remove(tensor_id: TensorId) {
+    // First, decrement ref_count of grad_tensor if exists
+    if let Some(Some(grad_id)) = with_tensor(tensor_id, |t| t.grad_tensor_id) {
+        with_tensor(grad_id, |t| {
+            t.ref_count.fetch_sub(1, Ordering::Relaxed);
+        });
+    }
+
+    // Then remove the tensor from TENSORS
+    #[cfg(feature = "std")]
+    {
+        TENSORS.remove(&tensor_id);
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let mut tensors = TENSORS.write();
+        tensors.remove(&tensor_id);
     }
 }
 
@@ -231,6 +250,18 @@ pub fn tensor_count() -> usize {
     {
         let tensors = TENSORS.read();
         tensors.len()
+    }
+}
+
+pub(crate) fn get_all_tensor_ids() -> Vec<TensorId> {
+    #[cfg(feature = "std")]
+    {
+        TENSORS.iter().map(|entry| *entry.key()).collect()
+    }
+    #[cfg(not(feature = "std"))]
+    {
+        let tensors = TENSORS.read();
+        tensors.keys().copied().collect()
     }
 }
 
@@ -417,7 +448,8 @@ impl Tensor {
     pub fn grad(&self) -> HoduResult<Self> {
         if let Some(result) = with_tensor(self.0, |tensor_ref| {
             if let Some(grad_id) = tensor_ref.grad_tensor_id {
-                Ok(Tensor(grad_id))
+                // Use tensor_from_id to properly increment ref_count
+                Ok(tensor_from_id(grad_id))
             } else {
                 Err(HoduError::GradientNotComputed(self.0))
             }
@@ -433,45 +465,124 @@ impl Tensor {
             return Ok(()); // No gradient to zero
         }
 
-        if let Ok(grad_tensor) = self.grad() {
-            let zeros = Self::zeros(grad_tensor.shape(), grad_tensor.dtype())?;
+        // Get old gradient ID and replace with None temporarily
+        let old_grad_id = with_tensor_mut(self.0, |tensor_ref| tensor_ref.grad_tensor_id.take());
+
+        // with_tensor_mut returns Option<Option<TensorId>>, need to unwrap both levels
+        if let Some(Some(old_grad_id)) = old_grad_id {
+            // Get shape and dtype from old gradient WITHOUT incrementing ref_count
+            let (shape, dtype) = with_tensor(old_grad_id, |t| {
+                let shape = t.layout.shape().to_vec();
+                let dtype = t.storage.as_ref().map(|s| s.dtype()).unwrap_or(DType::F32);
+                (shape, dtype)
+            })
+            .ok_or(HoduError::TensorNotFound(old_grad_id))?;
+
+            // Decrement ref_count of old gradient and check if it should be removed
+            let (should_remove, should_cleanup_tape) = with_tensor(old_grad_id, |t| {
+                let prev_count = t.ref_count.fetch_sub(1, Ordering::Relaxed);
+                let remove = prev_count == 1 && t.is_runtime && t.owner_context.is_none();
+                // Cleanup tape if it was the last reference and tensor requires grad
+                let cleanup = prev_count == 1 && t.requires_grad && t.owner_context.is_none();
+                (remove, cleanup)
+            })
+            .unwrap_or((false, false));
+
+            if should_cleanup_tape {
+                gradient::cleanup_tape_for_dropped_tensor(old_grad_id);
+            }
+
+            if should_remove {
+                remove(old_grad_id);
+            }
+
+            // Create zeros tensor with same shape
+            let zeros = Self::zeros(&shape, dtype)?;
+            let zeros_id = zeros.id();
+
+            // Mark as gradient tensor and increment ref_count BEFORE drop
+            // This ensures is_gradient=true is set atomically with ref_count increment
+            if let Some(()) = with_tensor_mut(zeros_id, |t| {
+                t.is_gradient = true;
+                t.ref_count.fetch_add(1, Ordering::Relaxed); // ref_count=2
+            }) {
+                // Successfully set is_gradient
+            } else {
+                return Err(HoduError::TensorNotFound(zeros_id));
+            }
 
             with_tensor_mut(self.0, |tensor_ref| {
-                tensor_ref.grad_tensor_id = Some(zeros.0);
+                tensor_ref.grad_tensor_id = Some(zeros_id);
             });
+
+            // zeros will drop here, decrementing ref_count back to 1
         }
 
         Ok(())
     }
 }
 
-pub(crate) fn from_storage(storage: BackendStorage, layout: Layout, is_runtime: bool, requires_grad: bool) -> Tensor {
+pub(crate) fn from_storage(
+    storage: BackendStorage,
+    layout: Layout,
+    is_runtime: bool,
+    requires_grad: bool,
+    owner_context: Option<ContextId>,
+) -> Tensor {
     let tensor_ = Tensor_ {
         storage: Some(Arc::new(storage)),
-        is_runtime,
         layout,
         requires_grad,
         grad_tensor_id: None,
+        is_runtime,
+        is_gradient: false,
+        owner_context,
         ref_count: AtomicUsize::new(1),
-        is_managed: AtomicBool::new(true),
     };
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);
     Tensor(tensor_id)
 }
 
+pub(crate) fn from_storage_with_context(
+    storage: BackendStorage,
+    layout: Layout,
+    is_runtime: bool,
+    requires_grad: bool,
+) -> Tensor {
+    let owner_context = if gradient::is_computing_gradients() {
+        None // Managed by GradientComputationGuard's keep_alive
+    } else if gradient::is_in_optimizer_step() {
+        None // Optimizer intermediate tensors should be cleaned up immediately
+    } else {
+        Some(gradient::get_active_context())
+    };
+    from_storage(storage, layout, is_runtime, requires_grad, owner_context)
+}
+
 pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, requires_grad: bool) -> Tensor {
     let storage_arc =
         with_tensor(source_tensor.id(), |tensor_ref| tensor_ref.storage.clone()).expect("Source tensor not found");
 
+    // Runtime tensors (operation results) should be owned by current context
+    // This ensures they are not removed until backward completes
+    let owner_context = if gradient::is_computing_gradients() {
+        None // Managed by GradientComputationGuard's keep_alive
+    } else if gradient::is_in_optimizer_step() {
+        None // Optimizer intermediate tensors should be cleaned up immediately
+    } else {
+        Some(gradient::get_active_context())
+    };
+
     let tensor_ = Tensor_ {
         storage: storage_arc,
-        is_runtime: true,
         layout,
         requires_grad,
         grad_tensor_id: None,
+        is_runtime: true,
+        is_gradient: false,
+        owner_context,
         ref_count: AtomicUsize::new(1),
-        is_managed: AtomicBool::new(true),
     };
 
     let tensor_id = TensorId::new();
@@ -482,12 +593,13 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
 pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
     let tensor_ = Tensor_ {
         storage: None,
-        is_runtime: false,
         layout,
         requires_grad,
         grad_tensor_id: None,
+        is_runtime: false,
+        is_gradient: false,
+        owner_context: None, // Builder tensors are user-created
         ref_count: AtomicUsize::new(1),
-        is_managed: AtomicBool::new(true), // Builder tensors (operation results) are managed
     };
     let tensor_id = TensorId::new();
     insert(tensor_id, tensor_);
@@ -511,24 +623,48 @@ pub(crate) fn register_operation_in_builder(
 }
 
 pub(crate) fn tensor_from_id(tensor_id: TensorId) -> Tensor {
-    // Increment reference count for the new handle
-    #[cfg(feature = "std")]
-    {
-        if let Some(tensor_ref) = TENSORS.get(&tensor_id) {
-            tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        let tensors = TENSORS.read();
-        if let Some(tensor_ref) = tensors.get(&tensor_id) {
-            tensor_ref.ref_count.fetch_add(1, Ordering::Relaxed);
-        }
-    }
+    // Increment ref_count for the new handle
+    with_tensor(tensor_id, |t| {
+        t.ref_count.fetch_add(1, Ordering::Relaxed);
+    });
     Tensor(tensor_id)
 }
 
 pub(crate) fn set_grad_tensor_id(tensor_id: TensorId, grad_tensor_id: TensorId) -> HoduResult<()> {
+    // Increment ref_count for the new gradient tensor (but don't set is_gradient)
+    // is_gradient should only be set for parameter gradients in zero_grad()
+    if let Some(()) = with_tensor_mut(grad_tensor_id, |t| {
+        t.ref_count.fetch_add(1, Ordering::Relaxed);
+    }) {
+        // Successfully incremented ref_count
+    } else {
+        return Err(HoduError::TensorNotFound(grad_tensor_id));
+    }
+
+    // Get old gradient ID (if exists) - must release lock before modifying ref_count
+    let old_grad_id = with_tensor(tensor_id, |tensor_ref| tensor_ref.grad_tensor_id);
+
+    // Decrement ref_count of old gradient and remove if necessary
+    if let Some(Some(old_grad_id)) = old_grad_id {
+        let (should_remove, should_cleanup_tape) = with_tensor(old_grad_id, |t| {
+            let prev_count = t.ref_count.fetch_sub(1, Ordering::Relaxed);
+            let remove = prev_count == 1 && t.is_runtime && t.owner_context.is_none();
+            // Cleanup tape if it was the last reference and tensor requires grad
+            let cleanup = prev_count == 1 && t.requires_grad && t.owner_context.is_none();
+            (remove, cleanup)
+        })
+        .unwrap_or((false, false));
+
+        if should_cleanup_tape {
+            gradient::cleanup_tape_for_dropped_tensor(old_grad_id);
+        }
+
+        if should_remove {
+            remove(old_grad_id);
+        }
+    }
+
+    // Now set new gradient
     if let Some(result) = with_tensor_mut(tensor_id, |tensor_ref| {
         tensor_ref.grad_tensor_id = Some(grad_tensor_id);
         Ok(())
