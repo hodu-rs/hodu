@@ -19,8 +19,8 @@ internal_crates=(
 
 # Public crates (published after internal crates)
 public_crates=(
-    hodu
     hodu-cli
+    hodu-lib
 )
 
 if [ -n "$(git status --porcelain)" ]; then

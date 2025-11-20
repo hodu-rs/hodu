@@ -1,1 +1,1 @@
-# hodu-cli
+# Hodu CLI
