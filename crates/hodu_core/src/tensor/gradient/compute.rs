@@ -127,11 +127,13 @@ struct GradientComputationGuard {
 }
 
 impl GradientComputationGuard {
-    fn new_with_capacity(capacity: usize) -> Self {
+    fn new_with_capacity(_capacity: usize) -> Self {
         set_computing_gradients(true);
-        Self {
-            keep_alive: HashMap::with_capacity(capacity),
-        }
+        #[cfg(feature = "std")]
+        let keep_alive = HashMap::with_capacity(_capacity);
+        #[cfg(not(feature = "std"))]
+        let keep_alive = HashMap::new();
+        Self { keep_alive }
     }
 
     fn keep(&mut self, tensor: Tensor) {

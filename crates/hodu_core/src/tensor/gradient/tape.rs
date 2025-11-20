@@ -1,6 +1,8 @@
 use super::core::ContextId;
+#[cfg(feature = "std")]
+use crate::error::HoduError;
 use crate::{
-    error::{HoduError, HoduResult},
+    error::HoduResult,
     layer::compat::*,
     ops::{Op, OpParams},
     tensor::TensorId,

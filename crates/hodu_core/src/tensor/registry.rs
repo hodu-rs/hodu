@@ -77,8 +77,7 @@ pub fn shrink_tensor_storage() {
     }
     #[cfg(not(feature = "std"))]
     {
-        let mut tensors = TENSORS.write();
-        tensors.shrink_to_fit();
+        // BTreeMap doesn't support shrink_to_fit
     }
 }
 
