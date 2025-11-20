@@ -24,7 +24,6 @@ hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.2.4" }
 hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.2.4" }
 hodu_nn = { path = "crates/hodu_nn", version = "0.2.4" }
 hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
-hodu_script = { path = "crates/hodu_script", version = "0.2.4" }
 hodu_utils = { path = "crates/hodu_utils", version = "0.2.4" }
 hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.4" }
 hodu_xla = "0.4.7"
