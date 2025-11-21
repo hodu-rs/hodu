@@ -2,33 +2,27 @@ use super::VjpCompute;
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::WindowingOp,
+    ops::{OpParams, ReduceWindowParams, WindowingOp},
     scalar::Scalar,
     tensor::{tensor_from_id, TensorId},
 };
 
 impl VjpCompute for WindowingOp {
-    fn compute_vjp_with_scalars(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        scalars: &[Scalar],
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
-        // Parameters: rank, window_shape[rank], strides[rank], padding[rank*2]
-        if scalars.is_empty() {
-            return Err(HoduError::InternalError("ReduceWindow requires parameters".to_string()));
-        }
-
-        let rank = scalars[0].to_usize();
-        if scalars.len() < 1 + rank * 4 {
-            return Err(HoduError::InternalError(
-                "ReduceWindow requires sufficient parameters".to_string(),
+        let OpParams::ReduceWindow(ReduceWindowParams {
+            window_shape, strides, ..
+        }) = op_params
+        else {
+            return Err(HoduError::VjpFunctionNotFound(
+                "WindowingOp requires ReduceWindowParams".to_string(),
             ));
-        }
-
-        // Extract window_shape
-        let window_shape: Vec<usize> = (0..rank).map(|i| scalars[1 + i].to_usize()).collect();
+        };
 
         let input = inputs[0];
         let input_tensor = tensor_from_id(input);
@@ -40,9 +34,6 @@ impl VjpCompute for WindowingOp {
                 // For max/min pooling, gradient flows only through positions that were max/min
                 // Upsample both output and gradient by repeating each element by stride amount
 
-                // Extract strides
-                let strides: Vec<usize> = (0..rank).map(|i| scalars[1 + rank + i].to_usize()).collect();
-
                 // Upsample output
                 let output_tensor = tensor_from_id(_output);
                 let mut upsampled_output = output_tensor.clone();
@@ -52,7 +43,8 @@ impl VjpCompute for WindowingOp {
                 let mut upsampled_grad = grad_tensor.clone();
 
                 // For each dimension, if stride > 1, insert a dimension after it and broadcast
-                for (dim_idx, &stride) in strides.iter().enumerate().rev() {
+                for (dim_idx, stride) in strides.iter().enumerate().rev() {
+                    let stride = *stride;
                     if stride > 1 {
                         // Upsample output
                         let current_shape = upsampled_output.shape();
@@ -92,13 +84,12 @@ impl VjpCompute for WindowingOp {
             },
             WindowingOp::ReduceWindowMean => {
                 // Mean: divide by window size and upsample gradient
-                let strides: Vec<usize> = (0..rank).map(|i| scalars[1 + rank + i].to_usize()).collect();
-
                 let grad_tensor = tensor_from_id(grad_output);
                 let mut upsampled_grad = grad_tensor.clone();
 
                 // Upsample gradient same way as Max/Min
-                for (dim_idx, &stride) in strides.iter().enumerate().rev() {
+                for (dim_idx, stride) in strides.iter().enumerate().rev() {
+                    let stride = *stride;
                     if stride > 1 {
                         let current_shape = upsampled_grad.shape();
                         let current_dims = current_shape.dims();
@@ -126,13 +117,12 @@ impl VjpCompute for WindowingOp {
             },
             WindowingOp::ReduceWindowSum => {
                 // Sum: just upsample gradient
-                let strides: Vec<usize> = (0..rank).map(|i| scalars[1 + rank + i].to_usize()).collect();
-
                 let grad_tensor = tensor_from_id(grad_output);
                 let mut upsampled_grad = grad_tensor.clone();
 
                 // Upsample gradient same way as Max/Min
-                for (dim_idx, &stride) in strides.iter().enumerate().rev() {
+                for (dim_idx, stride) in strides.iter().enumerate().rev() {
+                    let stride = *stride;
                     if stride > 1 {
                         let current_shape = upsampled_grad.shape();
                         let current_dims = current_shape.dims();

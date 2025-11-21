@@ -1,10 +1,13 @@
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{Op, OpParams, ShapeOp, ShapeScalarsOp},
+    ops::{
+        BroadcastParams, FlattenParams, Op, OpParams, PermuteParams, ReshapeParams, ShapeOp, ShapeScalarsOp,
+        SliceParams, SqueezeParams, TransposeParams, UnsqueezeParams,
+    },
     scalar::Scalar,
-    script::builder,
-    tensor::{create_builder_tensor, from_shared_storage_with, gradient, register_operation_in_builder, Tensor},
+    script::capture,
+    tensor::{create_builder_tensor, from_shared_storage_with, gradient, Tensor},
     types::Shape,
 };
 
@@ -31,20 +34,25 @@ impl Tensor {
         let new_layout = current_layout.reshape(&shape)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Reshape),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Reshape), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Reshape),
+                    OpParams::Reshape(ReshapeParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -52,8 +60,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Reshape);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Reshape),
+                    OpParams::Reshape(ReshapeParams),
+                )?;
             }
 
             Ok(result)
@@ -74,20 +86,25 @@ impl Tensor {
         let new_layout = current_layout.flatten()?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Flatten),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Flatten), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Flatten),
+                    OpParams::Flatten(FlattenParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -95,8 +112,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Flatten);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Flatten),
+                    OpParams::Flatten(FlattenParams),
+                )?;
             }
 
             Ok(result)
@@ -121,20 +142,25 @@ impl Tensor {
         let new_layout = current_layout.squeeze(&dims_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Squeeze),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Squeeze), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Squeeze),
+                    OpParams::Squeeze(SqueezeParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -142,8 +168,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Squeeze);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Squeeze),
+                    OpParams::Squeeze(SqueezeParams),
+                )?;
             }
 
             Ok(result)
@@ -163,20 +193,25 @@ impl Tensor {
         let new_layout = current_layout.unsqueeze(dim_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Unsqueeze),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Unsqueeze), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Unsqueeze),
+                    OpParams::Unsqueeze(UnsqueezeParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -184,8 +219,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Unsqueeze);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Unsqueeze),
+                    OpParams::Unsqueeze(UnsqueezeParams),
+                )?;
             }
 
             Ok(result)
@@ -203,20 +242,25 @@ impl Tensor {
         let new_layout = current_layout.broadcast_to(&target_shape)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Broadcast),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Broadcast), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Broadcast),
+                    OpParams::Broadcast(BroadcastParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -224,8 +268,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Broadcast);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Broadcast),
+                    OpParams::Broadcast(BroadcastParams),
+                )?;
             }
 
             Ok(result)
@@ -261,20 +309,25 @@ impl Tensor {
         let new_layout = current_layout.transpose(dim1_i32, dim2_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Transpose),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Transpose), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Transpose),
+                    OpParams::Transpose(TransposeParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -282,8 +335,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Transpose);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Transpose),
+                    OpParams::Transpose(TransposeParams),
+                )?;
             }
 
             Ok(result)
@@ -312,20 +369,25 @@ impl Tensor {
         let new_layout = current_layout.permute(&axes_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Shape(ShapeOp::Permute),
                 None,
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Shape(ShapeOp::Permute), vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result_id,
+                    Op::Shape(ShapeOp::Permute),
+                    OpParams::Permute(PermuteParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -333,8 +395,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Shape(ShapeOp::Permute);
-                gradient::record_operation(result.id(), op, vec![self.id()])?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::Shape(ShapeOp::Permute),
+                    OpParams::Permute(PermuteParams),
+                )?;
             }
 
             Ok(result)
@@ -414,30 +480,32 @@ impl Tensor {
         let new_layout = current_layout.slice(dim_i32, start_i32, end_i32, step_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if builder::is_builder_active() {
+        let end_scalar = Scalar::from(end_i32.unwrap_or(i32::MAX));
+        let op_params = OpParams::Slice(SliceParams {
+            dim: dim_scalar,
+            start: start_scalar,
+            end: end_scalar,
+            step: step_scalar,
+        });
+
+        if capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
 
-            let end_scalar = Scalar::from(end_i32.unwrap_or(i32::MAX));
-            let scalars = vec![dim_scalar, start_scalar, end_scalar, step_scalar];
-
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::ShapeScalars(ShapeScalarsOp::Slice),
-                Some(OpParams {
-                    scalars: scalars.clone(),
-                    ..Default::default()
-                }),
+                Some(op_params.clone()),
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![current_layout],
-                vec![new_layout],
+                new_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_scalars(
+                gradient::record_operation(
+                    vec![self.id()],
                     result_id,
                     Op::ShapeScalars(ShapeScalarsOp::Slice),
-                    vec![self.id()],
-                    scalars,
+                    op_params,
                 )?;
             }
 
@@ -446,10 +514,12 @@ impl Tensor {
             let result = from_shared_storage_with(self, new_layout, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::ShapeScalars(ShapeScalarsOp::Slice);
-                let end_scalar = Scalar::from(end_i32.unwrap_or(i32::MAX));
-                let scalars = vec![dim_scalar, start_scalar, end_scalar, step_scalar];
-                gradient::record_operation_with_scalars(result.id(), op, vec![self.id()], scalars)?;
+                gradient::record_operation(
+                    vec![self.id()],
+                    result.id(),
+                    Op::ShapeScalars(ShapeScalarsOp::Slice),
+                    op_params,
+                )?;
             }
 
             Ok(result)

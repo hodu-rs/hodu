@@ -1,9 +1,9 @@
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{MatrixOp, Op},
-    script::builder,
-    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
+    ops::{DotParams, MatmulParams, MatrixOp, Op, OpParams},
+    script::capture,
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -178,21 +178,26 @@ impl Tensor {
         let lhs_layout = lhs_broadcasted.layout();
         let rhs_layout = rhs_broadcasted.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Matrix(MatrixOp::Matmul),
-                None,
+                Some(OpParams::Matmul(MatmulParams)),
                 vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
-                vec![result_id],
+                result_id,
                 vec![lhs_layout, rhs_layout],
-                vec![result_layout],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Matrix(MatrixOp::Matmul), vec![self.id(), other.id()])?;
+                gradient::record_operation(
+                    vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
+                    result_id,
+                    Op::Matrix(MatrixOp::Matmul),
+                    OpParams::Matmul(MatmulParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -208,8 +213,12 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Matrix(MatrixOp::Matmul);
-                gradient::record_operation(result.id(), op, vec![self.id(), other.id()])?;
+                gradient::record_operation(
+                    vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
+                    result.id(),
+                    Op::Matrix(MatrixOp::Matmul),
+                    OpParams::Matmul(MatmulParams),
+                )?;
             }
 
             Ok(result)
@@ -316,21 +325,26 @@ impl Tensor {
         let self_layout = self.layout();
         let other_layout = other.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Matrix(MatrixOp::Dot),
-                None,
+                Some(OpParams::Dot(DotParams)),
                 vec![self.id(), other.id()],
-                vec![result_id],
+                result_id,
                 vec![self_layout, other_layout],
-                vec![result_layout],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation(result_id, Op::Matrix(MatrixOp::Dot), vec![self.id(), other.id()])?;
+                gradient::record_operation(
+                    vec![self.id(), other.id()],
+                    result_id,
+                    Op::Matrix(MatrixOp::Dot),
+                    OpParams::Dot(DotParams),
+                )?;
             }
 
             Ok(result_tensor)
@@ -346,8 +360,12 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Matrix(MatrixOp::Dot);
-                gradient::record_operation(result.id(), op, vec![self.id(), other.id()])?;
+                gradient::record_operation(
+                    vec![self.id(), other.id()],
+                    result.id(),
+                    Op::Matrix(MatrixOp::Dot),
+                    OpParams::Dot(DotParams),
+                )?;
             }
 
             Ok(result)

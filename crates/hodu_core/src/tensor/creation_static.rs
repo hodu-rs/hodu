@@ -1,7 +1,7 @@
 use crate::{
     compat::AtomicUsize,
     error::{HoduError, HoduResult},
-    script::builder::{get_active_builder, is_builder_active},
+    script::capture::{get_active_board, is_active},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::{DType, Layout, Shape},
 };
@@ -9,7 +9,7 @@ use crate::{
 impl Tensor {
     pub fn input(name: &'static str, shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        if !is_builder_active() {
+        if !is_active() {
             return Err(HoduError::BuilderNotActive);
         }
 
@@ -30,8 +30,8 @@ impl Tensor {
 
         let tensor = Tensor(tensor_id);
 
-        let active_builder = get_active_builder()?;
-        active_builder.add_input(name, tensor.clone())?;
+        let active_board = get_active_board()?;
+        active_board.add_input(name, tensor.clone())?;
 
         Ok(tensor)
     }

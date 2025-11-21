@@ -21,8 +21,8 @@ pub use registry::{exists, get, shrink_tensor_storage, tensor_count, with_tensor
 
 // Re-export internal functions for crate use
 pub(crate) use internal::{
-    create_builder_tensor, from_shared_storage_with, from_storage, from_storage_with_context,
-    register_operation_in_builder, set_grad_tensor_id, tensor_from_id,
+    create_builder_tensor, from_shared_storage_with, from_storage, from_storage_with_context, set_grad_tensor_id,
+    tensor_from_id,
 };
 
 // Re-export for submodules

@@ -2,12 +2,18 @@ use super::{vjp_utils::*, VjpCompute};
 use crate::{
     compat::*,
     error::HoduResult,
-    ops::MatrixOp,
+    ops::{MatrixOp, OpParams},
     tensor::{tensor_from_id, TensorId},
 };
 
 impl VjpCompute for MatrixOp {
-    fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
+    fn compute_vjp(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        _op_params: &OpParams,
+    ) -> HoduResult<Vec<TensorId>> {
         match self {
             MatrixOp::Matmul => {
                 // For matmul (ND batched with broadcasting):

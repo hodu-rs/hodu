@@ -28,10 +28,7 @@ mod vjp_unary;
 mod vjp_utils;
 mod vjp_windowing;
 
-pub use compute::{
-    compute_gradients, record_operation, record_operation_with_dims, record_operation_with_scalar,
-    record_operation_with_scalars, record_operation_with_split_info,
-};
+pub use compute::{compute_gradients, record_operation};
 pub use context::GradientContext;
 pub use core::{is_computing_gradients, is_in_optimizer_step, set_optimizer_step_flag, ContextId};
 

@@ -1,10 +1,10 @@
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{ConcatOp, Op, OpParams, SplitOp},
+    ops::{ConcatOp, ConcatParams, Op, OpParams, SplitOp, SplitParams},
     scalar::Scalar,
-    script::builder,
-    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
+    script::capture,
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::{Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
@@ -56,32 +56,25 @@ impl Tensor {
             output_dims[dim_usize] += dims[dim_usize];
         }
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
-            register_operation_in_builder(
+            let op_params = OpParams::Concat(ConcatParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Concat(ConcatOp::Concat),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
+                Some(op_params.clone()),
                 input_ids.clone(),
-                vec![result_id],
+                result_id,
                 layouts.clone(),
-                vec![result_layout],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
-                    result_id,
-                    Op::Concat(ConcatOp::Concat),
-                    input_ids,
-                    vec![dim_scalar],
-                    None,
-                )?;
+                gradient::record_operation(input_ids, result_id, Op::Concat(ConcatOp::Concat), op_params)?;
             }
 
             Ok(result_tensor)
@@ -103,9 +96,13 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Concat(ConcatOp::Concat);
                 let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
-                gradient::record_operation_with_dims(result.id(), op, input_ids, vec![dim_scalar], None)?;
+                gradient::record_operation(
+                    input_ids,
+                    result.id(),
+                    Op::Concat(ConcatOp::Concat),
+                    OpParams::Concat(ConcatParams { dim: dim_scalar }),
+                )?;
             }
 
             Ok(result)
@@ -152,11 +149,10 @@ impl Tensor {
         let shape_dims = shape.dims();
         let requires_grad = self.is_requires_grad() && validate_requires_grad;
 
-        // Prepare params for gradient: [dim, size1, size2, ...]
-        let mut params = vec![dim_scalar];
-        params.extend(sizes.iter().map(|&s| Scalar::from(s)));
+        // Prepare sizes as Scalars
+        let sizes_scalars: Vec<Scalar> = sizes.iter().map(|&s| Scalar::from(s)).collect();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let mut results = Vec::new();
 
             // Create all output tensors first
@@ -182,28 +178,26 @@ impl Tensor {
                 })
                 .collect();
 
-            register_operation_in_builder(
-                Op::Split(SplitOp::Split),
-                Some(OpParams {
-                    scalars: params.clone(),
-                    ..Default::default()
-                }),
-                vec![self.id()],
-                output_ids.clone(),
-                vec![self.layout()],
-                output_layouts,
-            )?;
+            // Register each split output separately with its own output_index
+            for (output_index, (&result_id, output_layout)) in output_ids.iter().zip(output_layouts.iter()).enumerate()
+            {
+                let op_params = OpParams::Split(SplitParams {
+                    dim: dim_scalar,
+                    sizes: sizes_scalars.clone(),
+                    output_index,
+                });
 
-            // Record gradient for each output
-            if requires_grad {
-                for (output_index, &result_id) in output_ids.iter().enumerate() {
-                    gradient::record_operation_with_split_info(
-                        result_id,
-                        Op::Split(SplitOp::Split),
-                        vec![self.id()],
-                        params.clone(),
-                        output_index,
-                    )?;
+                capture::capture_operation(
+                    Op::Split(SplitOp::Split),
+                    Some(op_params.clone()),
+                    vec![self.id()],
+                    result_id,
+                    vec![self.layout()],
+                    output_layout.clone(),
+                )?;
+
+                if requires_grad {
+                    gradient::record_operation(vec![self.id()], result_id, Op::Split(SplitOp::Split), op_params)?;
                 }
             }
 
@@ -223,13 +217,15 @@ impl Tensor {
                 let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
-                    let op = Op::Split(SplitOp::Split);
-                    gradient::record_operation_with_split_info(
-                        result.id(),
-                        op,
+                    gradient::record_operation(
                         vec![self.id()],
-                        params.clone(),
-                        output_index,
+                        result.id(),
+                        Op::Split(SplitOp::Split),
+                        OpParams::Split(SplitParams {
+                            dim: dim_scalar,
+                            sizes: sizes_scalars.clone(),
+                            output_index,
+                        }),
                     )?;
                 }
 

@@ -2,7 +2,8 @@
 // BinaryLogicalOp -> binary_logical_and (not binary_logical_logical_and)
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
-use crate::compat::{fmt, Vec};
+pub use super::op_params::*;
+use crate::compat::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -322,14 +323,12 @@ impl fmt::Debug for ReduceOp {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ConcatOp {
     Concat,
-    Stack,
 }
 
 impl fmt::Display for ConcatOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Concat => write!(f, "concat"),
-            Self::Stack => write!(f, "stack"),
         }
     }
 }
@@ -345,14 +344,12 @@ impl fmt::Debug for ConcatOp {
 #[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum SplitOp {
     Split,
-    Chunk,
 }
 
 impl fmt::Display for SplitOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Split => write!(f, "split"),
-            Self::Chunk => write!(f, "chunk"),
         }
     }
 }
@@ -637,30 +634,4 @@ impl fmt::Debug for Op {
             Self::Dummy => write!(f, "Dummy"),
         }
     }
-}
-
-/// Parameters for operations, used in gradient computation
-#[derive(Clone, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct OpParams {
-    /// Single scalar parameter (for UnaryScalar, CmpScalar)
-    pub scalar: Option<crate::scalar::Scalar>,
-
-    /// Vector of scalars (for Conv, Windowing, Split, Slice, etc.)
-    pub scalars: Vec<crate::scalar::Scalar>,
-
-    /// Dimension indices (for Reduce, Indexing)
-    pub dims: Vec<crate::scalar::Scalar>,
-
-    /// Keep dimension flag (for Reduce)
-    pub keep_dim: Option<bool>,
-
-    /// Output index (for Split gradient computation)
-    pub output_index: Option<usize>,
-
-    /// Data type (for Cast operations)
-    pub dtype: Option<crate::types::DType>,
-
-    /// Auxiliary tensor IDs (for storing indices from max/min pooling, etc.)
-    pub aux_tensors: Vec<crate::tensor::TensorId>,
 }

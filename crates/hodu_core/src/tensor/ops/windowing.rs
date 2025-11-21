@@ -1,10 +1,9 @@
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{Op, OpParams, WindowingOp},
-    scalar::Scalar,
-    script::builder,
-    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
+    ops::{Op, OpParams, ReduceWindowParams, WindowingOp},
+    script::capture,
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::{Layout, Shape},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
@@ -83,58 +82,29 @@ impl Tensor {
             padding_flat.push(hi);
         }
 
-        if builder::is_builder_active() {
+        let op_params = OpParams::ReduceWindow(ReduceWindowParams {
+            window_shape: window_dims.to_vec(),
+            strides: stride_dims.to_vec(),
+            padding: padding.to_vec(),
+            aux_tensors: vec![],
+        });
+
+        if capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            let mut scalars = Vec::new();
-            // Add window_shape
-            for &dim in window_dims {
-                scalars.push(Scalar::from(dim));
-            }
-            // Add strides
-            for &stride in stride_dims {
-                scalars.push(Scalar::from(stride));
-            }
-            // Add padding
-            for &pad in &padding_flat {
-                scalars.push(Scalar::from(pad));
-            }
-
-            let op_params = OpParams {
-                scalars,
-                ..Default::default()
-            };
-
-            register_operation_in_builder(
+            capture::capture_operation(
                 Op::Windowing(windowing_op),
-                Some(op_params),
+                Some(op_params.clone()),
                 vec![self.id()],
-                vec![result_id],
+                result_id,
                 vec![self.layout()],
-                vec![result_layout],
+                result_layout,
             )?;
 
             if requires_grad {
-                let mut grad_scalars = Vec::new();
-                grad_scalars.push(Scalar::from(rank));
-                for &dim in window_dims {
-                    grad_scalars.push(Scalar::from(dim));
-                }
-                for &stride in stride_dims {
-                    grad_scalars.push(Scalar::from(stride));
-                }
-                for &pad in &padding_flat {
-                    grad_scalars.push(Scalar::from(pad));
-                }
-
-                gradient::record_operation_with_scalars(
-                    result_id,
-                    Op::Windowing(windowing_op),
-                    vec![self.id()],
-                    grad_scalars,
-                )?;
+                gradient::record_operation(vec![self.id()], result_id, Op::Windowing(windowing_op), op_params)?;
             }
 
             Ok(result_tensor)
@@ -154,24 +124,7 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let mut scalars = Vec::new();
-                scalars.push(Scalar::from(rank));
-                for &dim in window_dims {
-                    scalars.push(Scalar::from(dim));
-                }
-                for &stride in stride_dims {
-                    scalars.push(Scalar::from(stride));
-                }
-                for &pad in &padding_flat {
-                    scalars.push(Scalar::from(pad));
-                }
-
-                gradient::record_operation_with_scalars(
-                    result.id(),
-                    Op::Windowing(windowing_op),
-                    vec![self.id()],
-                    scalars,
-                )?;
+                gradient::record_operation(vec![self.id()], result.id(), Op::Windowing(windowing_op), op_params)?;
             }
 
             Ok(result)

@@ -7,92 +7,10 @@ use crate::{
     compat::*,
     error::{HoduError, HoduResult},
     ops::{Op, OpParams},
-    scalar::Scalar,
     tensor::{self, set_grad_tensor_id, tensor_from_id, Tensor, TensorId},
 };
 
-pub fn record_operation(output_id: TensorId, op: Op, input_ids: Vec<TensorId>) -> HoduResult<()> {
-    record_operation_with_params(output_id, op, input_ids, OpParams::default())
-}
-
-pub fn record_operation_with_scalar(
-    output_id: TensorId,
-    op: Op,
-    input_ids: Vec<TensorId>,
-    scalar: Scalar,
-) -> HoduResult<()> {
-    record_operation_with_params(
-        output_id,
-        op,
-        input_ids,
-        OpParams {
-            scalar: Some(scalar),
-            ..Default::default()
-        },
-    )
-}
-
-pub fn record_operation_with_scalars(
-    output_id: TensorId,
-    op: Op,
-    input_ids: Vec<TensorId>,
-    scalars: Vec<Scalar>,
-) -> HoduResult<()> {
-    record_operation_with_params(
-        output_id,
-        op,
-        input_ids,
-        OpParams {
-            scalars,
-            ..Default::default()
-        },
-    )
-}
-
-pub fn record_operation_with_dims(
-    output_id: TensorId,
-    op: Op,
-    input_ids: Vec<TensorId>,
-    dims: Vec<Scalar>,
-    keep_dim: Option<bool>,
-) -> HoduResult<()> {
-    record_operation_with_params(
-        output_id,
-        op,
-        input_ids,
-        OpParams {
-            dims,
-            keep_dim,
-            ..Default::default()
-        },
-    )
-}
-
-pub fn record_operation_with_split_info(
-    output_id: TensorId,
-    op: Op,
-    input_ids: Vec<TensorId>,
-    params: Vec<Scalar>,
-    output_index: usize,
-) -> HoduResult<()> {
-    record_operation_with_params(
-        output_id,
-        op,
-        input_ids,
-        OpParams {
-            scalars: params,
-            output_index: Some(output_index),
-            ..Default::default()
-        },
-    )
-}
-
-pub(crate) fn record_operation_with_params(
-    output_id: TensorId,
-    op: Op,
-    input_ids: Vec<TensorId>,
-    op_params: OpParams,
-) -> HoduResult<()> {
+pub fn record_operation(input_ids: Vec<TensorId>, output_id: TensorId, op: Op, op_params: OpParams) -> HoduResult<()> {
     if is_computing_gradients() {
         return Ok(());
     }
@@ -247,41 +165,22 @@ fn compute_vjp_for_op(
     grad_output: TensorId,
 ) -> HoduResult<Vec<TensorId>> {
     match op {
-        Op::Binary(binary_op) => binary_op.compute_vjp(inputs, output, grad_output),
-        Op::BinaryLogical(binary_logical_op) => binary_logical_op.compute_vjp(inputs, output, grad_output),
-        Op::Cmp(cmp_op) => cmp_op.compute_vjp(inputs, output, grad_output),
-        Op::CmpScalar(cmp_scalar_op) => {
-            let scalar = op_params
-                .scalar
-                .ok_or_else(|| HoduError::VjpFunctionNotFound("CmpScalar requires scalar parameter".to_string()))?;
-            cmp_scalar_op.compute_vjp_with_scalar(inputs, output, grad_output, scalar)
-        },
-        Op::Unary(unary_op) => unary_op.compute_vjp(inputs, output, grad_output),
-        Op::UnaryLogical(unary_logical_op) => unary_logical_op.compute_vjp(inputs, output, grad_output),
-        Op::UnaryScalar(unary_scalar_op) => {
-            let scalar = op_params
-                .scalar
-                .ok_or_else(|| HoduError::VjpFunctionNotFound("UnaryScalar requires scalar parameter".to_string()))?;
-            unary_scalar_op.compute_vjp_with_scalar(inputs, output, grad_output, scalar)
-        },
-        Op::Matrix(matrix_op) => matrix_op.compute_vjp(inputs, output, grad_output),
-        Op::Reduce(reduce_op) => reduce_op.compute_vjp_with_dims(inputs, output, grad_output, &op_params.dims),
-        Op::Concat(concat_op) => concat_op.compute_vjp_with_dims(inputs, output, grad_output, &op_params.scalars),
-        Op::Split(split_op) => {
-            let output_index = op_params
-                .output_index
-                .ok_or_else(|| HoduError::VjpFunctionNotFound("Split requires output_index parameter".to_string()))?;
-            split_op.compute_vjp_with_split_info(inputs, output, grad_output, &op_params.scalars, output_index)
-        },
-        Op::Indexing(indexing_op) => indexing_op.compute_vjp_with_dims(inputs, output, grad_output, &op_params.dims),
-        Op::Conv(conv_op) => conv_op.compute_vjp_with_scalars(inputs, output, grad_output, &op_params.scalars),
-        Op::Windowing(windowing_op) => {
-            windowing_op.compute_vjp_with_scalars(inputs, output, grad_output, &op_params.scalars)
-        },
-        Op::Shape(shape_op) => shape_op.compute_vjp(inputs, output, grad_output),
-        Op::ShapeScalars(shape_op) => {
-            shape_op.compute_vjp_with_scalars(inputs, output, grad_output, &op_params.scalars)
-        },
+        Op::Binary(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::BinaryLogical(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Cmp(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::CmpScalar(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Unary(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::UnaryLogical(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::UnaryScalar(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Matrix(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Reduce(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Concat(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Split(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Indexing(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Conv(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Windowing(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Shape(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::ShapeScalars(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }
 }

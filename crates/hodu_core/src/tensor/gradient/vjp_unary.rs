@@ -2,14 +2,20 @@ use super::{vjp_utils::*, VjpCompute};
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{UnaryLogicalOp, UnaryOp, UnaryScalarOp},
+    ops::{OpParams, UnaryLogicalOp, UnaryOp, UnaryScalarOp, UnaryScalarParams},
     scalar::Scalar,
     tensor::{tensor_from_id, TensorId},
 };
 use num_traits::Float;
 
 impl VjpCompute for UnaryOp {
-    fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
+    fn compute_vjp(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        _op_params: &OpParams,
+    ) -> HoduResult<Vec<TensorId>> {
         let input = inputs[0];
         match self {
             UnaryOp::Neg => Ok(vec![create_neg_tensor(grad_output)?]),
@@ -230,13 +236,19 @@ impl VjpCompute for UnaryOp {
 impl VjpCompute for UnaryLogicalOp {}
 
 impl VjpCompute for UnaryScalarOp {
-    fn compute_vjp_with_scalar(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        scalar: Scalar,
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
+        let OpParams::UnaryScalar(UnaryScalarParams { scalar }) = op_params else {
+            return Err(HoduError::VjpFunctionNotFound(
+                "UnaryScalarOp requires UnaryScalarParams".to_string(),
+            ));
+        };
+        let scalar = *scalar;
         let input = inputs[0];
         match self {
             UnaryScalarOp::AddScalar => {

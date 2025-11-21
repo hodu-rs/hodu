@@ -1,13 +1,10 @@
 use crate::{
     compat::*,
     error::HoduResult,
-    ops::{CmpOp, CmpScalarOp, Op},
+    ops::{CmpOp, CmpParams, CmpScalarOp, CmpScalarParams, Op, OpParams},
     scalar::Scalar,
-    script::builder,
-    tensor::{
-        create_builder_tensor, from_storage_with_context, register_operation_in_builder, utils::broadcast_tensors2,
-        Tensor,
-    },
+    script::capture,
+    tensor::{create_builder_tensor, from_storage_with_context, utils::broadcast_tensors2, Tensor},
     types::Layout,
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_same_device, validate_same_dtype},
 };
@@ -25,17 +22,17 @@ macro_rules! cmp_op {
             let lhs_layout = lhs.layout();
             let rhs_layout = rhs.layout();
 
-            if builder::is_builder_active() {
+            if capture::is_active() {
                 let result_layout = lhs_layout.clone();
                 let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-                register_operation_in_builder(
+                capture::capture_operation(
                     Op::Cmp(CmpOp::$op_name),
-                    None,
+                    Some(OpParams::Cmp(CmpParams)),
                     vec![lhs.id(), rhs.id()],
-                    vec![result_id],
+                    result_id,
                     vec![lhs_layout, rhs_layout],
-                    vec![result_layout],
+                    result_layout,
                 )?;
 
                 Ok(result_tensor)
@@ -63,19 +60,16 @@ macro_rules! cmp_scalar_op {
             let scalar = scalar.into();
             let input_layout = self.layout();
 
-            if builder::is_builder_active() {
+            if capture::is_active() {
                 let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
 
-                let mut op_params = crate::ops::OpParams::default();
-                op_params.scalar = Some(scalar);
-
-                register_operation_in_builder(
+                capture::capture_operation(
                     Op::CmpScalar(CmpScalarOp::$op_name),
-                    Some(op_params),
+                    Some(OpParams::CmpScalar(CmpScalarParams { scalar })),
                     vec![self.id()],
-                    vec![result_id],
+                    result_id,
                     vec![input_layout.clone()],
-                    vec![input_layout],
+                    input_layout,
                 )?;
 
                 Ok(result_tensor)

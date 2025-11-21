@@ -91,21 +91,6 @@ pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (Ten
     (tensor_id, tensor)
 }
 
-pub(crate) fn register_operation_in_builder(
-    op: crate::ops::Op,
-    op_params: Option<crate::ops::OpParams>,
-    inputs: Vec<TensorId>,
-    outputs: Vec<TensorId>,
-    input_layouts: Vec<Layout>,
-    output_layouts: Vec<Layout>,
-) -> HoduResult<()> {
-    use crate::script::builder;
-    if let Ok(active_builder) = builder::get_active_builder() {
-        active_builder.add_operation(op, op_params, inputs, outputs, input_layouts, output_layouts)?;
-    }
-    Ok(())
-}
-
 pub(crate) fn tensor_from_id(tensor_id: TensorId) -> Tensor {
     registry::with_tensor(tensor_id, |t| {
         t.ref_count.fetch_add(1, Ordering::Relaxed);

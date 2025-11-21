@@ -2,30 +2,35 @@ use super::VjpCompute;
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::ReduceOp,
+    ops::{OpParams, ReduceOp, ReduceParams},
     scalar::Scalar,
     tensor::{tensor_from_id, TensorId},
 };
 
 impl VjpCompute for ReduceOp {
-    fn compute_vjp_with_dims(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         output: TensorId,
         grad_output: TensorId,
-        dims_scalars: &[Scalar],
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
+        let OpParams::Reduce(ReduceParams { dims, .. }) = op_params else {
+            return Err(HoduError::VjpFunctionNotFound(
+                "ReduceOp requires ReduceParams".to_string(),
+            ));
+        };
+
         let input = inputs[0];
         let input_tensor = tensor_from_id(input);
         let input_shape = input_tensor.shape();
         let dtype = input_tensor.dtype();
 
-        // Convert dims_scalars to Vec<usize>
-        let reduce_dims: Vec<usize> = if dims_scalars.is_empty() {
-            // If no dims provided (fallback case), use all dimensions
+        // Convert dims to Vec<usize>
+        let reduce_dims: Vec<usize> = if dims.is_empty() {
             (0..input_shape.dims().len()).collect()
         } else {
-            dims_scalars.iter().map(|scalar| scalar.to_usize()).collect()
+            dims.iter().map(|scalar| scalar.to_usize()).collect()
         };
 
         match self {

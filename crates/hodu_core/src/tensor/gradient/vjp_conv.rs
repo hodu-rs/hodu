@@ -2,41 +2,41 @@ use super::VjpCompute;
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::ConvOp,
-    scalar::Scalar,
+    ops::{ConvOp, OpParams},
     tensor::{tensor_from_id, TensorId},
 };
 
 impl VjpCompute for ConvOp {
-    fn compute_vjp_with_scalars(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        scalars: &[Scalar],
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
         match self {
             ConvOp::Conv1d => {
                 // inputs: [input, weight]
                 // Conv1d: input [N, Ci, L], weight [Co, Ci, K]
-                // scalars: [batch_size, length_input, channels_output, channels_input, kernel_size, padding, stride, dilation]
+                let OpParams::Conv1d(p) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound(
+                        "Conv1d requires Conv1dParams".to_string(),
+                    ));
+                };
                 if inputs.len() != 2 {
                     return Err(HoduError::InternalError("Conv1d requires 2 inputs".to_string()));
-                }
-                if scalars.len() < 8 {
-                    return Err(HoduError::InternalError("Conv1d requires 8 parameters".to_string()));
                 }
 
                 let input = tensor_from_id(inputs[0]);
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let channels_output = scalars[2].to_usize();
-                let channels_input = scalars[3].to_usize();
-                let kernel_size = scalars[4].to_usize();
-                let padding = scalars[5].to_usize();
-                let stride = scalars[6].to_usize();
-                let dilation = scalars[7].to_usize();
+                let channels_output = p.channels_output;
+                let channels_input = p.channels_input;
+                let kernel_size = p.kernel_size;
+                let padding = p.padding;
+                let stride = p.stride;
+                let dilation = p.dilation;
 
                 // Gradient w.r.t. input: use transposed convolution
                 // Conv1d weight: [Co, Ci, K], Conv_transpose1d (backend): w [Co_out, Ci_in, K]
@@ -55,25 +55,26 @@ impl VjpCompute for ConvOp {
             ConvOp::Conv2d => {
                 // inputs: [input, weight]
                 // Conv2d: input [N, Ci, H, W], weight [Co, Ci, Kh, Kw]
-                // scalars: [batch_size, input_height, input_width, kernel_height, kernel_width, channels_output, channels_input, padding, stride, dilation]
+                let OpParams::Conv2d(p) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound(
+                        "Conv2d requires Conv2dParams".to_string(),
+                    ));
+                };
                 if inputs.len() != 2 {
                     return Err(HoduError::InternalError("Conv2d requires 2 inputs".to_string()));
-                }
-                if scalars.len() < 10 {
-                    return Err(HoduError::InternalError("Conv2d requires 10 parameters".to_string()));
                 }
 
                 let input = tensor_from_id(inputs[0]);
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_height = scalars[3].to_usize();
-                let kernel_width = scalars[4].to_usize();
-                let channels_output = scalars[5].to_usize();
-                let channels_input = scalars[6].to_usize();
-                let padding = scalars[7].to_usize();
-                let stride = scalars[8].to_usize();
-                let dilation = scalars[9].to_usize();
+                let kernel_height = p.kernel_height;
+                let kernel_width = p.kernel_width;
+                let channels_output = p.channels_output;
+                let channels_input = p.channels_input;
+                let padding = p.padding;
+                let stride = p.stride;
+                let dilation = p.dilation;
 
                 // Gradient w.r.t. input: use transposed convolution
                 // Conv2d: x [N, Ci, H, W] * w [Co, Ci, K, K] -> y [N, Co, H', W']
@@ -94,26 +95,27 @@ impl VjpCompute for ConvOp {
             ConvOp::Conv3d => {
                 // inputs: [input, weight]
                 // Conv3d: input [N, Ci, D, H, W], weight [Co, Ci, Kd, Kh, Kw]
-                // scalars: [batch_size, input_depth, input_height, input_width, kernel_depth, kernel_height, kernel_width, channels_output, channels_input, padding, stride, dilation]
+                let OpParams::Conv3d(p) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound(
+                        "Conv3d requires Conv3dParams".to_string(),
+                    ));
+                };
                 if inputs.len() != 2 {
                     return Err(HoduError::InternalError("Conv3d requires 2 inputs".to_string()));
-                }
-                if scalars.len() < 12 {
-                    return Err(HoduError::InternalError("Conv3d requires 12 parameters".to_string()));
                 }
 
                 let input = tensor_from_id(inputs[0]);
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_depth = scalars[4].to_usize();
-                let kernel_height = scalars[5].to_usize();
-                let kernel_width = scalars[6].to_usize();
-                let channels_output = scalars[7].to_usize();
-                let channels_input = scalars[8].to_usize();
-                let padding = scalars[9].to_usize();
-                let stride = scalars[10].to_usize();
-                let dilation = scalars[11].to_usize();
+                let kernel_depth = p.kernel_depth;
+                let kernel_height = p.kernel_height;
+                let kernel_width = p.kernel_width;
+                let channels_output = p.channels_output;
+                let channels_input = p.channels_input;
+                let padding = p.padding;
+                let stride = p.stride;
+                let dilation = p.dilation;
 
                 // Gradient w.r.t. input: use transposed convolution
                 // Conv3d weight: [Co, Ci, Kd, Kh, Kw], Conv_transpose3d (backend): w [Co_out, Ci_in, ...]
@@ -138,15 +140,14 @@ impl VjpCompute for ConvOp {
             ConvOp::ConvTranspose1d => {
                 // inputs: [input, weight]
                 // ConvTranspose1d: input [N, Ci, L_in], weight [Ci, Co, K]
-                // scalars: [batch_size, length_input, channels_output, channels_input, kernel_size, padding, output_padding, stride, dilation]
+                let OpParams::ConvTranspose1d(p) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound(
+                        "ConvTranspose1d requires ConvTranspose1dParams".to_string(),
+                    ));
+                };
                 if inputs.len() != 2 {
                     return Err(HoduError::InternalError(
                         "ConvTranspose1d requires 2 inputs".to_string(),
-                    ));
-                }
-                if scalars.len() < 9 {
-                    return Err(HoduError::InternalError(
-                        "ConvTranspose1d requires 9 parameters".to_string(),
                     ));
                 }
 
@@ -154,13 +155,12 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let channels_output = scalars[2].to_usize();
-                let channels_input = scalars[3].to_usize();
-                let kernel_size = scalars[4].to_usize();
-                let padding = scalars[5].to_usize();
-                let _output_padding = scalars[6].to_usize();
-                let stride = scalars[7].to_usize();
-                let dilation = scalars[8].to_usize();
+                let channels_output = p.channels_output;
+                let channels_input = p.channels_input;
+                let kernel_size = p.kernel_size;
+                let padding = p.padding;
+                let stride = p.stride;
+                let dilation = p.dilation;
 
                 // Gradient w.r.t. input: Use regular Conv1d
                 // weight shape for conv1d is [Co, Ci, K], but we need to transpose channels
@@ -181,15 +181,14 @@ impl VjpCompute for ConvOp {
             ConvOp::ConvTranspose2d => {
                 // inputs: [input, weight]
                 // ConvTranspose2d: input [N, Ci, H_in, W_in], weight [Ci, Co, Kh, Kw]
-                // scalars: [batch_size, input_height, input_width, kernel_height, kernel_width, channels_output, channels_input, padding, output_padding, stride, dilation]
+                let OpParams::ConvTranspose2d(p) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound(
+                        "ConvTranspose2d requires ConvTranspose2dParams".to_string(),
+                    ));
+                };
                 if inputs.len() != 2 {
                     return Err(HoduError::InternalError(
                         "ConvTranspose2d requires 2 inputs".to_string(),
-                    ));
-                }
-                if scalars.len() < 11 {
-                    return Err(HoduError::InternalError(
-                        "ConvTranspose2d requires 11 parameters".to_string(),
                     ));
                 }
 
@@ -197,14 +196,13 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_height = scalars[3].to_usize();
-                let kernel_width = scalars[4].to_usize();
-                let channels_output = scalars[5].to_usize();
-                let channels_input = scalars[6].to_usize();
-                let padding = scalars[7].to_usize();
-                let _output_padding = scalars[8].to_usize();
-                let stride = scalars[9].to_usize();
-                let dilation = scalars[10].to_usize();
+                let kernel_height = p.kernel_height;
+                let kernel_width = p.kernel_width;
+                let channels_output = p.channels_output;
+                let channels_input = p.channels_input;
+                let padding = p.padding;
+                let stride = p.stride;
+                let dilation = p.dilation;
 
                 // Gradient w.r.t. input: Use regular Conv2d
                 let grad_input = grad_output_tensor.conv2d(&weight, stride, padding, dilation)?;
@@ -224,15 +222,14 @@ impl VjpCompute for ConvOp {
             ConvOp::ConvTranspose3d => {
                 // inputs: [input, weight]
                 // ConvTranspose3d: input [N, Ci, D_in, H_in, W_in], weight [Ci, Co, Kd, Kh, Kw]
-                // scalars: [batch_size, input_depth, input_height, input_width, kernel_depth, kernel_height, kernel_width, channels_output, channels_input, padding, output_padding, stride, dilation]
+                let OpParams::ConvTranspose3d(p) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound(
+                        "ConvTranspose3d requires ConvTranspose3dParams".to_string(),
+                    ));
+                };
                 if inputs.len() != 2 {
                     return Err(HoduError::InternalError(
                         "ConvTranspose3d requires 2 inputs".to_string(),
-                    ));
-                }
-                if scalars.len() < 13 {
-                    return Err(HoduError::InternalError(
-                        "ConvTranspose3d requires 13 parameters".to_string(),
                     ));
                 }
 
@@ -240,15 +237,14 @@ impl VjpCompute for ConvOp {
                 let weight = tensor_from_id(inputs[1]);
                 let grad_output_tensor = tensor_from_id(grad_output);
 
-                let kernel_depth = scalars[4].to_usize();
-                let kernel_height = scalars[5].to_usize();
-                let kernel_width = scalars[6].to_usize();
-                let channels_output = scalars[7].to_usize();
-                let channels_input = scalars[8].to_usize();
-                let padding = scalars[9].to_usize();
-                let _output_padding = scalars[10].to_usize();
-                let stride = scalars[11].to_usize();
-                let dilation = scalars[12].to_usize();
+                let kernel_depth = p.kernel_depth;
+                let kernel_height = p.kernel_height;
+                let kernel_width = p.kernel_width;
+                let channels_output = p.channels_output;
+                let channels_input = p.channels_input;
+                let padding = p.padding;
+                let stride = p.stride;
+                let dilation = p.dilation;
 
                 // Gradient w.r.t. input: Use regular Conv3d
                 let grad_input = grad_output_tensor.conv3d(&weight, stride, padding, dilation)?;

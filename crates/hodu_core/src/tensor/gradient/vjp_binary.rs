@@ -2,13 +2,19 @@ use super::{vjp_utils::*, VjpCompute};
 use crate::{
     compat::*,
     error::HoduResult,
-    ops::{BinaryLogicalOp, BinaryOp},
+    ops::{BinaryLogicalOp, BinaryOp, OpParams},
     scalar::Scalar,
     tensor::{tensor_from_id, TensorId},
 };
 
 impl VjpCompute for BinaryOp {
-    fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
+    fn compute_vjp(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        _op_params: &OpParams,
+    ) -> HoduResult<Vec<TensorId>> {
         // Get input shapes for gradient reduction
         let input_a = tensor_from_id(inputs[0]);
         let input_b = tensor_from_id(inputs[1]);

@@ -1,12 +1,9 @@
 use crate::{
     compat::*,
     error::HoduResult,
-    ops::{BinaryLogicalOp, BinaryOp, Op},
-    script::builder,
-    tensor::{
-        create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder,
-        utils::broadcast_tensors2, Tensor,
-    },
+    ops::{BinaryLogicalOp, BinaryLogicalParams, BinaryOp, BinaryParams, Op, OpParams},
+    script::capture,
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, utils::broadcast_tensors2, Tensor},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
         validate_same_dtype,
@@ -24,27 +21,28 @@ macro_rules! binary_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
-            if builder::is_builder_active() {
+            if capture::is_active() {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
                 let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
                 let result_layout = lhs_layout.clone();
                 let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-                register_operation_in_builder(
+                capture::capture_operation(
                     Op::Binary(BinaryOp::$op_name),
-                    None,
+                    Some(OpParams::Binary(BinaryParams)),
                     vec![lhs.id(), rhs.id()],
-                    vec![result_id],
+                    result_id,
                     vec![lhs_layout, rhs_layout],
-                    vec![result_layout],
+                    result_layout,
                 )?;
 
                 if requires_grad {
                     gradient::record_operation(
+                        vec![lhs.id(), rhs.id()],
                         result_id,
                         Op::Binary(BinaryOp::$op_name),
-                        vec![self.id(), rhs.id()],
+                        OpParams::Binary(BinaryParams),
                     )?;
                 }
 
@@ -70,8 +68,12 @@ macro_rules! binary_op {
                 let result = from_storage_with_context(storage, lhs_layout, true, requires_grad);
 
                 if !gradient::is_computing_gradients() && requires_grad {
-                    let op = Op::Binary(BinaryOp::$op_name);
-                    gradient::record_operation(result.id(), op, vec![self.id(), rhs.id()])?;
+                    gradient::record_operation(
+                        vec![lhs.id(), rhs.id()],
+                        result.id(),
+                        Op::Binary(BinaryOp::$op_name),
+                        OpParams::Binary(BinaryParams),
+                    )?;
                 }
 
                 Ok(result)
@@ -90,19 +92,19 @@ macro_rules! binary_logical_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
-            if builder::is_builder_active() {
+            if capture::is_active() {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
                 let result_layout = lhs_layout.clone();
                 let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-                register_operation_in_builder(
+                capture::capture_operation(
                     Op::BinaryLogical(BinaryLogicalOp::$op_name),
-                    None,
+                    Some(OpParams::BinaryLogical(BinaryLogicalParams)),
                     vec![lhs.id(), rhs.id()],
-                    vec![result_id],
+                    result_id,
                     vec![lhs_layout, rhs_layout],
-                    vec![result_layout],
+                    result_layout,
                 )?;
 
                 Ok(result_tensor)

@@ -2,25 +2,32 @@ use super::VjpCompute;
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::IndexingOp,
-    scalar::Scalar,
+    ops::{IndexingOp, OpParams},
     tensor::{tensor_from_id, Tensor, TensorId},
 };
 
 impl VjpCompute for IndexingOp {
-    fn compute_vjp_with_dims(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        params: &[Scalar],
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
-        if params.is_empty() {
-            return Err(HoduError::InternalError(
-                "Indexing operation requires dimension parameter".to_string(),
-            ));
-        }
-        let dim = params[0].to_usize();
+        let dim = match op_params {
+            OpParams::IndexSelect(p) => p.dim.to_usize(),
+            OpParams::IndexPut(p) => p.dim.to_usize(),
+            OpParams::Gather(p) => p.dim.to_usize(),
+            OpParams::Scatter(p) => p.dim.to_usize(),
+            OpParams::ScatterAdd(p) => p.dim.to_usize(),
+            OpParams::ScatterMax(p) => p.dim.to_usize(),
+            OpParams::ScatterMin(p) => p.dim.to_usize(),
+            _ => {
+                return Err(HoduError::VjpFunctionNotFound(
+                    "IndexingOp requires IndexingParams".to_string(),
+                ))
+            },
+        };
 
         match self {
             IndexingOp::IndexSelect => {

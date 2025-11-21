@@ -2,24 +2,25 @@ use super::VjpCompute;
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{ConcatOp, SplitOp},
-    scalar::Scalar,
+    ops::{ConcatOp, ConcatParams, OpParams, SplitOp, SplitParams},
     tensor::{tensor_from_id, Tensor, TensorId},
     types::Shape,
 };
 
 impl VjpCompute for ConcatOp {
-    fn compute_vjp_with_dims(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        params: &[Scalar],
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
-        if params.is_empty() {
-            return Err(HoduError::InternalError("Concat requires dim parameter".to_string()));
-        }
-        let dim = params[0];
+        let OpParams::Concat(ConcatParams { dim }) = op_params else {
+            return Err(HoduError::VjpFunctionNotFound(
+                "ConcatOp requires ConcatParams".to_string(),
+            ));
+        };
+        let dim = *dim;
 
         let sizes: Vec<usize> = inputs
             .iter()
@@ -36,25 +37,32 @@ impl VjpCompute for ConcatOp {
 }
 
 impl VjpCompute for SplitOp {
-    fn compute_vjp_with_split_info(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        params: &[Scalar],
-        output_index: usize,
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
-        if params.is_empty() {
-            return Err(HoduError::InternalError("Split requires dim parameter".to_string()));
-        }
+        let OpParams::Split(SplitParams {
+            dim,
+            sizes,
+            output_index,
+        }) = op_params
+        else {
+            return Err(HoduError::VjpFunctionNotFound(
+                "SplitOp requires SplitParams".to_string(),
+            ));
+        };
 
         let input = inputs[0];
         let input_tensor = tensor_from_id(input);
         let input_shape = input_tensor.shape();
         let dtype = input_tensor.dtype();
 
-        let dim = params[0].to_usize();
-        let sizes: Vec<usize> = params[1..].iter().map(|s| s.to_usize()).collect();
+        let dim = dim.to_usize();
+        let sizes: Vec<usize> = sizes.iter().map(|s| s.to_usize()).collect();
+        let output_index = *output_index;
 
         // Create zero tensors for all splits
         let mut grad_pieces = Vec::new();

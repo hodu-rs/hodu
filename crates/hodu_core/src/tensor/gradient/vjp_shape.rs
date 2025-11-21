@@ -2,13 +2,18 @@ use super::VjpCompute;
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
-    ops::{ShapeOp, ShapeScalarsOp},
-    scalar::Scalar,
+    ops::{OpParams, ShapeOp, ShapeScalarsOp, SliceParams},
     tensor::{tensor_from_id, Tensor, TensorId},
 };
 
 impl VjpCompute for ShapeOp {
-    fn compute_vjp(&self, inputs: &[TensorId], _output: TensorId, grad_output: TensorId) -> HoduResult<Vec<TensorId>> {
+    fn compute_vjp(
+        &self,
+        inputs: &[TensorId],
+        _output: TensorId,
+        grad_output: TensorId,
+        _op_params: &OpParams,
+    ) -> HoduResult<Vec<TensorId>> {
         let input = inputs[0];
         let input_tensor = tensor_from_id(input);
         let input_shape = input_tensor.shape();
@@ -147,12 +152,12 @@ impl VjpCompute for ShapeOp {
 }
 
 impl VjpCompute for ShapeScalarsOp {
-    fn compute_vjp_with_scalars(
+    fn compute_vjp(
         &self,
         inputs: &[TensorId],
         _output: TensorId,
         grad_output: TensorId,
-        scalars: &[Scalar],
+        op_params: &OpParams,
     ) -> HoduResult<Vec<TensorId>> {
         let input = inputs[0];
         let input_tensor = tensor_from_id(input);
@@ -162,22 +167,19 @@ impl VjpCompute for ShapeScalarsOp {
 
         match self {
             ShapeScalarsOp::Slice => {
-                // Extract slice parameters from scalars: [dim, start, end_or_max, step]
-                if scalars.len() < 4 {
-                    return Err(HoduError::InternalError(
-                        "Slice requires 4 scalar parameters".to_string(),
-                    ));
-                }
+                let OpParams::Slice(SliceParams { dim, start, end, step }) = op_params else {
+                    return Err(HoduError::VjpFunctionNotFound("Slice requires SliceParams".to_string()));
+                };
 
-                let dim = scalars[0].to_i32() as usize;
-                let start = scalars[1].to_i32() as isize;
-                let end_value = scalars[2].to_i32();
+                let dim = dim.to_i32() as usize;
+                let start = start.to_i32() as isize;
+                let end_value = end.to_i32();
                 let end = if end_value == i32::MAX {
                     None
                 } else {
                     Some(end_value as isize)
                 };
-                let step = scalars[3].to_i32() as isize;
+                let step = step.to_i32() as isize;
 
                 // Calculate slice indices
                 let dim_size = input_shape.dims()[dim] as isize;

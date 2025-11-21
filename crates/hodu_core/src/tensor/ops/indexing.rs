@@ -1,10 +1,13 @@
 use crate::{
     compat::*,
     error::HoduResult,
-    ops::{IndexingOp, Op, OpParams},
+    ops::{
+        GatherParams, IndexPutParams, IndexSelectParams, IndexingOp, Op, OpParams, ScatterAddParams, ScatterMaxParams,
+        ScatterMinParams, ScatterParams,
+    },
     scalar::Scalar,
-    script::builder,
-    tensor::{create_builder_tensor, from_storage_with_context, gradient, register_operation_in_builder, Tensor},
+    script::capture,
+    tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::Layout,
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_requires_grad_for_op,
@@ -40,29 +43,27 @@ impl Tensor {
         let self_layout = self.layout();
         let indices_layout = indices.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::IndexSelect(IndexSelectParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::IndexSelect),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
+                Some(op_params.clone()),
                 vec![self.id(), indices.id()],
-                vec![result_id],
+                result_id,
                 vec![self_layout, indices_layout],
-                vec![result_layout],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::IndexSelect),
-                    vec![self.id(), indices.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -84,13 +85,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::IndexSelect);
-                gradient::record_operation_with_dims(
-                    result.id(),
-                    op,
+                gradient::record_operation(
                     vec![self.id(), indices.id()],
-                    vec![dim_scalar],
-                    None,
+                    result.id(),
+                    Op::Indexing(IndexingOp::IndexSelect),
+                    OpParams::IndexSelect(IndexSelectParams { dim: dim_scalar }),
                 )?;
             }
 
@@ -120,29 +119,27 @@ impl Tensor {
         let indices_layout = indices.layout();
         let values_layout = values.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::IndexPut(IndexPutParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::IndexPut),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
-                vec![self.id(), indices.id(), values.id()],
-                vec![result_id],
-                vec![result_layout.clone(), indices_layout, values_layout],
-                vec![result_layout.clone()],
+                Some(op_params.clone()),
+                vec![self.id(), values.id(), indices.id()],
+                result_id,
+                vec![result_layout.clone(), values_layout, indices_layout],
+                result_layout.clone(),
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), values.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::IndexPut),
-                    vec![self.id(), indices.id(), values.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -168,13 +165,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::IndexPut);
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), values.id(), indices.id()],
                     result.id(),
-                    op,
-                    vec![self.id(), indices.id(), values.id()],
-                    vec![dim_scalar],
-                    None,
+                    Op::Indexing(IndexingOp::IndexPut),
+                    OpParams::IndexPut(IndexPutParams { dim: dim_scalar }),
                 )?;
             }
 
@@ -203,29 +198,27 @@ impl Tensor {
         let self_layout = self.layout();
         let result_layout = indices.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::Gather(GatherParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::Gather),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
+                Some(op_params.clone()),
                 vec![self.id(), indices.id()],
-                vec![result_id],
+                result_id,
                 vec![self_layout.clone(), result_layout.clone()],
-                vec![result_layout],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::Gather),
-                    vec![self.id(), indices.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -247,13 +240,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::Gather);
-                gradient::record_operation_with_dims(
-                    result.id(),
-                    op,
+                gradient::record_operation(
                     vec![self.id(), indices.id()],
-                    vec![dim_scalar],
-                    None,
+                    result.id(),
+                    Op::Indexing(IndexingOp::Gather),
+                    OpParams::Gather(GatherParams { dim: dim_scalar }),
                 )?;
             }
 
@@ -284,29 +275,27 @@ impl Tensor {
         let indices_layout = indices.layout();
         let src_layout = src.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::Scatter(ScatterParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::Scatter),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
-                vec![self.id(), indices.id(), src.id()],
-                vec![result_id],
-                vec![result_layout.clone(), indices_layout.clone(), src_layout.clone()],
-                vec![result_layout],
+                Some(op_params.clone()),
+                vec![self.id(), src.id(), indices.id()],
+                result_id,
+                vec![result_layout.clone(), src_layout.clone(), indices_layout.clone()],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::Scatter),
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -332,13 +321,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::Scatter);
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result.id(),
-                    op,
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    Op::Indexing(IndexingOp::Scatter),
+                    OpParams::Scatter(ScatterParams { dim: dim_scalar }),
                 )?;
             }
 
@@ -366,29 +353,27 @@ impl Tensor {
 
         let result_layout = self.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::ScatterAdd(ScatterAddParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::ScatterAdd),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
-                vec![self.id(), indices.id(), src.id()],
-                vec![result_id],
-                vec![self.layout(), indices.layout(), src.layout()],
-                vec![result_layout],
+                Some(op_params.clone()),
+                vec![self.id(), src.id(), indices.id()],
+                result_id,
+                vec![self.layout(), src.layout(), indices.layout()],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::ScatterAdd),
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -414,13 +399,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::ScatterAdd);
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result.id(),
-                    op,
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    Op::Indexing(IndexingOp::ScatterAdd),
+                    OpParams::ScatterAdd(ScatterAddParams { dim: dim_scalar }),
                 )?;
             }
 
@@ -448,29 +431,27 @@ impl Tensor {
 
         let result_layout = self.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::ScatterMax(ScatterMaxParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::ScatterMax),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
-                vec![self.id(), indices.id(), src.id()],
-                vec![result_id],
-                vec![self.layout(), indices.layout(), src.layout()],
-                vec![result_layout],
+                Some(op_params.clone()),
+                vec![self.id(), src.id(), indices.id()],
+                result_id,
+                vec![self.layout(), src.layout(), indices.layout()],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::ScatterMax),
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -496,13 +477,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::ScatterMax);
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result.id(),
-                    op,
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    Op::Indexing(IndexingOp::ScatterMax),
+                    OpParams::ScatterMax(ScatterMaxParams { dim: dim_scalar }),
                 )?;
             }
 
@@ -530,29 +509,27 @@ impl Tensor {
 
         let result_layout = self.layout();
 
-        if builder::is_builder_active() {
+        if capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            register_operation_in_builder(
+            let op_params = OpParams::ScatterMin(ScatterMinParams { dim: dim_scalar });
+
+            capture::capture_operation(
                 Op::Indexing(IndexingOp::ScatterMin),
-                Some(OpParams {
-                    scalars: vec![dim_scalar],
-                    ..Default::default()
-                }),
-                vec![self.id(), indices.id(), src.id()],
-                vec![result_id],
-                vec![self.layout(), indices.layout(), src.layout()],
-                vec![result_layout],
+                Some(op_params.clone()),
+                vec![self.id(), src.id(), indices.id()],
+                result_id,
+                vec![self.layout(), src.layout(), indices.layout()],
+                result_layout,
             )?;
 
             if requires_grad {
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result_id,
                     Op::Indexing(IndexingOp::ScatterMin),
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    op_params,
                 )?;
             }
 
@@ -578,13 +555,11 @@ impl Tensor {
             let result = from_storage_with_context(storage, result_layout, true, requires_grad);
 
             if !gradient::is_computing_gradients() && requires_grad {
-                let op = Op::Indexing(IndexingOp::ScatterMin);
-                gradient::record_operation_with_dims(
+                gradient::record_operation(
+                    vec![self.id(), src.id(), indices.id()],
                     result.id(),
-                    op,
-                    vec![self.id(), indices.id(), src.id()],
-                    vec![dim_scalar],
-                    None,
+                    Op::Indexing(IndexingOp::ScatterMin),
+                    OpParams::ScatterMin(ScatterMinParams { dim: dim_scalar }),
                 )?;
             }
 
