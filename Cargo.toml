@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*"]
-exclude = ["benchmarks", "crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
+exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
 resolver = "2"
 
 [package]
