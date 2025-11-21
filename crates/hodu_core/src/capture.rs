@@ -1,7 +1,7 @@
 mod board;
 mod storage;
 
-pub use board::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp};
+pub use board::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp, CapturedOutput};
 use storage::set_active;
 pub use storage::{
     active_board_id, capture_operation, get_active_board, is_active, register_board, take_board, ActiveBoardGuard,
