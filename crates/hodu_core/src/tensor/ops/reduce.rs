@@ -1,9 +1,9 @@
 use crate::{
+    capture,
     compat::*,
     error::HoduResult,
     ops::{Op, OpParams, ReduceOp, ReduceParams},
     scalar::Scalar,
-    script::capture,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::{Layout, Shape},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},

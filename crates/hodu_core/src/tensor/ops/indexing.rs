@@ -1,4 +1,5 @@
 use crate::{
+    capture,
     compat::*,
     error::HoduResult,
     ops::{
@@ -6,7 +7,6 @@ use crate::{
         ScatterMinParams, ScatterParams,
     },
     scalar::Scalar,
-    script::capture,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::Layout,
     utils::valid::{

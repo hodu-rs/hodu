@@ -1,4 +1,5 @@
 use crate::{
+    capture,
     compat::*,
     error::{HoduError, HoduResult},
     ops::{
@@ -6,7 +7,6 @@ use crate::{
         Conv3dParams, ConvOp, ConvTranspose1dGradWeightParams, ConvTranspose1dParams, ConvTranspose2dGradWeightParams,
         ConvTranspose2dParams, ConvTranspose3dGradWeightParams, ConvTranspose3dParams, Op, OpParams,
     },
-    script::capture,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
     types::{Layout, Shape},
     utils::valid::{

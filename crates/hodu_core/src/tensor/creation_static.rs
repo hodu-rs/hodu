@@ -1,7 +1,7 @@
 use crate::{
+    capture::{get_active_board, is_active},
     compat::AtomicUsize,
     error::{HoduError, HoduResult},
-    script::capture::{get_active_board, is_active},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::{DType, Layout, Shape},
 };

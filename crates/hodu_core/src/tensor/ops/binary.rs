@@ -1,8 +1,8 @@
 use crate::{
+    capture,
     compat::*,
     error::HoduResult,
     ops::{BinaryLogicalOp, BinaryLogicalParams, BinaryOp, BinaryParams, Op, OpParams},
-    script::capture,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, utils::broadcast_tensors2, Tensor},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,

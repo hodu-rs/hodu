@@ -1,4 +1,5 @@
 use crate::{
+    capture,
     compat::*,
     error::{HoduError, HoduResult},
     ops::{
@@ -6,7 +7,6 @@ use crate::{
         SliceParams, SqueezeParams, TransposeParams, UnsqueezeParams,
     },
     scalar::Scalar,
-    script::capture,
     tensor::{create_builder_tensor, from_shared_storage_with, gradient, Tensor},
     types::Shape,
 };

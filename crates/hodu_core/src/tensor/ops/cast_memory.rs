@@ -1,8 +1,8 @@
 use crate::{
+    capture,
     compat::*,
     error::{HoduError, HoduResult},
     ops::{CastOp, ContiguousParams, MemoryOp, Op, OpParams, ToDTypeParams},
-    script::capture,
     tensor::{create_builder_tensor, from_storage_with_context, Tensor},
     types::{DType, Device, Layout},
     utils::valid::validate_dtype_for_device,

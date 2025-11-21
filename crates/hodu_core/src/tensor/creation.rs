@@ -1,10 +1,10 @@
 use crate::{
     be::device::BackendDevice,
+    capture,
     compat::*,
     error::{HoduError, HoduResult},
     into::faltten::IntoFlattened,
     scalar::Scalar,
-    script::capture,
     tensor::{from_storage, Tensor},
     types::{DType, Device, Layout, Shape},
 };
