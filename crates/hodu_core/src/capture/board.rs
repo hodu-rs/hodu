@@ -25,6 +25,13 @@ pub struct CapturedInput {
     pub dtype: DType,
 }
 
+/// A captured output tensor
+#[derive(Debug, Clone)]
+pub struct CapturedOutput {
+    pub name: String,
+    pub tensor_id: TensorId,
+}
+
 /// A captured operation with its metadata
 #[derive(Debug, Clone)]
 pub struct CapturedOp {
@@ -41,6 +48,7 @@ pub struct CaptureBoard {
     pub(super) id: CaptureBoardId,
     name: Option<String>,
     inputs: Vec<CapturedInput>,
+    outputs: Vec<CapturedOutput>,
     ops: Vec<CapturedOp>,
 }
 
@@ -50,6 +58,7 @@ impl CaptureBoard {
             id: CaptureBoardId::new(),
             name: None,
             inputs: Vec::new(),
+            outputs: Vec::new(),
             ops: Vec::new(),
         }
     }
@@ -59,6 +68,7 @@ impl CaptureBoard {
             id: CaptureBoardId::new(),
             name: Some(name.into()),
             inputs: Vec::new(),
+            outputs: Vec::new(),
             ops: Vec::new(),
         }
     }
@@ -75,12 +85,16 @@ impl CaptureBoard {
         &self.inputs
     }
 
+    pub fn outputs(&self) -> &[CapturedOutput] {
+        &self.outputs
+    }
+
     pub fn ops(&self) -> &[CapturedOp] {
         &self.ops
     }
 
-    pub fn into_parts(self) -> (Vec<CapturedInput>, Vec<CapturedOp>) {
-        (self.inputs, self.ops)
+    pub fn into_parts(self) -> (Vec<CapturedInput>, Vec<CapturedOutput>, Vec<CapturedOp>) {
+        (self.inputs, self.outputs, self.ops)
     }
 
     pub fn add_input(&mut self, name: &str, tensor: Tensor) -> HoduResult<()> {
@@ -92,6 +106,14 @@ impl CaptureBoard {
         };
         self.inputs.push(input);
         Ok(())
+    }
+
+    pub fn add_output(&mut self, name: &str, tensor: Tensor) {
+        let output = CapturedOutput {
+            name: name.to_string(),
+            tensor_id: tensor.id(),
+        };
+        self.outputs.push(output);
     }
 
     pub(super) fn add_op(&mut self, op: CapturedOp) {
