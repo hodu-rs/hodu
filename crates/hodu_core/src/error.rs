@@ -301,8 +301,6 @@ impl From<std::string::FromUtf8Error> for HoduError {
     }
 }
 
-#[cfg(feature = "serde")]
-
 // Conversion from hodu_cpu_kernels error
 impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {
     fn from(e: hodu_cpu_kernels::CpuKernelError) -> Self {

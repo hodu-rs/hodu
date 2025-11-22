@@ -1,13 +1,11 @@
 pub mod capture;
 pub mod snapshot;
 
-use crate::{
-    compat::*,
-    error::{HoduError, HoduResult},
-};
+#[cfg(feature = "serde")]
+use crate::error::{HoduError, HoduResult};
 
 pub use capture::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp, CapturedTarget};
-pub use snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget};
+pub use snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId};
 
 /// Script holds the Hodu Script IR and provides compilation/execution interface
 pub struct Script {

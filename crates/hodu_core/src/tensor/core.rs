@@ -17,6 +17,10 @@ impl TensorId {
         static TENSOR_COUNTER: AtomicUsize = AtomicUsize::new(0);
         Self(TENSOR_COUNTER.fetch_add(1, Ordering::Relaxed))
     }
+
+    pub fn as_usize(&self) -> usize {
+        self.0
+    }
 }
 
 #[repr(transparent)]

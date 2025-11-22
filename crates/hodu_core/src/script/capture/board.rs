@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     error::HoduResult,
     ops::{Op, OpParams},
-    script::{Script, Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget},
+    script::{Script, Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId},
     tensor::{Tensor, TensorId},
     types::{DType, Layout, Shape},
 };
@@ -123,34 +123,62 @@ impl CaptureBoard {
 
     /// Convert captured operations into a Script
     pub fn capture(self) -> Script {
+        // Find the minimum TensorId to normalize all IDs to start from 0
+        let mut min_id = usize::MAX;
+
+        for input in &self.inputs {
+            min_id = min_id.min(input.tensor_id.as_usize());
+        }
+
+        for target in &self.targets {
+            min_id = min_id.min(target.tensor_id.as_usize());
+        }
+
+        for op in &self.ops {
+            for input_id in &op.input_ids {
+                min_id = min_id.min(input_id.as_usize());
+            }
+            min_id = min_id.min(op.output_id.as_usize());
+        }
+
+        // If no tensors were captured, use 0 as the offset
+        let offset = if min_id == usize::MAX { 0 } else { min_id };
+
+        // Convert captured inputs to snapshot inputs with normalized IDs
         let snapshot_inputs = self
             .inputs
             .into_iter()
             .map(|input| SnapshotInput {
                 name: input.name,
-                tensor_id: input.tensor_id,
+                id: SnapshotTensorId(input.tensor_id.as_usize() - offset),
                 shape: input.shape,
                 dtype: input.dtype,
             })
             .collect();
 
+        // Convert captured targets to snapshot targets with normalized IDs
         let snapshot_targets = self
             .targets
             .into_iter()
             .map(|target| SnapshotTarget {
                 name: target.name,
-                tensor_id: target.tensor_id,
+                id: SnapshotTensorId(target.tensor_id.as_usize() - offset),
             })
             .collect();
 
+        // Convert captured ops to snapshot nodes with normalized IDs
         let snapshot_nodes = self
             .ops
             .into_iter()
             .map(|op| SnapshotNode {
                 op: op.op,
                 params: op.params,
-                input_ids: op.input_ids,
-                output_id: op.output_id,
+                input_ids: op
+                    .input_ids
+                    .into_iter()
+                    .map(|id| SnapshotTensorId(id.as_usize() - offset))
+                    .collect(),
+                output_id: SnapshotTensorId(op.output_id.as_usize() - offset),
                 input_layouts: op.input_layouts,
                 output_layout: op.output_layout,
             })

@@ -1,16 +1,20 @@
 use crate::{
     compat::*,
     ops::{Op, OpParams},
-    tensor::TensorId,
     types::{DType, Layout, Shape},
 };
+
+/// Snapshot-local tensor ID (normalized from runtime TensorId)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SnapshotTensorId(pub usize);
 
 /// Snapshot input specification
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SnapshotInput {
     pub name: String,
-    pub tensor_id: TensorId,
+    pub id: SnapshotTensorId,
     pub shape: Shape,
     pub dtype: DType,
 }
@@ -20,7 +24,7 @@ pub struct SnapshotInput {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SnapshotTarget {
     pub name: String,
-    pub tensor_id: TensorId,
+    pub id: SnapshotTensorId,
 }
 
 /// Snapshot node (operation)
@@ -29,8 +33,8 @@ pub struct SnapshotTarget {
 pub struct SnapshotNode {
     pub op: Op,
     pub params: Option<OpParams>,
-    pub input_ids: Vec<TensorId>,
-    pub output_id: TensorId,
+    pub input_ids: Vec<SnapshotTensorId>,
+    pub output_id: SnapshotTensorId,
     pub input_layouts: Vec<Layout>,
     pub output_layout: Layout,
 }
