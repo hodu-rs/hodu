@@ -11,7 +11,6 @@ pub(crate) mod be_cuda;
 #[cfg(feature = "metal")]
 pub(crate) mod be_metal;
 pub(crate) mod cache;
-pub mod capture;
 pub mod error;
 pub(crate) mod into;
 mod op_params;

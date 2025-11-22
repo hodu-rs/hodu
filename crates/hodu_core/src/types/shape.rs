@@ -11,40 +11,6 @@ pub struct Shape {
     dims: SmallVec<[usize; 8]>,
 }
 
-#[cfg(feature = "serde")]
-impl bincode::Encode for Shape {
-    fn encode<E: bincode::enc::Encoder>(
-        &self,
-        encoder: &mut E,
-    ) -> core::result::Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(&self.dims.as_slice(), encoder)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<Context> bincode::Decode<Context> for Shape {
-    fn decode<D: bincode::de::Decoder<Context = Context>>(
-        decoder: &mut D,
-    ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let vec: Vec<usize> = bincode::Decode::decode(decoder)?;
-        Ok(Shape {
-            dims: SmallVec::from_vec(vec),
-        })
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de, Context> bincode::BorrowDecode<'de, Context> for Shape {
-    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
-        decoder: &mut D,
-    ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let vec: Vec<usize> = bincode::BorrowDecode::borrow_decode(decoder)?;
-        Ok(Shape {
-            dims: SmallVec::from_vec(vec),
-        })
-    }
-}
-
 impl Shape {
     /// Creates a new shape from a slice of dimensions.
     #[inline]

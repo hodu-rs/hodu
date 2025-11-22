@@ -20,7 +20,7 @@ std = [
     "rand_distr/std",
     "serde?/std",
 ]
-serde = ["dep:bincode", "dep:flate2", "dep:serde", "smallvec/serde"]
+serde = ["dep:postcard", "dep:serde", "smallvec/serde"]
 rayon = ["std", "dep:rayon"]
 
 # optional dtype
@@ -42,9 +42,7 @@ metal = ["std", "dep:hodu_metal_kernels"]
 xla = ["std", "i64", "dep:hodu_xla"]
 
 [dependencies]
-bincode = { workspace = true, optional = true }
 dashmap = { workspace = true, optional = true }
-flate2 = { workspace = true, optional = true }
 float8 = { workspace = true }
 half = { workspace = true, default-features = false }
 hodu_compat = { workspace = true }
@@ -54,6 +52,7 @@ hodu_metal_kernels = { workspace = true, optional = true }
 hodu_xla = { workspace = true, optional = true }
 num-traits = { workspace = true, default-features = false }
 paste = { workspace = true }
+postcard = { workspace = true, optional = true }
 rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
 rayon = { workspace = true, optional = true }

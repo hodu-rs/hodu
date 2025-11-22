@@ -1,5 +1,4 @@
 use crate::{
-    capture,
     compat::*,
     error::{HoduError, HoduResult},
     ops::{
@@ -85,10 +84,10 @@ impl Tensor {
             dilation,
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv1d),
                 Some(op_params.clone()),
                 vec![self.id(), weight.id()],
@@ -211,10 +210,10 @@ impl Tensor {
             dilation,
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv2d),
                 Some(op_params.clone()),
                 vec![self.id(), weight.id()],
@@ -342,10 +341,10 @@ impl Tensor {
             dilation,
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv3d),
                 Some(op_params.clone()),
                 vec![self.id(), weight.id()],
@@ -473,10 +472,10 @@ impl Tensor {
             dilation,
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose1d),
                 Some(op_params.clone()),
                 vec![self.id(), weight.id()],
@@ -610,10 +609,10 @@ impl Tensor {
             dilation,
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose2d),
                 Some(op_params.clone()),
                 vec![self.id(), weight.id()],
@@ -753,10 +752,10 @@ impl Tensor {
             dilation,
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose3d),
                 Some(op_params.clone()),
                 vec![self.id(), weight.id()],
@@ -855,11 +854,11 @@ impl Tensor {
             kernel_size: weight_shape[2],
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv1dGradWeight),
                 Some(op_params),
                 vec![self.id(), grad_output.id()],
@@ -942,11 +941,11 @@ impl Tensor {
             kernel_width: weight_shape[3],
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv2dGradWeight),
                 Some(op_params),
                 vec![self.id(), grad_output.id()],
@@ -1030,11 +1029,11 @@ impl Tensor {
             kernel_width: weight_shape[4],
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv3dGradWeight),
                 Some(op_params),
                 vec![self.id(), grad_output.id()],
@@ -1116,11 +1115,11 @@ impl Tensor {
             kernel_size: weight_shape[2],
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose1dGradWeight),
                 Some(op_params),
                 vec![self.id(), grad_output.id()],
@@ -1203,11 +1202,11 @@ impl Tensor {
             kernel_width: weight_shape[3],
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose2dGradWeight),
                 Some(op_params),
                 vec![self.id(), grad_output.id()],
@@ -1291,11 +1290,11 @@ impl Tensor {
             kernel_width: weight_shape[4],
         });
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose3dGradWeight),
                 Some(op_params),
                 vec![self.id(), grad_output.id()],

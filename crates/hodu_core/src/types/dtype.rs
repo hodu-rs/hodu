@@ -2,7 +2,6 @@ use crate::compat::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum DType {
     BOOL,
     F8E4M3,

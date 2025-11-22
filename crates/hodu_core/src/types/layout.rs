@@ -18,50 +18,6 @@ pub struct Layout {
     offset: usize,
 }
 
-#[cfg(feature = "serde")]
-impl bincode::Encode for Layout {
-    fn encode<E: bincode::enc::Encoder>(
-        &self,
-        encoder: &mut E,
-    ) -> core::result::Result<(), bincode::error::EncodeError> {
-        bincode::Encode::encode(&self.shape, encoder)?;
-        bincode::Encode::encode(&self.strides.as_slice(), encoder)?;
-        bincode::Encode::encode(&self.offset, encoder)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<Context> bincode::Decode<Context> for Layout {
-    fn decode<D: bincode::de::Decoder<Context = Context>>(
-        decoder: &mut D,
-    ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let shape: Shape = bincode::Decode::decode(decoder)?;
-        let strides_vec: Vec<usize> = bincode::Decode::decode(decoder)?;
-        let offset: usize = bincode::Decode::decode(decoder)?;
-        Ok(Layout {
-            shape,
-            strides: SmallVec::from_vec(strides_vec),
-            offset,
-        })
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de, Context> bincode::BorrowDecode<'de, Context> for Layout {
-    fn borrow_decode<D: bincode::de::BorrowDecoder<'de, Context = Context>>(
-        decoder: &mut D,
-    ) -> core::result::Result<Self, bincode::error::DecodeError> {
-        let shape: Shape = bincode::BorrowDecode::borrow_decode(decoder)?;
-        let strides_vec: Vec<usize> = bincode::BorrowDecode::borrow_decode(decoder)?;
-        let offset: usize = bincode::BorrowDecode::borrow_decode(decoder)?;
-        Ok(Layout {
-            shape,
-            strides: SmallVec::from_vec(strides_vec),
-            offset,
-        })
-    }
-}
-
 impl Layout {
     /// Creates a new layout with given shape and strides.
     pub fn new(shape: Shape, strides: Vec<usize>) -> Self {

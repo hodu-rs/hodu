@@ -2,6 +2,7 @@ use crate::{
     compat::*,
     error::HoduResult,
     ops::{Op, OpParams},
+    script::{Script, Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget},
     tensor::{Tensor, TensorId},
     types::{DType, Layout, Shape},
 };
@@ -27,7 +28,7 @@ pub struct CapturedInput {
 
 /// A captured output tensor
 #[derive(Debug, Clone)]
-pub struct CapturedOutput {
+pub struct CapturedTarget {
     pub name: String,
     pub tensor_id: TensorId,
 }
@@ -48,7 +49,7 @@ pub struct CaptureBoard {
     pub(super) id: CaptureBoardId,
     name: Option<String>,
     inputs: Vec<CapturedInput>,
-    outputs: Vec<CapturedOutput>,
+    targets: Vec<CapturedTarget>,
     ops: Vec<CapturedOp>,
 }
 
@@ -58,7 +59,7 @@ impl CaptureBoard {
             id: CaptureBoardId::new(),
             name: None,
             inputs: Vec::new(),
-            outputs: Vec::new(),
+            targets: Vec::new(),
             ops: Vec::new(),
         }
     }
@@ -68,7 +69,7 @@ impl CaptureBoard {
             id: CaptureBoardId::new(),
             name: Some(name.into()),
             inputs: Vec::new(),
-            outputs: Vec::new(),
+            targets: Vec::new(),
             ops: Vec::new(),
         }
     }
@@ -85,19 +86,19 @@ impl CaptureBoard {
         &self.inputs
     }
 
-    pub fn outputs(&self) -> &[CapturedOutput] {
-        &self.outputs
+    pub fn targets(&self) -> &[CapturedTarget] {
+        &self.targets
     }
 
     pub fn ops(&self) -> &[CapturedOp] {
         &self.ops
     }
 
-    pub fn into_parts(self) -> (Vec<CapturedInput>, Vec<CapturedOutput>, Vec<CapturedOp>) {
-        (self.inputs, self.outputs, self.ops)
+    pub fn into_parts(self) -> (Vec<CapturedInput>, Vec<CapturedTarget>, Vec<CapturedOp>) {
+        (self.inputs, self.targets, self.ops)
     }
 
-    pub fn add_input(&mut self, name: &str, tensor: Tensor) -> HoduResult<()> {
+    pub(crate) fn add_input(&mut self, name: &str, tensor: Tensor) -> HoduResult<()> {
         let input = CapturedInput {
             name: name.to_string(),
             tensor_id: tensor.id(),
@@ -108,16 +109,61 @@ impl CaptureBoard {
         Ok(())
     }
 
-    pub fn add_output(&mut self, name: &str, tensor: Tensor) {
-        let output = CapturedOutput {
+    pub fn add_target(&mut self, name: &str, tensor: Tensor) {
+        let target = CapturedTarget {
             name: name.to_string(),
             tensor_id: tensor.id(),
         };
-        self.outputs.push(output);
+        self.targets.push(target);
     }
 
     pub(super) fn add_op(&mut self, op: CapturedOp) {
         self.ops.push(op);
+    }
+
+    /// Convert captured operations into a Script
+    pub fn capture(self) -> Script {
+        let snapshot_inputs = self
+            .inputs
+            .into_iter()
+            .map(|input| SnapshotInput {
+                name: input.name,
+                tensor_id: input.tensor_id,
+                shape: input.shape,
+                dtype: input.dtype,
+            })
+            .collect();
+
+        let snapshot_targets = self
+            .targets
+            .into_iter()
+            .map(|target| SnapshotTarget {
+                name: target.name,
+                tensor_id: target.tensor_id,
+            })
+            .collect();
+
+        let snapshot_nodes = self
+            .ops
+            .into_iter()
+            .map(|op| SnapshotNode {
+                op: op.op,
+                params: op.params,
+                input_ids: op.input_ids,
+                output_id: op.output_id,
+                input_layouts: op.input_layouts,
+                output_layout: op.output_layout,
+            })
+            .collect();
+
+        let snapshot = Snapshot {
+            name: self.name,
+            inputs: snapshot_inputs,
+            targets: snapshot_targets,
+            nodes: snapshot_nodes,
+        };
+
+        Script::new(snapshot)
     }
 }
 
