@@ -123,6 +123,40 @@ impl CaptureBoard {
 
     /// Convert captured operations into a Script
     pub fn capture(self) -> Script {
+        // Dead code elimination: mark reachable nodes from targets
+        let mut reachable = HashSet::new();
+        let mut to_visit = Vec::new();
+
+        // Start from target tensor IDs
+        for target in &self.targets {
+            to_visit.push(target.tensor_id);
+        }
+
+        // Backward traversal to find all reachable nodes
+        while let Some(tensor_id) = to_visit.pop() {
+            if !reachable.insert(tensor_id) {
+                continue; // Already visited
+            }
+
+            // Find the op that produces this tensor
+            for op in &self.ops {
+                if op.output_id == tensor_id {
+                    // Mark all input tensors for visiting
+                    for input_id in &op.input_ids {
+                        to_visit.push(*input_id);
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Filter ops: keep only reachable ones
+        let filtered_ops: Vec<_> = self
+            .ops
+            .into_iter()
+            .filter(|op| reachable.contains(&op.output_id))
+            .collect();
+
         // Find the minimum TensorId to normalize all IDs to start from 0
         let mut min_id = usize::MAX;
 
@@ -134,7 +168,7 @@ impl CaptureBoard {
             min_id = min_id.min(target.tensor_id.as_usize());
         }
 
-        for op in &self.ops {
+        for op in &filtered_ops {
             for input_id in &op.input_ids {
                 min_id = min_id.min(input_id.as_usize());
             }
@@ -166,9 +200,8 @@ impl CaptureBoard {
             })
             .collect();
 
-        // Convert captured ops to snapshot nodes with normalized IDs
-        let snapshot_nodes = self
-            .ops
+        // Convert filtered ops to snapshot nodes with normalized IDs
+        let snapshot_nodes = filtered_ops
             .into_iter()
             .map(|op| SnapshotNode {
                 op: op.op,
