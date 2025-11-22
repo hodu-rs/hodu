@@ -1,5 +1,4 @@
 use crate::{
-    capture,
     compat::*,
     error::{HoduError, HoduResult},
     ops::{DotParams, MatmulParams, MatrixOp, Op, OpParams},
@@ -178,11 +177,11 @@ impl Tensor {
         let lhs_layout = lhs_broadcasted.layout();
         let rhs_layout = rhs_broadcasted.layout();
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Matrix(MatrixOp::Matmul),
                 Some(OpParams::Matmul(MatmulParams)),
                 vec![lhs_broadcasted.id(), rhs_broadcasted.id()],
@@ -325,11 +324,11 @@ impl Tensor {
         let self_layout = self.layout();
         let other_layout = other.layout();
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || other.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Matrix(MatrixOp::Dot),
                 Some(OpParams::Dot(DotParams)),
                 vec![self.id(), other.id()],

@@ -1,5 +1,4 @@
 use crate::{
-    capture,
     compat::*,
     error::HoduResult,
     ops::{CmpOp, CmpParams, CmpScalarOp, CmpScalarParams, Op, OpParams},
@@ -22,11 +21,11 @@ macro_rules! cmp_op {
             let lhs_layout = lhs.layout();
             let rhs_layout = rhs.layout();
 
-            if capture::is_active() {
+            if crate::script::capture::is_active() {
                 let result_layout = lhs_layout.clone();
                 let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
 
-                capture::capture_operation(
+                crate::script::capture::capture_operation(
                     Op::Cmp(CmpOp::$op_name),
                     Some(OpParams::Cmp(CmpParams)),
                     vec![lhs.id(), rhs.id()],
@@ -60,10 +59,10 @@ macro_rules! cmp_scalar_op {
             let scalar = scalar.into();
             let input_layout = self.layout();
 
-            if capture::is_active() {
+            if crate::script::capture::is_active() {
                 let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
 
-                capture::capture_operation(
+                crate::script::capture::capture_operation(
                     Op::CmpScalar(CmpScalarOp::$op_name),
                     Some(OpParams::CmpScalar(CmpScalarParams { scalar })),
                     vec![self.id()],

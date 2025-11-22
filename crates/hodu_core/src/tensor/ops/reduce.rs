@@ -1,5 +1,4 @@
 use crate::{
-    capture,
     compat::*,
     error::HoduResult,
     ops::{Op, OpParams, ReduceOp, ReduceParams},
@@ -168,7 +167,7 @@ impl Tensor {
 
         let result_layout = Layout::from_shape(&Shape::from(output_dims));
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
@@ -179,7 +178,7 @@ impl Tensor {
                 keep_dim,
             });
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Reduce(reduce_op),
                 Some(op_params.clone()),
                 vec![self.id()],

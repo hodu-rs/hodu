@@ -3,8 +3,8 @@
 //! Usage: `use hodu_core::prelude::*;`
 
 // Re-export
-pub use crate::capture::CaptureBoard;
 pub use crate::error::HoduResult;
 pub use crate::scalar::Scalar;
+pub use crate::script::capture::CaptureBoard;
 pub use crate::tensor::{get_runtime_device, set_runtime_device, Tensor};
 pub use crate::types::*;

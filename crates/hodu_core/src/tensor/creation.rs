@@ -1,6 +1,5 @@
 use crate::{
     be::device::BackendDevice,
-    capture,
     compat::*,
     error::{HoduError, HoduResult},
     into::faltten::IntoFlattened,
@@ -48,7 +47,7 @@ impl Tensor {
     where
         T: IntoFlattened,
     {
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -56,14 +55,20 @@ impl Tensor {
         let shape = Shape::from(&data.get_shape_vec());
         let layout = Layout::from_shape(&shape);
         let storage = BackendDevice::storage_from_flatten(data, device)?;
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn from_slice<T>(data: T, shape: impl Into<Shape>) -> HoduResult<Self>
     where
         T: IntoFlattened,
     {
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -81,19 +86,31 @@ impl Tensor {
 
         let layout = Layout::from_shape(&shape);
         let storage = BackendDevice::storage_from_flatten(data, device)?;
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn empty(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
         };
         let storage = BackendDevice::allocate(shape.size(), device, dtype)?;
         let layout = Layout::from_shape(&shape);
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn empty_like(tensor: &Self) -> HoduResult<Self> {
@@ -103,14 +120,20 @@ impl Tensor {
 
     pub fn zeros(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
         };
         let storage = BackendDevice::zeros(shape.size(), device, dtype)?;
         let layout = Layout::from_shape(&shape);
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn zeros_like(tensor: &Self) -> HoduResult<Self> {
@@ -120,7 +143,7 @@ impl Tensor {
 
     pub fn ones(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -128,7 +151,13 @@ impl Tensor {
         let layout = Layout::from_shape(&shape);
         let mut storage = BackendDevice::zeros(shape.size(), device, dtype)?;
         storage.const_set(Scalar::one(dtype), &layout)?;
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn ones_like(tensor: &Self) -> HoduResult<Self> {
@@ -139,7 +168,7 @@ impl Tensor {
     pub fn full<T: Into<Scalar>>(shape: impl Into<Shape>, value: T) -> HoduResult<Self> {
         let shape = shape.into();
         let value = value.into();
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -147,7 +176,13 @@ impl Tensor {
         let mut storage = BackendDevice::zeros(shape.size(), device, value.dtype())?;
         let layout = Layout::from_shape(&shape);
         storage.const_set(value, &layout)?;
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn full_like<T: Into<Scalar>>(tensor: &Self, value: T) -> HoduResult<Self> {
@@ -163,7 +198,7 @@ impl Tensor {
         let shape = shape.into();
         let mean = mean.into();
         let std = std.into();
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -177,7 +212,13 @@ impl Tensor {
         };
         let storage = BackendDevice::randn(shape.size(), device, dtype, mean.to_f32(), std.to_f32())?;
         let layout = Layout::from_shape(&shape);
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn randn_like<T: Into<Scalar>>(tensor: &Self, mean: T, std: T) -> HoduResult<Self> {
@@ -189,7 +230,7 @@ impl Tensor {
         let shape = shape.into();
         let low = low.into();
         let high = high.into();
-        let device = if capture::is_active() {
+        let device = if crate::script::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -203,7 +244,13 @@ impl Tensor {
         };
         let storage = BackendDevice::rand_uniform(shape.size(), device, dtype, low.to_f32(), high.to_f32())?;
         let layout = Layout::from_shape(&shape);
-        Ok(from_storage(storage, layout, !capture::is_active(), false, None))
+        Ok(from_storage(
+            storage,
+            layout,
+            !crate::script::capture::is_active(),
+            false,
+            None,
+        ))
     }
 
     pub fn rand_uniform_like<T: Into<Scalar>>(tensor: &Self, low: T, high: T) -> HoduResult<Self> {

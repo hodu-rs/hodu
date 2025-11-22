@@ -7,7 +7,6 @@ use crate::compat::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -40,7 +39,6 @@ impl fmt::Debug for BinaryOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum BinaryLogicalOp {
     LogicalAnd, // no-backprop
     LogicalOr,  // no-backprop
@@ -65,7 +63,6 @@ impl fmt::Debug for BinaryLogicalOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum CmpOp {
     Eq, // no-backprop
     Ne, // no-backprop
@@ -96,7 +93,6 @@ impl fmt::Debug for CmpOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum CmpScalarOp {
     EqScalar, // no-backprop
     NeScalar, // no-backprop
@@ -127,7 +123,6 @@ impl fmt::Debug for CmpScalarOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum UnaryOp {
     Neg,
     Abs,  // no-backprop
@@ -193,7 +188,6 @@ impl fmt::Debug for UnaryOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum UnaryLogicalOp {
     LogicalNot, // no-backprop
 }
@@ -214,7 +208,6 @@ impl fmt::Debug for UnaryLogicalOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum UnaryScalarOp {
     AddScalar,
     SubScalar,
@@ -254,7 +247,6 @@ impl fmt::Debug for UnaryScalarOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum MatrixOp {
     Matmul,
     Dot, // Supports 1D dot product, 2D matmul, and ND broadcast matmul
@@ -277,7 +269,6 @@ impl fmt::Debug for MatrixOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ReduceOp {
     Sum,
     Mean,
@@ -320,7 +311,6 @@ impl fmt::Debug for ReduceOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ConcatOp {
     Concat,
 }
@@ -341,7 +331,6 @@ impl fmt::Debug for ConcatOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum SplitOp {
     Split,
 }
@@ -362,7 +351,6 @@ impl fmt::Debug for SplitOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum IndexingOp {
     IndexSelect,
     IndexPut,
@@ -395,7 +383,6 @@ impl fmt::Debug for IndexingOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ConvOp {
     Conv1d,
     Conv2d,
@@ -438,7 +425,6 @@ impl fmt::Debug for ConvOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum WindowingOp {
     ReduceWindowMax,
     ReduceWindowMean,
@@ -465,7 +451,6 @@ impl fmt::Debug for WindowingOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ShapeOp {
     Reshape,
     Flatten,
@@ -498,7 +483,6 @@ impl fmt::Debug for ShapeOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum ShapeScalarsOp {
     Slice,
 }
@@ -519,7 +503,6 @@ impl fmt::Debug for ShapeScalarsOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum CastOp {
     ToDType, // no-backprop
 }
@@ -540,7 +523,6 @@ impl fmt::Debug for CastOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum MemoryOp {
     Contiguous, // no-backprop
 }
@@ -561,7 +543,6 @@ impl fmt::Debug for MemoryOp {
 
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde", derive(bincode::Encode, bincode::Decode))]
 pub enum Op {
     Binary(BinaryOp),
     BinaryLogical(BinaryLogicalOp),

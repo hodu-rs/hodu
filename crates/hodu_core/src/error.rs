@@ -108,6 +108,16 @@ pub enum HoduError {
     /// File not found.
     FileNotFound(String),
 
+    // ===== Serialization Errors =====
+    /// Invalid argument provided.
+    InvalidArgument(String),
+    /// Serialization failed.
+    SerializationFailed(String),
+    /// Deserialization failed.
+    DeserializationFailed(String),
+    /// Unsupported operation.
+    UnsupportedOperation(String),
+
     // ===== Internal Errors =====
     /// Internal error with a descriptive message.
     InternalError(String),
@@ -242,6 +252,20 @@ impl fmt::Display for HoduError {
                 write!(f, "file not found: {}", path)
             },
 
+            // Serialization Errors
+            Self::InvalidArgument(msg) => {
+                write!(f, "invalid argument: {}", msg)
+            },
+            Self::SerializationFailed(msg) => {
+                write!(f, "serialization failed: {}", msg)
+            },
+            Self::DeserializationFailed(msg) => {
+                write!(f, "deserialization failed: {}", msg)
+            },
+            Self::UnsupportedOperation(msg) => {
+                write!(f, "unsupported operation: {}", msg)
+            },
+
             // Internal Errors
             Self::InternalError(msg) => {
                 write!(f, "internal error: {}", msg)
@@ -278,18 +302,6 @@ impl From<std::string::FromUtf8Error> for HoduError {
 }
 
 #[cfg(feature = "serde")]
-impl From<bincode::error::DecodeError> for HoduError {
-    fn from(e: bincode::error::DecodeError) -> Self {
-        HoduError::IoError(format!("decode error: {}", e))
-    }
-}
-
-#[cfg(feature = "serde")]
-impl From<bincode::error::EncodeError> for HoduError {
-    fn from(e: bincode::error::EncodeError) -> Self {
-        HoduError::IoError(format!("encode error: {}", e))
-    }
-}
 
 // Conversion from hodu_cpu_kernels error
 impl From<hodu_cpu_kernels::CpuKernelError> for HoduError {

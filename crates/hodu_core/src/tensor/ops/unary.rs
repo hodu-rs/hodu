@@ -1,5 +1,4 @@
 use crate::{
-    capture,
     compat::*,
     error::HoduResult,
     ops::{Op, OpParams, UnaryLogicalOp, UnaryLogicalParams, UnaryOp, UnaryParams, UnaryScalarOp, UnaryScalarParams},
@@ -18,11 +17,11 @@ macro_rules! unary_op {
 
             let input_layout = self.layout();
 
-            if capture::is_active() {
+            if crate::script::capture::is_active() {
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
                 let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), requires_grad);
 
-                capture::capture_operation(
+                crate::script::capture::capture_operation(
                     Op::Unary(UnaryOp::$op_name),
                     Some(OpParams::Unary(UnaryParams)),
                     vec![self.id()],
@@ -73,10 +72,10 @@ macro_rules! unary_logical_op {
 
             let input_layout = self.layout();
 
-            if capture::is_active() {
+            if crate::script::capture::is_active() {
                 let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
 
-                capture::capture_operation(
+                crate::script::capture::capture_operation(
                     Op::UnaryLogical(UnaryLogicalOp::$op_name),
                     Some(OpParams::UnaryLogical(UnaryLogicalParams)),
                     vec![self.id()],
@@ -111,11 +110,11 @@ macro_rules! unary_scalar_op {
             let scalar_value = scalar.into();
             let input_layout = self.layout();
 
-            if capture::is_active() {
+            if crate::script::capture::is_active() {
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
                 let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), requires_grad);
 
-                capture::capture_operation(
+                crate::script::capture::capture_operation(
                     Op::UnaryScalar(UnaryScalarOp::$op_name),
                     Some(OpParams::UnaryScalar(UnaryScalarParams { scalar: scalar_value })),
                     vec![self.id()],

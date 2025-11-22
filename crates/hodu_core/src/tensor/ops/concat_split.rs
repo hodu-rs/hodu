@@ -1,5 +1,4 @@
 use crate::{
-    capture,
     compat::*,
     error::{HoduError, HoduResult},
     ops::{ConcatOp, ConcatParams, Op, OpParams, SplitOp, SplitParams},
@@ -56,7 +55,7 @@ impl Tensor {
             output_dims[dim_usize] += dims[dim_usize];
         }
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
@@ -64,7 +63,7 @@ impl Tensor {
             let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
             let op_params = OpParams::Concat(ConcatParams { dim: dim_scalar });
 
-            capture::capture_operation(
+            crate::script::capture::capture_operation(
                 Op::Concat(ConcatOp::Concat),
                 Some(op_params.clone()),
                 input_ids.clone(),
@@ -152,7 +151,7 @@ impl Tensor {
         // Prepare sizes as Scalars
         let sizes_scalars: Vec<Scalar> = sizes.iter().map(|&s| Scalar::from(s)).collect();
 
-        if capture::is_active() {
+        if crate::script::capture::is_active() {
             let mut results = Vec::new();
 
             // Create all output tensors first
@@ -187,7 +186,7 @@ impl Tensor {
                     output_index,
                 });
 
-                capture::capture_operation(
+                crate::script::capture::capture_operation(
                     Op::Split(SplitOp::Split),
                     Some(op_params.clone()),
                     vec![self.id()],
