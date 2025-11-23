@@ -77,40 +77,6 @@ impl fmt::Display for TargetEnv {
     }
 }
 
-/// Execution environment configuration
-#[derive(Debug, Clone)]
-pub struct ExecutionConfig {
-    /// Target device for execution
-    pub device: Device,
-    /// Runtime backend
-    pub runtime: Runtime,
-}
-
-impl Default for ExecutionConfig {
-    fn default() -> Self {
-        Self {
-            device: Device::CPU,
-            runtime: Runtime::HODU,
-        }
-    }
-}
-
-impl ExecutionConfig {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn device(mut self, device: Device) -> Self {
-        self.device = device;
-        self
-    }
-
-    pub fn runtime(mut self, runtime: Runtime) -> Self {
-        self.runtime = runtime;
-        self
-    }
-}
-
 /// Build target configuration
 #[derive(Debug, Clone)]
 pub struct TargetConfig {
@@ -242,9 +208,11 @@ impl TargetConfig {
 /// Build configuration
 #[derive(Default, Debug, Clone)]
 pub struct BuildConfig {
-    /// Execution environment
-    pub execution: ExecutionConfig,
-    /// Build target
+    /// Target device for execution
+    pub device: Device,
+    /// Runtime backend
+    pub runtime: Runtime,
+    /// Build target platform
     pub target: TargetConfig,
 }
 
@@ -253,8 +221,13 @@ impl BuildConfig {
         Self::default()
     }
 
-    pub fn execution(mut self, execution: ExecutionConfig) -> Self {
-        self.execution = execution;
+    pub fn device(mut self, device: Device) -> Self {
+        self.device = device;
+        self
+    }
+
+    pub fn runtime(mut self, runtime: Runtime) -> Self {
+        self.runtime = runtime;
         self
     }
 

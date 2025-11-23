@@ -44,7 +44,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::IndexSelect(IndexSelectParams { dim: dim_scalar });
 
@@ -120,7 +120,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::IndexPut(IndexPutParams { dim: dim_scalar });
 
@@ -199,7 +199,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::Gather(GatherParams { dim: dim_scalar });
 
@@ -276,7 +276,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::Scatter(ScatterParams { dim: dim_scalar });
 
@@ -354,7 +354,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::ScatterAdd(ScatterAddParams { dim: dim_scalar });
 
@@ -432,7 +432,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::ScatterMax(ScatterMaxParams { dim: dim_scalar });
 
@@ -510,7 +510,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::ScatterMin(ScatterMinParams { dim: dim_scalar });
 

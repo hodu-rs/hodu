@@ -4,7 +4,7 @@ use crate::{
     ops::{CmpOp, CmpParams, CmpScalarOp, CmpScalarParams, Op, OpParams},
     scalar::Scalar,
     tensor::{create_builder_tensor, from_storage_with_context, utils::broadcast_tensors2, Tensor},
-    types::Layout,
+    types::{DType, Layout},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_same_device, validate_same_dtype},
 };
 
@@ -23,7 +23,7 @@ macro_rules! cmp_op {
 
             if crate::script::capture::is_active() {
                 let result_layout = lhs_layout.clone();
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), DType::BOOL, false);
 
                 crate::script::capture::capture_operation(
                     Op::Cmp(CmpOp::$op_name),
@@ -60,7 +60,7 @@ macro_rules! cmp_scalar_op {
             let input_layout = self.layout();
 
             if crate::script::capture::is_active() {
-                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), DType::BOOL, false);
 
                 crate::script::capture::capture_operation(
                     Op::CmpScalar(CmpScalarOp::$op_name),

@@ -134,3 +134,8 @@ where
         tensors.get_mut(&tensor_id).map(f)
     }
 }
+
+/// Get the dtype of a tensor from the registry
+pub fn get_dtype(tensor_id: TensorId) -> Option<crate::types::DType> {
+    with_tensor(tensor_id, |t| t.dtype).flatten()
+}

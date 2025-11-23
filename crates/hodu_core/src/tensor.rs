@@ -17,7 +17,7 @@ pub use creation::{get_runtime_device, set_runtime_device};
 pub use gradient::{is_computing_gradients, is_in_optimizer_step, set_optimizer_step_flag, ContextId, GradientContext};
 
 // Re-export registry functions
-pub use registry::{exists, get, shrink_tensor_storage, tensor_count, with_tensor, with_tensor_mut};
+pub use registry::{exists, get, get_dtype, shrink_tensor_storage, tensor_count, with_tensor, with_tensor_mut};
 
 // Re-export internal functions for crate use
 pub(crate) use internal::{

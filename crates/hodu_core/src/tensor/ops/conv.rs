@@ -85,7 +85,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv1d),
@@ -211,7 +211,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv2d),
@@ -342,7 +342,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv3d),
@@ -473,7 +473,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose1d),
@@ -610,7 +610,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose2d),
@@ -753,7 +753,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose3d),
@@ -856,7 +856,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv1dGradWeight),
@@ -943,7 +943,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv2dGradWeight),
@@ -1031,7 +1031,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::Conv3dGradWeight),
@@ -1117,7 +1117,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose1dGradWeight),
@@ -1204,7 +1204,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose2dGradWeight),
@@ -1292,7 +1292,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(weight_shape));
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Conv(ConvOp::ConvTranspose3dGradWeight),

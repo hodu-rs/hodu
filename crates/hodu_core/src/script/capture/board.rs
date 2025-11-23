@@ -203,17 +203,23 @@ impl CaptureBoard {
         // Convert filtered ops to snapshot nodes with normalized IDs
         let snapshot_nodes = filtered_ops
             .into_iter()
-            .map(|op| SnapshotNode {
-                op: op.op,
-                params: op.params,
-                input_ids: op
-                    .input_ids
-                    .into_iter()
-                    .map(|id| SnapshotTensorId(id.as_usize() - offset))
-                    .collect(),
-                output_id: SnapshotTensorId(op.output_id.as_usize() - offset),
-                input_layouts: op.input_layouts,
-                output_layout: op.output_layout,
+            .map(|op| {
+                // Get output dtype from the tensor registry
+                let output_dtype = crate::tensor::get_dtype(op.output_id).expect("Builder tensor must have dtype");
+
+                SnapshotNode {
+                    op: op.op,
+                    params: op.params,
+                    input_ids: op
+                        .input_ids
+                        .into_iter()
+                        .map(|id| SnapshotTensorId(id.as_usize() - offset))
+                        .collect(),
+                    output_id: SnapshotTensorId(op.output_id.as_usize() - offset),
+                    input_layouts: op.input_layouts,
+                    output_layout: op.output_layout,
+                    output_dtype,
+                }
             })
             .collect();
 

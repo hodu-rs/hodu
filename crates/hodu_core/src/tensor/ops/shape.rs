@@ -34,7 +34,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Reshape),
@@ -86,7 +86,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Flatten),
@@ -142,7 +142,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Squeeze),
@@ -193,7 +193,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Unsqueeze),
@@ -242,7 +242,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Broadcast),
@@ -309,7 +309,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Transpose),
@@ -369,7 +369,7 @@ impl Tensor {
         let requires_grad = self.is_requires_grad();
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Shape(ShapeOp::Permute),
@@ -488,7 +488,7 @@ impl Tensor {
         });
 
         if crate::script::capture::is_active() {
-            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::ShapeScalars(ShapeScalarsOp::Slice),

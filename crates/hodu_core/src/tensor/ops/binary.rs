@@ -3,6 +3,7 @@ use crate::{
     error::HoduResult,
     ops::{BinaryLogicalOp, BinaryLogicalParams, BinaryOp, BinaryParams, Op, OpParams},
     tensor::{create_builder_tensor, from_storage_with_context, gradient, utils::broadcast_tensors2, Tensor},
+    types::DType,
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op, validate_same_device,
         validate_same_dtype,
@@ -25,7 +26,8 @@ macro_rules! binary_op {
                 let rhs_layout = rhs.layout();
                 let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
                 let result_layout = lhs_layout.clone();
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+                let (result_id, result_tensor) =
+                    create_builder_tensor(result_layout.clone(), lhs.dtype(), requires_grad);
 
                 crate::script::capture::capture_operation(
                     Op::Binary(BinaryOp::$op_name),
@@ -95,7 +97,7 @@ macro_rules! binary_logical_op {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
                 let result_layout = lhs_layout.clone();
-                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), DType::BOOL, false);
 
                 crate::script::capture::capture_operation(
                     Op::BinaryLogical(BinaryLogicalOp::$op_name),

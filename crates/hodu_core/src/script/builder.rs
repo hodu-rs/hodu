@@ -1,3 +1,4 @@
+pub mod codegen;
 pub mod config;
 pub mod validate;
 
@@ -6,7 +7,9 @@ use crate::{
     error::{HoduError, HoduResult},
     script::Script,
 };
-pub use config::{BuildConfig, ExecutionConfig, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor};
+use codegen::CodeGenerator;
+pub use config::{BuildConfig, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor};
+use inkwell::context::Context;
 
 /// Build output type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,7 +23,7 @@ pub enum BuildType {
 /// Builder for AOT compilation
 pub struct Builder<'a> {
     script: &'a Script,
-    target: TargetConfig,
+    config: BuildConfig,
     build_type: BuildType,
     output_path: Option<String>,
 }
@@ -30,15 +33,33 @@ impl<'a> Builder<'a> {
     pub fn new(script: &'a Script) -> Self {
         Self {
             script,
-            target: TargetConfig::default(),
+            config: BuildConfig::default(),
             build_type: BuildType::Library,
             output_path: None,
         }
     }
 
+    /// Set the build configuration (execution + target)
+    pub fn config(mut self, config: BuildConfig) -> Self {
+        self.config = config;
+        self
+    }
+
     /// Set the target platform configuration
     pub fn target(mut self, target: TargetConfig) -> Self {
-        self.target = target;
+        self.config.target = target;
+        self
+    }
+
+    /// Set the target device
+    pub fn device(mut self, device: crate::types::Device) -> Self {
+        self.config.device = device;
+        self
+    }
+
+    /// Set the target runtime
+    pub fn runtime(mut self, runtime: crate::types::Runtime) -> Self {
+        self.config.runtime = runtime;
         self
     }
 
@@ -61,15 +82,35 @@ impl<'a> Builder<'a> {
             .output_path
             .ok_or_else(|| HoduError::InvalidArgument("Output path must be set before building".into()))?;
 
-        // TODO: Validate snapshot for target platform
+        // Create LLVM context and code generator
+        let context = Context::create();
+        let mut codegen = CodeGenerator::new(&context, "hodu_module", self.config.device, self.config.runtime);
 
-        // TODO: Generate LLVM IR or similar from Snapshot
+        // Generate LLVM IR from Snapshot
+        codegen.generate(self.script.snapshot())?;
 
-        // TODO: Compile to native code using target triple
+        // Get the LLVM module
+        let _module = codegen.module();
 
-        // TODO: Link and produce output file
+        // TODO: Verify the module
 
-        // Placeholder for now
-        Err(HoduError::NotImplemented("AOT compilation not yet implemented".into()))
+        // TODO: Apply LLVM optimization passes
+
+        // TODO: Generate target machine code using target triple
+
+        // TODO: Write to output file (requires std feature)
+        #[cfg(feature = "std")]
+        {
+            // TODO: Write LLVM IR to file
+        }
+
+        #[cfg(not(feature = "std"))]
+        {
+            return Err(HoduError::UnsupportedOperation(
+                "File output not available in no_std environment".into(),
+            ));
+        }
+
+        Ok(())
     }
 }

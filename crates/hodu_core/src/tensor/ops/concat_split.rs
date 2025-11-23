@@ -58,7 +58,7 @@ impl Tensor {
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&Shape::from(output_dims));
             let requires_grad = tensors.iter().any(|t| t.is_requires_grad()) && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), first.dtype(), requires_grad);
 
             let input_ids: Vec<_> = tensors.iter().map(|t| t.id()).collect();
             let op_params = OpParams::Concat(ConcatParams { dim: dim_scalar });
@@ -161,7 +161,7 @@ impl Tensor {
                     let mut result_dims = shape_dims.to_vec();
                     result_dims[dim_usize] = size;
                     let result_layout = Layout::from_shape(&Shape::from(result_dims));
-                    let (result_id, result_tensor) = create_builder_tensor(result_layout, requires_grad);
+                    let (result_id, result_tensor) = create_builder_tensor(result_layout, self.dtype(), requires_grad);
                     results.push(result_tensor);
                     result_id
                 })

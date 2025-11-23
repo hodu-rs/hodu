@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// Snapshot-local tensor ID (normalized from runtime TensorId)
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SnapshotTensorId(pub usize);
 
@@ -37,6 +37,7 @@ pub struct SnapshotNode {
     pub output_id: SnapshotTensorId,
     pub input_layouts: Vec<Layout>,
     pub output_layout: Layout,
+    pub output_dtype: DType,
 }
 
 /// Hodu Snapshot - serializable IR representation

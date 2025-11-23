@@ -6,7 +6,7 @@ use crate::{
     be::storage::BackendStorage,
     compat::*,
     error::{HoduError, HoduResult},
-    types::Layout,
+    types::{DType, Layout},
 };
 
 pub(crate) fn from_storage(
@@ -73,11 +73,11 @@ pub(crate) fn from_shared_storage_with(source_tensor: &Tensor, layout: Layout, r
     Tensor::from_id(tensor_id)
 }
 
-pub(crate) fn create_builder_tensor(layout: Layout, requires_grad: bool) -> (TensorId, Tensor) {
+pub(crate) fn create_builder_tensor(layout: Layout, dtype: DType, requires_grad: bool) -> (TensorId, Tensor) {
     let tensor_ = Tensor_ {
         storage: None,
         layout,
-        dtype: None, // Builder tensors will get dtype from operations
+        dtype: Some(dtype),
         requires_grad,
         grad_tensor_id: None,
         is_runtime: false,

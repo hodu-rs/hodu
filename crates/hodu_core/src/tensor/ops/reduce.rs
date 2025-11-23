@@ -4,7 +4,7 @@ use crate::{
     ops::{Op, OpParams, ReduceOp, ReduceParams},
     scalar::Scalar,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
-    types::{Layout, Shape},
+    types::{DType, Layout, Shape},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
 
@@ -169,7 +169,6 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), requires_grad);
 
             let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d)).collect();
 
@@ -177,6 +176,14 @@ impl Tensor {
                 dims: dims_scalars.clone(),
                 keep_dim,
             });
+
+            // Determine output dtype based on operation
+            let output_dtype = match reduce_op {
+                ReduceOp::Any | ReduceOp::All => DType::BOOL,
+                _ => self.dtype(),
+            };
+
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), output_dtype, requires_grad);
 
             crate::script::capture::capture_operation(
                 Op::Reduce(reduce_op),

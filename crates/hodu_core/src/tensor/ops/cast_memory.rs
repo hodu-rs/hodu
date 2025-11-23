@@ -14,7 +14,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let input_layout = self.layout();
-            let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), dtype, false);
 
             let op_params = OpParams::ToDType(ToDTypeParams { dtype });
 
@@ -61,7 +61,7 @@ impl Tensor {
 
         if crate::script::capture::is_active() {
             let result_layout = Layout::from_shape(&self.shape());
-            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), false);
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
             crate::script::capture::capture_operation(
                 Op::Memory(MemoryOp::Contiguous),

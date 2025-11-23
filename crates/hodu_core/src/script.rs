@@ -4,9 +4,7 @@ pub mod snapshot;
 
 #[cfg(feature = "serde")]
 use crate::error::{HoduError, HoduResult};
-pub use builder::{
-    BuildConfig, BuildType, Builder, ExecutionConfig, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor,
-};
+pub use builder::{BuildConfig, BuildType, Builder, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor};
 pub use capture::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp, CapturedTarget};
 pub use snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId};
 

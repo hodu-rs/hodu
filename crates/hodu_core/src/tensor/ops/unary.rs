@@ -4,7 +4,7 @@ use crate::{
     ops::{Op, OpParams, UnaryLogicalOp, UnaryLogicalParams, UnaryOp, UnaryParams, UnaryScalarOp, UnaryScalarParams},
     scalar::Scalar,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
-    types::Layout,
+    types::{DType, Layout},
     utils::valid::{validate_dtype_for_device, validate_dtype_for_op, validate_requires_grad_for_op},
 };
 
@@ -19,7 +19,8 @@ macro_rules! unary_op {
 
             if crate::script::capture::is_active() {
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), requires_grad);
+                let (result_id, result_tensor) =
+                    create_builder_tensor(input_layout.clone(), self.dtype(), requires_grad);
 
                 crate::script::capture::capture_operation(
                     Op::Unary(UnaryOp::$op_name),
@@ -73,7 +74,7 @@ macro_rules! unary_logical_op {
             let input_layout = self.layout();
 
             if crate::script::capture::is_active() {
-                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), false);
+                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), DType::BOOL, false);
 
                 crate::script::capture::capture_operation(
                     Op::UnaryLogical(UnaryLogicalOp::$op_name),
@@ -112,7 +113,8 @@ macro_rules! unary_scalar_op {
 
             if crate::script::capture::is_active() {
                 let requires_grad = self.is_requires_grad() && validate_requires_grad;
-                let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), requires_grad);
+                let (result_id, result_tensor) =
+                    create_builder_tensor(input_layout.clone(), self.dtype(), requires_grad);
 
                 crate::script::capture::capture_operation(
                     Op::UnaryScalar(UnaryScalarOp::$op_name),
