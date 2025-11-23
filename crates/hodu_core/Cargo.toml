@@ -21,7 +21,6 @@ std = [
     "serde?/std",
 ]
 serde = ["dep:postcard", "dep:serde", "smallvec/serde"]
-rayon = ["std", "dep:rayon"]
 
 # optional dtype
 f8e5m2 = []
@@ -38,7 +37,7 @@ openblas = ["hodu_cpu_kernels/openblas"]
 cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
 metal = ["std", "dep:hodu_metal_kernels"]
 
-# optional compiler
+# optional runtime
 xla = ["std", "i64", "dep:hodu_xla"]
 
 [dependencies]
@@ -50,12 +49,12 @@ hodu_cpu_kernels = { workspace = true }
 hodu_cuda_kernels = { workspace = true, optional = true }
 hodu_metal_kernels = { workspace = true, optional = true }
 hodu_xla = { workspace = true, optional = true }
+inkwell = { workspace = true }
 num-traits = { workspace = true, default-features = false }
 paste = { workspace = true }
 postcard = { workspace = true, optional = true }
 rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
-rayon = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 smallvec = { workspace = true }
 spin = { workspace = true }

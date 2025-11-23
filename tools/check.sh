@@ -197,8 +197,6 @@ tests+=(
     "serde|[basic] serde (no-std)"
     "std|[basic] std only"
     "std,serde|[basic] std + serde"
-    "std,rayon|[basic] std + rayon"
-    "std,serde,rayon|[basic] std + serde + rayon"
 )
 
 # ============================================================================
@@ -208,8 +206,6 @@ tests+=(
     "$DTYPE_ALL|[dtype] all dtypes (no-std)"
     "std,$DTYPE_ALL|[dtype] all dtypes (std)"
     "std,serde,$DTYPE_ALL|[dtype] all dtypes + serde (std)"
-    "std,rayon,$DTYPE_ALL|[dtype] all dtypes + rayon (std)"
-    "std,serde,rayon,$DTYPE_ALL|[dtype] all dtypes + serde + rayon (std)"
 )
 
 # ============================================================================
@@ -218,9 +214,7 @@ tests+=(
 tests+=(
     "std,xla|[xla] xla only (std)"
     "std,serde,xla|[xla] xla + serde (std)"
-    "std,rayon,xla|[xla] xla + rayon (std)"
-    "std,serde,rayon,xla|[xla] xla + serde + rayon (std)"
-    "std,serde,rayon,xla,$DTYPE_ALL|[xla] xla + serde + rayon + all dtypes (std)"
+    "std,serde,xla,$DTYPE_ALL|[xla] xla + serde + all dtypes (std)"
 )
 
 # ============================================================================
@@ -230,18 +224,14 @@ if [ "$HAS_CUDA" = true ]; then
     tests+=(
         "std,cuda|[cuda] cuda only (std)"
         "std,serde,cuda|[cuda] cuda + serde (std)"
-        "std,rayon,cuda|[cuda] cuda + rayon (std)"
-        "std,serde,rayon,cuda|[cuda] cuda + serde + rayon (std)"
-        "std,serde,rayon,cuda,$DTYPE_ALL|[cuda] cuda + serde + rayon + all dtypes (std)"
+        "std,serde,cuda,$DTYPE_ALL|[cuda] cuda + serde + all dtypes (std)"
     )
 
     # CUDA + XLA combinations
     tests+=(
         "std,xla,cuda|[cuda+xla] xla + cuda (std)"
         "std,serde,xla,cuda|[cuda+xla] xla + cuda + serde (std)"
-        "std,rayon,xla,cuda|[cuda+xla] xla + cuda + rayon (std)"
-        "std,serde,rayon,xla,cuda|[cuda+xla] xla + cuda + serde + rayon (std)"
-        "std,serde,rayon,xla,cuda,$DTYPE_ALL|[cuda+xla] xla + cuda + all dtypes (std)"
+        "std,serde,xla,cuda,$DTYPE_ALL|[cuda+xla] xla + cuda + all dtypes (std)"
     )
 fi
 
@@ -252,18 +242,14 @@ if [ "$HAS_METAL" = true ]; then
     tests+=(
         "std,metal|[metal] metal only (std)"
         "std,serde,metal|[metal] metal + serde (std)"
-        "std,rayon,metal|[metal] metal + rayon (std)"
-        "std,serde,rayon,metal|[metal] metal + serde + rayon (std)"
-        "std,serde,rayon,metal,$DTYPE_ALL|[metal] metal + serde + rayon + all dtypes (std)"
+        "std,serde,metal,$DTYPE_ALL|[metal] metal + serde + all dtypes (std)"
     )
 
     # Metal + XLA combinations
     tests+=(
         "std,xla,metal|[metal+xla] xla + metal (std)"
         "std,serde,xla,metal|[metal+xla] xla + metal + serde (std)"
-        "std,rayon,xla,metal|[metal+xla] xla + metal + rayon (std)"
-        "std,serde,rayon,xla,metal|[metal+xla] xla + metal + serde + rayon (std)"
-        "std,serde,rayon,xla,metal,$DTYPE_ALL|[metal+xla] all features + all dtypes (std)"
+        "std,serde,xla,metal,$DTYPE_ALL|[metal+xla] all features + all dtypes (std)"
     )
 fi
 

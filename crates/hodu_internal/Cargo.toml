@@ -11,7 +11,6 @@ repository = "https://github.com/hodu-rs/hodu"
 [features]
 std = ["hodu_core/std", "hodu_nn/std", "hodu_utils/std"]
 serde = ["hodu_core/serde", "hodu_nn/serde", "hodu_utils/serde"]
-rayon = ["std", "hodu_core/rayon"]
 
 f8e5m2 = ["hodu_core/f8e5m2"]
 f64 = ["hodu_core/f64"]

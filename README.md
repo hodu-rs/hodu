@@ -171,7 +171,6 @@ let mut script = builder.build()?;
 |---------|-------------|--------------|
 | `std` | Standard library support | - |
 | `serde` | Serialization/deserialization support | - |
-| `rayon` | Parallel processing support | `std` |
 
 ### Optional Features
 | Feature | Description | Dependencies | Required Features |
