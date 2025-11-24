@@ -5,8 +5,8 @@
 #include <cuda_fp8.h>
 
 #define INDEX_SELECT_OP(TYPENAME, FN_NAME)                                                         \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       TYPENAME *out, const size_t *metadata) {                    \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   TYPENAME *out, const size_t *metadata) {        \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \
@@ -40,9 +40,9 @@
     }
 
 #define INDEX_PUT_OP(TYPENAME, FN_NAME)                                                            \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       const TYPENAME *values, TYPENAME *out,                      \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   const TYPENAME *values, TYPENAME *out,          \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \
@@ -91,8 +91,8 @@
     }
 
 #define GATHER_OP(TYPENAME, FN_NAME)                                                               \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       TYPENAME *out, const size_t *metadata) {                    \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   TYPENAME *out, const size_t *metadata) {        \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *output_shape = metadata + 2;                                                 \
@@ -135,9 +135,9 @@
     }
 
 #define SCATTER_OP(TYPENAME, FN_NAME)                                                              \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       const TYPENAME *src, TYPENAME *out,                         \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   const TYPENAME *src, TYPENAME *out,             \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \
@@ -182,9 +182,9 @@
     }
 
 #define SCATTER_ADD_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                                              \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       const TYPENAME *src, TYPENAME *out,                         \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   const TYPENAME *src, TYPENAME *out,             \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \
@@ -229,9 +229,9 @@
     }
 
 #define SCATTER_MAX_OP(TYPENAME, FN_NAME, ATOMIC_MAX)                                              \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       const TYPENAME *src, TYPENAME *out,                         \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   const TYPENAME *src, TYPENAME *out,             \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \
@@ -276,9 +276,9 @@
     }
 
 #define SCATTER_MIN_OP(TYPENAME, FN_NAME, ATOMIC_MIN)                                              \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const int32_t *indices,              \
-                                       const TYPENAME *src, TYPENAME *out,                         \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const int32_t *indices,  \
+                                                   const TYPENAME *src, TYPENAME *out,             \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \

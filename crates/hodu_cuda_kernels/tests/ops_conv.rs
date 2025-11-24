@@ -999,20 +999,43 @@ fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
     let grad_weight_size = out_channels * in_channels * kernel_size;
     let mut grad_weight: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(grad_weight_size).unwrap() };
 
-    // Metadata same as forward conv
+    // Generic metadata layout for conv1d_grad_weight (input_ndim=3, spatial_dims=1):
+    // [num_els, input_ndim, spatial_dims,
+    //  input_shape(3), grad_output_shape(3), weight_shape(3),
+    //  input_strides(3), grad_output_strides(3),
+    //  input_offset, grad_output_offset,
+    //  stride, padding, dilation]
     let metadata = vec![
-        grad_weight_size,
+        grad_weight_size, // num_els
+        3,                // input_ndim
+        1,                // spatial_dims
+        // input_shape: [batch, in_channels, in_width]
         batch,
         in_channels,
-        out_channels,
         input_length,
-        kernel_size,
+        // grad_output_shape: [batch, out_channels, out_width]
+        batch,
+        out_channels,
         output_length,
+        // weight_shape: [out_channels, in_channels, kernel_width]
+        out_channels,
+        in_channels,
+        kernel_size,
+        // input_strides: [in_channels * in_width, in_width, 1]
+        in_channels * input_length,
+        input_length,
+        1,
+        // grad_output_strides: [out_channels * out_width, out_width, 1]
+        out_channels * output_length,
+        output_length,
+        1,
+        // input_offset, grad_output_offset
+        0,
+        0,
+        // stride, padding, dilation
         stride,
         padding,
-        1, // dilation
-        0, // input_offset
-        0, // grad_output_offset
+        1,
     ];
 
     call_ops_conv_grad_weight(
@@ -1061,25 +1084,48 @@ fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
     let grad_weight_size = out_channels * in_channels * kernel_h * kernel_w;
     let mut grad_weight: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(grad_weight_size).unwrap() };
 
+    // Generic metadata layout for conv2d_grad_weight (input_ndim=4, spatial_dims=2):
     let metadata = vec![
-        grad_weight_size,
+        grad_weight_size, // num_els
+        4,                // input_ndim
+        2,                // spatial_dims
+        // input_shape: [batch, in_channels, in_height, in_width]
         batch,
         in_channels,
-        out_channels,
         input_height,
         input_width,
-        kernel_h,
-        kernel_w,
+        // grad_output_shape: [batch, out_channels, out_height, out_width]
+        batch,
+        out_channels,
         output_height,
         output_width,
+        // weight_shape: [out_channels, in_channels, kernel_height, kernel_width]
+        out_channels,
+        in_channels,
+        kernel_h,
+        kernel_w,
+        // input_strides: [C*H*W, H*W, W, 1]
+        in_channels * input_height * input_width,
+        input_height * input_width,
+        input_width,
+        1,
+        // grad_output_strides: [C*H*W, H*W, W, 1]
+        out_channels * output_height * output_width,
+        output_height * output_width,
+        output_width,
+        1,
+        // input_offset, grad_output_offset
+        0,
+        0,
+        // stride_h, stride_w
         stride_h,
         stride_w,
+        // padding_h, padding_w
         padding_h,
         padding_w,
-        1, // dilation_h
-        1, // dilation_w
-        0, // input_offset
-        0, // grad_output_offset
+        // dilation_h, dilation_w
+        1,
+        1,
     ];
 
     call_ops_conv_grad_weight(
@@ -1133,31 +1179,56 @@ fn run_conv3d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
     let grad_weight_size = out_channels * in_channels * kernel_d * kernel_h * kernel_w;
     let mut grad_weight: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(grad_weight_size).unwrap() };
 
+    // Generic metadata layout for conv3d_grad_weight (input_ndim=5, spatial_dims=3):
     let metadata = vec![
-        grad_weight_size,
+        grad_weight_size, // num_els
+        5,                // input_ndim
+        3,                // spatial_dims
+        // input_shape: [batch, in_channels, in_depth, in_height, in_width]
         batch,
         in_channels,
-        out_channels,
         input_depth,
         input_height,
         input_width,
-        kernel_d,
-        kernel_h,
-        kernel_w,
+        // grad_output_shape: [batch, out_channels, out_depth, out_height, out_width]
+        batch,
+        out_channels,
         output_depth,
         output_height,
         output_width,
+        // weight_shape: [out_channels, in_channels, kernel_depth, kernel_height, kernel_width]
+        out_channels,
+        in_channels,
+        kernel_d,
+        kernel_h,
+        kernel_w,
+        // input_strides: [C*D*H*W, D*H*W, H*W, W, 1]
+        in_channels * input_depth * input_height * input_width,
+        input_depth * input_height * input_width,
+        input_height * input_width,
+        input_width,
+        1,
+        // grad_output_strides: [C*D*H*W, D*H*W, H*W, W, 1]
+        out_channels * output_depth * output_height * output_width,
+        output_depth * output_height * output_width,
+        output_height * output_width,
+        output_width,
+        1,
+        // input_offset, grad_output_offset
+        0,
+        0,
+        // stride_d, stride_h, stride_w
         stride_d,
         stride_h,
         stride_w,
+        // padding_d, padding_h, padding_w
         padding_d,
         padding_h,
         padding_w,
-        1, // dilation_d
-        1, // dilation_h
-        1, // dilation_w
-        0, // input_offset
-        0, // grad_output_offset
+        // dilation_d, dilation_h, dilation_w
+        1,
+        1,
+        1,
     ];
 
     call_ops_conv_grad_weight(

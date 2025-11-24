@@ -7,8 +7,8 @@
 #define TILE_SIZE 16
 
 #define MATMUL_OP(TYPENAME, FN_NAME)                                                               \
-    extern "C" __global__ void FN_NAME(const TYPENAME *lhs, const TYPENAME *rhs, TYPENAME *out,    \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *lhs, const TYPENAME *rhs,       \
+                                                   TYPENAME *out, const size_t *metadata) {        \
         const size_t lhs_ndim = metadata[1];                                                       \
         const size_t rhs_ndim = metadata[2];                                                       \
         const size_t batch_ndim = metadata[3];                                                     \
@@ -104,8 +104,8 @@ MATMUL_OP(uint64_t, matmul_u64)
 #define DOT_TILE_SIZE 32
 
 #define DOT_OP(TYPENAME, FN_NAME)                                                                  \
-    extern "C" __global__ void FN_NAME(const TYPENAME *lhs, const TYPENAME *rhs, TYPENAME *out,    \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *lhs, const TYPENAME *rhs,       \
+                                                   TYPENAME *out, const size_t *metadata) {        \
         const size_t M = metadata[0];                                                              \
         const size_t K = metadata[1];                                                              \
         const size_t N = metadata[2];                                                              \

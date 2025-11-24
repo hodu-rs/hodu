@@ -4,8 +4,8 @@
 #include <cuda_fp8.h>
 
 #define CONCAT_OP(TYPENAME, FN_NAME)                                                               \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, TYPENAME *output,                    \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, TYPENAME *output,        \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *output_shape = metadata + 2;                                                 \
@@ -48,8 +48,8 @@
     }
 
 #define SPLIT_OP(TYPENAME, FN_NAME)                                                                \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, TYPENAME *output,                    \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, TYPENAME *output,        \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *input_shape = metadata + 2;                                                  \

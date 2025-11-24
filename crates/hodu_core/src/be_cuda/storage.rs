@@ -229,7 +229,7 @@ impl BackendStorageT for CudaStorage {
         let kernels = &self.device.kernels;
         let context = &self.device.context;
 
-        let kernel_name = format!("const_set_{}", dtype);
+        let kernel_name = format!("hodu_cuda_const_set_{}", dtype);
         let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
         let kernel = hodu_cuda_kernels::kernels::Kernel(kernel_name_static);
 
@@ -446,7 +446,7 @@ impl BackendStorageT for CudaStorage {
         let src_dtype = self.dtype();
         let device = self.get_device();
 
-        let kernel_name = format!("cast_{}_to_{}", src_dtype, target_dtype);
+        let kernel_name = format!("hodu_cuda_cast_{}_to_{}", src_dtype, target_dtype);
         let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
         let kernel = hodu_cuda_kernels::kernels::Kernel(kernel_name_static);
 
@@ -539,7 +539,7 @@ impl BackendStorageT for CudaStorage {
         let dtype = self.dtype();
         let device = self.get_device();
 
-        let kernel_name = format!("contiguous_{}", dtype);
+        let kernel_name = format!("hodu_cuda_contiguous_{}", dtype);
         let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
         let kernel = hodu_cuda_kernels::kernels::Kernel(kernel_name_static);
 

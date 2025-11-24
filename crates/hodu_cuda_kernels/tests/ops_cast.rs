@@ -48,42 +48,42 @@ where
 #[test]
 fn cast_f32_to_i32() {
     let input = vec![1.5f32, -2.7, 3.2, -4.9];
-    let results: Vec<i32> = run_cast(&input, Kernel("cast_f32_to_i32"));
+    let results: Vec<i32> = run_cast(&input, Kernel("hodu_cuda_cast_f32_to_i32"));
     assert_eq!(results, vec![1i32, -2, 3, -4]);
 }
 
 #[test]
 fn cast_i32_to_f32() {
     let input = vec![1i32, -2, 3, -4];
-    let results: Vec<f32> = run_cast(&input, Kernel("cast_i32_to_f32"));
+    let results: Vec<f32> = run_cast(&input, Kernel("hodu_cuda_cast_i32_to_f32"));
     assert_eq!(results, vec![1.0f32, -2.0, 3.0, -4.0]);
 }
 
 #[test]
 fn cast_f32_to_u32() {
     let input = vec![1.5f32, 2.7, 3.2, 4.9];
-    let results: Vec<u32> = run_cast(&input, Kernel("cast_f32_to_u32"));
+    let results: Vec<u32> = run_cast(&input, Kernel("hodu_cuda_cast_f32_to_u32"));
     assert_eq!(results, vec![1u32, 2, 3, 4]);
 }
 
 #[test]
 fn cast_u32_to_f32() {
     let input = vec![1u32, 2, 3, 4];
-    let results: Vec<f32> = run_cast(&input, Kernel("cast_u32_to_f32"));
+    let results: Vec<f32> = run_cast(&input, Kernel("hodu_cuda_cast_u32_to_f32"));
     assert_eq!(results, vec![1.0f32, 2.0, 3.0, 4.0]);
 }
 
 #[test]
 fn cast_f64_to_f32() {
     let input = vec![1.5f64, 2.7, 3.2, 4.9];
-    let results: Vec<f32> = run_cast(&input, Kernel("cast_f64_to_f32"));
+    let results: Vec<f32> = run_cast(&input, Kernel("hodu_cuda_cast_f64_to_f32"));
     assert_eq!(results, vec![1.5f32, 2.7, 3.2, 4.9]);
 }
 
 #[test]
 fn cast_f32_to_f64() {
     let input = vec![1.5f32, 2.7, 3.2, 4.9];
-    let results: Vec<f64> = run_cast(&input, Kernel("cast_f32_to_f64"));
+    let results: Vec<f64> = run_cast(&input, Kernel("hodu_cuda_cast_f32_to_f64"));
     // f32 cannot exactly represent 2.7, 3.2, 4.9, so we need to approximate
     assert_eq!(approx_f64(results, 1), vec![1.5f64, 2.7, 3.2, 4.9]);
 }

@@ -6,8 +6,8 @@
 #include <stdint.h>
 
 #define UNARY_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                         \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *out,                \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *out,    \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *dims = metadata + 2;                                                         \
@@ -31,8 +31,9 @@
     }
 
 #define UNARY_OP_WITH_SCALAR(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                             \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *out,                \
-                                       const size_t *metadata, const IN_TYPENAME *scalar) {        \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *out,    \
+                                                   const size_t *metadata,                         \
+                                                   const IN_TYPENAME *scalar) {                    \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *dims = metadata + 2;                                                         \

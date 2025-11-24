@@ -4,8 +4,8 @@
 #include <cuda_fp8.h>
 
 #define CONST_SET_OP(TYPENAME, FN_NAME)                                                            \
-    extern "C" __global__ void FN_NAME(TYPENAME *output, const TYPENAME const_val,                 \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(TYPENAME *output, const TYPENAME const_val,     \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *dims = metadata + 2;                                                         \

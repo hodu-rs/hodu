@@ -5,8 +5,8 @@
 #include <cuda_fp8.h>
 
 #define REDUCE_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, INIT_VAL, ACCUMULATE)                        \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *output,             \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *output, \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \
@@ -75,8 +75,8 @@
     }
 
 #define REDUCE_MEAN_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                         \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *output,             \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *output, \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \
@@ -144,8 +144,8 @@
     }
 
 #define REDUCE_NORM_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                         \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *output,             \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *output, \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \
@@ -214,8 +214,8 @@
     }
 
 #define REDUCE_ARGMAX_OP(IN_TYPENAME, FN_NAME)                                                     \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, int32_t *output,                  \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, int32_t *output,      \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \
@@ -291,8 +291,8 @@
     }
 
 #define REDUCE_ARGMIN_OP(IN_TYPENAME, FN_NAME)                                                     \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, int32_t *output,                  \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, int32_t *output,      \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \
@@ -368,8 +368,8 @@
     }
 
 #define REDUCE_ANY_OP(IN_TYPENAME, FN_NAME)                                                        \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, bool *output,                     \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, bool *output,         \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \
@@ -440,8 +440,8 @@
     }
 
 #define REDUCE_ALL_OP(IN_TYPENAME, FN_NAME)                                                        \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, bool *output,                     \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, bool *output,         \
+                                                   const size_t *metadata) {                       \
         const size_t num_dims = metadata[0];                                                       \
         const size_t *dims = metadata + 1;                                                         \
         const size_t *strides = metadata + 1 + num_dims;                                           \

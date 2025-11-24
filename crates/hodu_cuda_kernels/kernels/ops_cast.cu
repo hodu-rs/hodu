@@ -5,8 +5,8 @@
 #include <cuda_fp8.h>
 
 #define CAST_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, CAST_EXPR)                                     \
-    extern "C" __global__ void FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *out,                \
-                                       const size_t *metadata) {                                   \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const IN_TYPENAME *input, OUT_TYPENAME *out,    \
+                                                   const size_t *metadata) {                       \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const size_t *dims = metadata + 2;                                                         \

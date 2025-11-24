@@ -6,8 +6,8 @@
 #include <cuda_fp8.h>
 
 #define CONV1D_OP(TYPENAME, FN_NAME)                                                               \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *weight,              \
-                                       TYPENAME *output, const size_t *metadata) {                 \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const TYPENAME *weight,  \
+                                                   TYPENAME *output, const size_t *metadata) {     \
         const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[2];                                                    \
         const size_t out_channels = metadata[3];                                                   \
@@ -43,8 +43,8 @@
     }
 
 #define CONV2D_OP(TYPENAME, FN_NAME)                                                               \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *weight,              \
-                                       TYPENAME *output, const size_t *metadata) {                 \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const TYPENAME *weight,  \
+                                                   TYPENAME *output, const size_t *metadata) {     \
         const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[2];                                                    \
         const size_t out_channels = metadata[3];                                                   \
@@ -93,8 +93,8 @@
     }
 
 #define CONV3D_OP(TYPENAME, FN_NAME)                                                               \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *weight,              \
-                                       TYPENAME *output, const size_t *metadata) {                 \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const TYPENAME *weight,  \
+                                                   TYPENAME *output, const size_t *metadata) {     \
         const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[2];                                                    \
         const size_t out_channels = metadata[3];                                                   \
@@ -160,8 +160,8 @@
     }
 
 #define CONV_TRANSPOSE1D_OP(TYPENAME, FN_NAME)                                                     \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *weight,              \
-                                       TYPENAME *output, const size_t *metadata) {                 \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const TYPENAME *weight,  \
+                                                   TYPENAME *output, const size_t *metadata) {     \
         const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[2];                                                    \
         const size_t out_channels = metadata[3];                                                   \
@@ -200,8 +200,8 @@
     }
 
 #define CONV_TRANSPOSE2D_OP(TYPENAME, FN_NAME)                                                     \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *weight,              \
-                                       TYPENAME *output, const size_t *metadata) {                 \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const TYPENAME *weight,  \
+                                                   TYPENAME *output, const size_t *metadata) {     \
         const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[2];                                                    \
         const size_t out_channels = metadata[3];                                                   \
@@ -253,8 +253,8 @@
     }
 
 #define CONV_TRANSPOSE3D_OP(TYPENAME, FN_NAME)                                                     \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *weight,              \
-                                       TYPENAME *output, const size_t *metadata) {                 \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, const TYPENAME *weight,  \
+                                                   TYPENAME *output, const size_t *metadata) {     \
         const size_t num_els = metadata[0];                                                        \
         const size_t in_channels = metadata[2];                                                    \
         const size_t out_channels = metadata[3];                                                   \
@@ -325,8 +325,9 @@
     }
 
 #define CONV1D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                                       \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *grad_output,         \
-                                       TYPENAME *grad_weight, const size_t *metadata) {            \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(                                                \
+        const TYPENAME *input, const TYPENAME *grad_output, TYPENAME *grad_weight,                 \
+        const size_t *metadata) {                                                                  \
         /* Parse generic metadata: Conv1D has input_ndim=3, spatial_dims=1 */                      \
         const size_t input_ndim = metadata[1];                                                     \
         const size_t spatial_dims = metadata[2];                                                   \
@@ -378,8 +379,9 @@
     }
 
 #define CONV2D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                                       \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *grad_output,         \
-                                       TYPENAME *grad_weight, const size_t *metadata) {            \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(                                                \
+        const TYPENAME *input, const TYPENAME *grad_output, TYPENAME *grad_weight,                 \
+        const size_t *metadata) {                                                                  \
         /* Parse generic metadata: Conv2D has input_ndim=4, spatial_dims=2 */                      \
         const size_t input_ndim = metadata[1];                                                     \
         const size_t spatial_dims = metadata[2];                                                   \
@@ -447,8 +449,9 @@
     }
 
 #define CONV3D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                                       \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *grad_output,         \
-                                       TYPENAME *grad_weight, const size_t *metadata) {            \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(                                                \
+        const TYPENAME *input, const TYPENAME *grad_output, TYPENAME *grad_weight,                 \
+        const size_t *metadata) {                                                                  \
         /* Parse generic metadata: Conv3D has input_ndim=5, spatial_dims=3 */                      \
         const size_t input_ndim = metadata[1];                                                     \
         const size_t spatial_dims = metadata[2];                                                   \
@@ -535,8 +538,9 @@
     }
 
 #define CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                             \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *grad_output,         \
-                                       TYPENAME *grad_weight, const size_t *metadata) {            \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(                                                \
+        const TYPENAME *input, const TYPENAME *grad_output, TYPENAME *grad_weight,                 \
+        const size_t *metadata) {                                                                  \
         /* Parse generic metadata: ConvTranspose1D has input_ndim=3, spatial_dims=1 */             \
         const size_t input_ndim = metadata[1];                                                     \
         const size_t spatial_dims = metadata[2];                                                   \
@@ -592,8 +596,9 @@
     }
 
 #define CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                             \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *grad_output,         \
-                                       TYPENAME *grad_weight, const size_t *metadata) {            \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(                                                \
+        const TYPENAME *input, const TYPENAME *grad_output, TYPENAME *grad_weight,                 \
+        const size_t *metadata) {                                                                  \
         /* Parse generic metadata: ConvTranspose2D has input_ndim=4, spatial_dims=2 */             \
         const size_t input_ndim = metadata[1];                                                     \
         const size_t spatial_dims = metadata[2];                                                   \
@@ -664,8 +669,9 @@
     }
 
 #define CONV_TRANSPOSE3D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME, ATOMIC_ADD)                             \
-    extern "C" __global__ void FN_NAME(const TYPENAME *input, const TYPENAME *grad_output,         \
-                                       TYPENAME *grad_weight, const size_t *metadata) {            \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(                                                \
+        const TYPENAME *input, const TYPENAME *grad_output, TYPENAME *grad_weight,                 \
+        const size_t *metadata) {                                                                  \
         /* Parse generic metadata: ConvTranspose3D has input_ndim=5, spatial_dims=3 */             \
         const size_t input_ndim = metadata[1];                                                     \
         const size_t spatial_dims = metadata[2];                                                   \
