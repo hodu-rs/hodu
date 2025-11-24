@@ -287,6 +287,7 @@ fn test_gather_f32_1d() {
     let indices = [0i32, 2, 4, 1];
     let mut output = vec![0.0f32; 4];
 
+    let output_shape = vec![4];
     let input_shape = vec![5];
     let input_strides = vec![1];
     let indices_strides = vec![1];
@@ -299,13 +300,13 @@ fn test_gather_f32_1d() {
     let mut metadata = Vec::new();
     metadata.push(num_els);
     metadata.push(num_dims);
+    metadata.extend(&output_shape);
     metadata.extend(&input_shape);
     metadata.extend(&input_strides);
     metadata.extend(&indices_strides);
     metadata.push(input_offset);
     metadata.push(indices_offset);
     metadata.push(dim);
-    metadata.push(indices.len());
 
     call_ops_gather(
         gather::F32,
@@ -326,6 +327,7 @@ fn test_gather_i32() {
     let indices = [4i32, 2, 0, 3];
     let mut output = vec![0i32; 4];
 
+    let output_shape = vec![4];
     let input_shape = vec![5];
     let input_strides = vec![1];
     let indices_strides = vec![1];
@@ -338,13 +340,13 @@ fn test_gather_i32() {
     let mut metadata = Vec::new();
     metadata.push(num_els);
     metadata.push(num_dims);
+    metadata.extend(&output_shape);
     metadata.extend(&input_shape);
     metadata.extend(&input_strides);
     metadata.extend(&indices_strides);
     metadata.push(input_offset);
     metadata.push(indices_offset);
     metadata.push(dim);
-    metadata.push(indices.len());
 
     call_ops_gather(
         gather::I32,
@@ -367,9 +369,10 @@ fn test_gather_f32_2d() {
     let indices = [0i32, 2, 1];
     let mut output = vec![0.0f32; 6];
 
+    let output_shape = vec![2, 3];
     let input_shape = vec![2, 3];
     let input_strides = vec![3, 1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![0, 1]; // indices broadcast along dim 0
     let input_offset = 0;
     let indices_offset = 0;
     let dim = 1;
@@ -379,13 +382,13 @@ fn test_gather_f32_2d() {
     let mut metadata = Vec::new();
     metadata.push(num_els);
     metadata.push(num_dims);
+    metadata.extend(&output_shape);
     metadata.extend(&input_shape);
     metadata.extend(&input_strides);
     metadata.extend(&indices_strides);
     metadata.push(input_offset);
     metadata.push(indices_offset);
     metadata.push(dim);
-    metadata.push(indices.len());
 
     call_ops_gather(
         gather::F32,
@@ -408,9 +411,10 @@ fn test_gather_f32_3d() {
     let indices = [1i32, 0];
     let mut output = vec![0.0f32; 8];
 
+    let output_shape = vec![2, 2, 2];
     let input_shape = vec![2, 2, 2];
     let input_strides = vec![4, 2, 1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![0, 0, 1]; // indices broadcast along dim 0 and 1
     let input_offset = 0;
     let indices_offset = 0;
     let dim = 2;
@@ -420,13 +424,13 @@ fn test_gather_f32_3d() {
     let mut metadata = Vec::new();
     metadata.push(num_els);
     metadata.push(num_dims);
+    metadata.extend(&output_shape);
     metadata.extend(&input_shape);
     metadata.extend(&input_strides);
     metadata.extend(&indices_strides);
     metadata.push(input_offset);
     metadata.push(indices_offset);
     metadata.push(dim);
-    metadata.push(indices.len());
 
     call_ops_gather(
         gather::F32,
@@ -451,16 +455,16 @@ fn test_scatter_f32_1d() {
     let src = [10.0f32, 20.0, 30.0];
     let mut output = vec![0.0f32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();
@@ -500,16 +504,16 @@ fn test_scatter_f32_2d() {
     let src = [10.0f32, 11.0, 12.0, 13.0];
     let mut output = vec![0.0f32; 6];
 
+    let num_dims = 2;
     let input_shape = vec![3, 2];
     let input_strides = vec![2, 1];
     let src_shape = vec![2, 2];
     let src_strides = vec![2, 1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1, 0]; // num_dims elements, broadcast along dim 1
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 2;
     let num_els = 4;
 
     let mut metadata = Vec::new();
@@ -549,16 +553,16 @@ fn test_scatter_add_f32_1d() {
     let src = [10.0f32, 20.0, 30.0];
     let mut output = vec![0.0f32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();
@@ -595,16 +599,16 @@ fn test_scatter_add_i32() {
     let src = [10i32, 20, 30];
     let mut output = vec![0i32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();
@@ -644,16 +648,16 @@ fn test_scatter_max_f32_1d() {
     let src = [10.0f32, 20.0, 5.0];
     let mut output = vec![0.0f32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();
@@ -690,16 +694,16 @@ fn test_scatter_max_i32() {
     let src = [50i32, 30, 8];
     let mut output = vec![0i32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();
@@ -739,16 +743,16 @@ fn test_scatter_min_f32_1d() {
     let src = [5.0f32, 25.0, 15.0];
     let mut output = vec![0.0f32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();
@@ -785,16 +789,16 @@ fn test_scatter_min_i32() {
     let src = [5i32, 15, 60];
     let mut output = vec![0i32; 5];
 
+    let num_dims = 1;
     let input_shape = vec![5];
     let input_strides = vec![1];
     let src_shape = vec![3];
     let src_strides = vec![1];
-    let indices_strides = vec![1];
+    let indices_strides = vec![1]; // num_dims elements
     let input_offset = 0;
     let src_offset = 0;
     let indices_offset = 0;
     let dim = 0;
-    let num_dims = 1;
     let num_els = 3;
 
     let mut metadata = Vec::new();

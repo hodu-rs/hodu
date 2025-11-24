@@ -25,7 +25,8 @@ extern "C" {
 // Performs batched matrix multiplication with broadcasting support.
 //
 // All matmul operations follow this signature:
-//   void matmul_type(const void *lhs, const void *rhs, void *output, const size_t *metadata)
+//   void hodu_cpu_matmul_type(const void *lhs, const void *rhs, void *output, const size_t
+//   *metadata)
 //
 // Parameters:
 //   lhs      - Pointer to left-hand side tensor data
@@ -52,20 +53,20 @@ extern "C" {
 // Broadcasting:
 // Batch dimensions of size 1 are automatically broadcast to match the output shape.
 
-void matmul_f8e4m3(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_f8e5m2(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_bf16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_f16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_f32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_f64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_i8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_i16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_i32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_i64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_u8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_u16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_u32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void matmul_u64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_f8e4m3(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_f8e5m2(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_bf16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_f16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_f32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_f64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_i8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_i16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_i32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_i64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_u8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_u16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_u32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_matmul_u64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
 
 // ============================================================================
 // 2D MATRIX MULTIPLICATION (DOT)
@@ -74,7 +75,7 @@ void matmul_u64(const void *lhs, const void *rhs, void *output, const size_t *me
 // Performs simple 2D matrix multiplication without batching.
 //
 // All dot operations follow this signature:
-//   void dot_type(const void *lhs, const void *rhs, void *output, const size_t *metadata)
+//   void hodu_cpu_dot_type(const void *lhs, const void *rhs, void *output, const size_t *metadata)
 //
 // Parameters:
 //   lhs      - Pointer to left-hand side matrix data (2D)
@@ -93,20 +94,20 @@ void matmul_u64(const void *lhs, const void *rhs, void *output, const size_t *me
 // - metadata[7]: lhs_offset (starting offset in lhs)
 // - metadata[8]: rhs_offset (starting offset in rhs)
 
-void dot_f8e4m3(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_f8e5m2(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_bf16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_f16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_f32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_f64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_i8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_i16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_i32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_i64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_u8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_u16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_u32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
-void dot_u64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_f8e4m3(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_f8e5m2(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_bf16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_f16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_f32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_f64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_i8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_i16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_i32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_i64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_u8(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_u16(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_u32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+void hodu_cpu_dot_u64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
 
 #ifdef __cplusplus
 }

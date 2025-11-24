@@ -28,9 +28,9 @@ extern "C" {
 // ============================================================================
 //
 // All unary operations follow consistent signatures:
-//   void op_type(const void *input, void *output, const size_t *metadata)
-//   void op_scalar_type(const void *input, void *output, const size_t *metadata, const void
-//   *scalar)
+//   void hodu_cpu_op_type(const void *input, void *output, const size_t *metadata)
+//   void hodu_cpu_op_scalar_type(const void *input, void *output, const size_t *metadata, const
+//   void *scalar)
 //
 // Parameters:
 //   input    - Pointer to input tensor data (may be strided)
@@ -65,12 +65,12 @@ extern "C" {
  * - recip: Reciprocal (1/x)
  */
 #define DECLARE_UNARY_OP(TYPE_SUFFIX)                                                              \
-    void neg_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);               \
-    void abs_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);               \
-    void sign_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void square_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);            \
-    void sqrt_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void recip_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_neg_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
+    void hodu_cpu_abs_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
+    void hodu_cpu_sign_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_square_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);   \
+    void hodu_cpu_sqrt_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_recip_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Macro to declare activation function operations
@@ -87,13 +87,13 @@ extern "C" {
  * Note: Only available for float types (f8e4m3, f8e5m2, bf16, f16, f32, f64)
  */
 #define DECLARE_UNARY_ACTIVATION(TYPE_SUFFIX)                                                      \
-    void relu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void sigmoid_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);           \
-    void tanh_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void gelu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void softplus_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);          \
-    void silu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void mish_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_relu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_sigmoid_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);  \
+    void hodu_cpu_tanh_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_gelu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_softplus_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata); \
+    void hodu_cpu_silu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_mish_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Macro to declare trigonometric operations
@@ -106,9 +106,9 @@ extern "C" {
  * Note: Only available for float types (f8e4m3, f8e5m2, bf16, f16, f32, f64)
  */
 #define DECLARE_UNARY_TRIG(TYPE_SUFFIX)                                                            \
-    void sin_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);               \
-    void cos_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);               \
-    void tan_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_sin_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
+    void hodu_cpu_cos_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
+    void hodu_cpu_tan_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Macro to declare exponential and logarithmic operations
@@ -124,12 +124,12 @@ extern "C" {
  * Note: Only available for float types (f8e4m3, f8e5m2, bf16, f16, f32, f64)
  */
 #define DECLARE_UNARY_EXP(TYPE_SUFFIX)                                                             \
-    void exp_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);               \
-    void exp2_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void exp10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);             \
-    void ln_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);                \
-    void log2_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);              \
-    void log10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_exp_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
+    void hodu_cpu_exp2_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_exp10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);    \
+    void hodu_cpu_ln_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);       \
+    void hodu_cpu_log2_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_log10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Macro to declare logical operations
@@ -141,7 +141,8 @@ extern "C" {
  * Available for all types including bool.
  */
 #define DECLARE_UNARY_LOGICAL(TYPE_SUFFIX)                                                         \
-    void logical_not_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_logical_not_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata);
 
 /**
  * @brief Macro to declare scalar arithmetic operations
@@ -159,20 +160,20 @@ extern "C" {
  * Available for all types.
  */
 #define DECLARE_UNARY_WITH_SCALAR(TYPE_SUFFIX)                                                     \
-    void add_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,         \
-                                  const void *scalar);                                             \
-    void sub_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,         \
-                                  const void *scalar);                                             \
-    void mul_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,         \
-                                  const void *scalar);                                             \
-    void div_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,         \
-                                  const void *scalar);                                             \
-    void pow_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,         \
-                                  const void *scalar);                                             \
-    void maximum_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,     \
-                                      const void *scalar);                                         \
-    void minimum_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,     \
-                                      const void *scalar);
+    void hodu_cpu_add_scalar_##TYPE_SUFFIX(const void *input, void *output,                        \
+                                           const size_t *metadata, const void *scalar);            \
+    void hodu_cpu_sub_scalar_##TYPE_SUFFIX(const void *input, void *output,                        \
+                                           const size_t *metadata, const void *scalar);            \
+    void hodu_cpu_mul_scalar_##TYPE_SUFFIX(const void *input, void *output,                        \
+                                           const size_t *metadata, const void *scalar);            \
+    void hodu_cpu_div_scalar_##TYPE_SUFFIX(const void *input, void *output,                        \
+                                           const size_t *metadata, const void *scalar);            \
+    void hodu_cpu_pow_scalar_##TYPE_SUFFIX(const void *input, void *output,                        \
+                                           const size_t *metadata, const void *scalar);            \
+    void hodu_cpu_maximum_scalar_##TYPE_SUFFIX(const void *input, void *output,                    \
+                                               const size_t *metadata, const void *scalar);        \
+    void hodu_cpu_minimum_scalar_##TYPE_SUFFIX(const void *input, void *output,                    \
+                                               const size_t *metadata, const void *scalar);
 
 /**
  * @brief Macro to declare scalar comparison operations
@@ -190,18 +191,18 @@ extern "C" {
  * Available for all types.
  */
 #define DECLARE_UNARY_CMP_SCALAR(TYPE_SUFFIX)                                                      \
-    void eq_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar);                                              \
-    void ne_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar);                                              \
-    void lt_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar);                                              \
-    void le_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar);                                              \
-    void gt_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar);                                              \
-    void ge_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar);
+    void hodu_cpu_eq_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata, \
+                                          const void *scalar);                                     \
+    void hodu_cpu_ne_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata, \
+                                          const void *scalar);                                     \
+    void hodu_cpu_lt_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata, \
+                                          const void *scalar);                                     \
+    void hodu_cpu_le_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata, \
+                                          const void *scalar);                                     \
+    void hodu_cpu_gt_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata, \
+                                          const void *scalar);                                     \
+    void hodu_cpu_ge_scalar_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata, \
+                                          const void *scalar);
 
 // Bool type
 DECLARE_UNARY_OP(bool)

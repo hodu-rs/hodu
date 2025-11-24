@@ -46,8 +46,8 @@
  * @param ACCUMULATE Statement to accumulate values (uses 'acc' and 'val')
  */
 #define REDUCE_WINDOW_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX, INIT_VAL, ACCUMULATE)                     \
-    void reduce_window_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
-                                     const size_t *metadata) {                                     \
+    void hodu_cpu_reduce_window_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,             \
+                                              const size_t *metadata) {                            \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \
@@ -130,8 +130,8 @@
  * @param TYPE_SUFFIX Suffix for function name
  */
 #define REDUCE_WINDOW_MEAN_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX)                                      \
-    void reduce_window_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                 \
-                                          const size_t *metadata) {                                \
+    void hodu_cpu_reduce_window_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,        \
+                                                   const size_t *metadata) {                       \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \

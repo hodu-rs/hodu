@@ -25,7 +25,7 @@ extern "C" {
 // ============================================================================
 //
 // All binary operations follow a consistent signature:
-//   void op_type(const void *lhs, const void *rhs, void *output, const size_t *metadata)
+//   void hodu_cpu_op_type(const void *lhs, const void *rhs, void *output, const size_t *metadata)
 //
 // Parameters:
 //   lhs      - Pointer to left-hand side tensor data
@@ -49,42 +49,48 @@ extern "C" {
 /// Macro to declare arithmetic binary operations for a given type
 /// Declares: add, sub, mul, div, pow, maximum, minimum
 #define DECLARE_BINARY_OP(TYPE_SUFFIX)                                                             \
-    void add_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
-                           const size_t *metadata);                                                \
-    void sub_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
-                           const size_t *metadata);                                                \
-    void mul_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
-                           const size_t *metadata);                                                \
-    void div_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
-                           const size_t *metadata);                                                \
-    void pow_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                         \
-                           const size_t *metadata);                                                \
-    void maximum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                     \
-                               const size_t *metadata);                                            \
-    void minimum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                     \
-                               const size_t *metadata);
+    void hodu_cpu_add_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                \
+                                    const size_t *metadata);                                       \
+    void hodu_cpu_sub_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                \
+                                    const size_t *metadata);                                       \
+    void hodu_cpu_mul_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                \
+                                    const size_t *metadata);                                       \
+    void hodu_cpu_div_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                \
+                                    const size_t *metadata);                                       \
+    void hodu_cpu_pow_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                \
+                                    const size_t *metadata);                                       \
+    void hodu_cpu_maximum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,            \
+                                        const size_t *metadata);                                   \
+    void hodu_cpu_minimum_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,            \
+                                        const size_t *metadata);
 
 /// Macro to declare logical binary operations for a given type
 /// Declares: logical_and, logical_or, logical_xor
 /// All return boolean results (uint8_t: 0 for false, 1 for true)
 #define DECLARE_BINARY_LOGICAL(TYPE_SUFFIX)                                                        \
-    void logical_and_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
-                                   const size_t *metadata);                                        \
-    void logical_or_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                  \
-                                  const size_t *metadata);                                         \
-    void logical_xor_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
-                                   const size_t *metadata);
+    void hodu_cpu_logical_and_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,        \
+                                            const size_t *metadata);                               \
+    void hodu_cpu_logical_or_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,         \
+                                           const size_t *metadata);                                \
+    void hodu_cpu_logical_xor_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,        \
+                                            const size_t *metadata);
 
 /// Macro to declare comparison binary operations for a given type
 /// Declares: eq, ne, lt, le, gt, ge
 /// All return boolean results (uint8_t: 0 for false, 1 for true)
 #define DECLARE_BINARY_CMP(TYPE_SUFFIX)                                                            \
-    void eq_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
-    void ne_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
-    void lt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
-    void le_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
-    void gt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata); \
-    void ge_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output, const size_t *metadata);
+    void hodu_cpu_eq_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);                                        \
+    void hodu_cpu_ne_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);                                        \
+    void hodu_cpu_lt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);                                        \
+    void hodu_cpu_le_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);                                        \
+    void hodu_cpu_gt_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);                                        \
+    void hodu_cpu_ge_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                 \
+                                   const size_t *metadata);
 
 // Bool type
 DECLARE_BINARY_OP(bool)

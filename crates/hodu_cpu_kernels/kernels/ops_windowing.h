@@ -26,7 +26,7 @@ extern "C" {
 // ============================================================================
 //
 // All windowing operations follow consistent signatures:
-//   void reduce_window_op_type(const void *input, void *output, const size_t *metadata)
+//   void hodu_cpu_reduce_window_op_type(const void *input, void *output, const size_t *metadata)
 //
 // Parameters:
 //   input    - Pointer to input tensor data
@@ -58,67 +58,67 @@ extern "C" {
 /**
  * @brief Reduce window max operations (find maximum in each window)
  */
-void reduce_window_max_f8e4m3(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_f8e5m2(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_bf16(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_f16(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_f32(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_f64(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_i8(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_i16(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_i32(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_i64(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_u8(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_u16(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_u32(const void *input, void *output, const size_t *metadata);
-void reduce_window_max_u64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_f64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_i8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_i16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_i32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_i64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_u8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_u16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_u32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_max_u64(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Reduce window mean operations (compute average in each window)
  * Note: Only available for float types
  */
-void reduce_window_mean_f8e4m3(const void *input, void *output, const size_t *metadata);
-void reduce_window_mean_f8e5m2(const void *input, void *output, const size_t *metadata);
-void reduce_window_mean_bf16(const void *input, void *output, const size_t *metadata);
-void reduce_window_mean_f16(const void *input, void *output, const size_t *metadata);
-void reduce_window_mean_f32(const void *input, void *output, const size_t *metadata);
-void reduce_window_mean_f64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_mean_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_mean_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_mean_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_mean_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_mean_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_mean_f64(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Reduce window sum operations (sum values in each window)
  */
-void reduce_window_sum_f8e4m3(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_f8e5m2(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_bf16(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_f16(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_f32(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_f64(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_i8(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_i16(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_i32(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_i64(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_u8(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_u16(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_u32(const void *input, void *output, const size_t *metadata);
-void reduce_window_sum_u64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_f64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_i8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_i16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_i32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_i64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_u8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_u16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_u32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_sum_u64(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Reduce window min operations (find minimum in each window)
  */
-void reduce_window_min_f8e4m3(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_f8e5m2(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_bf16(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_f16(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_f32(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_f64(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_i8(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_i16(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_i32(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_i64(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_u8(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_u16(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_u32(const void *input, void *output, const size_t *metadata);
-void reduce_window_min_u64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_f64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_i8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_i16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_i32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_i64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_u8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_u16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_u32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_reduce_window_min_u64(const void *input, void *output, const size_t *metadata);
 
 #ifdef __cplusplus
 }

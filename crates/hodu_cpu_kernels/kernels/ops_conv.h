@@ -28,7 +28,8 @@ extern "C" {
 // ============================================================================
 //
 // All convolution operations follow consistent signatures:
-//   void convND_type(const void *input, const void *weight, void *output, const size_t *metadata)
+//   void hodu_cpu_convND_type(const void *input, const void *weight, void *output, const size_t
+//   *metadata)
 //
 // Parameters:
 //   input    - Pointer to input tensor data
@@ -95,28 +96,46 @@ extern "C" {
 
 // 1D Convolution operations
 
-void conv1d_f8e4m3(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv1d_f8e5m2(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv1d_bf16(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv1d_f16(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv1d_f32(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv1d_f64(const void *input, const void *weight, void *output, const size_t *metadata);
+void hodu_cpu_conv1d_f8e4m3(const void *input, const void *weight, void *output,
+                            const size_t *metadata);
+void hodu_cpu_conv1d_f8e5m2(const void *input, const void *weight, void *output,
+                            const size_t *metadata);
+void hodu_cpu_conv1d_bf16(const void *input, const void *weight, void *output,
+                          const size_t *metadata);
+void hodu_cpu_conv1d_f16(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
+void hodu_cpu_conv1d_f32(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
+void hodu_cpu_conv1d_f64(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
 
 // 2D Convolution operations
-void conv2d_f8e4m3(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv2d_f8e5m2(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv2d_bf16(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv2d_f16(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv2d_f32(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv2d_f64(const void *input, const void *weight, void *output, const size_t *metadata);
+void hodu_cpu_conv2d_f8e4m3(const void *input, const void *weight, void *output,
+                            const size_t *metadata);
+void hodu_cpu_conv2d_f8e5m2(const void *input, const void *weight, void *output,
+                            const size_t *metadata);
+void hodu_cpu_conv2d_bf16(const void *input, const void *weight, void *output,
+                          const size_t *metadata);
+void hodu_cpu_conv2d_f16(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
+void hodu_cpu_conv2d_f32(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
+void hodu_cpu_conv2d_f64(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
 
 // 3D Convolution operations
-void conv3d_f8e4m3(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv3d_f8e5m2(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv3d_bf16(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv3d_f16(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv3d_f32(const void *input, const void *weight, void *output, const size_t *metadata);
-void conv3d_f64(const void *input, const void *weight, void *output, const size_t *metadata);
+void hodu_cpu_conv3d_f8e4m3(const void *input, const void *weight, void *output,
+                            const size_t *metadata);
+void hodu_cpu_conv3d_f8e5m2(const void *input, const void *weight, void *output,
+                            const size_t *metadata);
+void hodu_cpu_conv3d_bf16(const void *input, const void *weight, void *output,
+                          const size_t *metadata);
+void hodu_cpu_conv3d_f16(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
+void hodu_cpu_conv3d_f32(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
+void hodu_cpu_conv3d_f64(const void *input, const void *weight, void *output,
+                         const size_t *metadata);
 
 // ============================================================================
 // TRANSPOSED CONVOLUTION OPERATIONS
@@ -126,46 +145,46 @@ void conv3d_f64(const void *input, const void *weight, void *output, const size_
 // as their forward counterparts.
 
 // 1D Transposed Convolution operations
-void conv_transpose1d_f8e4m3(const void *input, const void *weight, void *output,
-                             const size_t *metadata);
-void conv_transpose1d_f8e5m2(const void *input, const void *weight, void *output,
-                             const size_t *metadata);
-void conv_transpose1d_bf16(const void *input, const void *weight, void *output,
-                           const size_t *metadata);
-void conv_transpose1d_f16(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
-void conv_transpose1d_f32(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
-void conv_transpose1d_f64(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
+void hodu_cpu_conv_transpose1d_f8e4m3(const void *input, const void *weight, void *output,
+                                      const size_t *metadata);
+void hodu_cpu_conv_transpose1d_f8e5m2(const void *input, const void *weight, void *output,
+                                      const size_t *metadata);
+void hodu_cpu_conv_transpose1d_bf16(const void *input, const void *weight, void *output,
+                                    const size_t *metadata);
+void hodu_cpu_conv_transpose1d_f16(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
+void hodu_cpu_conv_transpose1d_f32(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
+void hodu_cpu_conv_transpose1d_f64(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
 
 // 2D Transposed Convolution operations
-void conv_transpose2d_f8e4m3(const void *input, const void *weight, void *output,
-                             const size_t *metadata);
-void conv_transpose2d_f8e5m2(const void *input, const void *weight, void *output,
-                             const size_t *metadata);
-void conv_transpose2d_bf16(const void *input, const void *weight, void *output,
-                           const size_t *metadata);
-void conv_transpose2d_f16(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
-void conv_transpose2d_f32(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
-void conv_transpose2d_f64(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
+void hodu_cpu_conv_transpose2d_f8e4m3(const void *input, const void *weight, void *output,
+                                      const size_t *metadata);
+void hodu_cpu_conv_transpose2d_f8e5m2(const void *input, const void *weight, void *output,
+                                      const size_t *metadata);
+void hodu_cpu_conv_transpose2d_bf16(const void *input, const void *weight, void *output,
+                                    const size_t *metadata);
+void hodu_cpu_conv_transpose2d_f16(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
+void hodu_cpu_conv_transpose2d_f32(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
+void hodu_cpu_conv_transpose2d_f64(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
 
 // 3D Transposed Convolution operations
-void conv_transpose3d_f8e4m3(const void *input, const void *weight, void *output,
-                             const size_t *metadata);
-void conv_transpose3d_f8e5m2(const void *input, const void *weight, void *output,
-                             const size_t *metadata);
-void conv_transpose3d_bf16(const void *input, const void *weight, void *output,
-                           const size_t *metadata);
-void conv_transpose3d_f16(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
-void conv_transpose3d_f32(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
-void conv_transpose3d_f64(const void *input, const void *weight, void *output,
-                          const size_t *metadata);
+void hodu_cpu_conv_transpose3d_f8e4m3(const void *input, const void *weight, void *output,
+                                      const size_t *metadata);
+void hodu_cpu_conv_transpose3d_f8e5m2(const void *input, const void *weight, void *output,
+                                      const size_t *metadata);
+void hodu_cpu_conv_transpose3d_bf16(const void *input, const void *weight, void *output,
+                                    const size_t *metadata);
+void hodu_cpu_conv_transpose3d_f16(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
+void hodu_cpu_conv_transpose3d_f32(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
+void hodu_cpu_conv_transpose3d_f64(const void *input, const void *weight, void *output,
+                                   const size_t *metadata);
 
 // ============================================================================
 // CONVOLUTION GRADIENT WEIGHT OPERATIONS
@@ -175,7 +194,7 @@ void conv_transpose3d_f64(const void *input, const void *weight, void *output,
 // Follow same metadata layouts as their forward counterparts.
 //
 // All gradient operations follow consistent signatures:
-//   void convND_grad_weight_type(const void *input, const void *grad_output,
+//   void hodu_cpu_convND_grad_weight_type(const void *input, const void *grad_output,
 //                                void *grad_weight, const size_t *metadata)
 //
 // Parameters:
@@ -185,88 +204,88 @@ void conv_transpose3d_f64(const void *input, const void *weight, void *output,
 //   metadata    - Array describing convolution parameters (same as forward)
 
 // 1D Convolution gradient weight operations
-void conv1d_grad_weight_f8e4m3(const void *input, const void *grad_output, void *grad_weight,
-                               const size_t *metadata);
-void conv1d_grad_weight_f8e5m2(const void *input, const void *grad_output, void *grad_weight,
-                               const size_t *metadata);
-void conv1d_grad_weight_bf16(const void *input, const void *grad_output, void *grad_weight,
-                             const size_t *metadata);
-void conv1d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
-void conv1d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
-void conv1d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
+void hodu_cpu_conv1d_grad_weight_f8e4m3(const void *input, const void *grad_output,
+                                        void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv1d_grad_weight_f8e5m2(const void *input, const void *grad_output,
+                                        void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv1d_grad_weight_bf16(const void *input, const void *grad_output, void *grad_weight,
+                                      const size_t *metadata);
+void hodu_cpu_conv1d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
+void hodu_cpu_conv1d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
+void hodu_cpu_conv1d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
 
 // 2D Convolution gradient weight operations
-void conv2d_grad_weight_f8e4m3(const void *input, const void *grad_output, void *grad_weight,
-                               const size_t *metadata);
-void conv2d_grad_weight_f8e5m2(const void *input, const void *grad_output, void *grad_weight,
-                               const size_t *metadata);
-void conv2d_grad_weight_bf16(const void *input, const void *grad_output, void *grad_weight,
-                             const size_t *metadata);
-void conv2d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
-void conv2d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
-void conv2d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
+void hodu_cpu_conv2d_grad_weight_f8e4m3(const void *input, const void *grad_output,
+                                        void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv2d_grad_weight_f8e5m2(const void *input, const void *grad_output,
+                                        void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv2d_grad_weight_bf16(const void *input, const void *grad_output, void *grad_weight,
+                                      const size_t *metadata);
+void hodu_cpu_conv2d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
+void hodu_cpu_conv2d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
+void hodu_cpu_conv2d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
 
 // 3D Convolution gradient weight operations
-void conv3d_grad_weight_f8e4m3(const void *input, const void *grad_output, void *grad_weight,
-                               const size_t *metadata);
-void conv3d_grad_weight_f8e5m2(const void *input, const void *grad_output, void *grad_weight,
-                               const size_t *metadata);
-void conv3d_grad_weight_bf16(const void *input, const void *grad_output, void *grad_weight,
-                             const size_t *metadata);
-void conv3d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
-void conv3d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
-void conv3d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
-                            const size_t *metadata);
+void hodu_cpu_conv3d_grad_weight_f8e4m3(const void *input, const void *grad_output,
+                                        void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv3d_grad_weight_f8e5m2(const void *input, const void *grad_output,
+                                        void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv3d_grad_weight_bf16(const void *input, const void *grad_output, void *grad_weight,
+                                      const size_t *metadata);
+void hodu_cpu_conv3d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
+void hodu_cpu_conv3d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
+void hodu_cpu_conv3d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
+                                     const size_t *metadata);
 
 // 1D Transposed Convolution gradient weight operations
-void conv_transpose1d_grad_weight_f8e4m3(const void *input, const void *grad_output,
-                                         void *grad_weight, const size_t *metadata);
-void conv_transpose1d_grad_weight_f8e5m2(const void *input, const void *grad_output,
-                                         void *grad_weight, const size_t *metadata);
-void conv_transpose1d_grad_weight_bf16(const void *input, const void *grad_output,
-                                       void *grad_weight, const size_t *metadata);
-void conv_transpose1d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
-void conv_transpose1d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
-void conv_transpose1d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
+void hodu_cpu_conv_transpose1d_grad_weight_f8e4m3(const void *input, const void *grad_output,
+                                                  void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose1d_grad_weight_f8e5m2(const void *input, const void *grad_output,
+                                                  void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose1d_grad_weight_bf16(const void *input, const void *grad_output,
+                                                void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose1d_grad_weight_f16(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose1d_grad_weight_f32(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose1d_grad_weight_f64(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
 
 // 2D Transposed Convolution gradient weight operations
-void conv_transpose2d_grad_weight_f8e4m3(const void *input, const void *grad_output,
-                                         void *grad_weight, const size_t *metadata);
-void conv_transpose2d_grad_weight_f8e5m2(const void *input, const void *grad_output,
-                                         void *grad_weight, const size_t *metadata);
-void conv_transpose2d_grad_weight_bf16(const void *input, const void *grad_output,
-                                       void *grad_weight, const size_t *metadata);
-void conv_transpose2d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
-void conv_transpose2d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
-void conv_transpose2d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
+void hodu_cpu_conv_transpose2d_grad_weight_f8e4m3(const void *input, const void *grad_output,
+                                                  void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose2d_grad_weight_f8e5m2(const void *input, const void *grad_output,
+                                                  void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose2d_grad_weight_bf16(const void *input, const void *grad_output,
+                                                void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose2d_grad_weight_f16(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose2d_grad_weight_f32(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose2d_grad_weight_f64(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
 
 // 3D Transposed Convolution gradient weight operations
-void conv_transpose3d_grad_weight_f8e4m3(const void *input, const void *grad_output,
-                                         void *grad_weight, const size_t *metadata);
-void conv_transpose3d_grad_weight_f8e5m2(const void *input, const void *grad_output,
-                                         void *grad_weight, const size_t *metadata);
-void conv_transpose3d_grad_weight_bf16(const void *input, const void *grad_output,
-                                       void *grad_weight, const size_t *metadata);
-void conv_transpose3d_grad_weight_f16(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
-void conv_transpose3d_grad_weight_f32(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
-void conv_transpose3d_grad_weight_f64(const void *input, const void *grad_output, void *grad_weight,
-                                      const size_t *metadata);
+void hodu_cpu_conv_transpose3d_grad_weight_f8e4m3(const void *input, const void *grad_output,
+                                                  void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose3d_grad_weight_f8e5m2(const void *input, const void *grad_output,
+                                                  void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose3d_grad_weight_bf16(const void *input, const void *grad_output,
+                                                void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose3d_grad_weight_f16(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose3d_grad_weight_f32(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
+void hodu_cpu_conv_transpose3d_grad_weight_f64(const void *input, const void *grad_output,
+                                               void *grad_weight, const size_t *metadata);
 
 #ifdef __cplusplus
 }

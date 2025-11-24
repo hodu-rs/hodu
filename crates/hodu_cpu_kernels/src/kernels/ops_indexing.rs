@@ -29,21 +29,21 @@ macro_rules! declare_and_dispatch_index_select {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<$op _bool>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e4m3>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e5m2>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _bf16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
                 )*
             }
 
@@ -56,21 +56,21 @@ macro_rules! declare_and_dispatch_index_select {
             ) {
                 match name {
                     $(
-                        concat!(stringify!($op), "_bool") => [<$op _bool>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_bf16") => [<$op _bf16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f16") => [<$op _f16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f32") => [<$op _f32>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f64") => [<$op _f64>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i8") => [<$op _i8>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i16") => [<$op _i16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i32") => [<$op _i32>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i64") => [<$op _i64>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u8") => [<$op _u8>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u16") => [<$op _u16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u32") => [<$op _u32>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u64") => [<$op _u64>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](input, indices, output, metadata),
                     )*
                     _ => panic!("Unknown index_select operation: {}", name),
                 }
@@ -84,21 +84,21 @@ macro_rules! declare_and_dispatch_index_put {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<$op _bool>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e4m3>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e5m2>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _bf16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f32>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f64>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i8>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i32>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i64>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u8>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u32>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u64>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, indices: *const i32, values: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
             }
 
@@ -112,21 +112,21 @@ macro_rules! declare_and_dispatch_index_put {
             ) {
                 match name {
                     $(
-                        concat!(stringify!($op), "_bool") => [<$op _bool>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_bf16") => [<$op _bf16>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_f16") => [<$op _f16>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_f32") => [<$op _f32>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_f64") => [<$op _f64>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_i8") => [<$op _i8>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_i16") => [<$op _i16>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_i32") => [<$op _i32>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_i64") => [<$op _i64>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_u8") => [<$op _u8>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_u16") => [<$op _u16>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_u32") => [<$op _u32>](input, indices, values, output, metadata),
-                        concat!(stringify!($op), "_u64") => [<$op _u64>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](input, indices, values, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](input, indices, values, output, metadata),
                     )*
                     _ => panic!("Unknown index_put operation: {}", name),
                 }
@@ -140,21 +140,21 @@ macro_rules! declare_and_dispatch_gather {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<$op _bool>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e4m3>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e5m2>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _bf16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, indices: *const i32, output: *mut c_void, metadata: *const usize);
                 )*
             }
 
@@ -167,21 +167,21 @@ macro_rules! declare_and_dispatch_gather {
             ) {
                 match name {
                     $(
-                        concat!(stringify!($op), "_bool") => [<$op _bool>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f8e4m3") => [<$op _f8e4m3>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f8e5m2") => [<$op _f8e5m2>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_bf16") => [<$op _bf16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f16") => [<$op _f16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f32") => [<$op _f32>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_f64") => [<$op _f64>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i8") => [<$op _i8>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i16") => [<$op _i16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i32") => [<$op _i32>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_i64") => [<$op _i64>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u8") => [<$op _u8>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u16") => [<$op _u16>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u32") => [<$op _u32>](input, indices, output, metadata),
-                        concat!(stringify!($op), "_u64") => [<$op _u64>](input, indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](input, indices, output, metadata),
+                            concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](input, indices, output, metadata),
                     )*
                     _ => panic!("Unknown gather operation: {}", name),
                 }
@@ -194,21 +194,21 @@ macro_rules! declare_and_dispatch_scatter {
     ($op_name:ident, $dispatch_name:ident) => {
         paste::paste! {
             extern "C" {
-                fn [<$op_name _bool>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f8e4m3>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f8e5m2>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _bf16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _bool>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f8e4m3>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f8e5m2>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _bf16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
             }
 
             unsafe fn $dispatch_name(
@@ -220,21 +220,21 @@ macro_rules! declare_and_dispatch_scatter {
                 metadata: *const usize,
             ) {
                 match name {
-                    concat!(stringify!($op_name), "_bool") => [<$op_name _bool>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f8e4m3") => [<$op_name _f8e4m3>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f8e5m2") => [<$op_name _f8e5m2>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_bf16") => [<$op_name _bf16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f16") => [<$op_name _f16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f32") => [<$op_name _f32>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f64") => [<$op_name _f64>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i8") => [<$op_name _i8>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i16") => [<$op_name _i16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i32") => [<$op_name _i32>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i64") => [<$op_name _i64>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u8") => [<$op_name _u8>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u16") => [<$op_name _u16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u32") => [<$op_name _u32>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u64") => [<$op_name _u64>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_bool") => [<hodu_cpu_ $op_name _bool>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_f8e4m3") => [<hodu_cpu_ $op_name _f8e4m3>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_f8e5m2") => [<hodu_cpu_ $op_name _f8e5m2>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_bf16") => [<hodu_cpu_ $op_name _bf16>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_f16") => [<hodu_cpu_ $op_name _f16>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_f32") => [<hodu_cpu_ $op_name _f32>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_f64") => [<hodu_cpu_ $op_name _f64>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_i8") => [<hodu_cpu_ $op_name _i8>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_i16") => [<hodu_cpu_ $op_name _i16>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_i32") => [<hodu_cpu_ $op_name _i32>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_i64") => [<hodu_cpu_ $op_name _i64>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_u8") => [<hodu_cpu_ $op_name _u8>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_u16") => [<hodu_cpu_ $op_name _u16>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_u32") => [<hodu_cpu_ $op_name _u32>](input, indices, src, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op_name), "_u64") => [<hodu_cpu_ $op_name _u64>](input, indices, src, output, metadata),
                     _ => panic!("Unknown {} operation: {}", stringify!($op_name), name),
                 }
             }
@@ -246,19 +246,19 @@ macro_rules! declare_and_dispatch_scatter_add {
     ($op_name:ident, $dispatch_name:ident) => {
         paste::paste! {
             extern "C" {
-                fn [<$op_name _f8e4m3>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f8e5m2>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _bf16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _f32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _i64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
-                fn [<$op_name _u64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f8e4m3>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f8e5m2>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _bf16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _f32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _i64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u8>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u16>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u32>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
+                fn [<hodu_cpu_ $op_name _u64>](input: *const c_void, indices: *const i32, src: *const c_void, output: *mut c_void, metadata: *const usize);
             }
 
             unsafe fn $dispatch_name(
@@ -270,19 +270,19 @@ macro_rules! declare_and_dispatch_scatter_add {
                 metadata: *const usize,
             ) {
                 match name {
-                    concat!(stringify!($op_name), "_f8e4m3") => [<$op_name _f8e4m3>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f8e5m2") => [<$op_name _f8e5m2>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_bf16") => [<$op_name _bf16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f16") => [<$op_name _f16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_f32") => [<$op_name _f32>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i8") => [<$op_name _i8>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i16") => [<$op_name _i16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i32") => [<$op_name _i32>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_i64") => [<$op_name _i64>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u8") => [<$op_name _u8>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u16") => [<$op_name _u16>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u32") => [<$op_name _u32>](input, indices, src, output, metadata),
-                    concat!(stringify!($op_name), "_u64") => [<$op_name _u64>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_f8e4m3") => [<hodu_cpu_ $op_name _f8e4m3>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_f8e5m2") => [<hodu_cpu_ $op_name _f8e5m2>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_bf16") => [<hodu_cpu_ $op_name _bf16>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_f16") => [<hodu_cpu_ $op_name _f16>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_f32") => [<hodu_cpu_ $op_name _f32>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_i8") => [<hodu_cpu_ $op_name _i8>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_i16") => [<hodu_cpu_ $op_name _i16>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_i32") => [<hodu_cpu_ $op_name _i32>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_i64") => [<hodu_cpu_ $op_name _i64>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_u8") => [<hodu_cpu_ $op_name _u8>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_u16") => [<hodu_cpu_ $op_name _u16>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_u32") => [<hodu_cpu_ $op_name _u32>](input, indices, src, output, metadata),
+                    concat!("hodu_cpu_", stringify!($op_name), "_u64") => [<hodu_cpu_ $op_name _u64>](input, indices, src, output, metadata),
                     _ => panic!("Unknown {} operation: {}", stringify!($op_name), name),
                 }
             }
@@ -485,11 +485,11 @@ pub fn call_ops_scatter(
 ) -> Result<()> {
     unsafe {
         let name = kernel_name.0;
-        if name.starts_with("scatter_add_") {
+        if name.starts_with("hodu_cpu_scatter_add_") {
             dispatch_scatter_add(name, input, indices, src, output, metadata.as_ptr());
-        } else if name.starts_with("scatter_max_") {
+        } else if name.starts_with("hodu_cpu_scatter_max_") {
             dispatch_scatter_max(name, input, indices, src, output, metadata.as_ptr());
-        } else if name.starts_with("scatter_min_") {
+        } else if name.starts_with("hodu_cpu_scatter_min_") {
             dispatch_scatter_min(name, input, indices, src, output, metadata.as_ptr());
         } else {
             dispatch_scatter(name, input, indices, src, output, metadata.as_ptr());

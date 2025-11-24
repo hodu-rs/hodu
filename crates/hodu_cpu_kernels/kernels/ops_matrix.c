@@ -67,8 +67,8 @@
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,          \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, \
+                                       const size_t *metadata) {                                   \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
         const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -218,8 +218,8 @@
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,          \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_matmul_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, \
+                                       const size_t *metadata) {                                   \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
         const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -420,8 +420,8 @@ MATMUL_OP(uint64_t, u64)
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,             \
-                           const size_t *metadata) {                                               \
+    void hodu_cpu_dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,    \
+                                    const size_t *metadata) {                                      \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
         const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -578,8 +578,8 @@ MATMUL_OP(uint64_t, u64)
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,             \
-                           const size_t *metadata) {                                               \
+    void hodu_cpu_dot_##TYPE_SUFFIX(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,    \
+                                    const size_t *metadata) {                                      \
         const TYPE *lhs = (const TYPE *)lhs_ptr;                                                   \
         const TYPE *rhs = (const TYPE *)rhs_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \

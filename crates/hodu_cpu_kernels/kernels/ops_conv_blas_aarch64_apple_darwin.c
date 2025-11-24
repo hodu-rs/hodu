@@ -7,14 +7,16 @@
 #include <string.h>
 
 // Forward declarations for fallback implementations
-extern void conv2d_f32_fallback(const void *input_ptr, const void *weight_ptr, void *output_ptr,
-                                const size_t *metadata);
-extern void conv2d_f64_fallback(const void *input_ptr, const void *weight_ptr, void *output_ptr,
-                                const size_t *metadata);
-extern void conv2d_grad_weight_f32_fallback(const void *input_ptr, const void *grad_output_ptr,
-                                            void *grad_weight_ptr, const size_t *metadata);
-extern void conv2d_grad_weight_f64_fallback(const void *input_ptr, const void *grad_output_ptr,
-                                            void *grad_weight_ptr, const size_t *metadata);
+extern void hodu_cpu_conv2d_f32_fallback(const void *input_ptr, const void *weight_ptr,
+                                         void *output_ptr, const size_t *metadata);
+extern void hodu_cpu_conv2d_f64_fallback(const void *input_ptr, const void *weight_ptr,
+                                         void *output_ptr, const size_t *metadata);
+extern void hodu_cpu_conv2d_grad_weight_f32_fallback(const void *input_ptr,
+                                                     const void *grad_output_ptr,
+                                                     void *grad_weight_ptr, const size_t *metadata);
+extern void hodu_cpu_conv2d_grad_weight_f64_fallback(const void *input_ptr,
+                                                     const void *grad_output_ptr,
+                                                     void *grad_weight_ptr, const size_t *metadata);
 
 // Im2col for f32: Transform image patches to columns for GEMM-based convolution
 static inline void im2col_f32(const float *input, float *col_buffer, size_t in_channels,
@@ -79,8 +81,8 @@ static inline void im2col_f64(const double *input, double *col_buffer, size_t in
 }
 
 // Accelerate BLAS-optimized conv2d for f32 using im2col + GEMM
-void conv2d_f32(const void *input_ptr, const void *weight_ptr, void *output_ptr,
-                const size_t *metadata) {
+void hodu_cpu_conv2d_f32(const void *input_ptr, const void *weight_ptr, void *output_ptr,
+                         const size_t *metadata) {
     const float *input = (const float *)input_ptr;
     const float *weight = (const float *)weight_ptr;
     float *output = (float *)output_ptr;
@@ -112,7 +114,7 @@ void conv2d_f32(const void *input_ptr, const void *weight_ptr, void *output_ptr,
     float *col_buffer = (float *)malloc(K * N * sizeof(float));
     if (!col_buffer) {
         // Fallback to naive implementation if allocation fails
-        conv2d_f32_fallback(input_ptr, weight_ptr, output_ptr, metadata);
+        hodu_cpu_conv2d_f32_fallback(input_ptr, weight_ptr, output_ptr, metadata);
         return;
     }
 
@@ -136,8 +138,8 @@ void conv2d_f32(const void *input_ptr, const void *weight_ptr, void *output_ptr,
 }
 
 // Accelerate BLAS-optimized conv2d for f64 using im2col + GEMM
-void conv2d_f64(const void *input_ptr, const void *weight_ptr, void *output_ptr,
-                const size_t *metadata) {
+void hodu_cpu_conv2d_f64(const void *input_ptr, const void *weight_ptr, void *output_ptr,
+                         const size_t *metadata) {
     const double *input = (const double *)input_ptr;
     const double *weight = (const double *)weight_ptr;
     double *output = (double *)output_ptr;
@@ -169,7 +171,7 @@ void conv2d_f64(const void *input_ptr, const void *weight_ptr, void *output_ptr,
     double *col_buffer = (double *)malloc(K * N * sizeof(double));
     if (!col_buffer) {
         // Fallback to naive implementation if allocation fails
-        conv2d_f64_fallback(input_ptr, weight_ptr, output_ptr, metadata);
+        hodu_cpu_conv2d_f64_fallback(input_ptr, weight_ptr, output_ptr, metadata);
         return;
     }
 
@@ -193,8 +195,8 @@ void conv2d_f64(const void *input_ptr, const void *weight_ptr, void *output_ptr,
 }
 
 // Accelerate BLAS-optimized conv2d_grad_weight for f32 using im2col + GEMM
-void conv2d_grad_weight_f32(const void *input_ptr, const void *grad_output_ptr,
-                            void *grad_weight_ptr, const size_t *metadata) {
+void hodu_cpu_conv2d_grad_weight_f32(const void *input_ptr, const void *grad_output_ptr,
+                                     void *grad_weight_ptr, const size_t *metadata) {
     const float *input = (const float *)input_ptr;
     const float *grad_output = (const float *)grad_output_ptr;
     float *grad_weight = (float *)grad_weight_ptr;
@@ -240,7 +242,8 @@ void conv2d_grad_weight_f32(const void *input_ptr, const void *grad_output_ptr,
         grad_output_stride_channel != expected_stride_channel ||
         grad_output_stride_batch != expected_stride_batch) {
         // grad_output is not contiguous (e.g., broadcasted), use fallback
-        conv2d_grad_weight_f32_fallback(input_ptr, grad_output_ptr, grad_weight_ptr, metadata);
+        hodu_cpu_conv2d_grad_weight_f32_fallback(input_ptr, grad_output_ptr, grad_weight_ptr,
+                                                 metadata);
         return;
     }
 
@@ -254,7 +257,8 @@ void conv2d_grad_weight_f32(const void *input_ptr, const void *grad_output_ptr,
     // Allocate column buffer: [K, N]
     float *col_buffer = (float *)malloc(K * N * sizeof(float));
     if (!col_buffer) {
-        conv2d_grad_weight_f32_fallback(input_ptr, grad_output_ptr, grad_weight_ptr, metadata);
+        hodu_cpu_conv2d_grad_weight_f32_fallback(input_ptr, grad_output_ptr, grad_weight_ptr,
+                                                 metadata);
         return;
     }
 
@@ -278,8 +282,8 @@ void conv2d_grad_weight_f32(const void *input_ptr, const void *grad_output_ptr,
 }
 
 // Accelerate BLAS-optimized conv2d_grad_weight for f64 using im2col + GEMM
-void conv2d_grad_weight_f64(const void *input_ptr, const void *grad_output_ptr,
-                            void *grad_weight_ptr, const size_t *metadata) {
+void hodu_cpu_conv2d_grad_weight_f64(const void *input_ptr, const void *grad_output_ptr,
+                                     void *grad_weight_ptr, const size_t *metadata) {
     const double *input = (const double *)input_ptr;
     const double *grad_output = (const double *)grad_output_ptr;
     double *grad_weight = (double *)grad_weight_ptr;
@@ -325,7 +329,8 @@ void conv2d_grad_weight_f64(const void *input_ptr, const void *grad_output_ptr,
         grad_output_stride_channel != expected_stride_channel ||
         grad_output_stride_batch != expected_stride_batch) {
         // grad_output is not contiguous (e.g., broadcasted), use fallback
-        conv2d_grad_weight_f64_fallback(input_ptr, grad_output_ptr, grad_weight_ptr, metadata);
+        hodu_cpu_conv2d_grad_weight_f64_fallback(input_ptr, grad_output_ptr, grad_weight_ptr,
+                                                 metadata);
         return;
     }
 
@@ -339,7 +344,8 @@ void conv2d_grad_weight_f64(const void *input_ptr, const void *grad_output_ptr,
     // Allocate column buffer: [K, N]
     double *col_buffer = (double *)malloc(K * N * sizeof(double));
     if (!col_buffer) {
-        conv2d_grad_weight_f64_fallback(input_ptr, grad_output_ptr, grad_weight_ptr, metadata);
+        hodu_cpu_conv2d_grad_weight_f64_fallback(input_ptr, grad_output_ptr, grad_weight_ptr,
+                                                 metadata);
         return;
     }
 

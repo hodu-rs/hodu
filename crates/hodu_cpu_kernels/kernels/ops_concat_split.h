@@ -26,7 +26,7 @@ extern "C" {
 // Concatenates multiple input tensors along a specified dimension.
 //
 // All concatenation operations follow this signature:
-//   void concat_type(const void *input, void *output, const size_t *metadata)
+//   void hodu_cpu_concat_type(const void *input, void *output, const size_t *metadata)
 //
 // Parameters:
 //   input    - Pointer to buffer containing all input tensors
@@ -44,21 +44,21 @@ extern "C" {
 // - metadata[...+num_inputs]: input_offsets (offset within each input tensor)
 // - metadata[...+num_inputs]: input_buffer_offsets (element offset of each input in input buffer)
 
-void concat_bool(const void *input, void *output, const size_t *metadata);
-void concat_f8e4m3(const void *input, void *output, const size_t *metadata);
-void concat_f8e5m2(const void *input, void *output, const size_t *metadata);
-void concat_bf16(const void *input, void *output, const size_t *metadata);
-void concat_f16(const void *input, void *output, const size_t *metadata);
-void concat_f32(const void *input, void *output, const size_t *metadata);
-void concat_f64(const void *input, void *output, const size_t *metadata);
-void concat_i8(const void *input, void *output, const size_t *metadata);
-void concat_i16(const void *input, void *output, const size_t *metadata);
-void concat_i32(const void *input, void *output, const size_t *metadata);
-void concat_i64(const void *input, void *output, const size_t *metadata);
-void concat_u8(const void *input, void *output, const size_t *metadata);
-void concat_u16(const void *input, void *output, const size_t *metadata);
-void concat_u32(const void *input, void *output, const size_t *metadata);
-void concat_u64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_bool(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_f64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_i8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_i16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_i32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_i64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_u8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_u16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_u32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_concat_u64(const void *input, void *output, const size_t *metadata);
 
 // ============================================================================
 // SPLIT OPERATIONS
@@ -67,7 +67,7 @@ void concat_u64(const void *input, void *output, const size_t *metadata);
 // Extracts a slice from an input tensor along a specified dimension.
 //
 // All split operations follow this signature:
-//   void split_type(const void *input, void *output, const size_t *metadata)
+//   void hodu_cpu_split_type(const void *input, void *output, const size_t *metadata)
 //
 // Parameters:
 //   input    - Pointer to input tensor data
@@ -84,21 +84,21 @@ void concat_u64(const void *input, void *output, const size_t *metadata);
 // - metadata[2+2*num_dims+2]: output_size_on_dim (size of output along split dimension)
 // - metadata[2+2*num_dims+3]: split_offset (offset along split dimension where output starts)
 
-void split_bool(const void *input, void *output, const size_t *metadata);
-void split_f8e4m3(const void *input, void *output, const size_t *metadata);
-void split_f8e5m2(const void *input, void *output, const size_t *metadata);
-void split_bf16(const void *input, void *output, const size_t *metadata);
-void split_f16(const void *input, void *output, const size_t *metadata);
-void split_f32(const void *input, void *output, const size_t *metadata);
-void split_f64(const void *input, void *output, const size_t *metadata);
-void split_i8(const void *input, void *output, const size_t *metadata);
-void split_i16(const void *input, void *output, const size_t *metadata);
-void split_i32(const void *input, void *output, const size_t *metadata);
-void split_i64(const void *input, void *output, const size_t *metadata);
-void split_u8(const void *input, void *output, const size_t *metadata);
-void split_u16(const void *input, void *output, const size_t *metadata);
-void split_u32(const void *input, void *output, const size_t *metadata);
-void split_u64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_bool(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_f64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_i8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_i16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_i32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_i64(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_u8(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_u16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_u32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_split_u64(const void *input, void *output, const size_t *metadata);
 
 #ifdef __cplusplus
 }

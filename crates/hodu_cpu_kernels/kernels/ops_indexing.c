@@ -28,8 +28,8 @@
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define INDEX_SELECT_OP(TYPENAME, FN_NAME)                                                         \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, void *output_ptr,                  \
-                 const size_t *metadata) {                                                         \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, void *output_ptr,       \
+                            const size_t *metadata) {                                              \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
                                                                                                    \
@@ -125,8 +125,8 @@ INDEX_SELECT_OP(uint64_t, index_select_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define INDEX_PUT_OP(TYPENAME, FN_NAME)                                                            \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *values_ptr,            \
-                 void *output_ptr, const size_t *metadata) {                                       \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, const void *values_ptr, \
+                            void *output_ptr, const size_t *metadata) {                            \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         const TYPENAME *values = (const TYPENAME *)values_ptr;                                     \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
@@ -235,8 +235,8 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define GATHER_OP(TYPENAME, FN_NAME)                                                               \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, void *output_ptr,                  \
-                 const size_t *metadata) {                                                         \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, void *output_ptr,       \
+                            const size_t *metadata) {                                              \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
                                                                                                    \
@@ -330,8 +330,8 @@ GATHER_OP(uint64_t, gather_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define SCATTER_OP(TYPENAME, FN_NAME)                                                              \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,               \
-                 void *output_ptr, const size_t *metadata) {                                       \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,    \
+                            void *output_ptr, const size_t *metadata) {                            \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         const TYPENAME *src = (const TYPENAME *)src_ptr;                                           \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
@@ -447,8 +447,8 @@ SCATTER_OP(uint64_t, scatter_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define SCATTER_ADD_OP(TYPENAME, FN_NAME)                                                          \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,               \
-                 void *output_ptr, const size_t *metadata) {                                       \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,    \
+                            void *output_ptr, const size_t *metadata) {                            \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         const TYPENAME *src = (const TYPENAME *)src_ptr;                                           \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
@@ -534,8 +534,8 @@ SCATTER_OP(uint64_t, scatter_u64)
 
 // Exotic floating-point scatter_add (uses proper float arithmetic)
 #define SCATTER_ADD_OP_EXOTIC(TYPE, FN_NAME, ADD_FN)                                               \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,               \
-                 void *output_ptr, const size_t *metadata) {                                       \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,    \
+                            void *output_ptr, const size_t *metadata) {                            \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *src = (const TYPE *)src_ptr;                                                   \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -648,8 +648,8 @@ SCATTER_ADD_OP(uint64_t, scatter_add_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define SCATTER_MAX_OP(TYPENAME, FN_NAME)                                                          \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,               \
-                 void *output_ptr, const size_t *metadata) {                                       \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,    \
+                            void *output_ptr, const size_t *metadata) {                            \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         const TYPENAME *src = (const TYPENAME *)src_ptr;                                           \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
@@ -765,8 +765,8 @@ SCATTER_MAX_OP(uint64_t, scatter_max_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define SCATTER_MIN_OP(TYPENAME, FN_NAME)                                                          \
-    void FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,               \
-                 void *output_ptr, const size_t *metadata) {                                       \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, const int32_t *indices, const void *src_ptr,    \
+                            void *output_ptr, const size_t *metadata) {                            \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         const TYPENAME *src = (const TYPENAME *)src_ptr;                                           \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \

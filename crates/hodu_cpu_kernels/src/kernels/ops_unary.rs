@@ -131,66 +131,66 @@ macro_rules! declare_and_dispatch_unary {
             extern "C" {
                 // Operations supporting all types (including unsigned)
                 $(
-                    fn [<$all_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _u8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _u16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _u32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _u64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$all_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _u8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _u16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _u32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _u64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $all_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
 
                 // Operations supporting signed types only (bool, float, signed int)
                 $(
-                    fn [<$signed_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$signed_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $signed_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
 
                 // Operations supporting only float types
                 $(
-                    fn [<$float_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$float_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$float_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$float_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$float_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$float_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$float_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $float_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
 
                 // Scalar operations (all types, with scalar parameter)
                 $(
-                    fn [<$scalar_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _u8>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _u16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _u32>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _u64>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
-                    fn [<$scalar_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _f16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _f32>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _f64>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _u8>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _u16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _u32>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _u64>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _i8>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _i16>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _i32>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
+                    fn [<hodu_cpu_ $scalar_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize, scalar: *const c_void);
                 )*
             }
 
@@ -204,47 +204,47 @@ macro_rules! declare_and_dispatch_unary {
                 match name {
                     // Operations with all types
                     $(
-                        concat!(stringify!($all_op), "_bool") => [<$all_op _bool>](input, output, metadata),
-                        concat!(stringify!($all_op), "_f8e4m3") => [<$all_op _f8e4m3>](input, output, metadata),
-                        concat!(stringify!($all_op), "_f8e5m2") => [<$all_op _f8e5m2>](input, output, metadata),
-                        concat!(stringify!($all_op), "_bf16") => [<$all_op _bf16>](input, output, metadata),
-                        concat!(stringify!($all_op), "_f16") => [<$all_op _f16>](input, output, metadata),
-                        concat!(stringify!($all_op), "_f32") => [<$all_op _f32>](input, output, metadata),
-                        concat!(stringify!($all_op), "_f64") => [<$all_op _f64>](input, output, metadata),
-                        concat!(stringify!($all_op), "_u8") => [<$all_op _u8>](input, output, metadata),
-                        concat!(stringify!($all_op), "_u16") => [<$all_op _u16>](input, output, metadata),
-                        concat!(stringify!($all_op), "_u32") => [<$all_op _u32>](input, output, metadata),
-                        concat!(stringify!($all_op), "_u64") => [<$all_op _u64>](input, output, metadata),
-                        concat!(stringify!($all_op), "_i8") => [<$all_op _i8>](input, output, metadata),
-                        concat!(stringify!($all_op), "_i16") => [<$all_op _i16>](input, output, metadata),
-                        concat!(stringify!($all_op), "_i32") => [<$all_op _i32>](input, output, metadata),
-                        concat!(stringify!($all_op), "_i64") => [<$all_op _i64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_bool") => [<hodu_cpu_ $all_op _bool>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_f8e4m3") => [<hodu_cpu_ $all_op _f8e4m3>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_f8e5m2") => [<hodu_cpu_ $all_op _f8e5m2>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_bf16") => [<hodu_cpu_ $all_op _bf16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_f16") => [<hodu_cpu_ $all_op _f16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_f32") => [<hodu_cpu_ $all_op _f32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_f64") => [<hodu_cpu_ $all_op _f64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_u8") => [<hodu_cpu_ $all_op _u8>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_u16") => [<hodu_cpu_ $all_op _u16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_u32") => [<hodu_cpu_ $all_op _u32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_u64") => [<hodu_cpu_ $all_op _u64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_i8") => [<hodu_cpu_ $all_op _i8>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_i16") => [<hodu_cpu_ $all_op _i16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_i32") => [<hodu_cpu_ $all_op _i32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($all_op), "_i64") => [<hodu_cpu_ $all_op _i64>](input, output, metadata),
                     )*
 
                     // Signed-only operations
                     $(
-                        concat!(stringify!($signed_op), "_bool") => [<$signed_op _bool>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_f8e4m3") => [<$signed_op _f8e4m3>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_f8e5m2") => [<$signed_op _f8e5m2>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_bf16") => [<$signed_op _bf16>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_f16") => [<$signed_op _f16>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_f32") => [<$signed_op _f32>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_f64") => [<$signed_op _f64>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_i8") => [<$signed_op _i8>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_i16") => [<$signed_op _i16>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_i32") => [<$signed_op _i32>](input, output, metadata),
-                        concat!(stringify!($signed_op), "_i64") => [<$signed_op _i64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_bool") => [<hodu_cpu_ $signed_op _bool>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_f8e4m3") => [<hodu_cpu_ $signed_op _f8e4m3>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_f8e5m2") => [<hodu_cpu_ $signed_op _f8e5m2>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_bf16") => [<hodu_cpu_ $signed_op _bf16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_f16") => [<hodu_cpu_ $signed_op _f16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_f32") => [<hodu_cpu_ $signed_op _f32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_f64") => [<hodu_cpu_ $signed_op _f64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_i8") => [<hodu_cpu_ $signed_op _i8>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_i16") => [<hodu_cpu_ $signed_op _i16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_i32") => [<hodu_cpu_ $signed_op _i32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($signed_op), "_i64") => [<hodu_cpu_ $signed_op _i64>](input, output, metadata),
                     )*
 
                     // Float-only operations
                     $(
-                        concat!(stringify!($float_op), "_bool") => [<$float_op _bool>](input, output, metadata),
-                        concat!(stringify!($float_op), "_f8e4m3") => [<$float_op _f8e4m3>](input, output, metadata),
-                        concat!(stringify!($float_op), "_f8e5m2") => [<$float_op _f8e5m2>](input, output, metadata),
-                        concat!(stringify!($float_op), "_bf16") => [<$float_op _bf16>](input, output, metadata),
-                        concat!(stringify!($float_op), "_f16") => [<$float_op _f16>](input, output, metadata),
-                        concat!(stringify!($float_op), "_f32") => [<$float_op _f32>](input, output, metadata),
-                        concat!(stringify!($float_op), "_f64") => [<$float_op _f64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_bool") => [<hodu_cpu_ $float_op _bool>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_f8e4m3") => [<hodu_cpu_ $float_op _f8e4m3>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_f8e5m2") => [<hodu_cpu_ $float_op _f8e5m2>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_bf16") => [<hodu_cpu_ $float_op _bf16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_f16") => [<hodu_cpu_ $float_op _f16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_f32") => [<hodu_cpu_ $float_op _f32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($float_op), "_f64") => [<hodu_cpu_ $float_op _f64>](input, output, metadata),
                     )*
 
                     _ => panic!("Unsupported unary kernel: {}", name),
@@ -262,21 +262,21 @@ macro_rules! declare_and_dispatch_unary {
                 match name {
                     // Scalar operations (all types)
                     $(
-                        concat!(stringify!($scalar_op), "_bool") => [<$scalar_op _bool>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_f8e4m3") => [<$scalar_op _f8e4m3>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_f8e5m2") => [<$scalar_op _f8e5m2>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_bf16") => [<$scalar_op _bf16>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_f16") => [<$scalar_op _f16>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_f32") => [<$scalar_op _f32>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_f64") => [<$scalar_op _f64>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_u8") => [<$scalar_op _u8>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_u16") => [<$scalar_op _u16>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_u32") => [<$scalar_op _u32>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_u64") => [<$scalar_op _u64>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_i8") => [<$scalar_op _i8>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_i16") => [<$scalar_op _i16>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_i32") => [<$scalar_op _i32>](input, output, metadata, scalar),
-                        concat!(stringify!($scalar_op), "_i64") => [<$scalar_op _i64>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_bool") => [<hodu_cpu_ $scalar_op _bool>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_f8e4m3") => [<hodu_cpu_ $scalar_op _f8e4m3>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_f8e5m2") => [<hodu_cpu_ $scalar_op _f8e5m2>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_bf16") => [<hodu_cpu_ $scalar_op _bf16>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_f16") => [<hodu_cpu_ $scalar_op _f16>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_f32") => [<hodu_cpu_ $scalar_op _f32>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_f64") => [<hodu_cpu_ $scalar_op _f64>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_u8") => [<hodu_cpu_ $scalar_op _u8>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_u16") => [<hodu_cpu_ $scalar_op _u16>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_u32") => [<hodu_cpu_ $scalar_op _u32>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_u64") => [<hodu_cpu_ $scalar_op _u64>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_i8") => [<hodu_cpu_ $scalar_op _i8>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_i16") => [<hodu_cpu_ $scalar_op _i16>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_i32") => [<hodu_cpu_ $scalar_op _i32>](input, output, metadata, scalar),
+                        concat!("hodu_cpu_", stringify!($scalar_op), "_i64") => [<hodu_cpu_ $scalar_op _i64>](input, output, metadata, scalar),
                     )*
                     _ => panic!("Unsupported unary scalar kernel: {}", name),
                 }

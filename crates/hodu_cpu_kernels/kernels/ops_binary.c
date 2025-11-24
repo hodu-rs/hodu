@@ -63,8 +63,8 @@
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
-                                 const size_t *metadata) {                                         \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,        \
+                                            const size_t *metadata) {                              \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         TYPE *out = (TYPE *)output;                                                                \
@@ -153,8 +153,8 @@
 /// @param OP_NAME Operation name
 /// @param FUNC Boolean expression to evaluate (e.g., x < y, x && y)
 #define IMPL_BINARY_TO_BOOL(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                      \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
-                                 const size_t *metadata) {                                         \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,        \
+                                            const size_t *metadata) {                              \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         uint8_t *out = (uint8_t *)output;                                                          \
@@ -207,8 +207,8 @@
 /// @param FROM_FLOAT Function to convert from float to storage type
 // Macros for f8/f16/BF16 with float conversion
 #define IMPL_BINARY_OP_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)             \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
-                                 const size_t *metadata) {                                         \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,        \
+                                            const size_t *metadata) {                              \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         TYPE *out = (TYPE *)output;                                                                \
@@ -270,8 +270,8 @@
 /// @param FUNC Boolean expression (evaluated in float precision)
 /// @param TO_FLOAT Function to convert from storage type to float
 #define IMPL_BINARY_TO_BOOL_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT)                    \
-    void OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,                   \
-                                 const size_t *metadata) {                                         \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *lhs, const void *rhs, void *output,        \
+                                            const size_t *metadata) {                              \
         const TYPE *l = (const TYPE *)lhs;                                                         \
         const TYPE *r = (const TYPE *)rhs;                                                         \
         uint8_t *out = (uint8_t *)output;                                                          \
@@ -320,7 +320,8 @@
 #if SIMD_F32_WIDTH > 1
 
 #define IMPL_BINARY_OP_F32_SIMD(OP_NAME, SIMD_OP, SCALAR_OP)                                       \
-    void OP_NAME##_f32(const void *lhs, const void *rhs, void *output, const size_t *metadata) {   \
+    void hodu_cpu_##OP_NAME##_f32(const void *lhs, const void *rhs, void *output,                  \
+                                  const size_t *metadata) {                                        \
         const f32_t *l = (const f32_t *)lhs;                                                       \
         const f32_t *r = (const f32_t *)rhs;                                                       \
         f32_t *out = (f32_t *)output;                                                              \
@@ -420,7 +421,8 @@ IMPL_BINARY_TO_BOOL(f32_t, f32, ge, x >= y)
 #if SIMD_F64_WIDTH > 1
 
 #define IMPL_BINARY_OP_F64_SIMD(OP_NAME, SIMD_OP, SCALAR_OP)                                       \
-    void OP_NAME##_f64(const void *lhs, const void *rhs, void *output, const size_t *metadata) {   \
+    void hodu_cpu_##OP_NAME##_f64(const void *lhs, const void *rhs, void *output,                  \
+                                  const size_t *metadata) {                                        \
         const f64_t *l = (const f64_t *)lhs;                                                       \
         const f64_t *r = (const f64_t *)rhs;                                                       \
         f64_t *out = (f64_t *)output;                                                              \

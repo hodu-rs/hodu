@@ -32,8 +32,8 @@
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define CONV1D_OP(TYPE, TYPE_SUFFIX)                                                               \
-    void conv1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_conv1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,              \
+                                       void *output_ptr, const size_t *metadata) {                 \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -84,8 +84,8 @@
 /// @param ADD_FN Addition function
 /// @param MUL_FN Multiplication function
 #define CONV1D_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                                  \
-    void conv1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_conv1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,              \
+                                       void *output_ptr, const size_t *metadata) {                 \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -170,8 +170,8 @@ CONV1D_OP(double, f64)
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define CONV2D_OP(TYPE, TYPE_SUFFIX)                                                               \
-    void conv2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_conv2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,              \
+                                       void *output_ptr, const size_t *metadata) {                 \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -235,8 +235,8 @@ CONV1D_OP(double, f64)
 /// @param ADD_FN Addition function
 /// @param MUL_FN Multiplication function
 #define CONV2D_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                                  \
-    void conv2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_conv2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,              \
+                                       void *output_ptr, const size_t *metadata) {                 \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -335,8 +335,8 @@ CONV2D_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul)
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define CONV3D_OP(TYPE, TYPE_SUFFIX)                                                               \
-    void conv3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_conv3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,              \
+                                       void *output_ptr, const size_t *metadata) {                 \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -417,8 +417,8 @@ CONV2D_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul)
 /// @param ADD_FN Addition function
 /// @param MUL_FN Multiplication function
 #define CONV3D_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                                  \
-    void conv3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr, void *output_ptr,     \
-                              const size_t *metadata) {                                            \
+    void hodu_cpu_conv3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,              \
+                                       void *output_ptr, const size_t *metadata) {                 \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -514,8 +514,8 @@ CONV3D_OP(double, f64)
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define CONV_TRANSPOSE1D_OP(TYPE, TYPE_SUFFIX)                                                     \
-    void conv_transpose1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_conv_transpose1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,    \
+                                                 void *output_ptr, const size_t *metadata) {       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -568,8 +568,8 @@ CONV3D_OP(double, f64)
 /// @param ADD_FN Addition function
 /// @param MUL_FN Multiplication function
 #define CONV_TRANSPOSE1D_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                        \
-    void conv_transpose1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_conv_transpose1d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,    \
+                                                 void *output_ptr, const size_t *metadata) {       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -637,8 +637,8 @@ CONV_TRANSPOSE1D_OP(double, f64)
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define CONV_TRANSPOSE2D_OP(TYPE, TYPE_SUFFIX)                                                     \
-    void conv_transpose2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_conv_transpose2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,    \
+                                                 void *output_ptr, const size_t *metadata) {       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -710,8 +710,8 @@ CONV_TRANSPOSE1D_OP(double, f64)
 /// @param ADD_FN Addition function
 /// @param MUL_FN Multiplication function
 #define CONV_TRANSPOSE2D_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                        \
-    void conv_transpose2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_conv_transpose2d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,    \
+                                                 void *output_ptr, const size_t *metadata) {       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -795,8 +795,8 @@ CONV_TRANSPOSE2D_OP(double, f64)
 /// @param TYPE C type for the operation
 /// @param TYPE_SUFFIX Suffix for function naming
 #define CONV_TRANSPOSE3D_OP(TYPE, TYPE_SUFFIX)                                                     \
-    void conv_transpose3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_conv_transpose3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,    \
+                                                 void *output_ptr, const size_t *metadata) {       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -890,8 +890,8 @@ CONV_TRANSPOSE2D_OP(double, f64)
 /// @param ADD_FN Addition function
 /// @param MUL_FN Multiplication function
 #define CONV_TRANSPOSE3D_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN)                        \
-    void conv_transpose3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,             \
-                                        void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_conv_transpose3d_##TYPE_SUFFIX(const void *input_ptr, const void *weight_ptr,    \
+                                                 void *output_ptr, const size_t *metadata) {       \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *weight = (const TYPE *)weight_ptr;                                             \
         TYPE *output = (TYPE *)output_ptr;                                                         \
@@ -1013,8 +1013,9 @@ CONV_TRANSPOSE3D_OP(double, f64)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV1D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                                    \
-    void conv1d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, const size_t *metadata) {         \
+    void hodu_cpu_conv1d_grad_weight_##TYPE_SUFFIX(                                                \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
+        const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
@@ -1081,8 +1082,9 @@ CONV_TRANSPOSE3D_OP(double, f64)
 /// @param MUL_FN Multiplication function
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV1D_GRAD_WEIGHT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, MUL_FN, ATOMIC_ADD_FN)               \
-    void conv1d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, const size_t *metadata) {         \
+    void hodu_cpu_conv1d_grad_weight_##TYPE_SUFFIX(                                                \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
+        const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
@@ -1179,8 +1181,9 @@ CONV1D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV2D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                                    \
-    void conv2d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, const size_t *metadata) {         \
+    void hodu_cpu_conv2d_grad_weight_##TYPE_SUFFIX(                                                \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
+        const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
@@ -1265,8 +1268,9 @@ CONV1D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param MUL_FN Multiplication function
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV2D_GRAD_WEIGHT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, MUL_FN, ATOMIC_ADD_FN)               \
-    void conv2d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, const size_t *metadata) {         \
+    void hodu_cpu_conv2d_grad_weight_##TYPE_SUFFIX(                                                \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
+        const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
@@ -1389,8 +1393,9 @@ CONV2D_GRAD_WEIGHT_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_mul, atomic_add_f16)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV3D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                                    \
-    void conv3d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, const size_t *metadata) {         \
+    void hodu_cpu_conv3d_grad_weight_##TYPE_SUFFIX(                                                \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
+        const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
@@ -1497,8 +1502,9 @@ CONV2D_GRAD_WEIGHT_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_mul, atomic_add_f16)
 /// @param MUL_FN Multiplication function
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV3D_GRAD_WEIGHT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, MUL_FN, ATOMIC_ADD_FN)               \
-    void conv3d_grad_weight_##TYPE_SUFFIX(const void *input_ptr, const void *grad_output_ptr,      \
-                                          void *grad_weight_ptr, const size_t *metadata) {         \
+    void hodu_cpu_conv3d_grad_weight_##TYPE_SUFFIX(                                                \
+        const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
+        const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         const TYPE *grad_output = (const TYPE *)grad_output_ptr;                                   \
         TYPE *grad_weight = (TYPE *)grad_weight_ptr;                                               \
@@ -1617,7 +1623,7 @@ CONV3D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                          \
-    void conv_transpose1d_grad_weight_##TYPE_SUFFIX(                                               \
+    void hodu_cpu_conv_transpose1d_grad_weight_##TYPE_SUFFIX(                                      \
         const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
@@ -1686,7 +1692,7 @@ CONV3D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param MUL_FN Multiplication function
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE1D_GRAD_WEIGHT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, MUL_FN, ATOMIC_ADD_FN)     \
-    void conv_transpose1d_grad_weight_##TYPE_SUFFIX(                                               \
+    void hodu_cpu_conv_transpose1d_grad_weight_##TYPE_SUFFIX(                                      \
         const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
@@ -1767,7 +1773,7 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                          \
-    void conv_transpose2d_grad_weight_##TYPE_SUFFIX(                                               \
+    void hodu_cpu_conv_transpose2d_grad_weight_##TYPE_SUFFIX(                                      \
         const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
@@ -1854,7 +1860,7 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param MUL_FN Multiplication function
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE2D_GRAD_WEIGHT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, MUL_FN, ATOMIC_ADD_FN)     \
-    void conv_transpose2d_grad_weight_##TYPE_SUFFIX(                                               \
+    void hodu_cpu_conv_transpose2d_grad_weight_##TYPE_SUFFIX(                                      \
         const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
@@ -1953,7 +1959,7 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE3D_GRAD_WEIGHT_OP(TYPE, TYPE_SUFFIX, ATOMIC_ADD_FN)                          \
-    void conv_transpose3d_grad_weight_##TYPE_SUFFIX(                                               \
+    void hodu_cpu_conv_transpose3d_grad_weight_##TYPE_SUFFIX(                                      \
         const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
@@ -2062,7 +2068,7 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(double, f64, atomic_add_f64)
 /// @param MUL_FN Multiplication function
 /// @param ATOMIC_ADD_FN Atomic addition function for thread-safe updates
 #define CONV_TRANSPOSE3D_GRAD_WEIGHT_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, MUL_FN, ATOMIC_ADD_FN)     \
-    void conv_transpose3d_grad_weight_##TYPE_SUFFIX(                                               \
+    void hodu_cpu_conv_transpose3d_grad_weight_##TYPE_SUFFIX(                                      \
         const void *input_ptr, const void *grad_output_ptr, void *grad_weight_ptr,                 \
         const size_t *metadata) {                                                                  \
         const TYPE *input = (const TYPE *)input_ptr;                                               \

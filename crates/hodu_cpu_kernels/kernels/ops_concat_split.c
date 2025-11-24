@@ -27,7 +27,7 @@
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define CONCAT_OP(TYPENAME, FN_NAME)                                                               \
-    void FN_NAME(const void *input_ptr, void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
                                                                                                    \
@@ -121,7 +121,7 @@ CONCAT_OP(uint64_t, concat_u64)
 /// @param TYPENAME C type for the operation
 /// @param FN_NAME Function name
 #define SPLIT_OP(TYPENAME, FN_NAME)                                                                \
-    void FN_NAME(const void *input_ptr, void *output_ptr, const size_t *metadata) {                \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
         TYPENAME *output = (TYPENAME *)output_ptr;                                                 \
                                                                                                    \

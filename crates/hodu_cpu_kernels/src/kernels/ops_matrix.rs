@@ -122,20 +122,20 @@ macro_rules! declare_and_dispatch_matrix {
             // Extern C declarations for all operations and types
             extern "C" {
                 $(
-                    fn [<$op _f8e4m3>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f8e5m2>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _bf16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f32>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _f64>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u8>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u32>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _u64>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i8>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i32>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
-                    fn [<$op _i64>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](lhs: *const c_void, rhs: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
             }
 
@@ -148,20 +148,20 @@ macro_rules! declare_and_dispatch_matrix {
                 metadata: &[usize],
             ) {
                 match name {
-                    "matmul_f8e4m3" => matmul_f8e4m3(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_f8e5m2" => matmul_f8e5m2(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_bf16" => matmul_bf16(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_f16" => matmul_f16(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_f32" => matmul_f32(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_f64" => matmul_f64(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_u8" => matmul_u8(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_u16" => matmul_u16(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_u32" => matmul_u32(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_u64" => matmul_u64(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_i8" => matmul_i8(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_i16" => matmul_i16(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_i32" => matmul_i32(lhs, rhs, output, metadata.as_ptr()),
-                    "matmul_i64" => matmul_i64(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_f8e4m3" => hodu_cpu_matmul_f8e4m3(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_f8e5m2" => hodu_cpu_matmul_f8e5m2(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_bf16" => hodu_cpu_matmul_bf16(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_f16" => hodu_cpu_matmul_f16(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_f32" => hodu_cpu_matmul_f32(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_f64" => hodu_cpu_matmul_f64(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_u8" => hodu_cpu_matmul_u8(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_u16" => hodu_cpu_matmul_u16(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_u32" => hodu_cpu_matmul_u32(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_u64" => hodu_cpu_matmul_u64(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_i8" => hodu_cpu_matmul_i8(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_i16" => hodu_cpu_matmul_i16(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_i32" => hodu_cpu_matmul_i32(lhs, rhs, output, metadata.as_ptr()),
+                    "hodu_cpu_matmul_i64" => hodu_cpu_matmul_i64(lhs, rhs, output, metadata.as_ptr()),
                     _ => panic!("Unsupported matmul kernel: {}", name),
                 }
             }
@@ -175,20 +175,20 @@ macro_rules! declare_and_dispatch_matrix {
                 metadata: *const usize,
             ) {
                 match name {
-                    "dot_f8e4m3" => dot_f8e4m3(lhs, rhs, output, metadata),
-                    "dot_f8e5m2" => dot_f8e5m2(lhs, rhs, output, metadata),
-                    "dot_bf16" => dot_bf16(lhs, rhs, output, metadata),
-                    "dot_f16" => dot_f16(lhs, rhs, output, metadata),
-                    "dot_f32" => dot_f32(lhs, rhs, output, metadata),
-                    "dot_f64" => dot_f64(lhs, rhs, output, metadata),
-                    "dot_u8" => dot_u8(lhs, rhs, output, metadata),
-                    "dot_u16" => dot_u16(lhs, rhs, output, metadata),
-                    "dot_u32" => dot_u32(lhs, rhs, output, metadata),
-                    "dot_u64" => dot_u64(lhs, rhs, output, metadata),
-                    "dot_i8" => dot_i8(lhs, rhs, output, metadata),
-                    "dot_i16" => dot_i16(lhs, rhs, output, metadata),
-                    "dot_i32" => dot_i32(lhs, rhs, output, metadata),
-                    "dot_i64" => dot_i64(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_f8e4m3" => hodu_cpu_dot_f8e4m3(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_f8e5m2" => hodu_cpu_dot_f8e5m2(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_bf16" => hodu_cpu_dot_bf16(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_f16" => hodu_cpu_dot_f16(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_f32" => hodu_cpu_dot_f32(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_f64" => hodu_cpu_dot_f64(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_u8" => hodu_cpu_dot_u8(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_u16" => hodu_cpu_dot_u16(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_u32" => hodu_cpu_dot_u32(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_u64" => hodu_cpu_dot_u64(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_i8" => hodu_cpu_dot_i8(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_i16" => hodu_cpu_dot_i16(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_i32" => hodu_cpu_dot_i32(lhs, rhs, output, metadata),
+                    "hodu_cpu_dot_i64" => hodu_cpu_dot_i64(lhs, rhs, output, metadata),
                     _ => panic!("Unsupported dot kernel: {}", name),
                 }
             }

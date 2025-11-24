@@ -23,57 +23,57 @@ ops!(
 );
 
 extern "C" {
-    fn reduce_window_max_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_max_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_max_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
 
-    fn reduce_window_mean_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_mean_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_mean_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_mean_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_mean_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_mean_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_mean_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_mean_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_mean_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_mean_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_mean_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_mean_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
 
-    fn reduce_window_sum_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_sum_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_sum_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
 
-    fn reduce_window_min_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
-    fn reduce_window_min_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_reduce_window_min_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
 }
 
 /// Call windowing reduction operation by kernel name
@@ -109,57 +109,61 @@ pub fn call_ops_reduce_window(
     let kernel_str = kernel_name.0;
     unsafe {
         match kernel_str {
-            "reduce_window_max_f8e4m3" => reduce_window_max_f8e4m3(input, output, metadata.as_ptr()),
-            "reduce_window_max_f8e5m2" => reduce_window_max_f8e5m2(input, output, metadata.as_ptr()),
-            "reduce_window_max_bf16" => reduce_window_max_bf16(input, output, metadata.as_ptr()),
-            "reduce_window_max_f16" => reduce_window_max_f16(input, output, metadata.as_ptr()),
-            "reduce_window_max_f32" => reduce_window_max_f32(input, output, metadata.as_ptr()),
-            "reduce_window_max_f64" => reduce_window_max_f64(input, output, metadata.as_ptr()),
-            "reduce_window_max_i8" => reduce_window_max_i8(input, output, metadata.as_ptr()),
-            "reduce_window_max_i16" => reduce_window_max_i16(input, output, metadata.as_ptr()),
-            "reduce_window_max_i32" => reduce_window_max_i32(input, output, metadata.as_ptr()),
-            "reduce_window_max_i64" => reduce_window_max_i64(input, output, metadata.as_ptr()),
-            "reduce_window_max_u8" => reduce_window_max_u8(input, output, metadata.as_ptr()),
-            "reduce_window_max_u16" => reduce_window_max_u16(input, output, metadata.as_ptr()),
-            "reduce_window_max_u32" => reduce_window_max_u32(input, output, metadata.as_ptr()),
-            "reduce_window_max_u64" => reduce_window_max_u64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_f8e4m3" => hodu_cpu_reduce_window_max_f8e4m3(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_f8e5m2" => hodu_cpu_reduce_window_max_f8e5m2(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_bf16" => hodu_cpu_reduce_window_max_bf16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_f16" => hodu_cpu_reduce_window_max_f16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_f32" => hodu_cpu_reduce_window_max_f32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_f64" => hodu_cpu_reduce_window_max_f64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_i8" => hodu_cpu_reduce_window_max_i8(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_i16" => hodu_cpu_reduce_window_max_i16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_i32" => hodu_cpu_reduce_window_max_i32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_i64" => hodu_cpu_reduce_window_max_i64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_u8" => hodu_cpu_reduce_window_max_u8(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_u16" => hodu_cpu_reduce_window_max_u16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_u32" => hodu_cpu_reduce_window_max_u32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_max_u64" => hodu_cpu_reduce_window_max_u64(input, output, metadata.as_ptr()),
 
-            "reduce_window_mean_f8e4m3" => reduce_window_mean_f8e4m3(input, output, metadata.as_ptr()),
-            "reduce_window_mean_f8e5m2" => reduce_window_mean_f8e5m2(input, output, metadata.as_ptr()),
-            "reduce_window_mean_bf16" => reduce_window_mean_bf16(input, output, metadata.as_ptr()),
-            "reduce_window_mean_f16" => reduce_window_mean_f16(input, output, metadata.as_ptr()),
-            "reduce_window_mean_f32" => reduce_window_mean_f32(input, output, metadata.as_ptr()),
-            "reduce_window_mean_f64" => reduce_window_mean_f64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_mean_f8e4m3" => {
+                hodu_cpu_reduce_window_mean_f8e4m3(input, output, metadata.as_ptr())
+            },
+            "hodu_cpu_reduce_window_mean_f8e5m2" => {
+                hodu_cpu_reduce_window_mean_f8e5m2(input, output, metadata.as_ptr())
+            },
+            "hodu_cpu_reduce_window_mean_bf16" => hodu_cpu_reduce_window_mean_bf16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_mean_f16" => hodu_cpu_reduce_window_mean_f16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_mean_f32" => hodu_cpu_reduce_window_mean_f32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_mean_f64" => hodu_cpu_reduce_window_mean_f64(input, output, metadata.as_ptr()),
 
-            "reduce_window_sum_f8e4m3" => reduce_window_sum_f8e4m3(input, output, metadata.as_ptr()),
-            "reduce_window_sum_f8e5m2" => reduce_window_sum_f8e5m2(input, output, metadata.as_ptr()),
-            "reduce_window_sum_bf16" => reduce_window_sum_bf16(input, output, metadata.as_ptr()),
-            "reduce_window_sum_f16" => reduce_window_sum_f16(input, output, metadata.as_ptr()),
-            "reduce_window_sum_f32" => reduce_window_sum_f32(input, output, metadata.as_ptr()),
-            "reduce_window_sum_f64" => reduce_window_sum_f64(input, output, metadata.as_ptr()),
-            "reduce_window_sum_i8" => reduce_window_sum_i8(input, output, metadata.as_ptr()),
-            "reduce_window_sum_i16" => reduce_window_sum_i16(input, output, metadata.as_ptr()),
-            "reduce_window_sum_i32" => reduce_window_sum_i32(input, output, metadata.as_ptr()),
-            "reduce_window_sum_i64" => reduce_window_sum_i64(input, output, metadata.as_ptr()),
-            "reduce_window_sum_u8" => reduce_window_sum_u8(input, output, metadata.as_ptr()),
-            "reduce_window_sum_u16" => reduce_window_sum_u16(input, output, metadata.as_ptr()),
-            "reduce_window_sum_u32" => reduce_window_sum_u32(input, output, metadata.as_ptr()),
-            "reduce_window_sum_u64" => reduce_window_sum_u64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_f8e4m3" => hodu_cpu_reduce_window_sum_f8e4m3(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_f8e5m2" => hodu_cpu_reduce_window_sum_f8e5m2(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_bf16" => hodu_cpu_reduce_window_sum_bf16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_f16" => hodu_cpu_reduce_window_sum_f16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_f32" => hodu_cpu_reduce_window_sum_f32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_f64" => hodu_cpu_reduce_window_sum_f64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_i8" => hodu_cpu_reduce_window_sum_i8(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_i16" => hodu_cpu_reduce_window_sum_i16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_i32" => hodu_cpu_reduce_window_sum_i32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_i64" => hodu_cpu_reduce_window_sum_i64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_u8" => hodu_cpu_reduce_window_sum_u8(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_u16" => hodu_cpu_reduce_window_sum_u16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_u32" => hodu_cpu_reduce_window_sum_u32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_sum_u64" => hodu_cpu_reduce_window_sum_u64(input, output, metadata.as_ptr()),
 
-            "reduce_window_min_f8e4m3" => reduce_window_min_f8e4m3(input, output, metadata.as_ptr()),
-            "reduce_window_min_f8e5m2" => reduce_window_min_f8e5m2(input, output, metadata.as_ptr()),
-            "reduce_window_min_bf16" => reduce_window_min_bf16(input, output, metadata.as_ptr()),
-            "reduce_window_min_f16" => reduce_window_min_f16(input, output, metadata.as_ptr()),
-            "reduce_window_min_f32" => reduce_window_min_f32(input, output, metadata.as_ptr()),
-            "reduce_window_min_f64" => reduce_window_min_f64(input, output, metadata.as_ptr()),
-            "reduce_window_min_i8" => reduce_window_min_i8(input, output, metadata.as_ptr()),
-            "reduce_window_min_i16" => reduce_window_min_i16(input, output, metadata.as_ptr()),
-            "reduce_window_min_i32" => reduce_window_min_i32(input, output, metadata.as_ptr()),
-            "reduce_window_min_i64" => reduce_window_min_i64(input, output, metadata.as_ptr()),
-            "reduce_window_min_u8" => reduce_window_min_u8(input, output, metadata.as_ptr()),
-            "reduce_window_min_u16" => reduce_window_min_u16(input, output, metadata.as_ptr()),
-            "reduce_window_min_u32" => reduce_window_min_u32(input, output, metadata.as_ptr()),
-            "reduce_window_min_u64" => reduce_window_min_u64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_f8e4m3" => hodu_cpu_reduce_window_min_f8e4m3(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_f8e5m2" => hodu_cpu_reduce_window_min_f8e5m2(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_bf16" => hodu_cpu_reduce_window_min_bf16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_f16" => hodu_cpu_reduce_window_min_f16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_f32" => hodu_cpu_reduce_window_min_f32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_f64" => hodu_cpu_reduce_window_min_f64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_i8" => hodu_cpu_reduce_window_min_i8(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_i16" => hodu_cpu_reduce_window_min_i16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_i32" => hodu_cpu_reduce_window_min_i32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_i64" => hodu_cpu_reduce_window_min_i64(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_u8" => hodu_cpu_reduce_window_min_u8(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_u16" => hodu_cpu_reduce_window_min_u16(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_u32" => hodu_cpu_reduce_window_min_u32(input, output, metadata.as_ptr()),
+            "hodu_cpu_reduce_window_min_u64" => hodu_cpu_reduce_window_min_u64(input, output, metadata.as_ptr()),
 
             _ => panic!("Unsupported reduce_window kernel: {:?}", kernel_name),
         }

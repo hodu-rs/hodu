@@ -4,13 +4,14 @@
 #include <cblas_new.h>
 
 // Forward declarations for fallback
-extern void mul_scalar_f32_fallback(const void *input, void *output, const size_t *metadata,
-                                    const void *scalar);
-extern void mul_scalar_f64_fallback(const void *input, void *output, const size_t *metadata,
-                                    const void *scalar);
+extern void hodu_cpu_mul_scalar_f32_fallback(const void *input, void *output,
+                                             const size_t *metadata, const void *scalar);
+extern void hodu_cpu_mul_scalar_f64_fallback(const void *input, void *output,
+                                             const size_t *metadata, const void *scalar);
 
 // mul_scalar_f32: Accelerate BLAS-optimized version
-void mul_scalar_f32(const void *input, void *output, const size_t *metadata, const void *scalar) {
+void hodu_cpu_mul_scalar_f32(const void *input, void *output, const size_t *metadata,
+                             const void *scalar) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -38,11 +39,12 @@ void mul_scalar_f32(const void *input, void *output, const size_t *metadata, con
     }
 
     // Fallback for non-contiguous or offset cases
-    mul_scalar_f32_fallback(input, output, metadata, scalar);
+    hodu_cpu_mul_scalar_f32_fallback(input, output, metadata, scalar);
 }
 
 // mul_scalar_f64: Accelerate BLAS-optimized version
-void mul_scalar_f64(const void *input, void *output, const size_t *metadata, const void *scalar) {
+void hodu_cpu_mul_scalar_f64(const void *input, void *output, const size_t *metadata,
+                             const void *scalar) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -70,5 +72,5 @@ void mul_scalar_f64(const void *input, void *output, const size_t *metadata, con
     }
 
     // Fallback for non-contiguous or offset cases
-    mul_scalar_f64_fallback(input, output, metadata, scalar);
+    hodu_cpu_mul_scalar_f64_fallback(input, output, metadata, scalar);
 }

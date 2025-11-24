@@ -6,18 +6,18 @@
 #include <cblas.h>
 
 // Forward declarations for fallback implementations
-extern void matmul_f32_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
-                                const size_t *metadata);
-extern void matmul_f64_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
-                                const size_t *metadata);
-extern void dot_f32_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
-                             const size_t *metadata);
-extern void dot_f64_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
-                             const size_t *metadata);
+extern void hodu_cpu_matmul_f32_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                                         const size_t *metadata);
+extern void hodu_cpu_matmul_f64_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                                         const size_t *metadata);
+extern void hodu_cpu_dot_f32_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                                      const size_t *metadata);
+extern void hodu_cpu_dot_f64_fallback(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                                      const size_t *metadata);
 
 /// F32 matmul using OpenBLAS cblas_sgemm with thread control
-void matmul_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
-                const size_t *metadata) {
+void hodu_cpu_matmul_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                         const size_t *metadata) {
     const f32_t *lhs = (const f32_t *)lhs_ptr;
     const f32_t *rhs = (const f32_t *)rhs_ptr;
     f32_t *output = (f32_t *)output_ptr;
@@ -148,13 +148,13 @@ void matmul_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
         }
     } else {
         // Fallback for complex stride patterns
-        matmul_f32_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
+        hodu_cpu_matmul_f32_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
     }
 }
 
 /// F64 matmul using OpenBLAS cblas_dgemm with thread control
-void matmul_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
-                const size_t *metadata) {
+void hodu_cpu_matmul_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                         const size_t *metadata) {
     const f64_t *lhs = (const f64_t *)lhs_ptr;
     const f64_t *rhs = (const f64_t *)rhs_ptr;
     f64_t *output = (f64_t *)output_ptr;
@@ -278,12 +278,13 @@ void matmul_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
         }
     } else {
         // Fallback for complex stride patterns
-        matmul_f64_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
+        hodu_cpu_matmul_f64_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
     }
 }
 
 /// F32 dot product using OpenBLAS cblas_sgemm
-void dot_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_dot_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                      const size_t *metadata) {
     const f32_t *lhs = (const f32_t *)lhs_ptr;
     const f32_t *rhs = (const f32_t *)rhs_ptr;
     f32_t *output = (f32_t *)output_ptr;
@@ -334,12 +335,13 @@ void dot_f32(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, const s
                     output, N);
     } else {
         // Fallback for complex stride patterns
-        dot_f32_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
+        hodu_cpu_dot_f32_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
     }
 }
 
 /// F64 dot product using OpenBLAS cblas_dgemm
-void dot_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_dot_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr,
+                      const size_t *metadata) {
     const f64_t *lhs = (const f64_t *)lhs_ptr;
     const f64_t *rhs = (const f64_t *)rhs_ptr;
     f64_t *output = (f64_t *)output_ptr;
@@ -391,6 +393,6 @@ void dot_f64(const void *lhs_ptr, const void *rhs_ptr, void *output_ptr, const s
                     output, N);
     } else {
         // Fallback for complex stride patterns
-        dot_f64_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
+        hodu_cpu_dot_f64_fallback(lhs_ptr, rhs_ptr, output_ptr, metadata);
     }
 }

@@ -458,19 +458,48 @@ fn test_conv1d_grad_weight_f32() {
     let grad_output = [1.0f32, 1.0, 1.0];
     let mut grad_weight = vec![0.0f32; out_channels * in_channels * kernel_width];
 
+    // Generic metadata layout for conv1d_grad_weight:
+    // metadata[0]: num_els
+    // metadata[1]: input_ndim (3 for conv1d)
+    // metadata[2]: spatial_dims (1 for conv1d)
+    // metadata[3..6]: input_shape [batch, in_channels, in_width]
+    // metadata[6..9]: grad_output_shape [batch, out_channels, out_width]
+    // metadata[9..12]: weight_shape [out_channels, in_channels, kernel_width]
+    // metadata[12..15]: input_strides
+    // metadata[15..18]: grad_output_strides
+    // metadata[18]: input_offset
+    // metadata[19]: grad_output_offset
+    // metadata[20]: stride
+    // metadata[21]: padding
+    // metadata[22]: dilation
+    let input_ndim = 3;
+    let spatial_dims = 1;
+    let input_strides = [in_channels * in_width, in_width, 1];
+    let grad_output_strides = [out_channels * out_width, out_width, 1];
     let metadata = vec![
-        out_channels * in_channels * kernel_width,
+        out_channels * in_channels * kernel_width, // num_els
+        input_ndim,
+        spatial_dims,
         batch,
         in_channels,
+        in_width, // input_shape
+        batch,
         out_channels,
-        in_width,
-        kernel_width,
-        out_width,
-        stride,
-        padding,
-        dilation,
-        0,
-        0,
+        out_width, // grad_output_shape
+        out_channels,
+        in_channels,
+        kernel_width, // weight_shape
+        input_strides[0],
+        input_strides[1],
+        input_strides[2], // input_strides
+        grad_output_strides[0],
+        grad_output_strides[1],
+        grad_output_strides[2], // grad_output_strides
+        0,                      // input_offset
+        0,                      // grad_output_offset
+        stride,                 // stride
+        padding,                // padding
+        dilation,               // dilation
     ];
 
     call_ops_conv_grad_weight(
@@ -507,25 +536,61 @@ fn test_conv2d_grad_weight_f32() {
     let grad_output = [1.0f32, 1.0, 1.0, 1.0];
     let mut grad_weight = vec![0.0f32; out_channels * in_channels * kernel_height * kernel_width];
 
+    // Generic metadata layout for conv2d_grad_weight:
+    // metadata[0]: num_els
+    // metadata[1]: input_ndim (4 for conv2d)
+    // metadata[2]: spatial_dims (2 for conv2d)
+    // metadata[3..7]: input_shape [batch, in_channels, in_height, in_width]
+    // metadata[7..11]: grad_output_shape [batch, out_channels, out_height, out_width]
+    // metadata[11..15]: weight_shape [out_channels, in_channels, kernel_height, kernel_width]
+    // metadata[15..19]: input_strides
+    // metadata[19..23]: grad_output_strides
+    // metadata[23]: input_offset
+    // metadata[24]: grad_output_offset
+    // metadata[25..27]: stride [stride_h, stride_w]
+    // metadata[27..29]: padding [padding_h, padding_w]
+    // metadata[29..31]: dilation [dilation_h, dilation_w]
+    let input_ndim = 4;
+    let spatial_dims = 2;
+    let input_strides = [in_channels * in_height * in_width, in_height * in_width, in_width, 1];
+    let grad_output_strides = [
+        out_channels * out_height * out_width,
+        out_height * out_width,
+        out_width,
+        1,
+    ];
     let metadata = vec![
-        out_channels * in_channels * kernel_height * kernel_width,
+        out_channels * in_channels * kernel_height * kernel_width, // num_els
+        input_ndim,
+        spatial_dims,
         batch,
         in_channels,
-        out_channels,
         in_height,
-        in_width,
-        kernel_height,
-        kernel_width,
+        in_width, // input_shape
+        batch,
+        out_channels,
         out_height,
-        out_width,
+        out_width, // grad_output_shape
+        out_channels,
+        in_channels,
+        kernel_height,
+        kernel_width, // weight_shape
+        input_strides[0],
+        input_strides[1],
+        input_strides[2],
+        input_strides[3], // input_strides
+        grad_output_strides[0],
+        grad_output_strides[1],
+        grad_output_strides[2],
+        grad_output_strides[3], // grad_output_strides
+        0,                      // input_offset
+        0,                      // grad_output_offset
         stride_h,
-        stride_w,
+        stride_w, // stride
         padding_h,
-        padding_w,
+        padding_w, // padding
         dilation_h,
-        dilation_w,
-        0,
-        0,
+        dilation_w, // dilation
     ];
 
     call_ops_conv_grad_weight(
@@ -568,31 +633,76 @@ fn test_conv3d_grad_weight_f32() {
     let grad_output = [1.0f32];
     let mut grad_weight = vec![0.0f32; out_channels * in_channels * kernel_depth * kernel_height * kernel_width];
 
+    // Generic metadata layout for conv3d_grad_weight:
+    // metadata[0]: num_els
+    // metadata[1]: input_ndim (5 for conv3d)
+    // metadata[2]: spatial_dims (3 for conv3d)
+    // metadata[3..8]: input_shape [batch, in_channels, in_depth, in_height, in_width]
+    // metadata[8..13]: grad_output_shape [batch, out_channels, out_depth, out_height, out_width]
+    // metadata[13..18]: weight_shape [out_channels, in_channels, kernel_depth, kernel_height, kernel_width]
+    // metadata[18..23]: input_strides
+    // metadata[23..28]: grad_output_strides
+    // metadata[28]: input_offset
+    // metadata[29]: grad_output_offset
+    // metadata[30..33]: stride [stride_d, stride_h, stride_w]
+    // metadata[33..36]: padding [padding_d, padding_h, padding_w]
+    // metadata[36..39]: dilation [dilation_d, dilation_h, dilation_w]
+    let input_ndim = 5;
+    let spatial_dims = 3;
+    let input_strides = [
+        in_channels * in_depth * in_height * in_width,
+        in_depth * in_height * in_width,
+        in_height * in_width,
+        in_width,
+        1,
+    ];
+    let grad_output_strides = [
+        out_channels * out_depth * out_height * out_width,
+        out_depth * out_height * out_width,
+        out_height * out_width,
+        out_width,
+        1,
+    ];
     let metadata = vec![
-        out_channels * in_channels * kernel_depth * kernel_height * kernel_width,
+        out_channels * in_channels * kernel_depth * kernel_height * kernel_width, // num_els
+        input_ndim,
+        spatial_dims,
         batch,
         in_channels,
-        out_channels,
         in_depth,
         in_height,
-        in_width,
-        kernel_depth,
-        kernel_height,
-        kernel_width,
+        in_width, // input_shape
+        batch,
+        out_channels,
         out_depth,
         out_height,
-        out_width,
+        out_width, // grad_output_shape
+        out_channels,
+        in_channels,
+        kernel_depth,
+        kernel_height,
+        kernel_width, // weight_shape
+        input_strides[0],
+        input_strides[1],
+        input_strides[2],
+        input_strides[3],
+        input_strides[4], // input_strides
+        grad_output_strides[0],
+        grad_output_strides[1],
+        grad_output_strides[2],
+        grad_output_strides[3],
+        grad_output_strides[4], // grad_output_strides
+        0,                      // input_offset
+        0,                      // grad_output_offset
         stride_d,
         stride_h,
-        stride_w,
+        stride_w, // stride
         padding_d,
         padding_h,
-        padding_w,
+        padding_w, // padding
         dilation_d,
         dilation_h,
-        dilation_w,
-        0,
-        0,
+        dilation_w, // dilation
     ];
 
     call_ops_conv_grad_weight(
@@ -623,19 +733,36 @@ fn test_conv_transpose1d_grad_weight_f32() {
     let grad_output = vec![1.0f32; out_width];
     let mut grad_weight = vec![0.0f32; in_channels * out_channels * kernel_width];
 
+    // Generic metadata layout for conv_transpose1d_grad_weight:
+    // Same structure as conv1d_grad_weight but with transposed semantics
+    let input_ndim = 3;
+    let spatial_dims = 1;
+    let input_strides = [in_channels * in_width, in_width, 1];
+    let grad_output_strides = [out_channels * out_width, out_width, 1];
     let metadata = vec![
-        in_channels * out_channels * kernel_width,
+        in_channels * out_channels * kernel_width, // num_els
+        input_ndim,
+        spatial_dims,
         batch,
         in_channels,
+        in_width, // input_shape
+        batch,
         out_channels,
-        in_width,
-        kernel_width,
-        out_width,
-        stride,
-        padding,
-        dilation,
-        0,
-        0,
+        out_width, // grad_output_shape
+        in_channels,
+        out_channels,
+        kernel_width, // weight_shape
+        input_strides[0],
+        input_strides[1],
+        input_strides[2], // input_strides
+        grad_output_strides[0],
+        grad_output_strides[1],
+        grad_output_strides[2], // grad_output_strides
+        0,                      // input_offset
+        0,                      // grad_output_offset
+        stride,                 // stride
+        padding,                // padding
+        dilation,               // dilation
     ];
 
     call_ops_conv_grad_weight(
@@ -672,25 +799,48 @@ fn test_conv_transpose2d_grad_weight_f32() {
     let grad_output = vec![1.0f32; out_height * out_width];
     let mut grad_weight = vec![0.0f32; in_channels * out_channels * kernel_height * kernel_width];
 
+    // Generic metadata layout for conv_transpose2d_grad_weight
+    let input_ndim = 4;
+    let spatial_dims = 2;
+    let input_strides = [in_channels * in_height * in_width, in_height * in_width, in_width, 1];
+    let grad_output_strides = [
+        out_channels * out_height * out_width,
+        out_height * out_width,
+        out_width,
+        1,
+    ];
     let metadata = vec![
-        in_channels * out_channels * kernel_height * kernel_width,
+        in_channels * out_channels * kernel_height * kernel_width, // num_els
+        input_ndim,
+        spatial_dims,
         batch,
         in_channels,
-        out_channels,
         in_height,
-        in_width,
-        kernel_height,
-        kernel_width,
+        in_width, // input_shape
+        batch,
+        out_channels,
         out_height,
-        out_width,
+        out_width, // grad_output_shape
+        in_channels,
+        out_channels,
+        kernel_height,
+        kernel_width, // weight_shape
+        input_strides[0],
+        input_strides[1],
+        input_strides[2],
+        input_strides[3], // input_strides
+        grad_output_strides[0],
+        grad_output_strides[1],
+        grad_output_strides[2],
+        grad_output_strides[3], // grad_output_strides
+        0,                      // input_offset
+        0,                      // grad_output_offset
         stride_h,
-        stride_w,
+        stride_w, // stride
         padding_h,
-        padding_w,
+        padding_w, // padding
         dilation_h,
-        dilation_w,
-        0,
-        0,
+        dilation_w, // dilation
     ];
 
     call_ops_conv_grad_weight(
@@ -733,31 +883,63 @@ fn test_conv_transpose3d_grad_weight_f32() {
     let grad_output = vec![1.0f32; out_depth * out_height * out_width];
     let mut grad_weight = vec![0.0f32; in_channels * out_channels * kernel_depth * kernel_height * kernel_width];
 
+    // Generic metadata layout for conv_transpose3d_grad_weight
+    let input_ndim = 5;
+    let spatial_dims = 3;
+    let input_strides = [
+        in_channels * in_depth * in_height * in_width,
+        in_depth * in_height * in_width,
+        in_height * in_width,
+        in_width,
+        1,
+    ];
+    let grad_output_strides = [
+        out_channels * out_depth * out_height * out_width,
+        out_depth * out_height * out_width,
+        out_height * out_width,
+        out_width,
+        1,
+    ];
     let metadata = vec![
-        in_channels * out_channels * kernel_depth * kernel_height * kernel_width,
+        in_channels * out_channels * kernel_depth * kernel_height * kernel_width, // num_els
+        input_ndim,
+        spatial_dims,
         batch,
         in_channels,
-        out_channels,
         in_depth,
         in_height,
-        in_width,
-        kernel_depth,
-        kernel_height,
-        kernel_width,
+        in_width, // input_shape
+        batch,
+        out_channels,
         out_depth,
         out_height,
-        out_width,
+        out_width, // grad_output_shape
+        in_channels,
+        out_channels,
+        kernel_depth,
+        kernel_height,
+        kernel_width, // weight_shape
+        input_strides[0],
+        input_strides[1],
+        input_strides[2],
+        input_strides[3],
+        input_strides[4], // input_strides
+        grad_output_strides[0],
+        grad_output_strides[1],
+        grad_output_strides[2],
+        grad_output_strides[3],
+        grad_output_strides[4], // grad_output_strides
+        0,                      // input_offset
+        0,                      // grad_output_offset
         stride_d,
         stride_h,
-        stride_w,
+        stride_w, // stride
         padding_d,
         padding_h,
-        padding_w,
+        padding_w, // padding
         dilation_d,
         dilation_h,
-        dilation_w,
-        0,
-        0,
+        dilation_w, // dilation
     ];
 
     call_ops_conv_grad_weight(

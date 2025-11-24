@@ -61,7 +61,8 @@
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata) {                              \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -158,8 +159,8 @@
         return NULL;                                                                               \
     }                                                                                              \
                                                                                                    \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar) {                                             \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata, const void *scalar) {          \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -231,7 +232,8 @@
  * @param FUNC Boolean expression using variable 'x'
  */
 #define IMPL_UNARY_TO_BOOL(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                                       \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata) {                              \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -270,8 +272,8 @@
  * @param FUNC Comparison expression using 'x' and 'const_val'
  */
 #define IMPL_UNARY_CMP_SCALAR_TO_BOOL(TYPE, TYPE_SUFFIX, OP_NAME, FUNC)                            \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar) {                                             \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata, const void *scalar) {          \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -313,7 +315,8 @@
  * @param FROM_FLOAT Function to convert float to TYPE
  */
 #define IMPL_UNARY_OP_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)              \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata) {                              \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -347,8 +350,8 @@
     }
 
 #define IMPL_UNARY_WITH_SCALAR_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT, FROM_FLOAT)     \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar) {                                             \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata, const void *scalar) {          \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -383,7 +386,8 @@
     }
 
 #define IMPL_UNARY_TO_BOOL_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT)                     \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata) {        \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata) {                              \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -410,8 +414,8 @@
     }
 
 #define IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(TYPE, TYPE_SUFFIX, OP_NAME, FUNC, TO_FLOAT)          \
-    void OP_NAME##_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata,          \
-                                 const void *scalar) {                                             \
+    void hodu_cpu_##OP_NAME##_##TYPE_SUFFIX(const void *input, void *output,                       \
+                                            const size_t *metadata, const void *scalar) {          \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
         const TYPE *in = (const TYPE *)input;                                                      \
@@ -443,7 +447,7 @@
 // ============================================================================
 // Basic arithmetic operations
 // SIMD-optimized neg_f32
-void neg_f32(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_neg_f32(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -491,7 +495,7 @@ void neg_f32(const void *input, void *output, const size_t *metadata) {
 }
 
 // SIMD-optimized abs_f32
-void abs_f32(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_abs_f32(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -541,7 +545,7 @@ void abs_f32(const void *input, void *output, const size_t *metadata) {
 IMPL_UNARY_OP(f32_t, f32, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f))
 
 // SIMD-optimized square_f32
-void square_f32(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_square_f32(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -590,7 +594,7 @@ void square_f32(const void *input, void *output, const size_t *metadata) {
 }
 
 // SIMD-optimized sqrt_f32
-void sqrt_f32(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_sqrt_f32(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -641,7 +645,7 @@ IMPL_UNARY_OP(f32_t, f32, recip, 1.0f / x)
 
 // Activation functions
 // SIMD-optimized relu_f32
-void relu_f32(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_relu_f32(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -720,8 +724,8 @@ IMPL_UNARY_WITH_SCALAR(f32_t, f32, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, sub_scalar, x - const_val)
 
 // mul_scalar_f32: Fallback implementation (BLAS versions in separate files)
-void mul_scalar_f32_fallback(const void *input, void *output, const size_t *metadata,
-                             const void *scalar) {
+void hodu_cpu_mul_scalar_f32_fallback(const void *input, void *output, const size_t *metadata,
+                                      const void *scalar) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f32_t *in = (const f32_t *)input;
@@ -757,8 +761,9 @@ void mul_scalar_f32_fallback(const void *input, void *output, const size_t *meta
 
 #ifndef USE_BLAS
 // Non-BLAS version just calls fallback
-void mul_scalar_f32(const void *input, void *output, const size_t *metadata, const void *scalar) {
-    mul_scalar_f32_fallback(input, output, metadata, scalar);
+void hodu_cpu_mul_scalar_f32(const void *input, void *output, const size_t *metadata,
+                             const void *scalar) {
+    hodu_cpu_mul_scalar_f32_fallback(input, output, metadata, scalar);
 }
 #endif
 
@@ -780,7 +785,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(f32_t, f32, ge_scalar, x >= const_val)
 // ============================================================================
 
 // neg_f64: SIMD-optimized version
-void neg_f64(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_neg_f64(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -830,7 +835,7 @@ void neg_f64(const void *input, void *output, const size_t *metadata) {
 }
 
 // abs_f64: SIMD-optimized version
-void abs_f64(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_abs_f64(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -882,7 +887,7 @@ void abs_f64(const void *input, void *output, const size_t *metadata) {
 IMPL_UNARY_OP(f64_t, f64, sign, (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0))
 
 // square_f64: SIMD-optimized version
-void square_f64(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_square_f64(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -934,7 +939,7 @@ void square_f64(const void *input, void *output, const size_t *metadata) {
 }
 
 // sqrt_f64: SIMD-optimized version
-void sqrt_f64(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_sqrt_f64(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -986,7 +991,7 @@ void sqrt_f64(const void *input, void *output, const size_t *metadata) {
 IMPL_UNARY_OP(f64_t, f64, recip, 1.0 / x)
 
 // relu_f64: SIMD-optimized version
-void relu_f64(const void *input, void *output, const size_t *metadata) {
+void hodu_cpu_relu_f64(const void *input, void *output, const size_t *metadata) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -1061,8 +1066,8 @@ IMPL_UNARY_WITH_SCALAR(f64_t, f64, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, sub_scalar, x - const_val)
 
 // mul_scalar_f64: Fallback implementation (BLAS versions in separate files)
-void mul_scalar_f64_fallback(const void *input, void *output, const size_t *metadata,
-                             const void *scalar) {
+void hodu_cpu_mul_scalar_f64_fallback(const void *input, void *output, const size_t *metadata,
+                                      const void *scalar) {
     const size_t num_els = metadata[0];
     const size_t num_dims = metadata[1];
     const f64_t *in = (const f64_t *)input;
@@ -1098,8 +1103,9 @@ void mul_scalar_f64_fallback(const void *input, void *output, const size_t *meta
 
 #ifndef USE_BLAS
 // Non-BLAS version just calls fallback
-void mul_scalar_f64(const void *input, void *output, const size_t *metadata, const void *scalar) {
-    mul_scalar_f64_fallback(input, output, metadata, scalar);
+void hodu_cpu_mul_scalar_f64(const void *input, void *output, const size_t *metadata,
+                             const void *scalar) {
+    hodu_cpu_mul_scalar_f64_fallback(input, output, metadata, scalar);
 }
 #endif
 

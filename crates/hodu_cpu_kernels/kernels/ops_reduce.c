@@ -46,7 +46,7 @@
 /// @param INIT_VAL Initial accumulator value
 /// @param ACCUMULATE Expression to accumulate values (e.g., acc += val)
 #define REDUCE_OP(IN_TYPE, OUT_TYPE, TYPE_SUFFIX, INIT_VAL, ACCUMULATE)                            \
-    void TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {            \
+    void hodu_cpu_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) { \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         OUT_TYPE *output = (OUT_TYPE *)output_ptr;                                                 \
                                                                                                    \
@@ -130,7 +130,7 @@ REDUCE_OP(bf16_t, bf16_t, sum_bf16, BF16_ZERO, acc = bf16_add(acc, val))
 REDUCE_OP(f16_t, f16_t, sum_f16, F16_ZERO, acc = f16_add(acc, val))
 
 // SIMD-optimized sum_f32
-void sum_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_sum_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f32_t *input = (const f32_t *)input_ptr;
     f32_t *output = (f32_t *)output_ptr;
 
@@ -237,7 +237,7 @@ void sum_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 }
 
 // SIMD-optimized sum_f64
-void sum_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_sum_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f64_t *input = (const f64_t *)input_ptr;
     f64_t *output = (f64_t *)output_ptr;
 
@@ -358,7 +358,7 @@ REDUCE_OP(bf16_t, bf16_t, max_bf16, BF16_NEG_INF, acc = bf16_max(acc, val))
 REDUCE_OP(f16_t, f16_t, max_f16, F16_NEG_INF, acc = f16_max(acc, val))
 
 // SIMD-optimized max_f32
-void max_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_max_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f32_t *input = (const f32_t *)input_ptr;
     f32_t *output = (f32_t *)output_ptr;
 
@@ -463,7 +463,7 @@ void max_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 }
 
 // SIMD-optimized max_f64
-void max_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_max_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f64_t *input = (const f64_t *)input_ptr;
     f64_t *output = (f64_t *)output_ptr;
 
@@ -582,7 +582,7 @@ REDUCE_OP(bf16_t, bf16_t, min_bf16, BF16_POS_INF, acc = bf16_min(acc, val))
 REDUCE_OP(f16_t, f16_t, min_f16, F16_POS_INF, acc = f16_min(acc, val))
 
 // SIMD-optimized min_f32
-void min_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_min_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f32_t *input = (const f32_t *)input_ptr;
     f32_t *output = (f32_t *)output_ptr;
 
@@ -687,7 +687,7 @@ void min_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 }
 
 // SIMD-optimized min_f64
-void min_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_min_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f64_t *input = (const f64_t *)input_ptr;
     f64_t *output = (f64_t *)output_ptr;
 
@@ -829,7 +829,8 @@ REDUCE_OP(uint64_t, uint64_t, prod_u64, 1u, acc *= val)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_STD_OP(TYPE, TYPE_SUFFIX)                                                           \
-    void std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+    void hodu_cpu_std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                       \
+                                    const size_t *metadata) {                                      \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -922,7 +923,8 @@ REDUCE_OP(uint64_t, uint64_t, prod_u64, 1u, acc *= val)
 /// @param SUB_FN Subtraction function
 /// @param SQRT_FN Square root function
 #define REDUCE_STD_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN, DIV_FN, SUB_FN, SQRT_FN)     \
-    void std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+    void hodu_cpu_std_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                       \
+                                    const size_t *metadata) {                                      \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -1029,7 +1031,8 @@ REDUCE_STD_OP(f64_t, f64)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_VAR_OP(TYPE, TYPE_SUFFIX)                                                           \
-    void var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+    void hodu_cpu_var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                       \
+                                    const size_t *metadata) {                                      \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -1120,7 +1123,8 @@ REDUCE_STD_OP(f64_t, f64)
 /// @param DIV_FN Division function
 /// @param SUB_FN Subtraction function
 #define REDUCE_VAR_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN, DIV_FN, SUB_FN)              \
-    void var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+    void hodu_cpu_var_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                       \
+                                    const size_t *metadata) {                                      \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -1210,7 +1214,7 @@ REDUCE_VAR_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul, bf16_div, bf16
 REDUCE_VAR_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul, f16_div, f16_sub)
 
 // SIMD-optimized var_f32 (variance: E[X^2] - E[X]^2)
-void var_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_var_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f32_t *input = (const f32_t *)input_ptr;
     f32_t *output = (f32_t *)output_ptr;
 
@@ -1322,7 +1326,7 @@ void var_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 }
 
 // SIMD-optimized var_f64 (variance: E[X^2] - E[X]^2)
-void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f64_t *input = (const f64_t *)input_ptr;
     f64_t *output = (f64_t *)output_ptr;
 
@@ -1446,7 +1450,8 @@ void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_MEAN_OP(TYPE, TYPE_SUFFIX)                                                          \
-    void mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
+    void hodu_cpu_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const size_t num_dims = metadata[0];                                                       \
         const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
         const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
@@ -1457,7 +1462,7 @@ void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         for (size_t i = 0; i < output_shape_len; i++) {                                            \
             num_els *= output_shape[i];                                                            \
         }                                                                                          \
-        sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                                        \
+        hodu_cpu_sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
         for (size_t i = 0; i < num_els; i++) {                                                     \
             output[i] /= (TYPE)reduce_size;                                                        \
@@ -1470,7 +1475,8 @@ void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param DIV_FN Division function
 #define REDUCE_MEAN_OP_EXOTIC(TYPE, TYPE_SUFFIX, DIV_FN)                                           \
-    void mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
+    void hodu_cpu_mean_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const size_t num_dims = metadata[0];                                                       \
         const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
         const size_t *output_shape = metadata + 3 + 2 * num_dims;                                  \
@@ -1481,7 +1487,7 @@ void var_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
         for (size_t i = 0; i < output_shape_len; i++) {                                            \
             num_els *= output_shape[i];                                                            \
         }                                                                                          \
-        sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                                        \
+        hodu_cpu_sum_##TYPE_SUFFIX(input_ptr, output_ptr, metadata);                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
         float reduce_size_f = (float)reduce_size;                                                  \
         TYPE reduce_size_typed = float_to_##TYPE_SUFFIX(reduce_size_f);                            \
@@ -1510,7 +1516,8 @@ REDUCE_MEAN_OP(f64_t, f64)
 /// @param TYPE C float type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_NORM_OP(TYPE, TYPE_SUFFIX)                                                          \
-    void norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
+    void hodu_cpu_norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -1597,7 +1604,8 @@ REDUCE_MEAN_OP(f64_t, f64)
 /// @param MUL_FN Multiplication function
 /// @param SQRT_FN Square root function
 #define REDUCE_NORM_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN, MUL_FN, SQRT_FN)                    \
-    void norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {     \
+    void hodu_cpu_norm_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                      \
+                                     const size_t *metadata) {                                     \
         const TYPE *input = (const TYPE *)input_ptr;                                               \
         TYPE *output = (TYPE *)output_ptr;                                                         \
                                                                                                    \
@@ -1681,7 +1689,7 @@ REDUCE_NORM_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add, bf16_mul, bf16_sqrt)
 REDUCE_NORM_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add, f16_mul, f16_sqrt)
 
 // SIMD-optimized norm_f32 (L2 norm: sqrt(sum(x^2)))
-void norm_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_norm_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f32_t *input = (const f32_t *)input_ptr;
     f32_t *output = (f32_t *)output_ptr;
 
@@ -1786,7 +1794,7 @@ void norm_f32(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 }
 
 // SIMD-optimized norm_f64 (L2 norm: sqrt(sum(x^2)))
-void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
+void hodu_cpu_norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
     const f64_t *input = (const f64_t *)input_ptr;
     f64_t *output = (f64_t *)output_ptr;
 
@@ -1904,7 +1912,8 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ARGMAX_OP(IN_TYPE, TYPE_SUFFIX)                                                     \
-    void argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+    void hodu_cpu_argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                    \
+                                       const size_t *metadata) {                                   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
@@ -1996,7 +2005,8 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param GT_FN Greater-than comparison function
 #define REDUCE_ARGMAX_OP_EXOTIC(IN_TYPE, TYPE_SUFFIX, GT_FN)                                       \
-    void argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+    void hodu_cpu_argmax_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                    \
+                                       const size_t *metadata) {                                   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
@@ -2096,7 +2106,8 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ARGMIN_OP(IN_TYPE, TYPE_SUFFIX)                                                     \
-    void argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+    void hodu_cpu_argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                    \
+                                       const size_t *metadata) {                                   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
@@ -2188,7 +2199,8 @@ void norm_f64(const void *input_ptr, void *output_ptr, const size_t *metadata) {
 /// @param TYPE_SUFFIX Suffix for function naming
 /// @param LT_FN Less-than comparison function
 #define REDUCE_ARGMIN_OP_EXOTIC(IN_TYPE, TYPE_SUFFIX, LT_FN)                                       \
-    void argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {   \
+    void hodu_cpu_argmin_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                    \
+                                       const size_t *metadata) {                                   \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         int32_t *output = (int32_t *)output_ptr;                                                   \
                                                                                                    \
@@ -2322,7 +2334,8 @@ REDUCE_ARGMIN_OP(uint64_t, u64)
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ANY_OP(IN_TYPE, TYPE_SUFFIX)                                                        \
-    void any_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+    void hodu_cpu_any_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                       \
+                                    const size_t *metadata) {                                      \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         bool *output = (bool *)output_ptr;                                                         \
                                                                                                    \
@@ -2416,7 +2429,8 @@ REDUCE_ARGMIN_OP(uint64_t, u64)
 /// @param IN_TYPE Input C type
 /// @param TYPE_SUFFIX Suffix for function naming
 #define REDUCE_ALL_OP(IN_TYPE, TYPE_SUFFIX)                                                        \
-    void all_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr, const size_t *metadata) {      \
+    void hodu_cpu_all_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                       \
+                                    const size_t *metadata) {                                      \
         const IN_TYPE *input = (const IN_TYPE *)input_ptr;                                         \
         bool *output = (bool *)output_ptr;                                                         \
                                                                                                    \
