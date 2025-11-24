@@ -29,8 +29,7 @@ impl Tensor {
 
         let tensor = Tensor(tensor_id);
 
-        let active_board = crate::script::capture::get_active_board()?;
-        active_board.add_input(name, tensor.clone())?;
+        crate::script::capture::add_input_to_active(name, tensor.clone())?;
 
         Ok(tensor)
     }
