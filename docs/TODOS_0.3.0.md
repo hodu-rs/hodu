@@ -33,8 +33,8 @@ let script = board.with_target("output", output_tensor).capture();
 // With name and multiple targets
 let board = CaptureBoard::with_name("my_model");
 board.open();
-let y1 = x.add(w1);
-let y2 = y1.mul(w2);
+let y1 = x.add(w1)?;
+let y2 = y1.mul(w2)?;
 board.close();
 let script = board
     .with_target("output1", y1)
@@ -82,7 +82,7 @@ let mut script = Script::load("model.hdss")?;
 // Set device, runtime, and compiler (required before compile)
 script.set_device(Device::CPU);
 script.set_runtime(Runtime::HODU);
-script.set_compiler(HoduRuntimeCompiler::LLVM);  // Optional: defaults to LLVM
+script.set_compiler(HoduRuntimeCompiler::LLVM);  // Optional for HODU runtime: defaults to LLVM
 
 // Compile
 script.compile()?;
@@ -123,9 +123,9 @@ script.compile()?;  // Previous compilation is cleared
 // Complete workflow: Capture → Compile → Execute
 let board = CaptureBoard::with_name("simple_add");
 board.open();
-let a = Tensor::from_slice(&[1.0f32, 2.0, 3.0, 4.0], [2, 2]);
-let b = Tensor::from_slice(&[5.0f32, 6.0, 7.0, 8.0], [2, 2]);
-let c = a.add(&b);
+let a = Tensor::input("a", [2, 2], DType::F32)?;
+let b = Tensor::input("b", [2, 2], DType::F32)?;
+let c = a.add(&b)?;
 board.close();
 
 let mut script = board.with_target("output", c).capture();
