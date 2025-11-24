@@ -11,7 +11,7 @@ use inkwell::{
     module::Module,
     types::{BasicMetadataTypeEnum, BasicTypeEnum},
     values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue},
-    AddressSpace,
+    AddressSpace, OptimizationLevel,
 };
 
 /// LLVM code generator for Snapshot
@@ -122,9 +122,53 @@ impl<'ctx> CodeGenerator<'ctx> {
             self.generate_node(node)?;
         }
 
-        // 5. Generate return instruction
+        // 6. Generate return instruction
         self.generate_return()?;
 
+        Ok(())
+    }
+
+    /// Verify the generated LLVM module
+    pub fn verify(&self) -> HoduResult<()> {
+        if let Err(err) = self.module.verify() {
+            return Err(HoduError::CompilationError(format!(
+                "LLVM module verification failed: {}",
+                err
+            )));
+        }
+        Ok(())
+    }
+
+    /// Apply optimization passes to the module
+    /// Note: Full optimization support requires newer LLVM/inkwell versions
+    /// This is a placeholder for future optimization implementation
+    pub fn optimize(&self, _opt_level: OptimizationLevel) -> HoduResult<()> {
+        // TODO: Implement optimization passes when using newer inkwell version
+        // For now, optimization will be handled at the TargetMachine level during code generation
+        Ok(())
+    }
+
+    /// Verify and optimize the module
+    pub fn verify_and_optimize(&self, opt_level: OptimizationLevel) -> HoduResult<()> {
+        // First verify the module
+        self.verify()?;
+
+        // Then optimize
+        self.optimize(opt_level)?;
+
+        Ok(())
+    }
+
+    /// Print LLVM IR to string (for debugging)
+    pub fn print_to_string(&self) -> String {
+        self.module.print_to_string().to_string()
+    }
+
+    /// Print LLVM IR to file
+    pub fn print_to_file(&self, path: &str) -> HoduResult<()> {
+        self.module
+            .print_to_file(path)
+            .map_err(|e| HoduError::CompilationError(format!("Failed to write LLVM IR to file: {}", e)))?;
         Ok(())
     }
 
