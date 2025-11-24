@@ -37,7 +37,14 @@ where
         input_strides[i] = input_strides[i + 1] * input_shape[i + 1];
     }
 
-    // Metadata: [num_els, num_dims, input_shape..., input_strides..., input_offset, dim, num_indices]
+    // CUDA kernel metadata layout for index_select:
+    // - metadata[0]: num_els
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims]: input_offset
+    // - metadata[2+2*num_dims+1]: dim
+    // - metadata[2+2*num_dims+2]: num_indices
     let mut metadata = Vec::new();
     metadata.push(output_size);
     metadata.push(num_dims);
@@ -104,8 +111,16 @@ where
         values_strides[i] = values_strides[i + 1] * values_shape[i + 1];
     }
 
-    // Metadata: [num_els, num_dims, input_shape..., input_strides..., values_strides...,
-    //            input_offset, values_offset, dim, num_indices]
+    // CUDA kernel metadata layout for index_put:
+    // - metadata[0]: num_els
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims..2+3*num_dims]: values_strides
+    // - metadata[2+3*num_dims]: input_offset
+    // - metadata[2+3*num_dims+1]: values_offset
+    // - metadata[2+3*num_dims+2]: dim
+    // - metadata[2+3*num_dims+3]: num_indices
     let mut metadata = Vec::new();
     metadata.push(output_size);
     metadata.push(num_dims);
@@ -155,7 +170,9 @@ where
     let input_dev = stream.memcpy_stod(input).unwrap();
     let indices_dev = stream.memcpy_stod(indices).unwrap();
 
-    let output_size: usize = indices_shape.iter().product();
+    // Output shape is same as indices_shape for gather
+    let output_shape = indices_shape;
+    let output_size: usize = output_shape.iter().product();
     let mut output: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(output_size).unwrap() };
 
     // Calculate strides
@@ -170,20 +187,26 @@ where
         indices_strides[i] = indices_strides[i + 1] * indices_shape[i + 1];
     }
 
-    let num_indices = indices.len();
-
-    // Metadata: [num_els, num_dims, input_shape..., input_strides..., indices_strides...,
-    //            input_offset, indices_offset, dim, num_indices]
+    // CUDA kernel metadata layout for gather:
+    // - metadata[0]: num_els
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: output_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_shape
+    // - metadata[2+2*num_dims..2+3*num_dims]: input_strides
+    // - metadata[2+3*num_dims..2+4*num_dims]: indices_strides
+    // - metadata[2+4*num_dims]: input_offset
+    // - metadata[2+4*num_dims+1]: indices_offset
+    // - metadata[2+4*num_dims+2]: dim
     let mut metadata = Vec::new();
     metadata.push(output_size);
     metadata.push(num_dims);
+    metadata.extend_from_slice(output_shape); // output_shape (same as indices_shape)
     metadata.extend_from_slice(input_shape);
     metadata.extend_from_slice(&input_strides);
     metadata.extend_from_slice(&indices_strides);
     metadata.push(0); // input_offset
     metadata.push(0); // indices_offset
     metadata.push(dim);
-    metadata.push(num_indices);
 
     call_ops_gather(
         kernel,
@@ -239,6 +262,7 @@ where
         src_strides[i] = src_strides[i + 1] * src_shape[i + 1];
     }
 
+    // indices_strides follows src_shape (indices has same shape as src)
     let mut indices_strides = vec![1; num_dims];
     for i in (0..num_dims - 1).rev() {
         indices_strides[i] = indices_strides[i + 1] * src_shape[i + 1];
@@ -246,8 +270,18 @@ where
 
     let num_els = src.len();
 
-    // Metadata: [num_els, num_dims, input_shape..., input_strides..., src_shape..., src_strides...,
-    //            indices_strides..., input_offset, src_offset, indices_offset, dim]
+    // CUDA kernel metadata layout for scatter:
+    // - metadata[0]: num_els (number of elements in src tensor to scatter)
+    // - metadata[1]: num_dims
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims..2+3*num_dims]: src_shape
+    // - metadata[2+3*num_dims..2+4*num_dims]: src_strides
+    // - metadata[2+4*num_dims..2+5*num_dims]: indices_strides
+    // - metadata[2+5*num_dims]: input_offset
+    // - metadata[2+5*num_dims+1]: src_offset
+    // - metadata[2+5*num_dims+2]: indices_offset
+    // - metadata[2+5*num_dims+3]: dim
     let mut metadata = Vec::new();
     metadata.push(num_els);
     metadata.push(num_dims);
