@@ -6,7 +6,7 @@ pub mod snapshot;
 use crate::error::{HoduError, HoduResult};
 pub use builder::{BuildConfig, BuildType, Builder, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor};
 pub use capture::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp, CapturedTarget};
-pub use snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId};
+pub use snapshot::{Snapshot, SnapshotConstant, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId};
 
 /// Script holds the Hodu Script IR and provides compilation/execution interface
 pub struct Script {

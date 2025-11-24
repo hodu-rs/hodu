@@ -27,6 +27,17 @@ pub struct SnapshotTarget {
     pub id: SnapshotTensorId,
 }
 
+/// Snapshot constant tensor (weights, biases, etc.)
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SnapshotConstant {
+    pub id: SnapshotTensorId,
+    pub shape: Shape,
+    pub dtype: DType,
+    /// Raw tensor data in bytes
+    pub data: Vec<u8>,
+}
+
 /// Snapshot node (operation)
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -46,6 +57,7 @@ pub struct SnapshotNode {
 pub struct Snapshot {
     pub name: Option<String>,
     pub inputs: Vec<SnapshotInput>,
+    pub constants: Vec<SnapshotConstant>,
     pub targets: Vec<SnapshotTarget>,
     pub nodes: Vec<SnapshotNode>,
 }
@@ -55,6 +67,7 @@ impl Snapshot {
         Self {
             name: None,
             inputs: Vec::new(),
+            constants: Vec::new(),
             targets: Vec::new(),
             nodes: Vec::new(),
         }
@@ -64,6 +77,7 @@ impl Snapshot {
         Self {
             name: Some(name.into()),
             inputs: Vec::new(),
+            constants: Vec::new(),
             targets: Vec::new(),
             nodes: Vec::new(),
         }

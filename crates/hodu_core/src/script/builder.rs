@@ -1,5 +1,5 @@
-pub mod codegen;
 pub mod config;
+pub mod llvm;
 pub mod validate;
 
 use crate::{
@@ -7,9 +7,9 @@ use crate::{
     error::{HoduError, HoduResult},
     script::Script,
 };
-use codegen::CodeGenerator;
 pub use config::{BuildConfig, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor};
 use inkwell::context::Context;
+use llvm::CodeGenerator;
 
 /// Build output type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

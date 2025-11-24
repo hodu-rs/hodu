@@ -178,6 +178,76 @@ impl CaptureBoard {
         // If no tensors were captured, use 0 as the offset
         let offset = if min_id == usize::MAX { 0 } else { min_id };
 
+        // Find constant tensors: reachable tensors that are not inputs and not produced by ops
+        let input_ids: HashSet<_> = self.inputs.iter().map(|i| i.tensor_id).collect();
+        let op_output_ids: HashSet<_> = filtered_ops.iter().map(|op| op.output_id).collect();
+
+        let mut constant_ids = HashSet::new();
+        for op in &filtered_ops {
+            for &input_id in &op.input_ids {
+                if reachable.contains(&input_id) && !input_ids.contains(&input_id) && !op_output_ids.contains(&input_id)
+                {
+                    constant_ids.insert(input_id);
+                }
+            }
+        }
+
+        // Extract constant tensor data from registry
+        let snapshot_constants: Vec<_> = constant_ids
+            .into_iter()
+            .filter_map(|tensor_id| {
+                // Get tensor from registry
+                let tensor = crate::tensor::tensor_from_id(tensor_id);
+                let dtype = tensor.dtype();
+                let shape = tensor.shape();
+
+                // Helper function to convert typed vec to bytes
+                fn to_bytes<T>(vec: Vec<T>) -> Vec<u8> {
+                    let len = vec.len() * core::mem::size_of::<T>();
+                    let ptr = vec.as_ptr() as *const u8;
+                    let mut bytes = Vec::with_capacity(len);
+                    unsafe {
+                        core::ptr::copy_nonoverlapping(ptr, bytes.as_mut_ptr(), len);
+                        bytes.set_len(len);
+                    }
+                    core::mem::forget(vec);
+                    bytes
+                }
+
+                // Extract flattened data as bytes based on dtype
+                let data = match dtype {
+                    DType::BOOL => to_bytes(tensor.to_flatten_vec::<bool>().ok()?),
+                    DType::F8E4M3 => to_bytes(tensor.to_flatten_vec::<float8::F8E4M3>().ok()?),
+                    #[cfg(feature = "f8e5m2")]
+                    DType::F8E5M2 => to_bytes(tensor.to_flatten_vec::<float8::F8E5M2>().ok()?),
+                    DType::BF16 => to_bytes(tensor.to_flatten_vec::<half::bf16>().ok()?),
+                    DType::F16 => to_bytes(tensor.to_flatten_vec::<half::f16>().ok()?),
+                    DType::F32 => to_bytes(tensor.to_flatten_vec::<f32>().ok()?),
+                    #[cfg(feature = "f64")]
+                    DType::F64 => to_bytes(tensor.to_flatten_vec::<f64>().ok()?),
+                    DType::U8 => tensor.to_flatten_vec::<u8>().ok()?,
+                    #[cfg(feature = "u16")]
+                    DType::U16 => to_bytes(tensor.to_flatten_vec::<u16>().ok()?),
+                    DType::U32 => to_bytes(tensor.to_flatten_vec::<u32>().ok()?),
+                    #[cfg(feature = "u64")]
+                    DType::U64 => to_bytes(tensor.to_flatten_vec::<u64>().ok()?),
+                    DType::I8 => to_bytes(tensor.to_flatten_vec::<i8>().ok()?),
+                    #[cfg(feature = "i16")]
+                    DType::I16 => to_bytes(tensor.to_flatten_vec::<i16>().ok()?),
+                    DType::I32 => to_bytes(tensor.to_flatten_vec::<i32>().ok()?),
+                    #[cfg(feature = "i64")]
+                    DType::I64 => to_bytes(tensor.to_flatten_vec::<i64>().ok()?),
+                };
+
+                Some(crate::script::SnapshotConstant {
+                    id: SnapshotTensorId(tensor_id.as_usize() - offset),
+                    shape,
+                    dtype,
+                    data,
+                })
+            })
+            .collect();
+
         // Convert captured inputs to snapshot inputs with normalized IDs
         let snapshot_inputs = self
             .inputs
@@ -226,6 +296,7 @@ impl CaptureBoard {
         let snapshot = Snapshot {
             name: self.name,
             inputs: snapshot_inputs,
+            constants: snapshot_constants,
             targets: snapshot_targets,
             nodes: snapshot_nodes,
         };
