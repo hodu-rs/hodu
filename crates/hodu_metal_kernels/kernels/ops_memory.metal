@@ -11,7 +11,7 @@ using namespace metal;
 // - metadata[2+num_dims..2+2*num_dims]: strides
 // - metadata[2+2*num_dims]: offset
 #define CONTIGUOUS_OP(TYPENAME, FN_NAME)                                                           \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
         constant size_t *metadata [[buffer(2)]], uint id [[thread_position_in_grid]]) {            \
         const size_t num_els = metadata[0];                                                        \
@@ -33,7 +33,7 @@ using namespace metal;
 
 // Copy operation - simple element-wise copy (for already contiguous data)
 #define COPY_OP(TYPENAME, FN_NAME)                                                                 \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
         constant size_t &num_els [[buffer(2)]], uint id [[thread_position_in_grid]]) {             \
         if (id >= num_els)                                                                         \

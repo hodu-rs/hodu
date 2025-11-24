@@ -67,13 +67,13 @@ fn run_cast<T: Clone, O: Clone>(input: &[T], kernel: Kernel) -> Vec<O> {
 #[test]
 fn cast_f32_to_i32() {
     let input = vec![1.5f32, -2.7, 3.2, -4.9];
-    let results: Vec<i32> = run_cast(&input, Kernel("cast_f32_to_i32"));
+    let results: Vec<i32> = run_cast(&input, Kernel("hodu_metal_cast_f32_to_i32"));
     assert_eq!(results, vec![1i32, -2, 3, -4]);
 }
 
 #[test]
 fn cast_i32_to_f32() {
     let input = vec![1i32, -2, 3, -4];
-    let results: Vec<f32> = run_cast(&input, Kernel("cast_i32_to_f32"));
+    let results: Vec<f32> = run_cast(&input, Kernel("hodu_metal_cast_i32_to_f32"));
     assert_eq!(results, vec![1.0f32, -2.0, 3.0, -4.0]);
 }

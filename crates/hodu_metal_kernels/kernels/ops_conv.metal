@@ -32,7 +32,7 @@ using namespace metal;
 // - metadata[11]: weight_offset
 
 #define CONV1D_OP(TYPENAME, FN_NAME)                                                               \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device TYPENAME *weight [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -108,7 +108,7 @@ CONV1D_OP(float, conv1d_f32)
 // - metadata[17]: weight_offset
 
 #define CONV2D_OP(TYPENAME, FN_NAME)                                                               \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device TYPENAME *weight [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -203,7 +203,7 @@ CONV2D_OP(float, conv2d_f32)
 // - metadata[23]: weight_offset
 
 #define CONV3D_OP(TYPENAME, FN_NAME)                                                               \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device TYPENAME *weight [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -295,7 +295,7 @@ CONV3D_OP(float, conv3d_f32)
 // - input_offset, weight_offset
 
 #define CONV_TRANSPOSE1D_OP(TYPENAME, FN_NAME)                                                     \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device TYPENAME *weight [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -362,7 +362,7 @@ CONV_TRANSPOSE1D_OP(float, conv_transpose1d_f32)
 // - input_offset, weight_offset
 
 #define CONV_TRANSPOSE2D_OP(TYPENAME, FN_NAME)                                                     \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device TYPENAME *weight [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -444,7 +444,7 @@ CONV_TRANSPOSE2D_OP(float, conv_transpose2d_f32)
 // - input_offset, weight_offset
 
 #define CONV_TRANSPOSE3D_OP(TYPENAME, FN_NAME)                                                     \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device TYPENAME *weight [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -551,12 +551,12 @@ CONV_TRANSPOSE3D_OP(float, conv_transpose3d_f32)
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
 #define CONV1D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME)                                                   \
-    kernel void FN_NAME(const device TYPENAME *input [[buffer(0)]],                                \
-                        const device TYPENAME *grad_output [[buffer(1)]],                          \
-                        device TYPENAME *grad_weight [[buffer(2)]],                                \
-                        constant size_t *metadata [[buffer(3)]],                                   \
-                        uint thread_index [[thread_position_in_grid]],                             \
-                        uint threads_per_grid [[threads_per_grid]]) {                              \
+    kernel void hodu_metal_##FN_NAME(const device TYPENAME *input [[buffer(0)]],                   \
+                                     const device TYPENAME *grad_output [[buffer(1)]],             \
+                                     device TYPENAME *grad_weight [[buffer(2)]],                   \
+                                     constant size_t *metadata [[buffer(3)]],                      \
+                                     uint thread_index [[thread_position_in_grid]],                \
+                                     uint threads_per_grid [[threads_per_grid]]) {                 \
                                                                                                    \
         /* Parse generic metadata: Conv1D has input_ndim=3, spatial_dims=1 */                      \
         const size_t input_ndim = metadata[1];                                                     \
@@ -641,12 +641,12 @@ CONV1D_GRAD_WEIGHT_OP(float, conv1d_grad_weight_f32)
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
 #define CONV2D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME)                                                   \
-    kernel void FN_NAME(const device TYPENAME *input [[buffer(0)]],                                \
-                        const device TYPENAME *grad_output [[buffer(1)]],                          \
-                        device TYPENAME *grad_weight [[buffer(2)]],                                \
-                        constant size_t *metadata [[buffer(3)]],                                   \
-                        uint thread_index [[thread_position_in_grid]],                             \
-                        uint threads_per_grid [[threads_per_grid]]) {                              \
+    kernel void hodu_metal_##FN_NAME(const device TYPENAME *input [[buffer(0)]],                   \
+                                     const device TYPENAME *grad_output [[buffer(1)]],             \
+                                     device TYPENAME *grad_weight [[buffer(2)]],                   \
+                                     constant size_t *metadata [[buffer(3)]],                      \
+                                     uint thread_index [[thread_position_in_grid]],                \
+                                     uint threads_per_grid [[threads_per_grid]]) {                 \
                                                                                                    \
         /* Parse generic metadata: Conv2D has input_ndim=4, spatial_dims=2 */                      \
         const size_t input_ndim = metadata[1];                                                     \
@@ -747,12 +747,12 @@ CONV2D_GRAD_WEIGHT_OP(float, conv2d_grad_weight_f32)
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
 #define CONV3D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME)                                                   \
-    kernel void FN_NAME(const device TYPENAME *input [[buffer(0)]],                                \
-                        const device TYPENAME *grad_output [[buffer(1)]],                          \
-                        device TYPENAME *grad_weight [[buffer(2)]],                                \
-                        constant size_t *metadata [[buffer(3)]],                                   \
-                        uint thread_index [[thread_position_in_grid]],                             \
-                        uint threads_per_grid [[threads_per_grid]]) {                              \
+    kernel void hodu_metal_##FN_NAME(const device TYPENAME *input [[buffer(0)]],                   \
+                                     const device TYPENAME *grad_output [[buffer(1)]],             \
+                                     device TYPENAME *grad_weight [[buffer(2)]],                   \
+                                     constant size_t *metadata [[buffer(3)]],                      \
+                                     uint thread_index [[thread_position_in_grid]],                \
+                                     uint threads_per_grid [[threads_per_grid]]) {                 \
                                                                                                    \
         /* Parse generic metadata: Conv3D has input_ndim=5, spatial_dims=3 */                      \
         const size_t input_ndim = metadata[1];                                                     \
@@ -870,12 +870,12 @@ CONV3D_GRAD_WEIGHT_OP(float, conv3d_grad_weight_f32)
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
 #define CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME)                                         \
-    kernel void FN_NAME(const device TYPENAME *input [[buffer(0)]],                                \
-                        const device TYPENAME *grad_output [[buffer(1)]],                          \
-                        device TYPENAME *grad_weight [[buffer(2)]],                                \
-                        constant size_t *metadata [[buffer(3)]],                                   \
-                        uint thread_index [[thread_position_in_grid]],                             \
-                        uint threads_per_grid [[threads_per_grid]]) {                              \
+    kernel void hodu_metal_##FN_NAME(const device TYPENAME *input [[buffer(0)]],                   \
+                                     const device TYPENAME *grad_output [[buffer(1)]],             \
+                                     device TYPENAME *grad_weight [[buffer(2)]],                   \
+                                     constant size_t *metadata [[buffer(3)]],                      \
+                                     uint thread_index [[thread_position_in_grid]],                \
+                                     uint threads_per_grid [[threads_per_grid]]) {                 \
                                                                                                    \
         /* Parse generic metadata: ConvTranspose1D has input_ndim=3, spatial_dims=1 */             \
         const size_t input_ndim = metadata[1];                                                     \
@@ -963,12 +963,12 @@ CONV_TRANSPOSE1D_GRAD_WEIGHT_OP(float, conv_transpose1d_grad_weight_f32)
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
 #define CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME)                                         \
-    kernel void FN_NAME(const device TYPENAME *input [[buffer(0)]],                                \
-                        const device TYPENAME *grad_output [[buffer(1)]],                          \
-                        device TYPENAME *grad_weight [[buffer(2)]],                                \
-                        constant size_t *metadata [[buffer(3)]],                                   \
-                        uint thread_index [[thread_position_in_grid]],                             \
-                        uint threads_per_grid [[threads_per_grid]]) {                              \
+    kernel void hodu_metal_##FN_NAME(const device TYPENAME *input [[buffer(0)]],                   \
+                                     const device TYPENAME *grad_output [[buffer(1)]],             \
+                                     device TYPENAME *grad_weight [[buffer(2)]],                   \
+                                     constant size_t *metadata [[buffer(3)]],                      \
+                                     uint thread_index [[thread_position_in_grid]],                \
+                                     uint threads_per_grid [[threads_per_grid]]) {                 \
                                                                                                    \
         /* Parse generic metadata: ConvTranspose2D has input_ndim=4, spatial_dims=2 */             \
         const size_t input_ndim = metadata[1];                                                     \
@@ -1071,12 +1071,12 @@ CONV_TRANSPOSE2D_GRAD_WEIGHT_OP(float, conv_transpose2d_grad_weight_f32)
 // Note: Uses atomic operations for parallel reduction across batch and spatial dimensions
 
 #define CONV_TRANSPOSE3D_GRAD_WEIGHT_OP(TYPENAME, FN_NAME)                                         \
-    kernel void FN_NAME(const device TYPENAME *input [[buffer(0)]],                                \
-                        const device TYPENAME *grad_output [[buffer(1)]],                          \
-                        device TYPENAME *grad_weight [[buffer(2)]],                                \
-                        constant size_t *metadata [[buffer(3)]],                                   \
-                        uint thread_index [[thread_position_in_grid]],                             \
-                        uint threads_per_grid [[threads_per_grid]]) {                              \
+    kernel void hodu_metal_##FN_NAME(const device TYPENAME *input [[buffer(0)]],                   \
+                                     const device TYPENAME *grad_output [[buffer(1)]],             \
+                                     device TYPENAME *grad_weight [[buffer(2)]],                   \
+                                     constant size_t *metadata [[buffer(3)]],                      \
+                                     uint thread_index [[thread_position_in_grid]],                \
+                                     uint threads_per_grid [[threads_per_grid]]) {                 \
                                                                                                    \
         /* Parse generic metadata: ConvTranspose3D has input_ndim=5, spatial_dims=3 */             \
         const size_t input_ndim = metadata[1];                                                     \

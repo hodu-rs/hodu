@@ -12,7 +12,7 @@ use objc2_metal::MTLResourceUsage;
 /// Executes a type cast operation on an input tensor using Metal compute pipeline.
 ///
 /// # Arguments
-/// * `kernel` - Cast operation kernel name (e.g., "cast_f32_to_i32", "cast_i32_to_f32")
+/// * `kernel` - Cast operation kernel name (e.g., "hodu_metal_cast_f32_to_i32", "hodu_metal_cast_i32_to_f32")
 /// * `kernels` - Kernel cache
 /// * `device` - Metal device to execute on
 /// * `ep` - Encoder provider (command buffer)
@@ -39,7 +39,7 @@ use objc2_metal::MTLResourceUsage;
 ///     1,      // strides[0]
 ///     0,      // offset
 /// ];
-/// call_ops_cast(&device, &command_buffer, &kernels, "cast_f32_to_i32",
+/// call_ops_cast(&device, &command_buffer, &kernels, "hodu_metal_cast_f32_to_i32",
 ///           input_buffer, &output, &metadata)?;
 /// ```
 pub fn call_ops_cast(

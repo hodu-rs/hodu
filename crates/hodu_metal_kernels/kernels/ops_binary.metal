@@ -43,7 +43,7 @@ template <typename T> T ipow(T base, T exp) {
 // The kernel automatically detects contiguous layouts and uses optimized access patterns.
 
 #define BINARY_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                        \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *lhs [[buffer(0)]], const device IN_TYPENAME *rhs [[buffer(1)]],  \
         device OUT_TYPENAME *out [[buffer(2)]], constant size_t *metadata [[buffer(3)]],           \
         uint id [[thread_position_in_grid]]) {                                                     \

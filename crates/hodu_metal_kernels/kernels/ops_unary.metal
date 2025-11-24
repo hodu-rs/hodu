@@ -79,7 +79,7 @@ float m_exp10(float x) {
 // - metadata[2+2*num_dims]: offset (starting offset in input)
 
 #define UNARY_OP_OUTPUT(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                                  \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -104,7 +104,7 @@ float m_exp10(float x) {
 #define UNARY_OP(TYPENAME, FN_NAME, FUNC) UNARY_OP_OUTPUT(TYPENAME, TYPENAME, FN_NAME, FUNC)
 
 #define UNARY_OP_WITH_CONSTANT(IN_TYPENAME, OUT_TYPENAME, FN_NAME, FUNC)                           \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], constant IN_TYPENAME &const_val [[buffer(3)]],    \
         uint thread_index [[thread_position_in_grid]],                                             \

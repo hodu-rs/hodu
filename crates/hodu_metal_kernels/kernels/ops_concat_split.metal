@@ -33,7 +33,7 @@ using namespace metal;
 // - buffer(2): metadata (constant size_t*)
 
 #define CONCAT_OP(TYPENAME, FN_NAME)                                                               \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -126,7 +126,7 @@ CONCAT_OP(uint64_t, concat_u64)
 // - buffer(2): metadata (constant size_t*)
 
 #define SPLIT_OP(TYPENAME, FN_NAME)                                                                \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], device TYPENAME *output [[buffer(1)]],         \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \

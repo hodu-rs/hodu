@@ -429,7 +429,7 @@ impl BackendStorageT for MetalStorage {
         };
 
         // Build kernel name: cast_<src>_to_<dst>
-        let kernel_name = format!("cast_{}_to_{}", self.dtype, target_dtype);
+        let kernel_name = format!("hodu_metal_cast_{}_to_{}", self.dtype, target_dtype);
         let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
         let kernel = Kernel(kernel_name_static);
 

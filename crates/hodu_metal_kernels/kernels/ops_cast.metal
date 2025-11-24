@@ -23,7 +23,7 @@ using namespace metal;
 // The kernel automatically detects contiguous layouts and uses optimized access patterns.
 
 #define CAST_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, CAST_EXPR)                                     \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint id [[thread_position_in_grid]]) {            \
         const size_t num_els = metadata[0];                                                        \

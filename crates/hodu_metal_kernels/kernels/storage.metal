@@ -11,7 +11,7 @@ using namespace metal;
 // - metadata[2+num_dims..2+2*num_dims]: strides
 // - metadata[2+2*num_dims]: offset
 #define CONST_SET_OP(TYPENAME, FN_NAME)                                                            \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         device TYPENAME *output [[buffer(0)]], constant size_t *metadata [[buffer(1)]],            \
         constant TYPENAME &const_val [[buffer(2)]], uint thread_index [[thread_position_in_grid]], \
         uint threads_per_grid [[threads_per_grid]]) {                                              \

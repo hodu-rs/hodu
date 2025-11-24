@@ -34,7 +34,7 @@ using namespace metal;
 // - metadata[...+4]: N (cols of rhs matrix)
 
 #define MATMUL_OP(TYPENAME, FN_NAME)                                                               \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *lhs [[buffer(0)]], const device TYPENAME *rhs [[buffer(1)]],        \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint3 thread_position_in_threadgroup [[thread_position_in_threadgroup]],                   \
@@ -196,7 +196,7 @@ MATMUL_OP(uint64_t, matmul_u64)
 #define THREADS_PER_TILE (DOT_TILE_SIZE / BLOCK_M)
 
 #define DOT_OP(TYPENAME, FN_NAME)                                                                  \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *lhs [[buffer(0)]], const device TYPENAME *rhs [[buffer(1)]],        \
         device TYPENAME *output [[buffer(2)]], constant size_t &num_els [[buffer(3)]],             \
         constant size_t *metadata [[buffer(4)]],                                                   \

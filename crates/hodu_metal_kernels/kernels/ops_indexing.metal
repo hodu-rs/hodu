@@ -37,7 +37,7 @@ using namespace metal;
 // - buffer(3): metadata (constant size_t*)
 
 #define INDEX_SELECT_OP(TYPENAME, FN_NAME)                                                         \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -124,7 +124,7 @@ INDEX_SELECT_OP(uint64_t, index_select_u64)
 // - metadata[2+3*num_dims+3]: num_indices
 
 #define INDEX_PUT_OP(TYPENAME, FN_NAME)                                                            \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *values [[buffer(2)]], device TYPENAME *output [[buffer(3)]],        \
         constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
@@ -220,7 +220,7 @@ INDEX_PUT_OP(uint64_t, index_put_u64)
 // - metadata[2+4*num_dims+2]: dim (dimension along which to gather)
 
 #define GATHER_OP(TYPENAME, FN_NAME)                                                               \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         device TYPENAME *output [[buffer(2)]], constant size_t *metadata [[buffer(3)]],            \
         uint thread_index [[thread_position_in_grid]],                                             \
@@ -318,7 +318,7 @@ GATHER_OP(uint64_t, gather_u64)
 // - metadata[2+5*num_dims+3]: dim (dimension along which to scatter)
 
 #define SCATTER_OP(TYPENAME, FN_NAME)                                                              \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
@@ -405,7 +405,7 @@ SCATTER_OP(uint64_t, scatter_u64)
 // Same metadata layout as SCATTER_OP
 
 #define SCATTER_ADD_OP(TYPENAME, FN_NAME)                                                          \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
@@ -492,7 +492,7 @@ SCATTER_ADD_OP(uint64_t, scatter_add_u64)
 // Same metadata layout as SCATTER_OP
 
 #define SCATTER_MAX_OP(TYPENAME, FN_NAME)                                                          \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \
@@ -579,7 +579,7 @@ SCATTER_MAX_OP(uint64_t, scatter_max_u64)
 // Same metadata layout as SCATTER_OP
 
 #define SCATTER_MIN_OP(TYPENAME, FN_NAME)                                                          \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device TYPENAME *input [[buffer(0)]], const device int32_t *indices [[buffer(1)]],   \
         const device TYPENAME *src [[buffer(2)]], device TYPENAME *output [[buffer(3)]],           \
         constant size_t *metadata [[buffer(4)]], uint thread_index [[thread_position_in_grid]],    \

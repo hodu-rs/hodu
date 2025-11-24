@@ -23,7 +23,7 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 
 // Helper macro for reduce_window operations
 #define REDUCE_WINDOW_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, INIT_VAL, ACCUMULATE)                 \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -109,7 +109,7 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 
 // Helper macro for reduce_window mean operations
 #define REDUCE_WINDOW_MEAN_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                  \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \

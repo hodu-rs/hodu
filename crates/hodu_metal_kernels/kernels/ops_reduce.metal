@@ -24,7 +24,7 @@ template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 
 // Helper macro for reduction operations
 #define REDUCE_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME, INIT_VAL, ACCUMULATE)                        \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -179,7 +179,7 @@ REDUCE_OP(uint64_t, uint64_t, prod_u64, 1u, acc *= val)
 // ============================================================================
 
 #define REDUCE_MEAN_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                         \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -267,7 +267,7 @@ REDUCE_MEAN_OP(float, float, mean_f32)
 // ============================================================================
 
 #define REDUCE_NORM_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                         \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -355,7 +355,7 @@ REDUCE_NORM_OP(float, float, norm_f32)
 // ============================================================================
 
 #define REDUCE_ARGMAX_OP(IN_TYPENAME, FN_NAME)                                                     \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device int32_t *output [[buffer(1)]],       \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -443,7 +443,7 @@ REDUCE_NORM_OP(float, float, norm_f32)
     }
 
 #define REDUCE_ARGMIN_OP(IN_TYPENAME, FN_NAME)                                                     \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device int32_t *output [[buffer(1)]],       \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -562,7 +562,7 @@ REDUCE_ARGMIN_OP(uint64_t, argmin_u64)
 template <typename T> inline bool is_nonzero(T val) { return val != T(0); }
 
 #define REDUCE_ANY_OP(IN_TYPENAME, FN_NAME)                                                        \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device bool *output [[buffer(1)]],          \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
@@ -644,7 +644,7 @@ template <typename T> inline bool is_nonzero(T val) { return val != T(0); }
     }
 
 #define REDUCE_ALL_OP(IN_TYPENAME, FN_NAME)                                                        \
-    kernel void FN_NAME(                                                                           \
+    kernel void hodu_metal_##FN_NAME(                                                              \
         const device IN_TYPENAME *input [[buffer(0)]], device bool *output [[buffer(1)]],          \
         constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
         uint threads_per_grid [[threads_per_grid]]) {                                              \
