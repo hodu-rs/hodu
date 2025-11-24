@@ -103,7 +103,10 @@ impl<'ctx> CodeGenerator<'ctx> {
         // 3. Map input parameters to SnapshotTensorIds
         self.map_function_inputs(snapshot, func)?;
 
-        // 4. Generate instructions for each node
+        // 4. Load constant tensors as global variables
+        self.load_constants(snapshot)?;
+
+        // 5. Generate instructions for each node
         for node in &snapshot.nodes {
             self.generate_node(node)?;
         }
@@ -159,6 +162,197 @@ impl<'ctx> CodeGenerator<'ctx> {
             }
         }
 
+        Ok(())
+    }
+
+    /// Load constant tensors as LLVM global variables
+    fn load_constants(&mut self, snapshot: &Snapshot) -> HoduResult<()> {
+        for constant in &snapshot.constants {
+            // Create global variable name
+            let global_name = format!("const_tensor_{}", constant.id.0);
+
+            // Determine element type and count
+            let element_type = self.dtype_to_llvm_type(constant.dtype);
+            let num_elements = constant.shape.size();
+
+            // Create array type for the constant data
+            let array_type = match element_type {
+                BasicTypeEnum::IntType(int_type) => int_type.array_type(num_elements as u32),
+                BasicTypeEnum::FloatType(float_type) => float_type.array_type(num_elements as u32),
+                _ => {
+                    return Err(HoduError::InternalError(format!(
+                        "Unsupported constant dtype: {:?}",
+                        constant.dtype
+                    )))
+                },
+            };
+
+            // Create global variable
+            let global = self.module.add_global(array_type, None, &global_name);
+            global.set_constant(true);
+            global.set_unnamed_addr(true);
+
+            // Initialize with constant data
+            self.initialize_constant_data(global, constant)?;
+
+            // Store pointer in tensor_values map
+            let ptr = global.as_pointer_value();
+            self.tensor_values.insert(constant.id, ptr);
+        }
+
+        Ok(())
+    }
+
+    /// Initialize global constant with data from SnapshotConstant
+    fn initialize_constant_data(
+        &self,
+        global: inkwell::values::GlobalValue<'ctx>,
+        constant: &crate::script::SnapshotConstant,
+    ) -> HoduResult<()> {
+        // Helper function to convert bytes to typed values
+        fn bytes_to_values<T: Copy>(data: &[u8]) -> Vec<T> {
+            let num_elements = data.len() / std::mem::size_of::<T>();
+            let mut values = Vec::with_capacity(num_elements);
+            unsafe {
+                let ptr = data.as_ptr() as *const T;
+                for i in 0..num_elements {
+                    values.push(*ptr.add(i));
+                }
+            }
+            values
+        }
+
+        // Create constant array based on dtype (in dtype.rs definition order)
+        let const_array = match constant.dtype {
+            DType::BOOL => {
+                let values = bytes_to_values::<bool>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.bool_type().const_int(v as u64, false))
+                    .collect();
+                self.context.bool_type().const_array(&const_values)
+            },
+            DType::F8E4M3 => {
+                // F8E4M3 stored as i8
+                let values = bytes_to_values::<u8>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i8_type().const_int(v as u64, false))
+                    .collect();
+                self.context.i8_type().const_array(&const_values)
+            },
+            #[cfg(feature = "f8e5m2")]
+            DType::F8E5M2 => {
+                // F8E5M2 stored as i8
+                let values = bytes_to_values::<u8>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i8_type().const_int(v as u64, false))
+                    .collect();
+                self.context.i8_type().const_array(&const_values)
+            },
+            DType::BF16 => {
+                // BF16 stored as i16
+                let values = bytes_to_values::<u16>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i16_type().const_int(v as u64, false))
+                    .collect();
+                self.context.i16_type().const_array(&const_values)
+            },
+            DType::F16 => {
+                let values = bytes_to_values::<half::f16>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.f16_type().const_float(v.to_f64()))
+                    .collect();
+                self.context.f16_type().const_array(&const_values)
+            },
+            DType::F32 => {
+                let values = bytes_to_values::<f32>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.f32_type().const_float(v as f64))
+                    .collect();
+                self.context.f32_type().const_array(&const_values)
+            },
+            #[cfg(feature = "f64")]
+            DType::F64 => {
+                let values = bytes_to_values::<f64>(&constant.data);
+                let const_values: Vec<_> = values.iter().map(|&v| self.context.f64_type().const_float(v)).collect();
+                self.context.f64_type().const_array(&const_values)
+            },
+            DType::U8 => {
+                let const_values: Vec<_> = constant
+                    .data
+                    .iter()
+                    .map(|&v| self.context.i8_type().const_int(v as u64, false))
+                    .collect();
+                self.context.i8_type().const_array(&const_values)
+            },
+            #[cfg(feature = "u16")]
+            DType::U16 => {
+                let values = bytes_to_values::<u16>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i16_type().const_int(v as u64, false))
+                    .collect();
+                self.context.i16_type().const_array(&const_values)
+            },
+            DType::U32 => {
+                let values = bytes_to_values::<u32>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i32_type().const_int(v as u64, false))
+                    .collect();
+                self.context.i32_type().const_array(&const_values)
+            },
+            #[cfg(feature = "u64")]
+            DType::U64 => {
+                let values = bytes_to_values::<u64>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i64_type().const_int(v, false))
+                    .collect();
+                self.context.i64_type().const_array(&const_values)
+            },
+            DType::I8 => {
+                let values = bytes_to_values::<i8>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i8_type().const_int(v as u64, true))
+                    .collect();
+                self.context.i8_type().const_array(&const_values)
+            },
+            #[cfg(feature = "i16")]
+            DType::I16 => {
+                let values = bytes_to_values::<i16>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i16_type().const_int(v as u64, true))
+                    .collect();
+                self.context.i16_type().const_array(&const_values)
+            },
+            DType::I32 => {
+                let values = bytes_to_values::<i32>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i32_type().const_int(v as u64, true))
+                    .collect();
+                self.context.i32_type().const_array(&const_values)
+            },
+            #[cfg(feature = "i64")]
+            DType::I64 => {
+                let values = bytes_to_values::<i64>(&constant.data);
+                let const_values: Vec<_> = values
+                    .iter()
+                    .map(|&v| self.context.i64_type().const_int(v as u64, true))
+                    .collect();
+                self.context.i64_type().const_array(&const_values)
+            },
+        };
+
+        global.set_initializer(&const_array);
         Ok(())
     }
 
@@ -266,7 +460,6 @@ impl<'ctx> CodeGenerator<'ctx> {
     }
 
     /// Convert DType to LLVM type
-    #[allow(dead_code)]
     fn dtype_to_llvm_type(&self, dtype: DType) -> BasicTypeEnum<'ctx> {
         match dtype {
             DType::BOOL => self.context.bool_type().into(),
