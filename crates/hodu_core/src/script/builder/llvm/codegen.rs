@@ -172,6 +172,130 @@ impl<'ctx> CodeGenerator<'ctx> {
         Ok(())
     }
 
+    /// Emit object file (.o) from LLVM IR
+    #[cfg(feature = "std")]
+    pub fn emit_object_file(&self, path: &str, opt_level: OptimizationLevel) -> HoduResult<()> {
+        use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine};
+        use std::path::Path;
+
+        // 1. Initialize native target
+        Target::initialize_native(&InitializationConfig::default())
+            .map_err(|e| HoduError::CompilationError(format!("Failed to initialize native target: {}", e)))?;
+
+        // 2. Get target triple
+        let target_triple = TargetMachine::get_default_triple();
+
+        // 3. Get target from triple
+        let target = Target::from_triple(&target_triple)
+            .map_err(|e| HoduError::CompilationError(format!("Failed to get target from triple: {}", e)))?;
+
+        // 4. Get CPU and features
+        let cpu = TargetMachine::get_host_cpu_name().to_string();
+        let features = TargetMachine::get_host_cpu_features().to_string();
+
+        // 5. Create target machine
+        let target_machine = target
+            .create_target_machine(
+                &target_triple,
+                &cpu,
+                &features,
+                opt_level,
+                RelocMode::PIC, // Position Independent Code for shared libraries
+                CodeModel::Default,
+            )
+            .ok_or_else(|| HoduError::CompilationError("Failed to create target machine".into()))?;
+
+        // 6. Write object file
+        target_machine
+            .write_to_file(&self.module, FileType::Object, Path::new(path))
+            .map_err(|e| HoduError::CompilationError(format!("Failed to write object file: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Emit shared library (.so/.dylib/.dll) from LLVM IR
+    #[cfg(feature = "std")]
+    pub fn emit_shared_library(&self, path: &str, opt_level: OptimizationLevel) -> HoduResult<()> {
+        use std::process::Command;
+
+        // 1. Create temporary object file
+        let temp_obj = format!("{}.o", path);
+        self.emit_object_file(&temp_obj, opt_level)?;
+
+        // 2. Platform-specific linker command and invocation
+        let status = if cfg!(target_os = "linux") {
+            Command::new("gcc")
+                .args(&["-shared", "-fPIC", "-o", path, &temp_obj])
+                .status()
+                .map_err(|e| HoduError::CompilationError(format!("Failed to invoke gcc: {}", e)))?
+        } else if cfg!(target_os = "macos") {
+            Command::new("clang")
+                .args(&["-shared", "-o", path, &temp_obj])
+                .status()
+                .map_err(|e| HoduError::CompilationError(format!("Failed to invoke clang: {}", e)))?
+        } else if cfg!(target_os = "windows") {
+            let dll_out = format!("/OUT:{}", path);
+            Command::new("link")
+                .args(&["/DLL", &dll_out, &temp_obj])
+                .status()
+                .map_err(|e| HoduError::CompilationError(format!("Failed to invoke link: {}", e)))?
+        } else {
+            return Err(HoduError::UnsupportedPlatform(
+                "Object file emission not supported on this platform".into(),
+            ));
+        };
+
+        // 3. Check linker status
+        if !status.success() {
+            return Err(HoduError::CompilationError(format!(
+                "Linker failed with exit code: {:?}",
+                status.code()
+            )));
+        }
+
+        // 4. Clean up temporary object file
+        std::fs::remove_file(&temp_obj)
+            .map_err(|e| HoduError::IoError(format!("Failed to remove temporary object file: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Emit assembly file (.s) from LLVM IR (for debugging)
+    #[cfg(feature = "std")]
+    pub fn emit_assembly(&self, path: &str, opt_level: OptimizationLevel) -> HoduResult<()> {
+        use inkwell::targets::{CodeModel, FileType, InitializationConfig, RelocMode, Target, TargetMachine};
+        use std::path::Path;
+
+        // Initialize and create target machine (same as emit_object_file)
+        Target::initialize_native(&InitializationConfig::default())
+            .map_err(|e| HoduError::CompilationError(format!("Failed to initialize native target: {}", e)))?;
+
+        let target_triple = TargetMachine::get_default_triple();
+        let target = Target::from_triple(&target_triple)
+            .map_err(|e| HoduError::CompilationError(format!("Failed to get target: {}", e)))?;
+
+        let cpu = TargetMachine::get_host_cpu_name().to_string();
+        let features = TargetMachine::get_host_cpu_features().to_string();
+
+        let target_machine = target
+            .create_target_machine(
+                &target_triple,
+                &cpu,
+                &features,
+                opt_level,
+                RelocMode::PIC,
+                CodeModel::Default,
+            )
+            .ok_or_else(|| HoduError::CompilationError("Failed to create target machine".into()))?;
+
+        // Write assembly file
+        target_machine
+            .write_to_file(&self.module, FileType::Assembly, Path::new(path))
+            .map_err(|e| HoduError::CompilationError(format!("Failed to write assembly file: {}", e)))?;
+
+        Ok(())
+    }
+
     /// Create LLVM function signature from Snapshot
     fn create_function(&mut self, snapshot: &Snapshot) -> HoduResult<FunctionValue<'ctx>> {
         // Function signature: void compute(void* input0, void* input1, ..., void* output0, ...)
@@ -266,7 +390,7 @@ impl<'ctx> CodeGenerator<'ctx> {
     ) -> HoduResult<()> {
         // Helper function to convert bytes to typed values
         fn bytes_to_values<T: Copy>(data: &[u8]) -> Vec<T> {
-            let num_elements = data.len() / std::mem::size_of::<T>();
+            let num_elements = data.len() / core::mem::size_of::<T>();
             let mut values = Vec::with_capacity(num_elements);
             unsafe {
                 let ptr = data.as_ptr() as *const T;
@@ -413,8 +537,8 @@ impl<'ctx> CodeGenerator<'ctx> {
 
     /// Generate LLVM IR for a single SnapshotNode
     fn generate_node(&mut self, node: &SnapshotNode) -> HoduResult<()> {
-        // 1. Get kernel name based on op, device, runtime
-        let kernel_name = self.get_kernel_name(&node.op)?;
+        // 1. Get kernel name based on op and dtype
+        let kernel_name = self.get_kernel_name(&node.op, node.output_dtype)?;
 
         // 2. Get or declare the external kernel function
         let kernel_fn = self.get_or_declare_kernel(&kernel_name, node)?;
@@ -445,10 +569,10 @@ impl<'ctx> CodeGenerator<'ctx> {
         Ok(())
     }
 
-    /// Get kernel function name based on op, device, and runtime
-    fn get_kernel_name(&self, op: &Op) -> HoduResult<String> {
-        // Format: "<runtime>_<device>_<op>"
-        // Example: "hodu_cpu_add", "hodu_cuda_matmul"
+    /// Get kernel function name based on runtime, device, op and dtype
+    fn get_kernel_name(&self, op: &Op, dtype: DType) -> HoduResult<String> {
+        // Format: "{runtime}_{device}_{op}_{dtype}"
+        // Example: "hodu_cpu_add_f32", "xla_cuda_matmul_f16"
 
         let runtime_prefix = match self.runtime {
             Runtime::HODU => "hodu",
@@ -464,10 +588,7 @@ impl<'ctx> CodeGenerator<'ctx> {
             Device::METAL => "metal",
         };
 
-        // Convert Op to snake_case name
-        let op_name = format!("{:?}", op).to_lowercase();
-
-        Ok(format!("{}_{}_{}", runtime_prefix, device_prefix, op_name))
+        Ok(format!("{}_{}_{}_{}", runtime_prefix, device_prefix, op, dtype))
     }
 
     /// Get or declare external kernel function

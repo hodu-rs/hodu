@@ -123,6 +123,8 @@ pub enum HoduError {
     InternalError(String),
     /// Not yet implemented feature.
     NotImplemented(String),
+    /// Unsupported platform.
+    UnsupportedPlatform(String),
 }
 
 impl fmt::Display for HoduError {
@@ -272,6 +274,9 @@ impl fmt::Display for HoduError {
             },
             Self::NotImplemented(feature) => {
                 write!(f, "not implemented: {}", feature)
+            },
+            Self::UnsupportedPlatform(msg) => {
+                write!(f, "unsupported platform: {}", msg)
             },
         }
     }
