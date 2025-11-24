@@ -61,14 +61,20 @@ let script = Script::load("model.hdss")?;
 - 컴파일된 상태로 전환 (실행 가능)
 
 ```rust
-// Default: CPU + HODU runtime
+// Load or create script
+let mut script = Script::load("model.hdss")?;
+
+// Set device and runtime (required before compile)
+script.set_device(Device::CPU);
+script.set_runtime(Runtime::HODU);
+
+// Compile
 script.compile()?;
 
-// With config
-let config = CompileConfig::new()
-    .device(Device::CUDA(0))
-    .runtime(Runtime::XLA);
-script.compile_with(config)?;
+// Or with different device/runtime
+script.set_device(Device::CUDA(0));
+script.set_runtime(Runtime::HODU);
+script.compile()?;  // Previous compilation is cleared
 ```
 
 ### Phase 4: Execute or Build
@@ -79,10 +85,27 @@ script.compile_with(config)?;
 
 - `compile()`된 Script를 즉시 실행
 - 입력 텐서를 받아 출력 텐서 반환
+- compile() 호출 없이 run()을 호출하면 자동으로 compile 수행
 
 ```rust
+// Prepare inputs: &[(&str, &Tensor)]
+let inputs = [
+    ("input1", &tensor1),
+    ("input2", &tensor2),
+];
+
+// Compile (optional - run() will auto-compile if needed)
 script.compile()?;
+
+// Execute and get outputs: HashMap<String, Tensor>
 let outputs = script.run(&inputs)?;
+
+// Access outputs by target name
+let output1 = &outputs["output1"];
+let output2 = &outputs["output2"];
+
+// Or run directly without explicit compile
+let outputs = script.run(&inputs)?;  // Auto-compiles if not already compiled
 ```
 
 **Phase 4-2: Builder + build() - AOT 컴파일하여 네이티브 바이너리/라이브러리 생성** (std)
@@ -168,8 +191,23 @@ hodu --build model.hdss --emit-llvm -o model.ll
   - [x] Constant 텐서 로딩 (모든 DType 지원)
   - [x] Kernel 함수 선언 (`{runtime}_{device}_{op}_{dtype}` 형식)
   - [x] Metadata constant 생성
+  - [x] no_std 환경 지원 (core::mem::size_of 사용)
 - [x] LLVM module 검증 및 최적화 패스 적용
-- [ ] JIT 실행 엔진 구현 (메모리 내 실행)
+- [x] JIT ExecutionEngine wrapper 구현
+  - [x] `CodeGenerator::create_jit_engine()` 메서드
+- [x] Script 구조 재설계
+  - [x] Device/Runtime을 Option으로 변경
+  - [x] Compiled state 추가
+  - [x] `set_device()`/`set_runtime()` 시 compiled state 초기화
+- [x] Script::compile() 메서드 스켈레톤
+- [x] Script::run() 메서드 스켈레톤
+  - [x] 입력: `&[(&str, &Tensor)]`
+  - [x] 출력: `HashMap<String, Tensor>`
+  - [x] 자동 compile 호출
+- [ ] JIT 실제 실행 로직 구현
+  - [ ] LLVM ExecutionEngine에서 함수 가져오기
+  - [ ] 입력/출력 버퍼 관리
+  - [ ] Tensor ↔ 메모리 변환
 
 **[std 전용 - 파일 I/O 필요]**
 - [x] AOT Object 파일 생성 (`emit_object_file`)

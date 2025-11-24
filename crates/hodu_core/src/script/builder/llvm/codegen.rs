@@ -8,6 +8,7 @@ use crate::{
 use inkwell::{
     builder::Builder as LLVMBuilder,
     context::Context,
+    execution_engine::ExecutionEngine,
     module::Module,
     types::{BasicMetadataTypeEnum, BasicTypeEnum},
     values::{BasicMetadataValueEnum, BasicValueEnum, FunctionValue, PointerValue},
@@ -718,6 +719,13 @@ impl<'ctx> CodeGenerator<'ctx> {
             .build_return(None)
             .map_err(|e| HoduError::CompilationError(format!("Failed to build return: {}", e)))?;
         Ok(())
+    }
+
+    /// Create JIT execution engine for the module
+    pub fn create_jit_engine(&self, opt_level: OptimizationLevel) -> HoduResult<ExecutionEngine<'ctx>> {
+        self.module
+            .create_jit_execution_engine(opt_level)
+            .map_err(|e| HoduError::CompilationError(format!("Failed to create JIT engine: {}", e)))
     }
 
     /// Get the generated LLVM module
