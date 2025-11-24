@@ -975,7 +975,7 @@ fn test_conv_transpose3d_batch_f32() {
 // Helper functions for grad_weight tests
 
 #[allow(clippy::too_many_arguments)]
-fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
+fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone + cudarc::driver::ValidAsZeroBits>(
     input: &[T],
     grad_output: &[T],
     batch: usize,
@@ -998,6 +998,7 @@ fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 
     let grad_weight_size = out_channels * in_channels * kernel_size;
     let mut grad_weight: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(grad_weight_size).unwrap() };
+    unsafe { stream.memset_zeros(&mut grad_weight).unwrap() };
 
     // Generic metadata layout for conv1d_grad_weight (input_ndim=3, spatial_dims=1):
     // [num_els, input_ndim, spatial_dims,
@@ -1055,7 +1056,7 @@ fn run_conv1d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
+fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone + cudarc::driver::ValidAsZeroBits>(
     input: &[T],
     grad_output: &[T],
     batch: usize,
@@ -1083,6 +1084,7 @@ fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 
     let grad_weight_size = out_channels * in_channels * kernel_h * kernel_w;
     let mut grad_weight: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(grad_weight_size).unwrap() };
+    unsafe { stream.memset_zeros(&mut grad_weight).unwrap() };
 
     // Generic metadata layout for conv2d_grad_weight (input_ndim=4, spatial_dims=2):
     let metadata = vec![
@@ -1145,7 +1147,7 @@ fn run_conv2d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn run_conv3d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
+fn run_conv3d_grad_weight<T: cudarc::driver::DeviceRepr + Clone + cudarc::driver::ValidAsZeroBits>(
     input: &[T],
     grad_output: &[T],
     batch: usize,
@@ -1178,6 +1180,7 @@ fn run_conv3d_grad_weight<T: cudarc::driver::DeviceRepr + Clone>(
 
     let grad_weight_size = out_channels * in_channels * kernel_d * kernel_h * kernel_w;
     let mut grad_weight: cudarc::driver::CudaSlice<T> = unsafe { stream.alloc(grad_weight_size).unwrap() };
+    unsafe { stream.memset_zeros(&mut grad_weight).unwrap() };
 
     // Generic metadata layout for conv3d_grad_weight (input_ndim=5, spatial_dims=3):
     let metadata = vec![
