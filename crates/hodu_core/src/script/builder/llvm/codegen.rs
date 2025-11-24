@@ -86,8 +86,19 @@ impl<'ctx> CodeGenerator<'ctx> {
     fn get_int_type(&self) -> inkwell::types::IntType<'ctx> {
         match self.pointer_width {
             32 => self.context.i32_type(),
-            64 => self.context.i64_type(),
-            _ => self.context.i64_type(), // Fallback to i64
+            64 => {
+                // Check if 64-bit features are enabled
+                #[cfg(any(feature = "f64", feature = "u64", feature = "i64"))]
+                {
+                    self.context.i64_type()
+                }
+                #[cfg(not(any(feature = "f64", feature = "u64", feature = "i64")))]
+                {
+                    // If no 64-bit features enabled, fall back to i32
+                    self.context.i32_type()
+                }
+            },
+            _ => self.context.i32_type(), // Fallback to i32 for unknown widths
         }
     }
 

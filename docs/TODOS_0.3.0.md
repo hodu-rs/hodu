@@ -103,6 +103,30 @@ let builder = Builder::new(&script)
     .build()?;
 ```
 
+**CLI 사용 예시**:
+```bash
+# 공유 라이브러리 생성 (.so, .dylib, .dll)
+hodu --build model.hdss -o libmodel.so
+
+# ONNX 모델을 공유 라이브러리로 컴파일
+hodu --build model.onnx -o libmodel.so
+
+# 실행 파일 생성
+hodu --build model.hdss --binary -o model_exec
+
+# 특정 타겟 아키텍처 지정
+hodu --build model.hdss --target x86_64-unknown-linux-gnu -o libmodel.so
+
+# ARM64 크로스 컴파일
+hodu --build model.hdss --target aarch64-apple-darwin -o libmodel.dylib
+
+# 최적화 레벨 지정
+hodu --build model.hdss -O3 -o libmodel.so
+
+# LLVM IR만 출력 (디버깅용)
+hodu --build model.hdss --emit-llvm -o model.ll
+```
+
 **LLVM 기반 컴파일 파이프라인**:
 
 1. **Snapshot → LLVM IR 변환**
@@ -127,8 +151,17 @@ let builder = Builder::new(&script)
    - BuildType::Binary → 실행 파일
 
 **구현 계획**:
-- [ ] `inkwell` crate 추가 (LLVM wrapper for Rust)
-- [ ] Snapshot → LLVM IR 변환 로직 구현
+- [x] `inkwell` crate 추가 (LLVM wrapper for Rust)
+- [x] Snapshot → LLVM IR 변환 로직 구현
+  - [x] CodeGenerator 구조체 설계
+  - [x] Target triple 기반 pointer width 자동 감지
+  - [x] Function signature 생성 (inputs + outputs)
+  - [x] Constant 텐서 로딩 (모든 DType 지원)
+  - [x] Kernel 함수 선언
+  - [x] Metadata constant 생성
 - [ ] Op별 LLVM instruction 생성 함수 구현
 - [ ] LLVM 최적화 패스 적용
 - [ ] 타겟별 코드 생성 및 링킹
+  - [ ] JIT 실행 엔진 구현
+  - [ ] AOT Object 파일 생성
+- [ ] Builder API 완성 (JIT + AOT 모두 지원)
