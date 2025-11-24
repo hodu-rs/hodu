@@ -191,27 +191,88 @@ let builder = Builder::new(&script)
 ```
 
 **CLI 사용 예시**:
+
+**JIT 실행 (즉시 실행)**:
+```bash
+# 기본 JIT 실행 (CPU, HODU runtime, LLVM compiler)
+hodu run model.hdss --input input.json
+
+# Device 지정
+hodu run model.hdss --input input.json --device cpu
+hodu run model.hdss --input input.json --device cuda:0
+hodu run model.hdss --input input.json --device metal
+
+# Runtime 지정
+hodu run model.hdss --input input.json --runtime hodu
+hodu run model.hdss --input input.json --runtime xla --device cuda:0
+
+# HODU runtime의 컴파일러 지정
+hodu run model.hdss --input input.json --runtime hodu --compiler llvm
+hodu run model.hdss --input input.json --runtime hodu --compiler mlir
+hodu run model.hdss --input input.json --runtime hodu --compiler cranelift
+
+# 출력 형식 지정
+hodu run model.hdss --input input.json -o output.json
+hodu run model.hdss --input input.json --output-format numpy  # .npy 파일 저장
+
+# ONNX 모델 직접 실행
+hodu run model.onnx --input input.json
+```
+
+**AOT 컴파일 (네이티브 바이너리/라이브러리 생성)**:
 ```bash
 # 공유 라이브러리 생성 (.so, .dylib, .dll)
-hodu --build model.hdss -o libmodel.so
+hodu build model.hdss -o libmodel.so
+
+# Device/Runtime 지정하여 빌드
+hodu build model.hdss -o libmodel.so --device cpu --runtime hodu
+hodu build model.hdss -o libmodel_cuda.so --device cuda:0 --runtime hodu
+
+# HODU runtime의 컴파일러 지정
+hodu build model.hdss -o libmodel.so --runtime hodu --compiler llvm
+hodu build model.hdss -o libmodel.so --runtime hodu --compiler mlir
 
 # ONNX 모델을 공유 라이브러리로 컴파일
-hodu --build model.onnx -o libmodel.so
+hodu build model.onnx -o libmodel.so
 
 # 실행 파일 생성
-hodu --build model.hdss --binary -o model_exec
+hodu build model.hdss --binary -o model_exec
 
-# 특정 타겟 아키텍처 지정
-hodu --build model.hdss --target x86_64-unknown-linux-gnu -o libmodel.so
-
-# ARM64 크로스 컴파일
-hodu --build model.hdss --target aarch64-apple-darwin -o libmodel.dylib
+# 특정 타겟 아키텍처 지정 (크로스 컴파일)
+hodu build model.hdss --target x86_64-unknown-linux-gnu -o libmodel.so
+hodu build model.hdss --target aarch64-apple-darwin -o libmodel.dylib
+hodu build model.hdss --target aarch64-unknown-linux-gnu -o libmodel_arm64.so
 
 # 최적화 레벨 지정
-hodu --build model.hdss -O3 -o libmodel.so
+hodu build model.hdss -O0 -o libmodel.so
+hodu build model.hdss -O1 -o libmodel.so
+hodu build model.hdss -O2 -o libmodel.so
+hodu build model.hdss -O3 -o libmodel.so
+```
 
-# LLVM IR만 출력 (디버깅용)
-hodu --build model.hdss --emit-llvm -o model.ll
+**모델 정보 확인**:
+```bash
+# 모델 정보 출력
+hodu info model.hdss
+
+# 예상 출력:
+# Model: simple_add
+# Inputs: 2
+#   - a: [2, 2] f32
+#   - b: [2, 2] f32
+# Outputs: 1
+#   - output: [2, 2] f32
+# Operations: 6
+# Constants: 2
+```
+
+**모델 변환**:
+```bash
+# ONNX → hdss
+hodu convert model.onnx -o model.hdss
+
+# hdss → ONNX (미래)
+hodu convert model.hdss -o model.onnx
 ```
 
 **LLVM 기반 컴파일 파이프라인**:
