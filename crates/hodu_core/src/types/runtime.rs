@@ -6,6 +6,8 @@ pub enum Runtime {
     HODU,
     #[cfg(feature = "xla")]
     XLA,
+    // ONNX,
+    // TVM,
 }
 
 impl fmt::Display for Runtime {
@@ -21,6 +23,28 @@ impl fmt::Display for Runtime {
 impl fmt::Debug for Runtime {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Runtime[{}]", self)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum HoduRuntimeCompiler {
+    #[default]
+    LLVM,
+    // MLIR,
+    // Cranelift,
+}
+
+impl fmt::Display for HoduRuntimeCompiler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HoduRuntimeCompiler::LLVM => write!(f, "llvm"),
+        }
+    }
+}
+
+impl fmt::Debug for HoduRuntimeCompiler {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "HoduRuntimeCompiler[{}]", self)
     }
 }
 

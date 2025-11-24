@@ -16,18 +16,30 @@
 ### Phase 1: Capture (no_std / std)
 
 - `CaptureBoard`로 텐서 연산 기록
+  - `new()` / `with_name()`: Board 생성
+  - `with_target()`: 추적할 출력 텐서 추가 (체이닝 가능)
   - `open()`: 기록 시작
   - `close()`: 기록 종료
-  - `add_target()`: 추적할 출력 텐서 추가
   - `capture()`: CapturedOps → Snapshot 변환 → Script 반환
 
 ```rust
+// Basic usage
 let board = CaptureBoard::new();
 board.open();
 // ... tensor operations ...
-board.add_target("output", tensor);
 board.close();
-let script = board.capture(); // Returns Script
+let script = board.with_target("output", output_tensor).capture();
+
+// With name and multiple targets
+let board = CaptureBoard::with_name("my_model");
+board.open();
+let y1 = x.add(w1);
+let y2 = y1.mul(w2);
+board.close();
+let script = board
+    .with_target("output1", y1)
+    .with_target("output2", y2)
+    .capture();
 ```
 
 ### Phase 2: Save/Load (std)
@@ -54,8 +66,11 @@ let script = Script::load("model.hdss")?;
 
 **메모리 내 LLVM IR 생성, 검증, 최적화**
 
-**Script::compile()** - Runtime/Device에 맞게 실행 가능한 형태로 컴파일
+**Script::compile()** - Runtime/Device/Compiler에 맞게 실행 가능한 형태로 컴파일
 - Runtime이 Device를 지원하는지 검증 (`runtime.is_supported(device)`)
+- Runtime별 분기:
+  - `Runtime::HODU` → Compiler별 분기 (LLVM / MLIR / Cranelift)
+  - `Runtime::XLA` → XLA HLO로 컴파일
 - Snapshot IR 검증 (dtype/device 호환성, shape 정합성)
 - IR 최적화 (상수 폴딩, 연산 융합 등)
 - 컴파일된 상태로 전환 (실행 가능)
@@ -64,17 +79,34 @@ let script = Script::load("model.hdss")?;
 // Load or create script
 let mut script = Script::load("model.hdss")?;
 
-// Set device and runtime (required before compile)
+// Set device, runtime, and compiler (required before compile)
 script.set_device(Device::CPU);
 script.set_runtime(Runtime::HODU);
+script.set_compiler(HoduRuntimeCompiler::LLVM);  // Optional: defaults to LLVM
 
 // Compile
 script.compile()?;
 
-// Or with different device/runtime
+// Or with different configuration
 script.set_device(Device::CUDA(0));
 script.set_runtime(Runtime::HODU);
+// Compiler automatically defaults to LLVM if not set
 script.compile()?;  // Previous compilation is cleared
+
+// Future: Use different compiler backend for HODU runtime
+#[cfg(feature = "mlir")]
+{
+    script.set_compiler(HoduRuntimeCompiler::MLIR);
+    script.compile()?;
+}
+
+// Future: Use XLA runtime
+#[cfg(feature = "xla")]
+{
+    script.set_device(Device::CUDA(0));
+    script.set_runtime(Runtime::XLA);  // No compiler needed for XLA
+    script.compile()?;
+}
 ```
 
 ### Phase 4: Execute or Build
@@ -88,24 +120,49 @@ script.compile()?;  // Previous compilation is cleared
 - compile() 호출 없이 run()을 호출하면 자동으로 compile 수행
 
 ```rust
+// Complete workflow: Capture → Compile → Execute
+let board = CaptureBoard::with_name("simple_add");
+board.open();
+let a = Tensor::from_slice(&[1.0f32, 2.0, 3.0, 4.0], [2, 2]);
+let b = Tensor::from_slice(&[5.0f32, 6.0, 7.0, 8.0], [2, 2]);
+let c = a.add(&b);
+board.close();
+
+let mut script = board.with_target("output", c).capture();
+
+// Configure runtime environment
+script.set_device(Device::CPU);
+script.set_runtime(Runtime::HODU);
+script.set_compiler(HoduRuntimeCompiler::LLVM);  // Optional for HODU runtime: defaults to LLVM
+
 // Prepare inputs: &[(&str, &Tensor)]
+let input_a = Tensor::from_slice(&[10.0f32, 20.0, 30.0, 40.0], [2, 2]);
+let input_b = Tensor::from_slice(&[50.0f32, 60.0, 70.0, 80.0], [2, 2]);
 let inputs = [
-    ("input1", &tensor1),
-    ("input2", &tensor2),
+    ("a", &input_a),
+    ("b", &input_b),
 ];
 
-// Compile (optional - run() will auto-compile if needed)
-script.compile()?;
-
 // Execute and get outputs: HashMap<String, Tensor>
+// (auto-compiles if not already compiled)
 let outputs = script.run(&inputs)?;
 
 // Access outputs by target name
-let output1 = &outputs["output1"];
-let output2 = &outputs["output2"];
+let result = &outputs["output"];
+// let result = outputs["output"]; <- move tensor
+println!("Result: {:?}", result);
 
-// Or run directly without explicit compile
-let outputs = script.run(&inputs)?;  // Auto-compiles if not already compiled
+// Load from file and execute
+let mut script = Script::load("model.hdss")?;
+script.set_device(Device::CPU);
+script.set_runtime(Runtime::HODU);
+
+// Can explicitly compile first
+script.compile()?;
+let outputs = script.run(&inputs)?;
+
+// Or run directly (auto-compiles)
+let outputs = script.run(&inputs)?;
 ```
 
 **Phase 4-2: Builder + build() - AOT 컴파일하여 네이티브 바이너리/라이브러리 생성** (std)
@@ -195,19 +252,68 @@ hodu --build model.hdss --emit-llvm -o model.ll
 - [x] LLVM module 검증 및 최적화 패스 적용
 - [x] JIT ExecutionEngine wrapper 구현
   - [x] `CodeGenerator::create_jit_engine()` 메서드
+- [x] Compiled state 구조 설계
+  - [x] `compiled/` 폴더 생성
+  - [x] `compiled.rs`: CompiledState enum (Runtime별 분기)
+  - [x] `compiled/hodu.rs`: HoduCompiledState enum (Compiler별 분기)
+  - [x] `compiled/hodu/llvm.rs`: LLVMJitState (Context + ExecutionEngine 관리)
+  - [x] `compiled/xla.rs`: XLAExecutable (placeholder)
+  - [x] Context lifetime 관리 (Box::leak 패턴)
 - [x] Script 구조 재설계
-  - [x] Device/Runtime을 Option으로 변경
-  - [x] Compiled state 추가
-  - [x] `set_device()`/`set_runtime()` 시 compiled state 초기화
-- [x] Script::compile() 메서드 스켈레톤
-- [x] Script::run() 메서드 스켈레톤
+  - [x] Device/Runtime/Compiler를 Option으로 변경
+  - [x] Compiled state: Option<CompiledState>
+  - [x] `set_device()`/`set_runtime()`/`set_compiler()` 시 compiled state 초기화
+  - [x] `compiler()` getter 추가
+- [x] Script::compile() 구현
+  - [x] Runtime별 분기 (HODU / XLA)
+  - [x] HODU runtime: Compiler별 분기 (LLVM / MLIR / Cranelift)
+  - [x] LLVM: CodeGenerator로 LLVM IR 생성 → JIT engine 생성
+  - [x] CompiledState 저장
+- [x] Script::run() 구현
   - [x] 입력: `&[(&str, &Tensor)]`
   - [x] 출력: `HashMap<String, Tensor>`
   - [x] 자동 compile 호출
-- [ ] JIT 실제 실행 로직 구현
-  - [ ] LLVM ExecutionEngine에서 함수 가져오기
-  - [ ] 입력/출력 버퍼 관리
-  - [ ] Tensor ↔ 메모리 변환
+  - [x] CompiledState::execute() 호출
+- [ ] JIT 실제 실행 로직 구현 (LLVMJitState::execute)
+  - [ ] LLVM ExecutionEngine에서 함수 포인터 가져오기
+  - [ ] 입력 텐서 검증 (snapshot.inputs와 매칭)
+  - [ ] 입력 버퍼 준비 (Tensor → raw pointer)
+  - [ ] 출력 버퍼 할당
+  - [ ] JIT 함수 호출
+  - [ ] 출력 버퍼 → Tensor 변환
+  - [ ] HashMap<target_name, Tensor> 반환
+- [x] jit_test.rs 예제 업데이트
+  - [x] Script::compile() 테스트
+  - [x] Device/Runtime/Compiler 설정 확인
+
+**[확장 계획 - 다양한 컴파일러 백엔드]**
+- [x] HoduRuntimeCompiler enum 추가 (types/runtime.rs)
+  - [x] LLVM (기본)
+  - [ ] MLIR (미래)
+  - [ ] Cranelift (미래)
+- [ ] MLIR 컴파일러 백엔드
+  - [ ] compiled/hodu/mlir.rs
+  - [ ] Snapshot → MLIR dialect 변환
+- [ ] Cranelift 컴파일러 백엔드
+  - [ ] compiled/hodu/cranelift.rs
+  - [ ] Snapshot → Cranelift IR 변환
+
+**[확장 계획 - 다양한 런타임]**
+- [x] Runtime enum 확장 (types/runtime.rs)
+  - [x] HODU (LLVM 컴파일)
+  - [x] XLA (placeholder)
+  - [ ] ONNX (미래)
+  - [ ] TVM (미래)
+- [ ] XLA 런타임 구현
+  - [ ] compiled/xla.rs: XLAExecutable 구현
+  - [ ] Snapshot → XLA HLO 변환
+  - [ ] XLA compilation 및 execution
+- [ ] ONNX 런타임
+  - [ ] compiled/onnx.rs
+  - [ ] Snapshot이 이미 ONNX 형식이면 ONNX Runtime session 생성
+- [ ] TVM 런타임
+  - [ ] compiled/tvm.rs
+  - [ ] Snapshot → Relay IR 변환
 
 **[std 전용 - 파일 I/O 필요]**
 - [x] AOT Object 파일 생성 (`emit_object_file`)

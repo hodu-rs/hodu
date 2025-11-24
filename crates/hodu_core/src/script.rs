@@ -1,23 +1,26 @@
 pub mod builder;
 pub mod capture;
+pub mod compiled;
 pub mod snapshot;
 
 use crate::{
     compat::*,
     error::{HoduError, HoduResult},
     tensor::Tensor,
-    types::{Device, Runtime},
+    types::{Device, HoduRuntimeCompiler, Runtime},
 };
 pub use builder::{BuildConfig, BuildType, Builder, TargetArch, TargetConfig, TargetEnv, TargetOS, TargetVendor};
 pub use capture::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp, CapturedTarget};
+pub use compiled::{CompiledState, HoduCompiledState, LLVMJitState};
 pub use snapshot::{Snapshot, SnapshotConstant, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId};
 
 /// Script holds the Hodu Script IR and provides compilation/execution interface
 pub struct Script {
     snapshot: Snapshot,
-    compiled: Option<()>, // TODO: Store actual compiled state
+    compiled: Option<CompiledState>,
     device: Option<Device>,
     runtime: Option<Runtime>,
+    compiler: Option<HoduRuntimeCompiler>,
 }
 
 impl Script {
@@ -28,6 +31,7 @@ impl Script {
             compiled: None,
             device: None,
             runtime: None,
+            compiler: None,
         }
     }
 
@@ -58,6 +62,12 @@ impl Script {
         self.compiled = None;
     }
 
+    /// Set compiler for HODU runtime (clears compiled state)
+    pub fn set_compiler(&mut self, compiler: HoduRuntimeCompiler) {
+        self.compiler = Some(compiler);
+        self.compiled = None;
+    }
+
     /// Get device
     pub fn device(&self) -> Option<Device> {
         self.device
@@ -66,6 +76,11 @@ impl Script {
     /// Get runtime
     pub fn runtime(&self) -> Option<Runtime> {
         self.runtime
+    }
+
+    /// Get compiler
+    pub fn compiler(&self) -> Option<HoduRuntimeCompiler> {
+        self.compiler
     }
 
     /// Save Script to a file
@@ -125,7 +140,7 @@ impl Script {
     }
 
     /// Compile the script for execution
-    /// This prepares the script for JIT execution by generating LLVM IR
+    /// This prepares the script for JIT execution by generating LLVM IR or XLA executable
     pub fn compile(&mut self) -> HoduResult<()> {
         let device = self
             .device
@@ -143,25 +158,74 @@ impl Script {
             )));
         }
 
-        // TODO: Generate and cache LLVM JIT engine or XLA executable
+        // Compile based on runtime
+        let compiled_state = match runtime {
+            Runtime::HODU => {
+                // Get compiler (default to LLVM if not set)
+                let compiler = self.compiler.unwrap_or(HoduRuntimeCompiler::LLVM);
 
-        self.compiled = Some(());
+                match compiler {
+                    HoduRuntimeCompiler::LLVM => {
+                        // Generate LLVM IR and create JIT engine
+                        use crate::script::builder::llvm::CodeGenerator;
+                        use inkwell::context::Context;
+                        use inkwell::OptimizationLevel;
+
+                        // Create context on heap and get a 'static reference
+                        let context = Context::create();
+                        let context_ptr = Box::into_raw(Box::new(context));
+
+                        // SAFETY: We leaked context to get 'static lifetime
+                        // It will be reclaimed when LLVMJitState is dropped
+                        let context_ref: &'static Context = unsafe { &*context_ptr };
+
+                        let mut codegen = CodeGenerator::new(context_ref, "hodu_jit", device, runtime);
+
+                        // Generate LLVM IR from snapshot
+                        codegen.generate(&self.snapshot)?;
+
+                        // Create JIT execution engine
+                        let engine = codegen.create_jit_engine(OptimizationLevel::Default)?;
+
+                        // SAFETY: We manually manage context and engine lifetimes
+                        // Context is already leaked, so we reconstruct it from the pointer
+                        let context_owned = unsafe { *Box::from_raw(context_ptr) };
+                        let llvm_state = unsafe { LLVMJitState::new(context_owned, engine) };
+
+                        CompiledState::HODU(HoduCompiledState::LLVM(llvm_state))
+                    },
+                }
+            },
+
+            #[cfg(feature = "xla")]
+            Runtime::XLA => {
+                // TODO: Compile to XLA executable
+                return Err(HoduError::UnsupportedOperation(
+                    "XLA compilation not yet implemented".into(),
+                ));
+            },
+        };
+
+        self.compiled = Some(compiled_state);
         Ok(())
     }
 
     /// Run the script with inputs and return outputs as HashMap<target_name, Tensor>
     /// Automatically compiles if not already compiled
-    pub fn run(&mut self, _inputs: &[(&str, &Tensor)]) -> HoduResult<HashMap<String, Tensor>> {
+    pub fn run(&mut self, inputs: &[(&str, &Tensor)]) -> HoduResult<HashMap<String, Tensor>> {
         // Auto-compile if needed
         if self.compiled.is_none() {
             self.compile()?;
         }
 
-        // TODO: Execute using the compiled runtime and return outputs
         // TODO: Validate inputs match snapshot.inputs
-        // For now, return empty HashMap
-        Err(HoduError::UnsupportedOperation(
-            "JIT execution not yet implemented".into(),
-        ))
+
+        // Execute using the compiled state
+        let compiled_state = self
+            .compiled
+            .as_ref()
+            .ok_or_else(|| HoduError::InternalError("Compiled state should exist after compile()".into()))?;
+
+        compiled_state.execute(inputs)
     }
 }
