@@ -84,22 +84,12 @@ impl<'ctx> CodeGenerator<'ctx> {
     }
 
     /// Get integer type matching target pointer width
+    /// This is used for metadata arrays that must match the native usize type
     fn get_int_type(&self) -> inkwell::types::IntType<'ctx> {
         match self.pointer_width {
             32 => self.context.i32_type(),
-            64 => {
-                // Check if 64-bit features are enabled
-                #[cfg(any(feature = "f64", feature = "u64", feature = "i64"))]
-                {
-                    self.context.i64_type()
-                }
-                #[cfg(not(any(feature = "f64", feature = "u64", feature = "i64")))]
-                {
-                    // If no 64-bit features enabled, fall back to i32
-                    self.context.i32_type()
-                }
-            },
-            _ => self.context.i32_type(), // Fallback to i32 for unknown widths
+            64 => self.context.i64_type(), // Always use i64 on 64-bit targets for metadata
+            _ => self.context.i32_type(),  // Fallback to i32 for unknown widths
         }
     }
 
@@ -226,18 +216,18 @@ impl<'ctx> CodeGenerator<'ctx> {
         // 2. Platform-specific linker command and invocation
         let status = if cfg!(target_os = "linux") {
             Command::new("gcc")
-                .args(&["-shared", "-fPIC", "-o", path, &temp_obj])
+                .args(["-shared", "-fPIC", "-o", path, &temp_obj])
                 .status()
                 .map_err(|e| HoduError::CompilationError(format!("Failed to invoke gcc: {}", e)))?
         } else if cfg!(target_os = "macos") {
             Command::new("clang")
-                .args(&["-shared", "-o", path, &temp_obj])
+                .args(["-shared", "-o", path, &temp_obj])
                 .status()
                 .map_err(|e| HoduError::CompilationError(format!("Failed to invoke clang: {}", e)))?
         } else if cfg!(target_os = "windows") {
             let dll_out = format!("/OUT:{}", path);
             Command::new("link")
-                .args(&["/DLL", &dll_out, &temp_obj])
+                .args(["/DLL", &dll_out, &temp_obj])
                 .status()
                 .map_err(|e| HoduError::CompilationError(format!("Failed to invoke link: {}", e)))?
         } else {
@@ -538,6 +528,27 @@ impl<'ctx> CodeGenerator<'ctx> {
 
     /// Generate LLVM IR for a single SnapshotNode
     fn generate_node(&mut self, node: &SnapshotNode) -> HoduResult<()> {
+        // Handle view operations (all shape ops) specially
+        // These operations don't need kernel calls - they just alias the input pointer
+        use crate::ops::Op;
+        if let Op::Shape(_) = &node.op {
+            // All shape operations are view operations - just alias the input pointer
+            if node.input_ids.len() != 1 {
+                return Err(HoduError::InternalError(format!(
+                    "Shape op should have exactly 1 input, got {}",
+                    node.input_ids.len()
+                )));
+            }
+            let input_ptr = self
+                .tensor_values
+                .get(&node.input_ids[0])
+                .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", node.input_ids[0])))?;
+
+            // Map output to same pointer as input (it's a view)
+            self.tensor_values.insert(node.output_id, *input_ptr);
+            return Ok(());
+        }
+
         // 1. Get kernel name based on op and dtype
         let kernel_name = self.get_kernel_name(&node.op, node.output_dtype)?;
 
@@ -586,7 +597,7 @@ impl<'ctx> CodeGenerator<'ctx> {
             #[cfg(feature = "cuda")]
             Device::CUDA(_) => "cuda",
             #[cfg(feature = "metal")]
-            Device::METAL => "metal",
+            Device::Metal => "metal",
         };
 
         Ok(format!("{}_{}_{}_{}", runtime_prefix, device_prefix, op, dtype))
@@ -664,44 +675,26 @@ impl<'ctx> CodeGenerator<'ctx> {
     }
 
     /// Create metadata constant (shape, strides, offset info)
+    /// Delegates to metadata module for operation-specific format
     fn create_metadata_constant(&mut self, node: &SnapshotNode) -> HoduResult<PointerValue<'ctx>> {
-        // Build metadata array: [num_inputs, ndim, shape..., strides..., offset, ...]
-        let mut metadata = Vec::new();
-
-        // Number of inputs
-        metadata.push(node.input_ids.len() as u64);
-
-        // For each input: ndim, shape, strides, offset
-        for layout in &node.input_layouts {
-            metadata.push(layout.ndim() as u64);
-            for &dim in layout.shape().dims() {
-                metadata.push(dim as u64);
-            }
-            for &stride in layout.strides() {
-                metadata.push(stride as u64);
-            }
-            metadata.push(layout.offset() as u64);
-        }
-
-        // Output: ndim, shape, strides, offset
-        metadata.push(node.output_layout.ndim() as u64);
-        for &dim in node.output_layout.shape().dims() {
-            metadata.push(dim as u64);
-        }
-        for &stride in node.output_layout.strides() {
-            metadata.push(stride as u64);
-        }
-        metadata.push(node.output_layout.offset() as u64);
+        // Generate metadata using centralized logic (returns Vec<usize>)
+        let metadata = crate::script::metadata::generate_metadata(node)?;
 
         // Create constant array using target-specific integer type
+        // int_type matches native usize: i32 on 32-bit, i64 on 64-bit
         let int_type = self.get_int_type();
         let array_type = int_type.array_type(metadata.len() as u32);
 
         // Create the constant array from the values
+        // Note: const_int() API requires u64 parameter, but we have usize values
+        // Platform-specific behavior:
+        // - On 64-bit: usize as u64 is a no-op cast (both 8 bytes)
+        // - On 32-bit: usize as u64 zero-extends 4→8 bytes, then LLVM truncates to i32
+        // Result: metadata array elements match native usize on all platforms
         let const_array = int_type.const_array(
             &metadata
                 .iter()
-                .map(|&v| int_type.const_int(v, false))
+                .map(|&v| int_type.const_int(v as u64, false))
                 .collect::<Vec<_>>(),
         );
 
@@ -721,11 +714,59 @@ impl<'ctx> CodeGenerator<'ctx> {
         Ok(())
     }
 
-    /// Create JIT execution engine for the module
-    pub fn create_jit_engine(&self, opt_level: OptimizationLevel) -> HoduResult<ExecutionEngine<'ctx>> {
-        self.module
+    /// Create JIT execution engine for the module and register CPU kernel symbols
+    pub fn create_jit_engine(
+        &self,
+        opt_level: OptimizationLevel,
+        snapshot: &Snapshot,
+    ) -> HoduResult<ExecutionEngine<'ctx>> {
+        let mut engine = self
+            .module
             .create_jit_execution_engine(opt_level)
-            .map_err(|e| HoduError::CompilationError(format!("Failed to create JIT engine: {}", e)))
+            .map_err(|e| HoduError::CompilationError(format!("Failed to create JIT engine: {}", e)))?;
+
+        // Register CPU kernel symbols
+        self.register_cpu_kernels(&mut engine, snapshot)?;
+
+        Ok(engine)
+    }
+
+    /// Register CPU kernel function pointers with the execution engine
+    fn register_cpu_kernels(&self, engine: &mut ExecutionEngine<'ctx>, snapshot: &Snapshot) -> HoduResult<()> {
+        // Collect all unique kernel names from snapshot nodes
+        let mut kernel_names = crate::compat::HashSet::new();
+        for node in &snapshot.nodes {
+            // Skip shape operations (they're view ops, no kernels)
+            if let crate::ops::Op::Shape(_) = &node.op {
+                continue;
+            }
+            // Format: "hodu_cpu_{op}_{dtype}"
+            let kernel_name = format!("hodu_cpu_{}_{}", node.op, node.output_dtype);
+            kernel_names.insert(kernel_name);
+        }
+
+        // Register each kernel with the execution engine
+        #[cfg(feature = "std")]
+        println!("[DEBUG] Registering {} kernels with JIT engine", kernel_names.len());
+
+        for kernel_name in kernel_names {
+            if let Some(fn_ptr) = hodu_cpu_kernels::jit_symbols::get_kernel_ptr(&kernel_name) {
+                // Get the function from the module
+                if let Some(func) = self.module.get_function(&kernel_name) {
+                    #[cfg(feature = "std")]
+                    println!("[DEBUG] Registering kernel: {} at {:p}", kernel_name, fn_ptr);
+                    engine.add_global_mapping(&func, fn_ptr as usize);
+                } else {
+                    #[cfg(feature = "std")]
+                    println!("[WARN] Kernel function not found in module: {}", kernel_name);
+                }
+            } else {
+                #[cfg(feature = "std")]
+                println!("[WARN] Kernel implementation not found: {}", kernel_name);
+            }
+        }
+
+        Ok(())
     }
 
     /// Get the generated LLVM module

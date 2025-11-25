@@ -130,6 +130,18 @@ impl Tensor {
         .ok_or(HoduError::TensorNotFound(self.0))?
     }
 
+    /// Get raw pointer to tensor data (for JIT execution)
+    pub(crate) fn data_ptr(&self) -> *const u8 {
+        registry::with_tensor(self.0, |tensor_ref| {
+            tensor_ref
+                .storage
+                .as_ref()
+                .map(|s| s.as_ref().as_ptr())
+                .unwrap_or(core::ptr::null())
+        })
+        .unwrap_or(core::ptr::null())
+    }
+
     pub fn is_runtime(&self) -> bool {
         registry::with_tensor(self.0, |t| t.is_runtime).unwrap_or(false)
     }

@@ -53,6 +53,16 @@ impl MetalStorage {
         &self.buffer
     }
 
+    /// Get device pointer to the underlying Metal buffer data
+    pub fn as_ptr(&self) -> *const u8 {
+        self.buffer.contents() as *const u8
+    }
+
+    /// Get mutable device pointer to the underlying Metal buffer data
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.buffer.contents() as *mut u8
+    }
+
     pub fn to_cpu<T: Clone>(&self) -> HoduResult<Vec<T>> {
         let size = self.count * self.dtype.get_size_in_bytes();
         let buffer = self.device.allocate_buffer(size)?;

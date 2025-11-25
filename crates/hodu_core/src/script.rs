@@ -1,6 +1,7 @@
 pub mod builder;
 pub mod capture;
 pub mod compiled;
+pub mod metadata;
 pub mod snapshot;
 
 use crate::{
@@ -184,13 +185,21 @@ impl Script {
                         // Generate LLVM IR from snapshot
                         codegen.generate(&self.snapshot)?;
 
-                        // Create JIT execution engine
-                        let engine = codegen.create_jit_engine(OptimizationLevel::Default)?;
+                        // DEBUG: Print LLVM IR
+                        #[cfg(feature = "std")]
+                        {
+                            if let Ok(ir_string) = codegen.module().print_to_string().to_str() {
+                                println!("[DEBUG] Generated LLVM IR:\n{}", ir_string);
+                            }
+                        }
+
+                        // Create JIT execution engine with kernel symbols registered
+                        let engine = codegen.create_jit_engine(OptimizationLevel::Default, &self.snapshot)?;
 
                         // SAFETY: We manually manage context and engine lifetimes
                         // Context is already leaked, so we reconstruct it from the pointer
                         let context_owned = unsafe { *Box::from_raw(context_ptr) };
-                        let llvm_state = unsafe { LLVMJitState::new(context_owned, engine) };
+                        let llvm_state = unsafe { LLVMJitState::new(context_owned, engine, &self.snapshot) };
 
                         CompiledState::HODU(HoduCompiledState::LLVM(llvm_state))
                     },

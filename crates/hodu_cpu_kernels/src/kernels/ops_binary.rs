@@ -141,6 +141,31 @@ macro_rules! declare_and_dispatch_binary {
                     _ => panic!("Unsupported binary kernel: {}", name),
                 }
             }
+
+            /// Get function pointer for a binary kernel by name
+            /// Returns None if kernel name is not recognized
+            pub fn get_binary_kernel_ptr(name: &str) -> Option<*const ()> {
+                match name {
+                    $(
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => Some([<hodu_cpu_ $op _bool>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => Some([<hodu_cpu_ $op _f8e4m3>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => Some([<hodu_cpu_ $op _f8e5m2>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => Some([<hodu_cpu_ $op _bf16>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => Some([<hodu_cpu_ $op _f16>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => Some([<hodu_cpu_ $op _f32>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => Some([<hodu_cpu_ $op _f64>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => Some([<hodu_cpu_ $op _u8>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => Some([<hodu_cpu_ $op _u16>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => Some([<hodu_cpu_ $op _u32>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => Some([<hodu_cpu_ $op _u64>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => Some([<hodu_cpu_ $op _i8>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => Some([<hodu_cpu_ $op _i16>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => Some([<hodu_cpu_ $op _i32>] as *const ()),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => Some([<hodu_cpu_ $op _i64>] as *const ()),
+                    )*
+                    _ => None,
+                }
+            }
         }
     };
 }

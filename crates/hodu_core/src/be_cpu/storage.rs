@@ -83,6 +83,60 @@ pub enum CpuStorage {
 // }
 
 impl CpuStorage {
+    /// Get raw pointer to the underlying data
+    pub fn as_ptr(&self) -> *const u8 {
+        match self {
+            Self::BOOL(v) => v.as_ptr() as *const u8,
+            Self::F8E4M3(v) => v.as_ptr() as *const u8,
+            #[cfg(feature = "f8e5m2")]
+            Self::F8E5M2(v) => v.as_ptr() as *const u8,
+            Self::BF16(v) => v.as_ptr() as *const u8,
+            Self::F16(v) => v.as_ptr() as *const u8,
+            Self::F32(v) => v.as_ptr() as *const u8,
+            #[cfg(feature = "f64")]
+            Self::F64(v) => v.as_ptr() as *const u8,
+            Self::U8(v) => v.as_ptr() as *const u8,
+            #[cfg(feature = "u16")]
+            Self::U16(v) => v.as_ptr() as *const u8,
+            Self::U32(v) => v.as_ptr() as *const u8,
+            #[cfg(feature = "u64")]
+            Self::U64(v) => v.as_ptr() as *const u8,
+            Self::I8(v) => v.as_ptr() as *const u8,
+            #[cfg(feature = "i16")]
+            Self::I16(v) => v.as_ptr() as *const u8,
+            Self::I32(v) => v.as_ptr() as *const u8,
+            #[cfg(feature = "i64")]
+            Self::I64(v) => v.as_ptr() as *const u8,
+        }
+    }
+
+    /// Get mutable raw pointer to the underlying data
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        match self {
+            Self::BOOL(v) => v.as_mut_ptr() as *mut u8,
+            Self::F8E4M3(v) => v.as_mut_ptr() as *mut u8,
+            #[cfg(feature = "f8e5m2")]
+            Self::F8E5M2(v) => v.as_mut_ptr() as *mut u8,
+            Self::BF16(v) => v.as_mut_ptr() as *mut u8,
+            Self::F16(v) => v.as_mut_ptr() as *mut u8,
+            Self::F32(v) => v.as_mut_ptr() as *mut u8,
+            #[cfg(feature = "f64")]
+            Self::F64(v) => v.as_mut_ptr() as *mut u8,
+            Self::U8(v) => v.as_mut_ptr() as *mut u8,
+            #[cfg(feature = "u16")]
+            Self::U16(v) => v.as_mut_ptr() as *mut u8,
+            Self::U32(v) => v.as_mut_ptr() as *mut u8,
+            #[cfg(feature = "u64")]
+            Self::U64(v) => v.as_mut_ptr() as *mut u8,
+            Self::I8(v) => v.as_mut_ptr() as *mut u8,
+            #[cfg(feature = "i16")]
+            Self::I16(v) => v.as_mut_ptr() as *mut u8,
+            Self::I32(v) => v.as_mut_ptr() as *mut u8,
+            #[cfg(feature = "i64")]
+            Self::I64(v) => v.as_mut_ptr() as *mut u8,
+        }
+    }
+
     pub fn from_vec<T: 'static>(vec: Vec<T>) -> Self {
         let any_vec = &vec as &dyn core::any::Any;
 

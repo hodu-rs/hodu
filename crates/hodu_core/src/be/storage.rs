@@ -118,6 +118,17 @@ pub enum BackendStorage {
 }
 
 impl BackendStorage {
+    /// Get raw pointer to the underlying data
+    pub fn as_ptr(&self) -> *const u8 {
+        match self {
+            Self::CPU(storage) => storage.as_ptr(),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => storage.as_ptr(),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => storage.as_ptr(),
+        }
+    }
+
     pub fn dtype(&self) -> DType {
         match self {
             Self::CPU(storage) => storage.dtype(),

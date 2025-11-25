@@ -9,6 +9,7 @@
 extern crate alloc;
 
 mod error;
+pub mod jit_symbols;
 mod kernels;
 
 pub use error::{CpuKernelError, Result};
