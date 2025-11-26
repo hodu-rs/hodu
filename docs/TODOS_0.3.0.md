@@ -406,44 +406,17 @@ hodu convert model.hdss -o model.onnx
   - [x] jit_test.rs (constants만 사용)
   - [x] jit_concat_test.rs (3개 입력 concat)
   - [x] jit_with_inputs_test.rs (runtime inputs)
+- [x] Parameter count 확장 (4 → 12)
+  - [x] Helper closure 패턴으로 리팩토링
+  - [x] 0-12 파라미터 케이스 구현
+  - [x] 컴파일 검증 완료
 
 **[알려진 제한사항]**
-- [ ] Parameter count 제한
-  - 현재 최대 4개 (inputs + outputs) 지원
-  - 향후 확장 필요
+- [x] Parameter count 제한
+  - ~~현재 최대 4개 (inputs + outputs) 지원~~
+  - 현재 최대 12개 (inputs + outputs) 지원
+  - Helper closure 패턴으로 깔끔하게 구현
 - [ ] Concat packed buffer
   - alloca 사용 (스택 할당)
   - 큰 텐서의 경우 스택 오버플로우 가능
   - malloc 사용 고려 필요
-
-**[테스트 결과 (2025-11-27)]**
-- ✅ JIT 기본 실행 테스트 통과
-  - Constants 사용: Add/Mul 연산 정확
-  - 출력: [6, 8, 10, 12], [5, 12, 21, 32]
-- ✅ Concat operation 테스트 통과
-  - 3개 입력 concatenate
-  - 출력 shape [3, 2] 정확
-  - 출력 데이터 [1, 2, 3, 4, 5, 6] 정확
-- ✅ Runtime inputs 테스트 통과
-  - 2개 입력 텐서 검증
-  - Input ordering 정확
-  - Shape/dtype 검증 작동
-  - 출력 정확
-
-**[다음 우선순위 작업]**
-- [ ] Builder API 완성
-  - [ ] emit_object_file 구현
-  - [ ] emit_assembly 구현
-  - [ ] emit_shared_library 구현
-  - [ ] Target machine 설정
-  - [ ] 최적화 패스 적용
-- [ ] Parameter count 확장
-  - [ ] 8개 이상 파라미터 지원
-  - [ ] 또는 struct로 전달하는 방식
-- [ ] 에러 처리 개선
-  - [ ] JIT 실행 중 에러 복구
-  - [ ] 더 자세한 에러 메시지
-- [ ] 성능 최적화
-  - [ ] Kernel fusion
-  - [ ] Memory layout 최적화
-  - [ ] SIMD vectorization

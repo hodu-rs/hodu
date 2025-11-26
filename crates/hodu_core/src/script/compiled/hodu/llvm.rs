@@ -158,8 +158,17 @@ impl LLVMJitState {
         let num_outputs = output_ptrs.len();
         let total_params = num_inputs + num_outputs;
 
+        // Helper to get nth pointer (input or output)
+        let get_ptr = |idx: usize| -> *const u8 {
+            if idx < num_inputs {
+                input_ptrs[idx]
+            } else {
+                output_ptrs[idx - num_inputs] as *const u8
+            }
+        };
+
         // Call function based on total parameter count
-        // We support up to 8 total parameters for now
+        // We support up to 12 total parameters
         unsafe {
             match total_params {
                 0 => {
@@ -168,70 +177,183 @@ impl LLVMJitState {
                 },
                 1 => {
                     let func: extern "C" fn(*const u8) = core::mem::transmute(fn_addr);
-                    let p0 = if num_inputs > 0 {
-                        input_ptrs[0]
-                    } else {
-                        output_ptrs[0] as *const u8
-                    };
-                    func(p0);
+                    func(get_ptr(0));
                 },
                 2 => {
-                    if num_inputs == 0 {
-                        // Both are outputs (mutable)
-                        let func: extern "C" fn(*mut u8, *mut u8) = core::mem::transmute(fn_addr);
-                        func(output_ptrs[0], output_ptrs[1]);
-                    } else {
-                        let func: extern "C" fn(*const u8, *const u8) = core::mem::transmute(fn_addr);
-                        let (p0, p1) = match num_inputs {
-                            1 => (input_ptrs[0], output_ptrs[0] as *const u8),
-                            _ => (input_ptrs[0], input_ptrs[1]),
-                        };
-                        func(p0, p1);
-                    }
+                    let func: extern "C" fn(*const u8, *const u8) = core::mem::transmute(fn_addr);
+                    func(get_ptr(0), get_ptr(1));
                 },
                 3 => {
                     let func: extern "C" fn(*const u8, *const u8, *const u8) = core::mem::transmute(fn_addr);
-                    let (p0, p1, p2) = match num_inputs {
-                        0 => (
-                            output_ptrs[0] as *const u8,
-                            output_ptrs[1] as *const u8,
-                            output_ptrs[2] as *const u8,
-                        ),
-                        1 => (input_ptrs[0], output_ptrs[0] as *const u8, output_ptrs[1] as *const u8),
-                        2 => (input_ptrs[0], input_ptrs[1], output_ptrs[0] as *const u8),
-                        _ => (input_ptrs[0], input_ptrs[1], input_ptrs[2]),
-                    };
-                    func(p0, p1, p2);
+                    func(get_ptr(0), get_ptr(1), get_ptr(2));
                 },
                 4 => {
                     let func: extern "C" fn(*const u8, *const u8, *const u8, *const u8) = core::mem::transmute(fn_addr);
-                    let (p0, p1, p2, p3) = match num_inputs {
-                        0 => (
-                            output_ptrs[0] as *const u8,
-                            output_ptrs[1] as *const u8,
-                            output_ptrs[2] as *const u8,
-                            output_ptrs[3] as *const u8,
-                        ),
-                        1 => (
-                            input_ptrs[0],
-                            output_ptrs[0] as *const u8,
-                            output_ptrs[1] as *const u8,
-                            output_ptrs[2] as *const u8,
-                        ),
-                        2 => (
-                            input_ptrs[0],
-                            input_ptrs[1],
-                            output_ptrs[0] as *const u8,
-                            output_ptrs[1] as *const u8,
-                        ),
-                        3 => (input_ptrs[0], input_ptrs[1], input_ptrs[2], output_ptrs[0] as *const u8),
-                        _ => (input_ptrs[0], input_ptrs[1], input_ptrs[2], input_ptrs[3]),
-                    };
-                    func(p0, p1, p2, p3);
+                    func(get_ptr(0), get_ptr(1), get_ptr(2), get_ptr(3));
+                },
+                5 => {
+                    let func: extern "C" fn(*const u8, *const u8, *const u8, *const u8, *const u8) =
+                        core::mem::transmute(fn_addr);
+                    func(get_ptr(0), get_ptr(1), get_ptr(2), get_ptr(3), get_ptr(4));
+                },
+                6 => {
+                    let func: extern "C" fn(*const u8, *const u8, *const u8, *const u8, *const u8, *const u8) =
+                        core::mem::transmute(fn_addr);
+                    func(get_ptr(0), get_ptr(1), get_ptr(2), get_ptr(3), get_ptr(4), get_ptr(5));
+                },
+                7 => {
+                    let func: extern "C" fn(
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                    ) = core::mem::transmute(fn_addr);
+                    func(
+                        get_ptr(0),
+                        get_ptr(1),
+                        get_ptr(2),
+                        get_ptr(3),
+                        get_ptr(4),
+                        get_ptr(5),
+                        get_ptr(6),
+                    );
+                },
+                8 => {
+                    let func: extern "C" fn(
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                    ) = core::mem::transmute(fn_addr);
+                    func(
+                        get_ptr(0),
+                        get_ptr(1),
+                        get_ptr(2),
+                        get_ptr(3),
+                        get_ptr(4),
+                        get_ptr(5),
+                        get_ptr(6),
+                        get_ptr(7),
+                    );
+                },
+                9 => {
+                    let func: extern "C" fn(
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                    ) = core::mem::transmute(fn_addr);
+                    func(
+                        get_ptr(0),
+                        get_ptr(1),
+                        get_ptr(2),
+                        get_ptr(3),
+                        get_ptr(4),
+                        get_ptr(5),
+                        get_ptr(6),
+                        get_ptr(7),
+                        get_ptr(8),
+                    );
+                },
+                10 => {
+                    let func: extern "C" fn(
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                    ) = core::mem::transmute(fn_addr);
+                    func(
+                        get_ptr(0),
+                        get_ptr(1),
+                        get_ptr(2),
+                        get_ptr(3),
+                        get_ptr(4),
+                        get_ptr(5),
+                        get_ptr(6),
+                        get_ptr(7),
+                        get_ptr(8),
+                        get_ptr(9),
+                    );
+                },
+                11 => {
+                    let func: extern "C" fn(
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                    ) = core::mem::transmute(fn_addr);
+                    func(
+                        get_ptr(0),
+                        get_ptr(1),
+                        get_ptr(2),
+                        get_ptr(3),
+                        get_ptr(4),
+                        get_ptr(5),
+                        get_ptr(6),
+                        get_ptr(7),
+                        get_ptr(8),
+                        get_ptr(9),
+                        get_ptr(10),
+                    );
+                },
+                12 => {
+                    let func: extern "C" fn(
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                        *const u8,
+                    ) = core::mem::transmute(fn_addr);
+                    func(
+                        get_ptr(0),
+                        get_ptr(1),
+                        get_ptr(2),
+                        get_ptr(3),
+                        get_ptr(4),
+                        get_ptr(5),
+                        get_ptr(6),
+                        get_ptr(7),
+                        get_ptr(8),
+                        get_ptr(9),
+                        get_ptr(10),
+                        get_ptr(11),
+                    );
                 },
                 _ => {
                     return Err(HoduError::UnsupportedOperation(format!(
-                        "Unsupported parameter count: {}. Maximum supported: 4",
+                        "Unsupported parameter count: {}. Maximum supported: 12",
                         total_params
                     )));
                 },
