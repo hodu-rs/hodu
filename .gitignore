@@ -5,3 +5,6 @@ Cargo.lock
 
 # OS
 .DS_Store
+
+# hodu
+*.hdss

@@ -335,17 +335,20 @@ hodu convert model.hdss -o model.onnx
   - [x] 출력: `HashMap<String, Tensor>`
   - [x] 자동 compile 호출
   - [x] CompiledState::execute() 호출
-- [ ] JIT 실제 실행 로직 구현 (LLVMJitState::execute)
-  - [ ] LLVM ExecutionEngine에서 함수 포인터 가져오기
-  - [ ] 입력 텐서 검증 (snapshot.inputs와 매칭)
-  - [ ] 입력 버퍼 준비 (Tensor → raw pointer)
-  - [ ] 출력 버퍼 할당
-  - [ ] JIT 함수 호출
-  - [ ] 출력 버퍼 → Tensor 변환
-  - [ ] HashMap<target_name, Tensor> 반환
+- [x] JIT 실제 실행 로직 구현 (LLVMJitState::execute)
+  - [x] LLVM ExecutionEngine에서 함수 포인터 가져오기
+  - [x] 입력 텐서 검증 (snapshot.inputs와 매칭)
+  - [x] 입력 버퍼 준비 (Tensor → raw pointer)
+  - [x] 출력 버퍼 할당
+  - [x] JIT 함수 호출
+  - [x] 출력 버퍼 → Tensor 변환
+  - [x] HashMap<target_name, Tensor> 반환
 - [x] jit_test.rs 예제 업데이트
   - [x] Script::compile() 테스트
   - [x] Device/Runtime/Compiler 설정 확인
+  - [x] JIT 실행 테스트 (constants만 사용)
+  - [x] Runtime inputs 테스트 추가
+  - [x] Concat operation 테스트 추가
 
 **[확장 계획 - 다양한 컴파일러 백엔드]**
 - [x] HoduRuntimeCompiler enum 추가 (types/runtime.rs)
@@ -387,3 +390,60 @@ hodu convert model.hdss -o model.onnx
 - [x] CUDA 커널: `hodu_cuda_{op}_{dtype}` 형식으로 리네이밍 (c6e4b67)
 - [x] Metal 커널: `hodu_metal_{op}_{dtype}` 형식으로 리네이밍 (2142441)
 - [ ] XLA 런타임: 별도 처리 방식 설계 필요
+
+**[추가 구현 사항]**
+- [x] Concat operation 특별 처리 (LLVM codegen)
+  - [x] Variable input count 지원
+  - [x] Packed buffer 생성 (alloca 사용)
+  - [x] Kernel signature 조정 (input 1개로)
+- [x] Metadata 시스템 중앙화
+  - [x] `op_metadatas.rs` 생성
+  - [x] 모든 backend에서 공유하는 metadata 함수
+  - [x] be_cpu, be_metal, be_cuda, script 모두 업데이트
+- [x] DEBUG 출력 제거
+  - [x] script 디렉토리의 모든 println! 제거
+- [x] 테스트 작성
+  - [x] jit_test.rs (constants만 사용)
+  - [x] jit_concat_test.rs (3개 입력 concat)
+  - [x] jit_with_inputs_test.rs (runtime inputs)
+
+**[알려진 제한사항]**
+- [ ] Parameter count 제한
+  - 현재 최대 4개 (inputs + outputs) 지원
+  - 향후 확장 필요
+- [ ] Concat packed buffer
+  - alloca 사용 (스택 할당)
+  - 큰 텐서의 경우 스택 오버플로우 가능
+  - malloc 사용 고려 필요
+
+**[테스트 결과 (2025-11-27)]**
+- ✅ JIT 기본 실행 테스트 통과
+  - Constants 사용: Add/Mul 연산 정확
+  - 출력: [6, 8, 10, 12], [5, 12, 21, 32]
+- ✅ Concat operation 테스트 통과
+  - 3개 입력 concatenate
+  - 출력 shape [3, 2] 정확
+  - 출력 데이터 [1, 2, 3, 4, 5, 6] 정확
+- ✅ Runtime inputs 테스트 통과
+  - 2개 입력 텐서 검증
+  - Input ordering 정확
+  - Shape/dtype 검증 작동
+  - 출력 정확
+
+**[다음 우선순위 작업]**
+- [ ] Builder API 완성
+  - [ ] emit_object_file 구현
+  - [ ] emit_assembly 구현
+  - [ ] emit_shared_library 구현
+  - [ ] Target machine 설정
+  - [ ] 최적화 패스 적용
+- [ ] Parameter count 확장
+  - [ ] 8개 이상 파라미터 지원
+  - [ ] 또는 struct로 전달하는 방식
+- [ ] 에러 처리 개선
+  - [ ] JIT 실행 중 에러 복구
+  - [ ] 더 자세한 에러 메시지
+- [ ] 성능 최적화
+  - [ ] Kernel fusion
+  - [ ] Memory layout 최적화
+  - [ ] SIMD vectorization
