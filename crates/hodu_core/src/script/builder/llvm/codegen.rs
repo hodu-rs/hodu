@@ -557,12 +557,20 @@ impl<'ctx> CodeGenerator<'ctx> {
 
         // 3. Prepare arguments: input pointers
         let mut args: Vec<BasicMetadataValueEnum> = Vec::new();
-        for input_id in &node.input_ids {
-            let ptr = self
-                .tensor_values
-                .get(input_id)
-                .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", input_id)))?;
-            args.push(BasicMetadataValueEnum::PointerValue(*ptr));
+
+        // Special handling for Concat: pack all inputs into a single buffer
+        if matches!(node.op, Op::Concat(_)) {
+            let packed_ptr = self.create_packed_buffer(node)?;
+            args.push(BasicMetadataValueEnum::PointerValue(packed_ptr));
+        } else {
+            // Normal case: pass each input pointer separately
+            for input_id in &node.input_ids {
+                let ptr = self
+                    .tensor_values
+                    .get(input_id)
+                    .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", input_id)))?;
+                args.push(BasicMetadataValueEnum::PointerValue(*ptr));
+            }
         }
 
         // 4. Allocate or get output buffer
@@ -612,10 +620,16 @@ impl<'ctx> CodeGenerator<'ctx> {
 
         // Declare external function
         // Signature: void kernel(void* in0, void* in1, ..., void* out, void* metadata)
+        // Special case for Concat: single packed input pointer
         let void_type = self.context.void_type();
         let ptr_type = self.context.ptr_type(AddressSpace::default());
 
-        let num_inputs = node.input_ids.len();
+        use crate::ops::Op;
+        let num_inputs = if matches!(node.op, Op::Concat(_)) {
+            1 // Concat uses a single packed buffer
+        } else {
+            node.input_ids.len()
+        };
         let param_types: Vec<BasicMetadataTypeEnum> = vec![ptr_type.into(); num_inputs + 2]; // inputs + output + metadata
 
         let fn_type = void_type.fn_type(&param_types, false);
@@ -746,23 +760,12 @@ impl<'ctx> CodeGenerator<'ctx> {
         }
 
         // Register each kernel with the execution engine
-        #[cfg(feature = "std")]
-        println!("[DEBUG] Registering {} kernels with JIT engine", kernel_names.len());
-
         for kernel_name in kernel_names {
             if let Some(fn_ptr) = hodu_cpu_kernels::jit_symbols::get_kernel_ptr(&kernel_name) {
                 // Get the function from the module
                 if let Some(func) = self.module.get_function(&kernel_name) {
-                    #[cfg(feature = "std")]
-                    println!("[DEBUG] Registering kernel: {} at {:p}", kernel_name, fn_ptr);
                     engine.add_global_mapping(&func, fn_ptr as usize);
-                } else {
-                    #[cfg(feature = "std")]
-                    println!("[WARN] Kernel function not found in module: {}", kernel_name);
                 }
-            } else {
-                #[cfg(feature = "std")]
-                println!("[WARN] Kernel implementation not found: {}", kernel_name);
             }
         }
 
@@ -1142,6 +1145,76 @@ impl<'ctx> CodeGenerator<'ctx> {
                 node.op
             ))),
         }
+    }
+
+    /// Create a packed buffer for concat operation
+    /// Allocates a single buffer and copies all input tensors into it sequentially
+    fn create_packed_buffer(&mut self, node: &SnapshotNode) -> HoduResult<PointerValue<'ctx>> {
+        let i8_type = self.context.i8_type();
+        let ptr_type = self.context.ptr_type(AddressSpace::default());
+        let i64_type = self.context.i64_type();
+
+        let element_size = node.output_dtype.get_size_in_bytes() as u64;
+
+        // Calculate total size needed for all inputs
+        let mut total_size = 0u64;
+        for i in 0..node.input_ids.len() {
+            let input_layout = &node.input_layouts[i];
+            let num_elements = input_layout.shape().size() as u64;
+            total_size += num_elements * element_size;
+        }
+
+        // Declare memcpy if not already declared
+        let memcpy_fn = if let Some(func) = self.module.get_function("memcpy") {
+            func
+        } else {
+            let fn_type = ptr_type.fn_type(&[ptr_type.into(), ptr_type.into(), i64_type.into()], false);
+            self.module.add_function("memcpy", fn_type, None)
+        };
+
+        // Allocate packed buffer using alloca instead of malloc for simplicity
+        // Note: This puts the buffer on the stack, which is fine for JIT execution
+        let i32_type = self.context.i32_type();
+        let num_elements = total_size as u32; // Total bytes
+        let packed_ptr = self
+            .builder
+            .build_array_alloca(i8_type, i32_type.const_int(num_elements as u64, false), "packed_buffer")
+            .map_err(|e| HoduError::CompilationError(format!("Failed to build alloca: {}", e)))?;
+
+        // Copy each input into the packed buffer
+        let mut offset = 0u64;
+        for (i, input_id) in node.input_ids.iter().enumerate() {
+            let input_ptr = self
+                .tensor_values
+                .get(input_id)
+                .ok_or_else(|| HoduError::InternalError(format!("Tensor {:?} not found", input_id)))?;
+
+            let input_layout = &node.input_layouts[i];
+            let num_elements = input_layout.shape().size() as u64;
+            let byte_size = num_elements * element_size;
+
+            // Calculate destination pointer (packed_ptr + offset)
+            let offset_val = i64_type.const_int(offset, false);
+            let dest_ptr = unsafe {
+                self.builder
+                    .build_gep(i8_type, packed_ptr, &[offset_val], &format!("dest_ptr_{}", i))
+                    .map_err(|e| HoduError::CompilationError(format!("Failed to build GEP: {}", e)))?
+            };
+
+            // Copy input to packed buffer
+            let byte_size_val = i64_type.const_int(byte_size, false);
+            self.builder
+                .build_call(
+                    memcpy_fn,
+                    &[dest_ptr.into(), (*input_ptr).into(), byte_size_val.into()],
+                    &format!("memcpy_{}", i),
+                )
+                .map_err(|e| HoduError::CompilationError(format!("Failed to build memcpy call: {}", e)))?;
+
+            offset += byte_size;
+        }
+
+        Ok(packed_ptr)
     }
 
     /// Validate that a node has the expected number of inputs
