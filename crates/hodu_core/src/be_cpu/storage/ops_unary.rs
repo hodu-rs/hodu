@@ -27,25 +27,12 @@ pub fn call_ops_cmp_scalar(
 
     let shape = input_layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = input_layout.clone(); // Cmp scalar ops preserve layout
 
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::cmp_scalar_metadata(input_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", cmp_op, input_storage.dtype());
@@ -106,25 +93,12 @@ pub fn call_ops_unary(input_storage: &CpuStorage, input_layout: &Layout, op: Op)
 
     let shape = input_layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = input_layout.clone(); // Unary ops preserve layout
 
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::unary_metadata(input_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", unary_op, input_storage.dtype());
@@ -190,25 +164,12 @@ pub fn call_ops_unary_logical(input_storage: &CpuStorage, input_layout: &Layout,
 
     let shape = input_layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = input_layout.clone(); // Unary logical ops preserve layout
 
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::unary_logical_metadata(input_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", unary_op, input_storage.dtype());
@@ -278,25 +239,12 @@ pub fn call_ops_unary_scalar(
 
     let shape = input_layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = input_layout.clone(); // Unary scalar ops preserve layout
 
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::unary_scalar_metadata(input_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", unary_op, input_storage.dtype());

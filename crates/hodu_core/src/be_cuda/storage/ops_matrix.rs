@@ -26,35 +26,17 @@ pub fn call_ops_matmul(
     let lhs_ndim = lhs_shape.ndim();
     let rhs_ndim = rhs_shape.ndim();
 
-    let output_size = {
-        let mut dims = Vec::new();
-        for i in 0..(lhs_ndim - 2) {
-            dims.push(lhs_shape[i]);
-        }
-        dims.push(lhs_shape[lhs_ndim - 2]);
-        dims.push(rhs_shape[rhs_ndim - 1]);
-        dims.iter().map(|&x| x as u32).product::<u32>()
-    };
+    let mut output_shape_vec = Vec::new();
+    for i in 0..(lhs_ndim - 2) {
+        output_shape_vec.push(lhs_shape[i]);
+    }
+    output_shape_vec.push(lhs_shape[lhs_ndim - 2]);
+    output_shape_vec.push(rhs_shape[rhs_ndim - 1]);
+    let output_shape = crate::types::Shape::new(&output_shape_vec);
+    let output_layout = Layout::from_shape(&output_shape);
+    let output_size = output_shape.size();
 
-    let mut metadata = Vec::new();
-    metadata.push(output_size as usize);
-    metadata.push(lhs_ndim);
-    metadata.push(rhs_ndim);
-
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
+    let metadata = crate::op_metadatas::matmul_metadata(lhs_layout, rhs_layout, &output_layout)?;
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
@@ -124,26 +106,13 @@ pub fn call_ops_dot(
         _ => return Err(HoduError::BackendError("call_ops_dot expects Dot op".to_string())),
     };
 
+    let metadata = crate::op_metadatas::dot_metadata(lhs_layout, rhs_layout)?;
+
     let lhs_shape = lhs_layout.shape();
     let rhs_shape = rhs_layout.shape();
-
     let m = lhs_shape[0];
-    let k = lhs_shape[1];
     let n = rhs_shape[1];
-
-    let mut metadata = Vec::new();
-    metadata.push(m);
-    metadata.push(k);
-    metadata.push(n);
-
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
+    let output_size = m * n;
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
@@ -151,8 +120,6 @@ pub fn call_ops_dot(
     let kernel_name = format!("dot_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
-
-    let output_size = m * n;
 
     macro_rules! call_dot {
         ($lhs:expr, $rhs:expr, $ty:ty) => {{

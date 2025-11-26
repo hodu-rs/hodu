@@ -94,54 +94,9 @@ pub fn call_ops_concat(
     let mut output_shape_vec = first_shape.dims().to_vec();
     output_shape_vec[dim] = layouts.iter().map(|l| l.shape().dims()[dim]).sum();
     let output_shape = Shape::new(&output_shape_vec);
-    let num_els = output_shape.size();
 
-    // Build metadata array for CPU kernel
-    // Layout: num_els, num_dims, output_shape, concat_dim, num_inputs,
-    //         input_shapes (flattened), input_strides (flattened),
-    //         input_offsets, input_buffer_offsets
-    let mut metadata: Vec<usize> =
-        Vec::with_capacity(2 + ndim + 1 + 1 + num_inputs * ndim + num_inputs * ndim + num_inputs + num_inputs);
-
-    metadata.push(num_els);
-    metadata.push(ndim);
-
-    // Add output shape
-    for &d in &output_shape_vec {
-        metadata.push(d);
-    }
-
-    // Add concat dimension
-    metadata.push(dim);
-
-    // Add number of inputs
-    metadata.push(num_inputs);
-
-    // Add input shapes (flattened)
-    for layout in layouts {
-        for &d in layout.shape().dims() {
-            metadata.push(d);
-        }
-    }
-
-    // Add input strides (flattened)
-    for layout in layouts {
-        for &s in layout.strides() {
-            metadata.push(s);
-        }
-    }
-
-    // Add input offsets
-    for layout in layouts {
-        metadata.push(layout.offset());
-    }
-
-    // Add input buffer offsets (we'll pack all inputs contiguously)
-    let mut buffer_offset = 0;
-    for layout in layouts {
-        metadata.push(buffer_offset);
-        buffer_offset += layout.shape().size();
-    }
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::concat_metadata(layouts, dim, &output_shape_vec);
 
     // Generate kernel name
     let kernel_name = format!("concat_{}", dtype);
@@ -273,35 +228,8 @@ pub fn call_ops_split(
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
-    // Build metadata array for CPU kernel
-    // Layout: num_els, num_dims, input_shape, input_strides, input_offset,
-    //         split_dim, output_size_on_dim, split_offset
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + ndim + ndim + 1 + 3);
-
-    metadata.push(num_els);
-    metadata.push(ndim);
-
-    // Add input shape
-    for &d in input_shape.dims() {
-        metadata.push(d);
-    }
-
-    // Add input strides
-    for &s in layout.strides() {
-        metadata.push(s);
-    }
-
-    // Add input offset
-    metadata.push(layout.offset());
-
-    // Add split dimension
-    metadata.push(dim);
-
-    // Add output size on split dimension
-    metadata.push(size);
-
-    // Add split offset (start position)
-    metadata.push(start);
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::split_metadata(layout, dim, size, start, num_els);
 
     // Generate kernel name
     let dtype = storage.dtype();

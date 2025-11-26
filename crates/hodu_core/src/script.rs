@@ -1,7 +1,6 @@
 pub mod builder;
 pub mod capture;
 pub mod compiled;
-pub mod metadata;
 pub mod snapshot;
 
 use crate::{

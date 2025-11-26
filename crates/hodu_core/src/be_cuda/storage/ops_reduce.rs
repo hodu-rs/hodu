@@ -52,29 +52,7 @@ pub fn call_ops_reduce(
 
     let output_size: u32 = output_shape_vec.iter().map(|&x| x as u32).product();
 
-    // Calculate reduce size
-    let mut reduce_size: usize = 1;
-    for &dim in dims {
-        reduce_size *= input_shape[dim];
-    }
-
-    // Build metadata matching Metal's format
-    let num_dims = input_ndim;
-    let output_shape_len = output_shape_vec.len();
-    let num_reduce_dims = dims.len();
-
-    let mut metadata = Vec::with_capacity(1 + num_dims * 2 + 1 + 1 + output_shape_len + 1 + num_reduce_dims + 2);
-
-    metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().copied());
-    metadata.extend(layout.strides().iter().copied());
-    metadata.push(layout.offset());
-    metadata.push(output_shape_len);
-    metadata.extend(output_shape_vec.iter().copied());
-    metadata.push(num_reduce_dims);
-    metadata.extend(dims.iter().copied());
-    metadata.push(if keep_dim { 1 } else { 0 });
-    metadata.push(reduce_size);
+    let metadata = crate::op_metadatas::reduce_metadata(layout, dims, keep_dim);
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();

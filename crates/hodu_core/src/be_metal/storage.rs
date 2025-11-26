@@ -59,8 +59,9 @@ impl MetalStorage {
     }
 
     /// Get mutable device pointer to the underlying Metal buffer data
+    #[allow(dead_code)]
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.buffer.contents() as *mut u8
+        self.buffer.contents()
     }
 
     pub fn to_cpu<T: Clone>(&self) -> HoduResult<Vec<T>> {

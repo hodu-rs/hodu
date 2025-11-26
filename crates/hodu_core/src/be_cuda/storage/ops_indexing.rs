@@ -53,6 +53,8 @@ pub fn call_ops_index_select(
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
+    let metadata = crate::op_metadatas::index_select_metadata(input_layout, dim, num_indices, num_els);
+
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
     let device_id = input_storage.device_id();
@@ -62,17 +64,6 @@ pub fn call_ops_index_select(
     let kernel_name = format!("index_select_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
-
-    // Build metadata
-    let num_dims = input_ndim;
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 2 + 3);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().copied());
-    metadata.extend(input_layout.strides().iter().copied());
-    metadata.push(input_layout.offset());
-    metadata.push(dim);
-    metadata.push(num_indices);
 
     // Extract indices
     let indices = match &indices_storage.data {
@@ -167,6 +158,8 @@ pub fn call_ops_index_put(
         });
     }
 
+    let metadata = crate::op_metadatas::index_put_metadata(input_layout, values_layout, dim, num_indices, num_els);
+
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
     let device_id = input_storage.device_id();
@@ -176,28 +169,6 @@ pub fn call_ops_index_put(
     let kernel_name = format!("index_put_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
-
-    // Build metadata
-    let num_dims = input_shape.ndim();
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 3 + 4);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().copied());
-    metadata.extend(input_layout.strides().iter().copied());
-
-    // Values strides (pad to num_dims elements)
-    for i in 0..num_dims {
-        if i < values_layout.strides().len() {
-            metadata.push(values_layout.strides()[i]);
-        } else {
-            metadata.push(0);
-        }
-    }
-
-    metadata.push(input_layout.offset());
-    metadata.push(values_layout.offset());
-    metadata.push(dim);
-    metadata.push(num_indices);
 
     // Extract indices
     let indices = match &indices_storage.data {
@@ -288,10 +259,11 @@ pub fn call_ops_gather(
         _ => return Err(HoduError::BackendError("call_ops_gather expects Gather op".to_string())),
     }
 
-    let input_shape = input_layout.shape();
     let indices_shape = indices_layout.shape();
     let output_shape = indices_shape.clone();
     let num_els = output_shape.size();
+
+    let metadata = crate::op_metadatas::gather_metadata(input_layout, indices_layout, dim, num_els);
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
@@ -302,28 +274,6 @@ pub fn call_ops_gather(
     let kernel_name = format!("gather_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
-
-    // Build metadata
-    let num_dims = input_shape.ndim();
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 4 + 3);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-    metadata.extend(output_shape.dims().iter().copied());
-    metadata.extend(input_shape.dims().iter().copied());
-    metadata.extend(input_layout.strides().iter().copied());
-
-    // Indices strides (pad to num_dims elements)
-    for i in 0..num_dims {
-        if i < indices_layout.strides().len() {
-            metadata.push(indices_layout.strides()[i]);
-        } else {
-            metadata.push(0);
-        }
-    }
-
-    metadata.push(input_layout.offset());
-    metadata.push(indices_layout.offset());
-    metadata.push(dim);
 
     // Extract indices
     let indices = match &indices_storage.data {
@@ -408,7 +358,6 @@ pub fn call_ops_scatter(
     }
 
     let input_shape = input_layout.shape();
-    let src_shape = src_layout.shape();
     let num_els = input_shape.size();
 
     // Validate dtypes match
@@ -419,6 +368,8 @@ pub fn call_ops_scatter(
         });
     }
 
+    let metadata = crate::op_metadatas::scatter_metadata(input_layout, indices_layout, src_layout, dim);
+
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
     let device_id = input_storage.device_id();
@@ -428,47 +379,6 @@ pub fn call_ops_scatter(
     let kernel_name = format!("scatter_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
-
-    // Build metadata
-    let num_dims = input_shape.ndim();
-    let num_src_els = src_shape.size();
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + num_dims * 5 + 4);
-    metadata.push(num_src_els);
-    metadata.push(num_dims);
-    metadata.extend(input_shape.dims().iter().copied());
-    metadata.extend(input_layout.strides().iter().copied());
-
-    // Src shape (pad to num_dims elements)
-    for i in 0..num_dims {
-        if i < src_shape.ndim() {
-            metadata.push(src_shape.dims()[i]);
-        } else {
-            metadata.push(1);
-        }
-    }
-
-    // Src strides (pad to num_dims elements)
-    for i in 0..num_dims {
-        if i < src_layout.strides().len() {
-            metadata.push(src_layout.strides()[i]);
-        } else {
-            metadata.push(0);
-        }
-    }
-
-    // Indices strides (pad to num_dims elements)
-    for i in 0..num_dims {
-        if i < indices_layout.strides().len() {
-            metadata.push(indices_layout.strides()[i]);
-        } else {
-            metadata.push(0);
-        }
-    }
-
-    metadata.push(input_layout.offset());
-    metadata.push(src_layout.offset());
-    metadata.push(indices_layout.offset());
-    metadata.push(dim);
 
     // Extract indices
     let indices = match &indices_storage.data {

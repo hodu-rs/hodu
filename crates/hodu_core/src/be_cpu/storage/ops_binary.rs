@@ -22,34 +22,13 @@ pub fn call_ops_binary(
     };
 
     let lhs_shape = lhs_layout.shape();
-    let rhs_shape = rhs_layout.shape();
     let num_els = lhs_shape.size();
-    let num_dims = lhs_shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = lhs_layout.clone(); // Binary ops preserve layout
 
-    // Add shapes
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::binary_metadata(lhs_layout, rhs_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", binary_op, lhs_storage.dtype());
@@ -151,34 +130,13 @@ pub fn call_ops_binary_logical(
     };
 
     let lhs_shape = lhs_layout.shape();
-    let rhs_shape = rhs_layout.shape();
     let num_els = lhs_shape.size();
-    let num_dims = lhs_shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = lhs_layout.clone(); // Binary logical ops preserve layout
 
-    // Add shapes
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::binary_logical_metadata(lhs_layout, rhs_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", binary_op, lhs_storage.dtype());
@@ -275,34 +233,13 @@ pub fn call_ops_cmp(
     };
 
     let lhs_shape = lhs_layout.shape();
-    let rhs_shape = rhs_layout.shape();
     let num_els = lhs_shape.size();
-    let num_dims = lhs_shape.ndim();
 
-    // Build metadata array for CPU kernel
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 4 * num_dims + 2);
-    metadata.push(num_els);
-    metadata.push(num_dims);
+    // Compute output layout for metadata generation
+    let output_layout = lhs_layout.clone(); // Cmp ops preserve layout
 
-    // Add shapes
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::cmp_metadata(lhs_layout, rhs_layout, &output_layout);
 
     // Use Display to get kernel name
     let kernel_name = format!("{}_{}", cmp_op, lhs_storage.dtype());

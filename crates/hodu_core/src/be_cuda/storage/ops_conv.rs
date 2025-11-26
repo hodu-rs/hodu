@@ -31,45 +31,51 @@ pub fn call_ops_conv(
     let out_channels = weight_shape[0];
 
     let spatial_dims = input_shape.ndim() - 2;
-    let mut output_spatial_dims = Vec::with_capacity(spatial_dims);
+    let mut output_shape_vec = Vec::with_capacity(spatial_dims + 2);
+    output_shape_vec.push(batch_size);
+    output_shape_vec.push(out_channels);
 
     for i in 0..spatial_dims {
         let input_size = input_shape[2 + i];
         let kernel_size = weight_shape[2 + i];
         let output_size = (input_size + 2 * padding[i] - dilation[i] * (kernel_size - 1) - 1) / stride[i] + 1;
-        output_spatial_dims.push(output_size);
+        output_shape_vec.push(output_size);
     }
 
-    let output_size = batch_size * out_channels * output_spatial_dims.iter().product::<usize>();
+    let output_size: usize = output_shape_vec.iter().product();
 
-    let mut metadata = Vec::new();
-    metadata.push(output_size);
-    metadata.push(spatial_dims);
-
-    for &d in input_shape.dims() {
-        metadata.push(d);
-    }
-    for &d in weight_shape.dims() {
-        metadata.push(d);
-    }
-    for &s in input_layout.strides() {
-        metadata.push(s);
-    }
-    for &s in weight_layout.strides() {
-        metadata.push(s);
-    }
-    metadata.push(input_layout.offset());
-    metadata.push(weight_layout.offset());
-
-    for &s in stride {
-        metadata.push(s);
-    }
-    for &p in padding {
-        metadata.push(p);
-    }
-    for &d in dilation {
-        metadata.push(d);
-    }
+    let metadata = match spatial_dims {
+        1 => crate::op_metadatas::conv1d_metadata(
+            input_layout,
+            weight_layout,
+            stride[0],
+            padding[0],
+            dilation[0],
+            &output_shape_vec,
+        ),
+        2 => crate::op_metadatas::conv2d_metadata(
+            input_layout,
+            weight_layout,
+            stride,
+            padding,
+            dilation,
+            &output_shape_vec,
+        ),
+        3 => crate::op_metadatas::conv3d_metadata(
+            input_layout,
+            weight_layout,
+            stride,
+            padding,
+            dilation,
+            &output_shape_vec,
+        ),
+        _ => {
+            return Err(HoduError::BackendError(format!(
+                "unsupported spatial dimensions: {}",
+                spatial_dims
+            )))
+        },
+    };
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
@@ -153,52 +159,18 @@ pub fn call_ops_conv_grad_weight(
     };
 
     let input_shape = input_layout.shape();
-    let grad_output_shape = grad_output_layout.shape();
+    let spatial_dims = input_shape.ndim() - 2;
     let num_els = weight_shape.size();
 
-    // Build metadata array
-    let mut metadata = Vec::new();
-    metadata.push(num_els);
-
-    let input_ndim = input_shape.ndim();
-    let spatial_dims = input_ndim - 2;
-
-    metadata.push(input_ndim);
-    metadata.push(spatial_dims);
-
-    // Add shapes
-    for &d in input_shape.dims() {
-        metadata.push(d);
-    }
-    for &d in grad_output_shape.dims() {
-        metadata.push(d);
-    }
-    for &d in weight_shape.dims() {
-        metadata.push(d);
-    }
-
-    // Add strides
-    for &s in input_layout.strides() {
-        metadata.push(s);
-    }
-    for &s in grad_output_layout.strides() {
-        metadata.push(s);
-    }
-
-    // Add offsets
-    metadata.push(input_layout.offset());
-    metadata.push(grad_output_layout.offset());
-
-    // Add conv parameters
-    for &s in stride {
-        metadata.push(s);
-    }
-    for &p in padding {
-        metadata.push(p);
-    }
-    for &d in dilation {
-        metadata.push(d);
-    }
+    let metadata = crate::op_metadatas::conv_grad_weight_metadata(
+        input_layout,
+        grad_output_layout,
+        weight_shape.dims(),
+        stride,
+        padding,
+        dilation,
+        spatial_dims,
+    );
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();

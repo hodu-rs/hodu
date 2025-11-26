@@ -24,28 +24,10 @@ pub fn call_ops_cmp_scalar(
         },
     };
 
-    let shape = input_layout.shape();
-    let num_els = shape.size();
-    let num_dims = shape.ndim();
+    let output_layout = input_layout.clone();
+    let metadata = crate::op_metadatas::cmp_scalar_metadata(input_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
-
+    let num_els = input_layout.shape().size();
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
@@ -118,28 +100,10 @@ pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: O
         },
     };
 
-    let shape = input_layout.shape();
-    let num_els = shape.size();
-    let num_dims = shape.ndim();
+    let output_layout = input_layout.clone();
+    let metadata = crate::op_metadatas::unary_metadata(input_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
-
+    let num_els = input_layout.shape().size();
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
@@ -180,28 +144,10 @@ pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layou
         },
     };
 
-    let shape = input_layout.shape();
-    let num_els = shape.size();
-    let num_dims = shape.ndim();
+    let output_layout = input_layout.clone();
+    let metadata = crate::op_metadatas::unary_logical_metadata(input_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
-
+    let num_els = input_layout.shape().size();
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 
@@ -248,28 +194,10 @@ pub fn call_ops_unary_scalar(
         },
     };
 
-    let shape = input_layout.shape();
-    let num_els = shape.size();
-    let num_dims = shape.ndim();
+    let output_layout = input_layout.clone();
+    let metadata = crate::op_metadatas::unary_scalar_metadata(input_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shape
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in input_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(input_layout.offset());
-
+    let num_els = input_layout.shape().size();
     let dtype = input_storage.dtype();
     let device = input_storage.backend_device();
 

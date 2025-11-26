@@ -41,7 +41,6 @@ pub fn call_ops_concat(
         ));
     }
 
-    let num_inputs = storages.len();
     let first_shape = layouts[0].shape();
     let ndim = first_shape.ndim();
 
@@ -86,6 +85,8 @@ pub fn call_ops_concat(
     let mut output_shape_vec = first_shape.dims().to_vec();
     output_shape_vec[dim] = layouts.iter().map(|l| l.shape().dims()[dim]).sum();
     let output_shape = Shape::new(&output_shape_vec);
+
+    let metadata = crate::op_metadatas::concat_metadata(layouts, dim, &output_shape_vec);
     let num_els = output_shape.size();
 
     let device = first.backend_device();
@@ -125,45 +126,6 @@ pub fn call_ops_concat(
     }
 
     blit.end_encoding();
-
-    // Build metadata for concat kernel (same as CPU backend)
-    let mut metadata = Vec::new();
-    metadata.push(num_els);
-    metadata.push(ndim);
-
-    // Add output shape
-    for &d in &output_shape_vec {
-        metadata.push(d);
-    }
-
-    metadata.push(dim);
-    metadata.push(num_inputs);
-
-    // Add input shapes (from original layouts)
-    for layout in layouts {
-        for &d in layout.shape().dims() {
-            metadata.push(d);
-        }
-    }
-
-    // Add input strides (from original layouts - kernel will handle non-contiguous)
-    for layout in layouts {
-        for &s in layout.strides() {
-            metadata.push(s);
-        }
-    }
-
-    // Add input offsets (from original layouts - kernel will handle this)
-    for layout in layouts {
-        metadata.push(layout.offset());
-    }
-
-    // Add input buffer offsets - cumulative positions in packed temp buffer (in elements)
-    let mut buffer_offset_elements = 0;
-    for storage in storages.iter() {
-        metadata.push(buffer_offset_elements);
-        buffer_offset_elements += storage.buffer().length() / element_size;
-    }
 
     // Create output buffer
     let output_buffer = device.new_buffer(num_els, dtype, "concat_output")?;
@@ -230,30 +192,7 @@ pub fn call_ops_split(
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::new();
-    metadata.push(num_els);
-    metadata.push(ndim);
-
-    // Add input shape
-    for &d in input_shape.dims() {
-        metadata.push(d);
-    }
-
-    // Add input strides
-    for &s in layout.strides() {
-        metadata.push(s);
-    }
-
-    metadata.push(layout.offset());
-
-    // Add output shape
-    for &d in &output_shape_vec {
-        metadata.push(d);
-    }
-
-    metadata.push(dim);
-    metadata.push(start);
+    let metadata = crate::op_metadatas::split_metadata(layout, dim, size, start, num_els);
 
     let dtype = storage.dtype();
     let device = storage.backend_device();

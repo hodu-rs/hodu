@@ -66,49 +66,8 @@ pub fn call_ops_reduce(
 
     let output_shape = Shape::new(&output_shape_vec);
 
-    // Calculate reduce size (number of elements to reduce per output element)
-    let mut reduce_size: usize = 1;
-    for &dim in dims {
-        reduce_size *= input_shape.dims()[dim];
-    }
-
-    // Build metadata array for CPU kernel
-    // Layout: shape_len, shape, strides, offset, output_shape_len, output_shape,
-    //         num_reduce_dims, reduce_dims, keep_dim, reduce_size
-    let mut metadata: Vec<usize> =
-        Vec::with_capacity(1 + input_ndim + input_ndim + 1 + 1 + output_shape_vec.len() + 1 + dims.len() + 1 + 1);
-
-    // Add input shape info
-    metadata.push(input_ndim);
-    for &dim in input_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add input strides
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add input offset
-    metadata.push(layout.offset());
-
-    // Add output shape info
-    metadata.push(output_shape_vec.len());
-    for &dim in &output_shape_vec {
-        metadata.push(dim);
-    }
-
-    // Add reduce dimensions
-    metadata.push(dims.len());
-    for &dim in dims {
-        metadata.push(dim);
-    }
-
-    // Add keep_dim flag
-    metadata.push(if keep_dim { 1 } else { 0 });
-
-    // Add reduce size
-    metadata.push(reduce_size);
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::reduce_metadata(layout, dims, keep_dim);
 
     // Generate kernel name
     let kernel_name = format!("{}_{}", reduce_op, storage.dtype());

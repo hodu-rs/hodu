@@ -20,36 +20,10 @@ pub fn call_ops_binary(
         _ => return Err(HoduError::BackendError("call_ops_binary expects binary op".to_string())),
     };
 
-    let lhs_shape = lhs_layout.shape();
-    let rhs_shape = rhs_layout.shape();
-    let num_els = lhs_shape.size();
-    let num_dims = lhs_shape.ndim();
+    let output_layout = lhs_layout.clone();
+    let metadata = crate::op_metadatas::binary_metadata(lhs_layout, rhs_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims + 2);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shapes
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
-
+    let num_els = lhs_layout.shape().size();
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
@@ -98,36 +72,10 @@ pub fn call_ops_binary_logical(
         },
     };
 
-    let lhs_shape = lhs_layout.shape();
-    let rhs_shape = rhs_layout.shape();
-    let num_els = lhs_shape.size();
-    let num_dims = lhs_shape.ndim();
+    let output_layout = lhs_layout.clone();
+    let metadata = crate::op_metadatas::binary_logical_metadata(lhs_layout, rhs_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims + 2);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shapes
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
-
+    let num_els = lhs_layout.shape().size();
     let input_dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 
@@ -173,36 +121,10 @@ pub fn call_ops_cmp(
         _ => return Err(HoduError::BackendError("Lcall_ops_cmpE expects LcmpE op".to_string())),
     };
 
-    let lhs_shape = lhs_layout.shape();
-    let rhs_shape = rhs_layout.shape();
-    let num_els = lhs_shape.size();
-    let num_dims = lhs_shape.ndim();
+    let output_layout = lhs_layout.clone();
+    let metadata = crate::op_metadatas::cmp_metadata(lhs_layout, rhs_layout, &output_layout);
 
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(2 + 4 * num_dims + 2);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    // Add shapes
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
-
+    let num_els = lhs_layout.shape().size();
     let input_dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
 

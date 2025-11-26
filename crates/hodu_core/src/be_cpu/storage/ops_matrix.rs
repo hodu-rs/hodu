@@ -100,52 +100,11 @@ pub fn call_ops_matmul(
     output_shape_vec.push(n);
     let output_shape = Shape::new(&output_shape_vec);
 
-    // Calculate total number of output elements
-    let num_els = output_shape.size();
+    // Create output layout for metadata generation
+    let output_layout = Layout::from_shape(&output_shape);
 
-    // Build metadata array for CPU kernel
-    // Layout: num_els, lhs_ndim, rhs_ndim, batch_ndim, lhs_shape, rhs_shape, batch_shape,
-    //         lhs_strides, rhs_strides, lhs_offset, rhs_offset, M, K, N
-    let mut metadata: Vec<usize> = Vec::with_capacity(4 + lhs_ndim + rhs_ndim + batch_ndim + lhs_ndim + rhs_ndim + 5);
-
-    metadata.push(num_els);
-    metadata.push(lhs_ndim);
-    metadata.push(rhs_ndim);
-    metadata.push(batch_ndim);
-
-    // Add lhs shape
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add rhs shape
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add batch shape
-    for &dim in &batch_shape {
-        metadata.push(dim);
-    }
-
-    // Add lhs strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add rhs strides
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
-
-    // Add matrix dimensions M, K, N
-    metadata.push(m);
-    metadata.push(k_lhs);
-    metadata.push(n);
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::matmul_metadata(lhs_layout, rhs_layout, &output_layout)?;
 
     // Generate kernel name
     let kernel_name = format!("matmul_{}", lhs_storage.dtype());
@@ -280,25 +239,8 @@ pub fn call_ops_dot(
     // Build output shape [M, N]
     let output_shape = Shape::new(&[m, n]);
 
-    // Build metadata array for CPU kernel
-    // Layout: M, K, N, lhs_stride_m, lhs_stride_k, rhs_stride_k, rhs_stride_n, lhs_offset, rhs_offset
-    let mut metadata: Vec<usize> = Vec::with_capacity(9);
-
-    metadata.push(m);
-    metadata.push(k_lhs);
-    metadata.push(n);
-
-    // Add strides
-    let lhs_strides = lhs_layout.strides();
-    let rhs_strides = rhs_layout.strides();
-    metadata.push(lhs_strides[0]); // stride for rows
-    metadata.push(lhs_strides[1]); // stride for cols
-    metadata.push(rhs_strides[0]); // stride for rows
-    metadata.push(rhs_strides[1]); // stride for cols
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::dot_metadata(lhs_layout, rhs_layout)?;
 
     // Generate kernel name
     let kernel_name = format!("dot_{}", lhs_storage.dtype());

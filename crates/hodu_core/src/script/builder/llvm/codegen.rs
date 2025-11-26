@@ -675,10 +675,10 @@ impl<'ctx> CodeGenerator<'ctx> {
     }
 
     /// Create metadata constant (shape, strides, offset info)
-    /// Delegates to metadata module for operation-specific format
+    /// Generates metadata directly from SnapshotNode using centralized op_metadatas functions
     fn create_metadata_constant(&mut self, node: &SnapshotNode) -> HoduResult<PointerValue<'ctx>> {
-        // Generate metadata using centralized logic (returns Vec<usize>)
-        let metadata = crate::script::metadata::generate_metadata(node)?;
+        // Generate metadata using centralized op_metadatas functions
+        let metadata = self.generate_metadata(node)?;
 
         // Create constant array using target-specific integer type
         // int_type matches native usize: i32 on 32-bit, i64 on 64-bit
@@ -766,6 +766,394 @@ impl<'ctx> CodeGenerator<'ctx> {
             }
         }
 
+        Ok(())
+    }
+
+    /// Generate metadata array for a kernel operation from a SnapshotNode
+    /// Returns a vector of usize values that will be passed as metadata pointer
+    fn generate_metadata(&self, node: &SnapshotNode) -> HoduResult<Vec<usize>> {
+        use crate::op_metadatas;
+        use crate::op_params::OpParams;
+        use crate::ops::{MatrixOp, Op};
+
+        match &node.op {
+            Op::Binary(_) => {
+                self.validate_input_count(node, 2)?;
+                Ok(op_metadatas::binary_metadata(
+                    &node.input_layouts[0],
+                    &node.input_layouts[1],
+                    &node.output_layout,
+                ))
+            },
+            Op::BinaryLogical(_) => {
+                self.validate_input_count(node, 2)?;
+                Ok(op_metadatas::binary_logical_metadata(
+                    &node.input_layouts[0],
+                    &node.input_layouts[1],
+                    &node.output_layout,
+                ))
+            },
+            Op::Cmp(_) => {
+                self.validate_input_count(node, 2)?;
+                Ok(op_metadatas::cmp_metadata(
+                    &node.input_layouts[0],
+                    &node.input_layouts[1],
+                    &node.output_layout,
+                ))
+            },
+            Op::Unary(_) => {
+                self.validate_input_count(node, 1)?;
+                Ok(op_metadatas::unary_metadata(
+                    &node.input_layouts[0],
+                    &node.output_layout,
+                ))
+            },
+            Op::UnaryLogical(_) => {
+                self.validate_input_count(node, 1)?;
+                Ok(op_metadatas::unary_logical_metadata(
+                    &node.input_layouts[0],
+                    &node.output_layout,
+                ))
+            },
+            Op::CmpScalar(_) => {
+                self.validate_input_count(node, 1)?;
+                Ok(op_metadatas::cmp_scalar_metadata(
+                    &node.input_layouts[0],
+                    &node.output_layout,
+                ))
+            },
+            Op::UnaryScalar(_) => {
+                self.validate_input_count(node, 1)?;
+                Ok(op_metadatas::unary_scalar_metadata(
+                    &node.input_layouts[0],
+                    &node.output_layout,
+                ))
+            },
+            Op::Matrix(matrix_op) => {
+                self.validate_input_count(node, 2)?;
+                match matrix_op {
+                    MatrixOp::Matmul => op_metadatas::matmul_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        &node.output_layout,
+                    ),
+                    MatrixOp::Dot => op_metadatas::dot_metadata(&node.input_layouts[0], &node.input_layouts[1]),
+                }
+            },
+            Op::Reduce(_) => {
+                self.validate_input_count(node, 1)?;
+                let params = node
+                    .params
+                    .as_ref()
+                    .ok_or_else(|| HoduError::InternalError("Reduce op missing params".into()))?;
+                if let OpParams::Reduce(p) = params {
+                    let dims: Vec<usize> = p.dims.iter().map(|s| s.to_usize()).collect();
+                    Ok(op_metadatas::reduce_metadata(&node.input_layouts[0], &dims, p.keep_dim))
+                } else {
+                    Err(HoduError::InternalError("Invalid params for Reduce op".into()))
+                }
+            },
+            Op::Concat(_) => {
+                let params = node
+                    .params
+                    .as_ref()
+                    .ok_or_else(|| HoduError::InternalError("Concat op missing params".into()))?;
+                if let OpParams::Concat(p) = params {
+                    let dim = p.dim.to_usize();
+                    let layouts: Vec<&_> = node.input_layouts.iter().collect();
+                    let output_shape = node.output_layout.shape().dims();
+                    Ok(op_metadatas::concat_metadata(&layouts, dim, output_shape))
+                } else {
+                    Err(HoduError::InternalError("Invalid params for Concat op".into()))
+                }
+            },
+            Op::Split(_) => {
+                self.validate_input_count(node, 1)?;
+                let params = node
+                    .params
+                    .as_ref()
+                    .ok_or_else(|| HoduError::InternalError("Split op missing params".into()))?;
+                if let OpParams::Split(p) = params {
+                    let dim = p.dim.to_usize();
+                    let size = node.output_layout.shape().dims()[dim];
+                    // Calculate start position based on output_index and sizes
+                    let start: usize = p.sizes.iter().take(p.output_index).map(|s| s.to_usize()).sum();
+                    let num_els = node.output_layout.shape().size();
+                    Ok(op_metadatas::split_metadata(
+                        &node.input_layouts[0],
+                        dim,
+                        size,
+                        start,
+                        num_els,
+                    ))
+                } else {
+                    Err(HoduError::InternalError("Invalid params for Split op".into()))
+                }
+            },
+            Op::Conv(_) => {
+                self.validate_input_count(node, 2)?;
+                let params = node
+                    .params
+                    .as_ref()
+                    .ok_or_else(|| HoduError::InternalError("Conv op missing params".into()))?;
+                let output_shape = node.output_layout.shape().dims();
+                match params {
+                    OpParams::Conv1d(p) => Ok(op_metadatas::conv1d_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        p.stride,
+                        p.padding,
+                        p.dilation,
+                        output_shape,
+                    )),
+                    OpParams::Conv2d(p) => Ok(op_metadatas::conv2d_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        &[p.stride, p.stride],
+                        &[p.padding, p.padding],
+                        &[p.dilation, p.dilation],
+                        output_shape,
+                    )),
+                    OpParams::Conv3d(p) => Ok(op_metadatas::conv3d_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        &[p.stride, p.stride, p.stride],
+                        &[p.padding, p.padding, p.padding],
+                        &[p.dilation, p.dilation, p.dilation],
+                        output_shape,
+                    )),
+                    OpParams::ConvTranspose1d(p) => Ok(op_metadatas::conv1d_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        p.stride,
+                        p.padding,
+                        p.dilation,
+                        output_shape,
+                    )),
+                    OpParams::ConvTranspose2d(p) => Ok(op_metadatas::conv2d_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        &[p.stride, p.stride],
+                        &[p.padding, p.padding],
+                        &[p.dilation, p.dilation],
+                        output_shape,
+                    )),
+                    OpParams::ConvTranspose3d(p) => Ok(op_metadatas::conv3d_metadata(
+                        &node.input_layouts[0],
+                        &node.input_layouts[1],
+                        &[p.stride, p.stride, p.stride],
+                        &[p.padding, p.padding, p.padding],
+                        &[p.dilation, p.dilation, p.dilation],
+                        output_shape,
+                    )),
+                    OpParams::Conv1dGradWeight(p) => {
+                        let weight_shape = &[p.out_channels, p.in_channels, p.kernel_size];
+                        Ok(op_metadatas::conv_grad_weight_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            weight_shape,
+                            &[p.stride],
+                            &[p.padding],
+                            &[p.dilation],
+                            1,
+                        ))
+                    },
+                    OpParams::Conv2dGradWeight(p) => {
+                        let weight_shape = &[p.out_channels, p.in_channels, p.kernel_height, p.kernel_width];
+                        Ok(op_metadatas::conv_grad_weight_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            weight_shape,
+                            &[p.stride, p.stride],
+                            &[p.padding, p.padding],
+                            &[p.dilation, p.dilation],
+                            2,
+                        ))
+                    },
+                    OpParams::Conv3dGradWeight(p) => {
+                        let weight_shape = &[
+                            p.out_channels,
+                            p.in_channels,
+                            p.kernel_depth,
+                            p.kernel_height,
+                            p.kernel_width,
+                        ];
+                        Ok(op_metadatas::conv_grad_weight_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            weight_shape,
+                            &[p.stride, p.stride, p.stride],
+                            &[p.padding, p.padding, p.padding],
+                            &[p.dilation, p.dilation, p.dilation],
+                            3,
+                        ))
+                    },
+                    OpParams::ConvTranspose1dGradWeight(p) => {
+                        let weight_shape = &[p.out_channels, p.in_channels, p.kernel_size];
+                        Ok(op_metadatas::conv_grad_weight_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            weight_shape,
+                            &[p.stride],
+                            &[p.padding],
+                            &[p.dilation],
+                            1,
+                        ))
+                    },
+                    OpParams::ConvTranspose2dGradWeight(p) => {
+                        let weight_shape = &[p.out_channels, p.in_channels, p.kernel_height, p.kernel_width];
+                        Ok(op_metadatas::conv_grad_weight_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            weight_shape,
+                            &[p.stride, p.stride],
+                            &[p.padding, p.padding],
+                            &[p.dilation, p.dilation],
+                            2,
+                        ))
+                    },
+                    OpParams::ConvTranspose3dGradWeight(p) => {
+                        let weight_shape = &[
+                            p.out_channels,
+                            p.in_channels,
+                            p.kernel_depth,
+                            p.kernel_height,
+                            p.kernel_width,
+                        ];
+                        Ok(op_metadatas::conv_grad_weight_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            weight_shape,
+                            &[p.stride, p.stride, p.stride],
+                            &[p.padding, p.padding, p.padding],
+                            &[p.dilation, p.dilation, p.dilation],
+                            3,
+                        ))
+                    },
+                    _ => Err(HoduError::InternalError("Invalid params for Conv op".into())),
+                }
+            },
+            Op::Indexing(_) => {
+                let params = node
+                    .params
+                    .as_ref()
+                    .ok_or_else(|| HoduError::InternalError("Indexing op missing params".into()))?;
+                let num_els = node.output_layout.shape().size();
+                match params {
+                    OpParams::IndexSelect(p) => {
+                        self.validate_input_count(node, 2)?;
+                        let dim = p.dim.to_usize();
+                        let num_indices = node.input_layouts[1].shape().size();
+                        Ok(op_metadatas::index_select_metadata(
+                            &node.input_layouts[0],
+                            dim,
+                            num_indices,
+                            num_els,
+                        ))
+                    },
+                    OpParams::IndexPut(p) => {
+                        self.validate_input_count(node, 3)?;
+                        let dim = p.dim.to_usize();
+                        let num_indices = node.input_layouts[1].shape().size();
+                        Ok(op_metadatas::index_put_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[2],
+                            dim,
+                            num_indices,
+                            num_els,
+                        ))
+                    },
+                    OpParams::Gather(p) => {
+                        self.validate_input_count(node, 2)?;
+                        let dim = p.dim.to_usize();
+                        Ok(op_metadatas::gather_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            dim,
+                            num_els,
+                        ))
+                    },
+                    OpParams::Scatter(p) => {
+                        self.validate_input_count(node, 3)?;
+                        let dim = p.dim.to_usize();
+                        Ok(op_metadatas::scatter_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            &node.input_layouts[2],
+                            dim,
+                        ))
+                    },
+                    OpParams::ScatterAdd(p) => {
+                        self.validate_input_count(node, 3)?;
+                        let dim = p.dim.to_usize();
+                        Ok(op_metadatas::scatter_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            &node.input_layouts[2],
+                            dim,
+                        ))
+                    },
+                    OpParams::ScatterMax(p) => {
+                        self.validate_input_count(node, 3)?;
+                        let dim = p.dim.to_usize();
+                        Ok(op_metadatas::scatter_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            &node.input_layouts[2],
+                            dim,
+                        ))
+                    },
+                    OpParams::ScatterMin(p) => {
+                        self.validate_input_count(node, 3)?;
+                        let dim = p.dim.to_usize();
+                        Ok(op_metadatas::scatter_metadata(
+                            &node.input_layouts[0],
+                            &node.input_layouts[1],
+                            &node.input_layouts[2],
+                            dim,
+                        ))
+                    },
+                    _ => Err(HoduError::InternalError("Invalid params for Indexing op".into())),
+                }
+            },
+            Op::Windowing(_) => {
+                self.validate_input_count(node, 1)?;
+                let params = node
+                    .params
+                    .as_ref()
+                    .ok_or_else(|| HoduError::InternalError("Windowing op missing params".into()))?;
+                if let OpParams::ReduceWindow(p) = params {
+                    // Flatten padding from Vec<(usize, usize)> to Vec<usize>
+                    let padding_flat: Vec<usize> = p.padding.iter().flat_map(|(lo, hi)| vec![*lo, *hi]).collect();
+                    let output_shape = node.output_layout.shape().dims();
+                    Ok(op_metadatas::reduce_window_metadata(
+                        &node.input_layouts[0],
+                        &p.window_shape,
+                        &p.strides,
+                        &padding_flat,
+                        output_shape,
+                    ))
+                } else {
+                    Err(HoduError::InternalError("Invalid params for Windowing op".into()))
+                }
+            },
+            _ => Err(HoduError::UnsupportedOperation(format!(
+                "Metadata generation not yet implemented for op: {}",
+                node.op
+            ))),
+        }
+    }
+
+    /// Validate that a node has the expected number of inputs
+    fn validate_input_count(&self, node: &SnapshotNode, expected: usize) -> HoduResult<()> {
+        if node.input_layouts.len() != expected {
+            return Err(HoduError::InternalError(format!(
+                "Op {:?} expects {} inputs, got {}",
+                node.op,
+                expected,
+                node.input_layouts.len()
+            )));
+        }
         Ok(())
     }
 

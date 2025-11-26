@@ -95,7 +95,7 @@ impl CpuStorage {
             Self::F32(v) => v.as_ptr() as *const u8,
             #[cfg(feature = "f64")]
             Self::F64(v) => v.as_ptr() as *const u8,
-            Self::U8(v) => v.as_ptr() as *const u8,
+            Self::U8(v) => v.as_ptr(),
             #[cfg(feature = "u16")]
             Self::U16(v) => v.as_ptr() as *const u8,
             Self::U32(v) => v.as_ptr() as *const u8,
@@ -122,7 +122,7 @@ impl CpuStorage {
             Self::F32(v) => v.as_mut_ptr() as *mut u8,
             #[cfg(feature = "f64")]
             Self::F64(v) => v.as_mut_ptr() as *mut u8,
-            Self::U8(v) => v.as_mut_ptr() as *mut u8,
+            Self::U8(v) => v.as_mut_ptr(),
             #[cfg(feature = "u16")]
             Self::U16(v) => v.as_mut_ptr() as *mut u8,
             Self::U32(v) => v.as_mut_ptr() as *mut u8,

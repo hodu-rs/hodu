@@ -95,48 +95,10 @@ pub fn call_ops_reduce_window(
     }
 
     let output_shape = Shape::new(&output_shape_vec);
-    let output_size = output_shape.size();
 
-    // Build metadata array
-    // Layout: output_size, num_dims, input_shape, input_strides, offset,
-    //         window_shape, strides, padding, output_shape
-    let mut metadata: Vec<usize> = Vec::with_capacity(3 + ndim * 7);
-
-    metadata.push(output_size);
-    metadata.push(ndim);
-
-    // Add input shape
-    for &dim in input_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add input strides
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offset
-    metadata.push(layout.offset());
-
-    // Add window shape
-    for &w in window_shape {
-        metadata.push(w);
-    }
-
-    // Add strides
-    for &s in strides {
-        metadata.push(s);
-    }
-
-    // Add padding (already flattened)
-    for &p in padding {
-        metadata.push(p);
-    }
-
-    // Add output shape
-    for &dim in &output_shape_vec {
-        metadata.push(dim);
-    }
+    // Generate metadata using centralized function
+    let metadata =
+        crate::op_metadatas::reduce_window_metadata(layout, window_shape, strides, padding, &output_shape_vec);
 
     // Generate kernel name
     let dtype = storage.dtype();

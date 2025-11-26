@@ -15,22 +15,11 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
         _ => return Err(HoduError::BackendError("call_ops_unary expects unary op".to_string())),
     };
 
+    let output_layout = layout.clone();
+    let metadata = crate::op_metadatas::unary_metadata(layout, &output_layout);
+
     let shape = layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
-
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-    metadata.push(layout.offset());
-
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
     let device_id = input_storage.device_id();
@@ -150,22 +139,11 @@ pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: 
         },
     };
 
+    let output_layout = layout.clone();
+    let metadata = crate::op_metadatas::unary_logical_metadata(layout, &output_layout);
+
     let shape = layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
-
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-    metadata.push(layout.offset());
-
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
 
@@ -222,22 +200,11 @@ pub fn call_ops_unary_scalar(
         },
     };
 
+    let output_layout = layout.clone();
+    let metadata = crate::op_metadatas::unary_scalar_metadata(layout, &output_layout);
+
     let shape = layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
-
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-    metadata.push(layout.offset());
-
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
     let device_id = input_storage.device_id();
@@ -302,22 +269,11 @@ pub fn call_ops_cmp_scalar(
         },
     };
 
+    let output_layout = layout.clone();
+    let metadata = crate::op_metadatas::cmp_scalar_metadata(layout, &output_layout);
+
     let shape = layout.shape();
     let num_els = shape.size();
-    let num_dims = shape.ndim();
-
-    let mut metadata: Vec<usize> = Vec::with_capacity(2 + 2 * num_dims + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-
-    for &dim in shape.dims() {
-        metadata.push(dim);
-    }
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-    metadata.push(layout.offset());
-
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
 

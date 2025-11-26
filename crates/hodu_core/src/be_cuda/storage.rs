@@ -23,7 +23,7 @@ use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
 use float8::F8E5M2;
 use half::{bf16, f16};
-use hodu_cuda_kernels::cuda::{CudaSlice, DeviceRepr};
+use hodu_cuda_kernels::cuda::{CudaSlice, DevicePtr, DeviceRepr};
 
 #[derive(Debug, Clone)]
 pub(crate) enum CudaStorageData {
@@ -77,54 +77,54 @@ impl CudaStorage {
     /// Get device pointer to the underlying CUDA data
     pub fn as_ptr(&self) -> *const u8 {
         match &self.data {
-            CudaStorageData::BOOL(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::F8E4M3(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::BOOL(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::F8E4M3(s) => s.device_ptr().as_ptr() as *const u8,
             #[cfg(feature = "f8e5m2")]
-            CudaStorageData::F8E5M2(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::BF16(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::F16(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::F32(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::F8E5M2(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::BF16(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::F16(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::F32(s) => s.device_ptr().as_ptr() as *const u8,
             #[cfg(feature = "f64")]
-            CudaStorageData::F64(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::U8(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::F64(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::U8(s) => s.device_ptr().as_ptr() as *const u8,
             #[cfg(feature = "u16")]
-            CudaStorageData::U16(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::U32(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::U16(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::U32(s) => s.device_ptr().as_ptr() as *const u8,
             #[cfg(feature = "u64")]
-            CudaStorageData::U64(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::I8(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::U64(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::I8(s) => s.device_ptr().as_ptr() as *const u8,
             #[cfg(feature = "i16")]
-            CudaStorageData::I16(s) => s.as_device_ptr().as_ptr() as *const u8,
-            CudaStorageData::I32(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::I16(s) => s.device_ptr().as_ptr() as *const u8,
+            CudaStorageData::I32(s) => s.device_ptr().as_ptr() as *const u8,
             #[cfg(feature = "i64")]
-            CudaStorageData::I64(s) => s.as_device_ptr().as_ptr() as *const u8,
+            CudaStorageData::I64(s) => s.device_ptr().as_ptr() as *const u8,
         }
     }
 
     /// Get mutable device pointer to the underlying CUDA data
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         match &mut self.data {
-            CudaStorageData::BOOL(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::F8E4M3(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::BOOL(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::F8E4M3(s) => s.device_ptr().as_ptr() as *mut u8,
             #[cfg(feature = "f8e5m2")]
-            CudaStorageData::F8E5M2(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::BF16(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::F16(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::F32(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::F8E5M2(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::BF16(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::F16(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::F32(s) => s.device_ptr().as_ptr() as *mut u8,
             #[cfg(feature = "f64")]
-            CudaStorageData::F64(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::U8(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::F64(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::U8(s) => s.device_ptr().as_ptr() as *mut u8,
             #[cfg(feature = "u16")]
-            CudaStorageData::U16(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::U32(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::U16(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::U32(s) => s.device_ptr().as_ptr() as *mut u8,
             #[cfg(feature = "u64")]
-            CudaStorageData::U64(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::I8(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::U64(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::I8(s) => s.device_ptr().as_ptr() as *mut u8,
             #[cfg(feature = "i16")]
-            CudaStorageData::I16(s) => s.as_device_ptr().as_ptr() as *mut u8,
-            CudaStorageData::I32(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::I16(s) => s.device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::I32(s) => s.device_ptr().as_ptr() as *mut u8,
             #[cfg(feature = "i64")]
-            CudaStorageData::I64(s) => s.as_device_ptr().as_ptr() as *mut u8,
+            CudaStorageData::I64(s) => s.device_ptr().as_ptr() as *mut u8,
         }
     }
 

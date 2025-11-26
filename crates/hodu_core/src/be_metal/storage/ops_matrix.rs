@@ -24,39 +24,25 @@ pub fn call_ops_matmul(
         },
     };
 
+    // Compute output shape for matmul
     let lhs_shape = lhs_layout.shape();
     let rhs_shape = rhs_layout.shape();
     let lhs_ndim = lhs_shape.ndim();
     let rhs_ndim = rhs_shape.ndim();
 
-    // Validate shapes for matmul
     if lhs_ndim < 2 || rhs_ndim < 2 {
         return Err(HoduError::BackendError(
             "matmul requires at least 2D tensors".to_string(),
         ));
     }
 
-    // Extract matrix dimensions
     let m = lhs_shape.dims()[lhs_ndim - 2];
-    let k_lhs = lhs_shape.dims()[lhs_ndim - 1];
-    let k_rhs = rhs_shape.dims()[rhs_ndim - 2];
     let n = rhs_shape.dims()[rhs_ndim - 1];
 
-    // Check that inner dimensions match
-    if k_lhs != k_rhs {
-        return Err(HoduError::IncompatibleShapes {
-            lhs: lhs_shape.clone(),
-            rhs: rhs_shape.clone(),
-            op: crate::ops::Op::Matrix(crate::ops::MatrixOp::Matmul),
-        });
-    }
-
-    // Compute batch dimensions and output shape
     let lhs_batch_ndim = lhs_ndim - 2;
     let rhs_batch_ndim = rhs_ndim - 2;
     let batch_ndim = lhs_batch_ndim.max(rhs_batch_ndim);
 
-    // Broadcast batch dimensions
     let mut batch_shape = Vec::with_capacity(batch_ndim);
     for i in 0..batch_ndim {
         let lhs_idx = (lhs_batch_ndim as i32 - batch_ndim as i32 + i as i32) as usize;
@@ -73,67 +59,17 @@ pub fn call_ops_matmul(
             1
         };
 
-        if lhs_dim != rhs_dim && lhs_dim != 1 && rhs_dim != 1 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape.clone(),
-                rhs: rhs_shape.clone(),
-                op: crate::ops::Op::Matrix(crate::ops::MatrixOp::Matmul),
-            });
-        }
-
         batch_shape.push(lhs_dim.max(rhs_dim));
     }
 
-    // Build output shape: [...batch_dims, M, N]
-    let mut output_shape_vec = batch_shape.clone();
+    let mut output_shape_vec = batch_shape;
     output_shape_vec.push(m);
     output_shape_vec.push(n);
     let output_shape = Shape::new(&output_shape_vec);
+    let output_layout = Layout::from_shape(&output_shape);
 
-    // Calculate total number of output elements
+    let metadata = crate::op_metadatas::matmul_metadata(lhs_layout, rhs_layout, &output_layout)?;
     let num_els = output_shape.size();
-
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(4 + lhs_ndim + rhs_ndim + batch_ndim + lhs_ndim + rhs_ndim + 5);
-
-    metadata.push(num_els);
-    metadata.push(lhs_ndim);
-    metadata.push(rhs_ndim);
-    metadata.push(batch_ndim);
-
-    // Add lhs shape
-    for &dim in lhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add rhs shape
-    for &dim in rhs_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // Add batch shape
-    for &dim in &batch_shape {
-        metadata.push(dim);
-    }
-
-    // Add lhs strides
-    for &stride in lhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add rhs strides
-    for &stride in rhs_layout.strides() {
-        metadata.push(stride);
-    }
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
-
-    // Add matrix dimensions M, K, N
-    metadata.push(m);
-    metadata.push(k_lhs);
-    metadata.push(n);
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();
@@ -181,52 +117,17 @@ pub fn call_ops_dot(
 
     let lhs_shape = lhs_layout.shape();
     let rhs_shape = rhs_layout.shape();
-    let lhs_ndim = lhs_shape.ndim();
-    let rhs_ndim = rhs_shape.ndim();
 
-    // Validate that both are 2D matrices
-    if lhs_ndim != 2 || rhs_ndim != 2 {
+    if lhs_shape.ndim() != 2 || rhs_shape.ndim() != 2 {
         return Err(HoduError::BackendError("dot requires exactly 2D tensors".to_string()));
     }
 
-    // Extract matrix dimensions
     let m = lhs_shape.dims()[0];
-    let k_lhs = lhs_shape.dims()[1];
-    let k_rhs = rhs_shape.dims()[0];
     let n = rhs_shape.dims()[1];
-
-    // Check that inner dimensions match
-    if k_lhs != k_rhs {
-        return Err(HoduError::IncompatibleShapes {
-            lhs: lhs_shape.clone(),
-            rhs: rhs_shape.clone(),
-            op: crate::ops::Op::Matrix(crate::ops::MatrixOp::Dot),
-        });
-    }
-
-    // Build output shape [M, N]
     let output_shape = Shape::new(&[m, n]);
+
+    let metadata = crate::op_metadatas::dot_metadata(lhs_layout, rhs_layout)?;
     let num_els = output_shape.size();
-
-    // Build metadata array for Metal kernel
-    let mut metadata = Vec::with_capacity(9);
-
-    metadata.push(m);
-    metadata.push(k_lhs);
-    metadata.push(n);
-
-    // Add strides
-    let lhs_strides = lhs_layout.strides();
-    let rhs_strides = rhs_layout.strides();
-
-    metadata.push(lhs_strides[0]); // lhs_stride_m
-    metadata.push(lhs_strides[1]); // lhs_stride_k
-    metadata.push(rhs_strides[0]); // rhs_stride_k
-    metadata.push(rhs_strides[1]); // rhs_stride_n
-
-    // Add offsets
-    metadata.push(lhs_layout.offset());
-    metadata.push(rhs_layout.offset());
 
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.backend_device();

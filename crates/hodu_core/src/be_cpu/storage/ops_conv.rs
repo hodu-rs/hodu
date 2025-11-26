@@ -110,22 +110,16 @@ pub fn call_ops_conv(
             };
 
             let output_shape = Shape::new(&[batch_size, out_channels, out_width]);
-            let num_els = output_shape.size();
 
-            let metadata: Vec<usize> = vec![
-                num_els,
-                batch_size,
-                in_channels,
-                out_channels,
-                in_width,
-                kernel_width,
-                out_width,
+            let output_shape_vec = vec![batch_size, out_channels, out_width];
+            let metadata = crate::op_metadatas::conv1d_metadata(
+                input_layout,
+                weight_layout,
                 stride_w,
                 padding_w,
                 dilation_w,
-                input_layout.offset(),
-                weight_layout.offset(),
-            ];
+                &output_shape_vec,
+            );
 
             (metadata, output_shape)
         },
@@ -154,28 +148,16 @@ pub fn call_ops_conv(
             };
 
             let output_shape = Shape::new(&[batch_size, out_channels, out_height, out_width]);
-            let num_els = output_shape.size();
 
-            let metadata: Vec<usize> = vec![
-                num_els,
-                batch_size,
-                in_channels,
-                out_channels,
-                in_height,
-                in_width,
-                kernel_height,
-                kernel_width,
-                out_height,
-                out_width,
-                stride_h,
-                stride_w,
-                padding_h,
-                padding_w,
-                dilation_h,
-                dilation_w,
-                input_layout.offset(),
-                weight_layout.offset(),
-            ];
+            let output_shape_vec = vec![batch_size, out_channels, out_height, out_width];
+            let metadata = crate::op_metadatas::conv2d_metadata(
+                input_layout,
+                weight_layout,
+                &[stride_h, stride_w],
+                &[padding_h, padding_w],
+                &[dilation_h, dilation_w],
+                &output_shape_vec,
+            );
 
             (metadata, output_shape)
         },
@@ -211,34 +193,16 @@ pub fn call_ops_conv(
             };
 
             let output_shape = Shape::new(&[batch_size, out_channels, out_depth, out_height, out_width]);
-            let num_els = output_shape.size();
 
-            let metadata: Vec<usize> = vec![
-                num_els,
-                batch_size,
-                in_channels,
-                out_channels,
-                in_depth,
-                in_height,
-                in_width,
-                kernel_depth,
-                kernel_height,
-                kernel_width,
-                out_depth,
-                out_height,
-                out_width,
-                stride_d,
-                stride_h,
-                stride_w,
-                padding_d,
-                padding_h,
-                padding_w,
-                dilation_d,
-                dilation_h,
-                dilation_w,
-                input_layout.offset(),
-                weight_layout.offset(),
-            ];
+            let output_shape_vec = vec![batch_size, out_channels, out_depth, out_height, out_width];
+            let metadata = crate::op_metadatas::conv3d_metadata(
+                input_layout,
+                weight_layout,
+                &[stride_d, stride_h, stride_w],
+                &[padding_d, padding_h, padding_w],
+                &[dilation_d, dilation_h, dilation_w],
+                &output_shape_vec,
+            );
 
             (metadata, output_shape)
         },
@@ -340,8 +304,6 @@ pub fn call_ops_conv_grad_weight(
         });
     }
 
-    let input_shape = input_layout.shape();
-    let grad_output_shape = grad_output_layout.shape();
     let dtype = input_storage.dtype();
 
     // Determine spatial dimensions based on op
@@ -356,48 +318,16 @@ pub fn call_ops_conv_grad_weight(
         },
     };
 
-    let num_els = weight_shape.size();
-    let input_ndim = input_shape.ndim();
-
-    // Build metadata array (matching Metal/CUDA structure)
-    let mut metadata = Vec::new();
-    metadata.push(num_els);
-    metadata.push(input_ndim);
-    metadata.push(spatial_dims);
-
-    // Add shapes
-    for &d in input_shape.dims() {
-        metadata.push(d);
-    }
-    for &d in grad_output_shape.dims() {
-        metadata.push(d);
-    }
-    for &d in weight_shape.dims() {
-        metadata.push(d);
-    }
-
-    // Add strides
-    for &s in input_layout.strides() {
-        metadata.push(s);
-    }
-    for &s in grad_output_layout.strides() {
-        metadata.push(s);
-    }
-
-    // Add offsets
-    metadata.push(input_layout.offset());
-    metadata.push(grad_output_layout.offset());
-
-    // Add conv parameters
-    for &s in stride {
-        metadata.push(s);
-    }
-    for &p in padding {
-        metadata.push(p);
-    }
-    for &d in dilation {
-        metadata.push(d);
-    }
+    // Generate metadata using centralized function
+    let metadata = crate::op_metadatas::conv_grad_weight_metadata(
+        input_layout,
+        grad_output_layout,
+        weight_shape.dims(),
+        stride,
+        padding,
+        dilation,
+        spatial_dims,
+    );
 
     // Generate kernel name
     let kernel_name = format!("{}_{}", conv_op, dtype);
