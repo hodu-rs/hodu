@@ -44,10 +44,43 @@ pub struct CompilerPluginInfo {
     pub version: &'static str,
 }
 
+/// Opaque plugin handle for FFI
+///
+/// This wraps a `Box<dyn CompilerPlugin>` but is represented as a raw pointer
+/// for FFI safety. The actual type is erased at the C boundary.
+#[repr(C)]
+pub struct CompilerPluginHandle {
+    _opaque: [u8; 0],
+}
+
 /// Plugin entry point function type
-/// Each plugin must export: `extern "C" fn hodu_compiler_plugin_create() -> *mut dyn CompilerPlugin`
-pub type CompilerPluginCreateFn = unsafe extern "C" fn() -> *mut dyn CompilerPlugin;
+/// Each plugin must export: `extern "C" fn hodu_compiler_plugin_create() -> *mut CompilerPluginHandle`
+pub type CompilerPluginCreateFn = unsafe extern "C" fn() -> *mut CompilerPluginHandle;
 
 /// Plugin destroy function type
-/// Each plugin must export: `extern "C" fn hodu_compiler_plugin_destroy(ptr: *mut dyn CompilerPlugin)`
-pub type CompilerPluginDestroyFn = unsafe extern "C" fn(ptr: *mut dyn CompilerPlugin);
+/// Each plugin must export: `extern "C" fn hodu_compiler_plugin_destroy(ptr: *mut CompilerPluginHandle)`
+pub type CompilerPluginDestroyFn = unsafe extern "C" fn(ptr: *mut CompilerPluginHandle);
+
+impl CompilerPluginHandle {
+    /// Create a handle from a boxed plugin (called from plugin side)
+    pub fn from_boxed(plugin: Box<dyn CompilerPlugin>) -> *mut Self {
+        Box::into_raw(Box::new(plugin)) as *mut Self
+    }
+
+    /// Convert handle back to boxed plugin (called from host side)
+    ///
+    /// # Safety
+    /// The handle must have been created by `from_boxed` and not yet destroyed
+    pub unsafe fn into_boxed(ptr: *mut Self) -> Box<Box<dyn CompilerPlugin>> {
+        Box::from_raw(ptr as *mut Box<dyn CompilerPlugin>)
+    }
+
+    /// Get a reference to the plugin
+    ///
+    /// # Safety
+    /// The handle must be valid
+    pub unsafe fn as_ref<'a>(ptr: *mut Self) -> &'a dyn CompilerPlugin {
+        let boxed = &*(ptr as *mut Box<dyn CompilerPlugin>);
+        boxed.as_ref()
+    }
+}

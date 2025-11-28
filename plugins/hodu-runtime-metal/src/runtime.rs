@@ -349,21 +349,21 @@ fn parse_dtype(dtype_str: &str) -> HoduResult<DType> {
 }
 
 // Plugin entry points
-// Note: We return a double-boxed pointer to properly handle trait object fat pointers across FFI
+// Using opaque handle type for FFI safety
 #[no_mangle]
-pub extern "C" fn hodu_runtime_plugin_create() -> *mut Box<dyn RuntimePlugin> {
+pub extern "C" fn hodu_runtime_plugin_create() -> *mut hodu_plugin::RuntimePluginHandle {
     match MetalRuntime::new() {
         Ok(runtime) => {
             let boxed: Box<dyn RuntimePlugin> = Box::new(runtime);
-            Box::into_raw(Box::new(boxed))
+            hodu_plugin::RuntimePluginHandle::from_boxed(boxed)
         },
         Err(_) => std::ptr::null_mut(),
     }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn hodu_runtime_plugin_destroy(ptr: *mut Box<dyn RuntimePlugin>) {
+pub unsafe extern "C" fn hodu_runtime_plugin_destroy(ptr: *mut hodu_plugin::RuntimePluginHandle) {
     if !ptr.is_null() {
-        drop(Box::from_raw(ptr));
+        drop(hodu_plugin::RuntimePluginHandle::into_boxed(ptr));
     }
 }

@@ -1,8 +1,9 @@
 //! Plugin manager for loading and managing plugins
 
-#![allow(improper_ctypes_definitions)]
-
-use crate::{CompilerPlugin, FormatPlugin, HoduError, HoduResult, RuntimePlugin};
+use crate::{
+    CompilerPlugin, CompilerPluginHandle, FormatPlugin, FormatPluginHandle, HoduError, HoduResult, RuntimePlugin,
+    RuntimePluginHandle,
+};
 use hodu_compat::*;
 use std::path::{Path, PathBuf};
 
@@ -87,16 +88,16 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        // Plugin returns Box<Box<dyn CompilerPlugin>> to handle fat pointer across FFI
-        type CreateFn = unsafe extern "C" fn() -> *mut Box<dyn CompilerPlugin>;
+        // Plugin returns opaque handle (wraps Box<Box<dyn CompilerPlugin>>)
+        type CreateFn = unsafe extern "C" fn() -> *mut CompilerPluginHandle;
         let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_compiler_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
-        let plugin_ptr = unsafe { create_fn() };
-        if plugin_ptr.is_null() {
+        let handle = unsafe { create_fn() };
+        if handle.is_null() {
             return Err(HoduError::IoError("Plugin creation failed".into()));
         }
-        let plugin: Box<dyn CompilerPlugin> = unsafe { *Box::from_raw(plugin_ptr) };
+        let plugin: Box<dyn CompilerPlugin> = unsafe { *CompilerPluginHandle::into_boxed(handle) };
 
         let name = plugin.name().to_string();
 
@@ -141,16 +142,16 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        // Plugin returns Box<Box<dyn RuntimePlugin>> to handle fat pointer across FFI
-        type CreateFn = unsafe extern "C" fn() -> *mut Box<dyn RuntimePlugin>;
+        // Plugin returns opaque handle (wraps Box<Box<dyn RuntimePlugin>>)
+        type CreateFn = unsafe extern "C" fn() -> *mut RuntimePluginHandle;
         let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_runtime_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
-        let plugin_ptr = unsafe { create_fn() };
-        if plugin_ptr.is_null() {
+        let handle = unsafe { create_fn() };
+        if handle.is_null() {
             return Err(HoduError::IoError("Plugin creation failed".into()));
         }
-        let plugin: Box<dyn RuntimePlugin> = unsafe { *Box::from_raw(plugin_ptr) };
+        let plugin: Box<dyn RuntimePlugin> = unsafe { *RuntimePluginHandle::into_boxed(handle) };
 
         let name = plugin.name().to_string();
 
@@ -195,12 +196,16 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        type CreateFn = unsafe extern "C" fn() -> *mut dyn FormatPlugin;
+        // Plugin returns opaque handle (wraps Box<Box<dyn FormatPlugin>>)
+        type CreateFn = unsafe extern "C" fn() -> *mut FormatPluginHandle;
         let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_format_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
-        let plugin_ptr = unsafe { create_fn() };
-        let plugin: Box<dyn FormatPlugin> = unsafe { Box::from_raw(plugin_ptr) };
+        let handle = unsafe { create_fn() };
+        if handle.is_null() {
+            return Err(HoduError::IoError("Plugin creation failed".into()));
+        }
+        let plugin: Box<dyn FormatPlugin> = unsafe { *FormatPluginHandle::into_boxed(handle) };
 
         let name = plugin.name().to_string();
 

@@ -33,10 +33,16 @@ impl MetalCompiler {
         }
     }
 
-    /// Get the embedded Metal kernel source
+    /// Get the Metal kernel source
     fn get_kernel_source(&self) -> HoduResult<String> {
-        // Bundled kernels from hodu_metal_kernels
-        Ok(include_str!(concat!(env!("OUT_DIR"), "/bundled_kernels.metal")).to_string())
+        if let Some(path) = &self.kernel_path {
+            // Load from custom kernel path
+            std::fs::read_to_string(path)
+                .map_err(|e| HoduError::BackendError(format!("Failed to read kernel source: {}", e)))
+        } else {
+            // Bundled kernels from hodu_metal_kernels
+            Ok(include_str!(concat!(env!("OUT_DIR"), "/bundled_kernels.metal")).to_string())
+        }
     }
 
     /// Compile snapshot to artifact
@@ -258,16 +264,16 @@ fn parse_dtype(s: &str) -> HoduResult<ArtifactDType> {
 }
 
 // Plugin entry points for dynamic loading
-// Note: We return a double-boxed pointer to properly handle trait object fat pointers across FFI
+// Using opaque handle type for FFI safety
 #[no_mangle]
-pub extern "C" fn hodu_compiler_plugin_create() -> *mut Box<dyn CompilerPlugin> {
+pub extern "C" fn hodu_compiler_plugin_create() -> *mut hodu_plugin::CompilerPluginHandle {
     let boxed: Box<dyn CompilerPlugin> = Box::new(MetalCompiler::new());
-    Box::into_raw(Box::new(boxed))
+    hodu_plugin::CompilerPluginHandle::from_boxed(boxed)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn hodu_compiler_plugin_destroy(ptr: *mut Box<dyn CompilerPlugin>) {
+pub unsafe extern "C" fn hodu_compiler_plugin_destroy(ptr: *mut hodu_plugin::CompilerPluginHandle) {
     if !ptr.is_null() {
-        drop(Box::from_raw(ptr));
+        drop(hodu_plugin::CompilerPluginHandle::into_boxed(ptr));
     }
 }

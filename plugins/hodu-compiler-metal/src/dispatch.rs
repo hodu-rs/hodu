@@ -185,6 +185,7 @@ impl DispatchManifest {
     }
 
     /// Deserialize from JSON bytes
+    #[allow(dead_code)]
     pub fn from_json(data: &[u8]) -> Option<Self> {
         serde_json::from_slice(data).ok()
     }

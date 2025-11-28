@@ -73,6 +73,7 @@ pub fn compile_metal_to_metallib(metal_path: &Path, metallib_path: &Path) -> Hod
 }
 
 /// Compile multiple Metal sources to a single metallib
+#[allow(dead_code)]
 pub fn compile_metals_to_metallib(metal_paths: &[&Path], metallib_path: &Path) -> HoduResult<()> {
     let mut air_paths = Vec::new();
 

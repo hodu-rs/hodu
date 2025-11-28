@@ -91,10 +91,43 @@ pub struct RuntimePluginInfo {
     pub version: &'static str,
 }
 
+/// Opaque plugin handle for FFI
+///
+/// This wraps a `Box<dyn RuntimePlugin>` but is represented as a raw pointer
+/// for FFI safety. The actual type is erased at the C boundary.
+#[repr(C)]
+pub struct RuntimePluginHandle {
+    _opaque: [u8; 0],
+}
+
 /// Plugin entry point function type
-/// Each plugin must export: `extern "C" fn hodu_runtime_plugin_create() -> *mut dyn RuntimePlugin`
-pub type RuntimePluginCreateFn = unsafe extern "C" fn() -> *mut dyn RuntimePlugin;
+/// Each plugin must export: `extern "C" fn hodu_runtime_plugin_create() -> *mut RuntimePluginHandle`
+pub type RuntimePluginCreateFn = unsafe extern "C" fn() -> *mut RuntimePluginHandle;
 
 /// Plugin destroy function type
-/// Each plugin must export: `extern "C" fn hodu_runtime_plugin_destroy(ptr: *mut dyn RuntimePlugin)`
-pub type RuntimePluginDestroyFn = unsafe extern "C" fn(ptr: *mut dyn RuntimePlugin);
+/// Each plugin must export: `extern "C" fn hodu_runtime_plugin_destroy(ptr: *mut RuntimePluginHandle)`
+pub type RuntimePluginDestroyFn = unsafe extern "C" fn(ptr: *mut RuntimePluginHandle);
+
+impl RuntimePluginHandle {
+    /// Create a handle from a boxed plugin (called from plugin side)
+    pub fn from_boxed(plugin: Box<dyn RuntimePlugin>) -> *mut Self {
+        Box::into_raw(Box::new(plugin)) as *mut Self
+    }
+
+    /// Convert handle back to boxed plugin (called from host side)
+    ///
+    /// # Safety
+    /// The handle must have been created by `from_boxed` and not yet destroyed
+    pub unsafe fn into_boxed(ptr: *mut Self) -> Box<Box<dyn RuntimePlugin>> {
+        Box::from_raw(ptr as *mut Box<dyn RuntimePlugin>)
+    }
+
+    /// Get a reference to the plugin
+    ///
+    /// # Safety
+    /// The handle must be valid
+    pub unsafe fn as_ref<'a>(ptr: *mut Self) -> &'a dyn RuntimePlugin {
+        let boxed = &*(ptr as *mut Box<dyn RuntimePlugin>);
+        boxed.as_ref()
+    }
+}

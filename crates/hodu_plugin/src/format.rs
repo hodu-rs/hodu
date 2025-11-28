@@ -47,11 +47,43 @@ pub struct FormatPluginInfo {
     pub extensions: &'static [&'static str],
 }
 
-/// Plugin entry point function type (returns raw pointer for FFI safety)
-/// Each plugin must export: `extern "C" fn hodu_format_plugin_create() -> *mut ()`
-/// The returned pointer should be cast to `Box<dyn FormatPlugin>` using `from_raw`
-pub type FormatPluginCreateFn = unsafe extern "C" fn() -> *mut ();
+/// Opaque plugin handle for FFI
+///
+/// This wraps a `Box<dyn FormatPlugin>` but is represented as a raw pointer
+/// for FFI safety. The actual type is erased at the C boundary.
+#[repr(C)]
+pub struct FormatPluginHandle {
+    _opaque: [u8; 0],
+}
+
+/// Plugin entry point function type
+/// Each plugin must export: `extern "C" fn hodu_format_plugin_create() -> *mut FormatPluginHandle`
+pub type FormatPluginCreateFn = unsafe extern "C" fn() -> *mut FormatPluginHandle;
 
 /// Plugin destroy function type
-/// Each plugin must export: `extern "C" fn hodu_format_plugin_destroy(ptr: *mut ())`
-pub type FormatPluginDestroyFn = unsafe extern "C" fn(ptr: *mut ());
+/// Each plugin must export: `extern "C" fn hodu_format_plugin_destroy(ptr: *mut FormatPluginHandle)`
+pub type FormatPluginDestroyFn = unsafe extern "C" fn(ptr: *mut FormatPluginHandle);
+
+impl FormatPluginHandle {
+    /// Create a handle from a boxed plugin (called from plugin side)
+    pub fn from_boxed(plugin: Box<dyn FormatPlugin>) -> *mut Self {
+        Box::into_raw(Box::new(plugin)) as *mut Self
+    }
+
+    /// Convert handle back to boxed plugin (called from host side)
+    ///
+    /// # Safety
+    /// The handle must have been created by `from_boxed` and not yet destroyed
+    pub unsafe fn into_boxed(ptr: *mut Self) -> Box<Box<dyn FormatPlugin>> {
+        Box::from_raw(ptr as *mut Box<dyn FormatPlugin>)
+    }
+
+    /// Get a reference to the plugin
+    ///
+    /// # Safety
+    /// The handle must be valid
+    pub unsafe fn as_ref<'a>(ptr: *mut Self) -> &'a dyn FormatPlugin {
+        let boxed = &*(ptr as *mut Box<dyn FormatPlugin>);
+        boxed.as_ref()
+    }
+}

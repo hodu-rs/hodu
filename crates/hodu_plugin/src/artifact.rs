@@ -88,10 +88,11 @@ impl From<hodu_core::types::DType> for ArtifactDType {
 }
 
 impl TryFrom<ArtifactDType> for hodu_core::types::DType {
-    type Error = hodu_core::error::HoduError;
+    type Error = crate::HoduError;
 
     fn try_from(dtype: ArtifactDType) -> Result<Self, Self::Error> {
-        use hodu_core::error::HoduError;
+        #[allow(unused_imports)]
+        use crate::HoduError;
         use hodu_core::types::DType;
         match dtype {
             ArtifactDType::Bool => Ok(DType::BOOL),
