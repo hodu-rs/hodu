@@ -7,13 +7,16 @@ fn main() {
     // Source files
     build
         .file("kernels/ops_binary.c")
+        .file("kernels/ops_cast.c")
         .file("kernels/ops_concat_split.c")
         .file("kernels/ops_conv.c")
         .file("kernels/ops_indexing.c")
         .file("kernels/ops_matrix.c")
+        .file("kernels/ops_memory.c")
         .file("kernels/ops_reduce.c")
         .file("kernels/ops_unary.c")
         .file("kernels/ops_windowing.c")
+        .file("kernels/storage.c")
         .include("kernels");
 
     // BLAS configuration (must be done before adding source files)
@@ -80,6 +83,8 @@ fn main() {
         "utils.h",
         "ops_binary.h",
         "ops_binary.c",
+        "ops_cast.h",
+        "ops_cast.c",
         "ops_concat_split.h",
         "ops_concat_split.c",
         "ops_conv.h",
@@ -94,12 +99,16 @@ fn main() {
         "ops_conv_blas_aarch64_apple_darwin.c",
         "ops_unary_openblas.c",
         "ops_unary_blas_aarch64_apple_darwin.c",
+        "ops_memory.h",
+        "ops_memory.c",
         "ops_reduce.h",
         "ops_reduce.c",
         "ops_unary.h",
         "ops_unary.c",
         "ops_windowing.h",
         "ops_windowing.c",
+        "storage.h",
+        "storage.c",
     ] {
         println!("cargo:rerun-if-changed=kernels/{}", file);
     }
@@ -152,7 +161,6 @@ fn link_blas() {
         let openblas = build_openblas::OpenBlasConfig::detect();
         if openblas.available {
             openblas.setup_linking();
-            return;
         }
     }
 

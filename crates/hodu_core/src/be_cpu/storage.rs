@@ -10,7 +10,7 @@ mod ops_unary;
 mod ops_windowing;
 
 use crate::{
-    be::storage::BackendStorageT,
+    be::{device::BackendDeviceT, storage::BackendStorageT},
     be_cpu::device::CpuDevice,
     compat::*,
     error::{HoduError, HoduResult},
@@ -18,19 +18,11 @@ use crate::{
     scalar::Scalar,
     types::{DType, Device, Layout},
 };
+use core::ffi::c_void;
 use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
 use float8::F8E5M2;
 use half::{bf16, f16};
-
-/// Converts a slice to a Vec using sequential iteration
-#[inline]
-fn convert<T, U, F>(storage: &[T], f: F) -> Vec<U>
-where
-    F: Fn(&T) -> U,
-{
-    storage.iter().map(f).collect()
-}
 
 #[derive(Debug, Clone)]
 pub enum CpuStorage {
@@ -327,88 +319,65 @@ impl BackendStorageT for CpuStorage {
     }
 
     fn const_set(&mut self, scalar: Scalar, layout: &Layout) -> HoduResult<()> {
-        #[inline]
-        fn set_values<T: Copy>(data: &mut [T], layout: &Layout, value: T) {
-            let shape = layout.shape();
-            let strides = layout.strides();
-            let offset = layout.offset();
-
-            if strides == Layout::compute_strides(shape).as_slice() && offset == 0 {
-                data.fill(value);
-            } else {
-                let ndim = shape.ndim();
-                let mut indices = vec![0; ndim];
-
-                loop {
-                    let flat_index = offset
-                        + indices
-                            .iter()
-                            .enumerate()
-                            .map(|(i, &idx)| idx * strides[i])
-                            .sum::<usize>();
-
-                    if flat_index < data.len() {
-                        data[flat_index] = value;
-                    }
-
-                    // Increment multi-dimensional index
-                    let mut carry = true;
-                    for i in (0..ndim).rev() {
-                        if carry {
-                            indices[i] += 1;
-                            if indices[i] < shape[i] {
-                                carry = false;
-                            } else {
-                                indices[i] = 0;
-                            }
-                        }
-                    }
-
-                    if carry {
-                        break;
-                    }
-                }
-            }
-        }
-
+        let shape = layout.shape();
+        let strides = layout.strides();
+        let offset = layout.offset();
+        let num_els = layout.size();
         let expected_dtype = self.dtype();
         let got_dtype = scalar.dtype();
 
-        macro_rules! match_and_set {
-            ($($storage_variant:ident, $scalar_variant:ident $(, $cfg:meta)?);* $(;)?) => {
-                match (self, scalar) {
-                    $(
-                        $(#[cfg($cfg)])?
-                        (Self::$storage_variant(data), Scalar::$scalar_variant(v)) => {
-                            set_values(data, layout, v);
-                        }
-                    )*
-                    _ => {
-                        return Err(HoduError::DTypeMismatch {
-                            expected: expected_dtype,
-                            got: got_dtype,
-                        })
-                    }
-                }
-            };
+        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
+        for i in 0..shape.ndim() {
+            metadata.push(shape[i]);
+        }
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
+        }
+        metadata.push(offset);
+
+        macro_rules! call_kernel {
+            ($data:expr, $kernel_variant:ident, $val:expr) => {{
+                let out_ptr = $data.as_mut_ptr() as *mut c_void;
+                hodu_cpu_kernels::call_ops_const_set(
+                    hodu_cpu_kernels::const_set::$kernel_variant,
+                    out_ptr,
+                    &metadata,
+                    $val,
+                )?;
+            }};
         }
 
-        match_and_set! {
-            BOOL, BOOL;
-            F8E4M3, F8E4M3;
-            F8E5M2, F8E5M2, feature = "f8e5m2";
-            BF16, BF16;
-            F16, F16;
-            F32, F32;
-            F64, F64, feature = "f64";
-            U8, U8;
-            U16, U16, feature = "u16";
-            U32, U32;
-            U64, U64, feature = "u64";
-            I8, I8;
-            I16, I16, feature = "i16";
-            I32, I32;
-            I64, I64, feature = "i64";
+        match (self, scalar) {
+            (Self::BOOL(data), Scalar::BOOL(v)) => call_kernel!(data, BOOL, v as u8),
+            (Self::F8E4M3(data), Scalar::F8E4M3(v)) => call_kernel!(data, F8E4M3, v),
+            #[cfg(feature = "f8e5m2")]
+            (Self::F8E5M2(data), Scalar::F8E5M2(v)) => call_kernel!(data, F8E5M2, v),
+            (Self::BF16(data), Scalar::BF16(v)) => call_kernel!(data, BF16, v),
+            (Self::F16(data), Scalar::F16(v)) => call_kernel!(data, F16, v),
+            (Self::F32(data), Scalar::F32(v)) => call_kernel!(data, F32, v),
+            #[cfg(feature = "f64")]
+            (Self::F64(data), Scalar::F64(v)) => call_kernel!(data, F64, v),
+            (Self::U8(data), Scalar::U8(v)) => call_kernel!(data, U8, v),
+            #[cfg(feature = "u16")]
+            (Self::U16(data), Scalar::U16(v)) => call_kernel!(data, U16, v),
+            (Self::U32(data), Scalar::U32(v)) => call_kernel!(data, U32, v),
+            #[cfg(feature = "u64")]
+            (Self::U64(data), Scalar::U64(v)) => call_kernel!(data, U64, v),
+            (Self::I8(data), Scalar::I8(v)) => call_kernel!(data, I8, v),
+            #[cfg(feature = "i16")]
+            (Self::I16(data), Scalar::I16(v)) => call_kernel!(data, I16, v),
+            (Self::I32(data), Scalar::I32(v)) => call_kernel!(data, I32, v),
+            #[cfg(feature = "i64")]
+            (Self::I64(data), Scalar::I64(v)) => call_kernel!(data, I64, v),
+            _ => {
+                return Err(HoduError::DTypeMismatch {
+                    expected: expected_dtype,
+                    got: got_dtype,
+                })
+            },
         }
 
         Ok(())
@@ -605,575 +574,106 @@ impl BackendStorageT for CpuStorage {
 
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {
         if self.dtype() == target_dtype {
-            // Still need to make it contiguous according to layout
             return self.contiguous(layout);
-        }
-
-        // First make it contiguous according to layout
-        let contiguous = self.contiguous(layout)?;
-
-        let result = match (&contiguous, target_dtype) {
-            // BOOL conversions
-            (Self::BOOL(storage), DType::BOOL) => Self::BOOL(storage.clone()),
-            (Self::BOOL(storage), DType::F8E4M3) => {
-                Self::F8E4M3(convert(storage, |&v| F8E4M3::from(if v { 1.0f32 } else { 0.0f32 })))
-            },
-            #[cfg(feature = "f8e5m2")]
-            (Self::BOOL(storage), DType::F8E5M2) => {
-                Self::F8E5M2(convert(storage, |&v| F8E5M2::from(if v { 1.0f32 } else { 0.0f32 })))
-            },
-            (Self::BOOL(storage), DType::BF16) => {
-                Self::BF16(convert(storage, |&v| bf16::from_f32(if v { 1.0f32 } else { 0.0f32 })))
-            },
-            (Self::BOOL(storage), DType::F16) => {
-                Self::F16(convert(storage, |&v| f16::from_f32(if v { 1.0f32 } else { 0.0f32 })))
-            },
-            (Self::BOOL(storage), DType::F32) => Self::F32(convert(storage, |&v| if v { 1.0f32 } else { 0.0f32 })),
-            #[cfg(feature = "f64")]
-            (Self::BOOL(storage), DType::F64) => Self::F64(convert(storage, |&v| if v { 1.0f64 } else { 0.0f64 })),
-            (Self::BOOL(storage), DType::U8) => Self::U8(convert(storage, |&v| if v { 1u8 } else { 0u8 })),
-            #[cfg(feature = "u16")]
-            (Self::BOOL(storage), DType::U16) => Self::U16(convert(storage, |&v| if v { 1u16 } else { 0u16 })),
-            (Self::BOOL(storage), DType::U32) => Self::U32(convert(storage, |&v| if v { 1u32 } else { 0u32 })),
-            #[cfg(feature = "u64")]
-            (Self::BOOL(storage), DType::U64) => Self::U64(convert(storage, |&v| if v { 1u64 } else { 0u64 })),
-            (Self::BOOL(storage), DType::I8) => Self::I8(convert(storage, |&v| if v { 1i8 } else { 0i8 })),
-            #[cfg(feature = "i16")]
-            (Self::BOOL(storage), DType::I16) => Self::I16(convert(storage, |&v| if v { 1i16 } else { 0i16 })),
-            (Self::BOOL(storage), DType::I32) => Self::I32(convert(storage, |&v| if v { 1i32 } else { 0i32 })),
-            #[cfg(feature = "i64")]
-            (Self::BOOL(storage), DType::I64) => Self::I64(convert(storage, |&v| if v { 1i64 } else { 0i64 })),
-
-            // F8E4M3 conversions
-            (Self::F8E4M3(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v.to_f32() != 0.0)),
-            (Self::F8E4M3(storage), DType::F8E4M3) => Self::F8E4M3(storage.clone()),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E4M3(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v.to_f32()))),
-            (Self::F8E4M3(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v.to_f32()))),
-            (Self::F8E4M3(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v.to_f32()))),
-            (Self::F8E4M3(storage), DType::F32) => Self::F32(convert(storage, |&v| v.to_f32())),
-            #[cfg(feature = "f64")]
-            (Self::F8E4M3(storage), DType::F64) => Self::F64(convert(storage, |&v| v.to_f64())),
-            (Self::F8E4M3(storage), DType::U8) => Self::U8(convert(storage, |&v| v.to_f32() as u8)),
-            #[cfg(feature = "u16")]
-            (Self::F8E4M3(storage), DType::U16) => Self::U16(convert(storage, |&v| v.to_f32() as u16)),
-            (Self::F8E4M3(storage), DType::U32) => Self::U32(convert(storage, |&v| v.to_f32() as u32)),
-            #[cfg(feature = "u64")]
-            (Self::F8E4M3(storage), DType::U64) => Self::U64(convert(storage, |&v| v.to_f32() as u64)),
-            (Self::F8E4M3(storage), DType::I8) => Self::I8(convert(storage, |&v| v.to_f32() as i8)),
-            #[cfg(feature = "i16")]
-            (Self::F8E4M3(storage), DType::I16) => Self::I16(convert(storage, |&v| v.to_f32() as i16)),
-            (Self::F8E4M3(storage), DType::I32) => Self::I32(convert(storage, |&v| v.to_f32() as i32)),
-            #[cfg(feature = "i64")]
-            (Self::F8E4M3(storage), DType::I64) => Self::I64(convert(storage, |&v| v.to_f32() as i64)),
-
-            // F8E5M2 conversions
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v.to_f32() != 0.0)),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v.to_f32()))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F8E5M2) => Self::F8E5M2(storage.clone()),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v.to_f32()))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v.to_f32()))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::F32) => Self::F32(convert(storage, |&v| v.to_f32())),
-            #[cfg(feature = "f8e5m2")]
-            #[cfg(feature = "f64")]
-            (Self::F8E5M2(storage), DType::F64) => Self::F64(convert(storage, |&v| v.to_f64())),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::U8) => Self::U8(convert(storage, |&v| v.to_f32() as u8)),
-            #[cfg(feature = "f8e5m2")]
-            #[cfg(feature = "u16")]
-            (Self::F8E5M2(storage), DType::U16) => Self::U16(convert(storage, |&v| v.to_f32() as u16)),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::U32) => Self::U32(convert(storage, |&v| v.to_f32() as u32)),
-            #[cfg(feature = "f8e5m2")]
-            #[cfg(feature = "u64")]
-            (Self::F8E5M2(storage), DType::U64) => Self::U64(convert(storage, |&v| v.to_f32() as u64)),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::I8) => Self::I8(convert(storage, |&v| v.to_f32() as i8)),
-            #[cfg(feature = "f8e5m2")]
-            #[cfg(feature = "i16")]
-            (Self::F8E5M2(storage), DType::I16) => Self::I16(convert(storage, |&v| v.to_f32() as i16)),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F8E5M2(storage), DType::I32) => Self::I32(convert(storage, |&v| v.to_f32() as i32)),
-            #[cfg(feature = "f8e5m2")]
-            #[cfg(feature = "i64")]
-            (Self::F8E5M2(storage), DType::I64) => Self::I64(convert(storage, |&v| v.to_f32() as i64)),
-
-            // BF16 conversions
-            (Self::BF16(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v.to_f32() != 0.0)),
-            (Self::BF16(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v.to_f32()))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::BF16(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v.to_f32()))),
-            (Self::BF16(storage), DType::BF16) => Self::BF16(storage.clone()),
-            (Self::BF16(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v.to_f32()))),
-            (Self::BF16(storage), DType::F32) => Self::F32(convert(storage, |&v| v.to_f32())),
-            #[cfg(feature = "f64")]
-            (Self::BF16(storage), DType::F64) => Self::F64(convert(storage, |&v| v.to_f64())),
-            (Self::BF16(storage), DType::U8) => Self::U8(convert(storage, |&v| v.to_f32() as u8)),
-            #[cfg(feature = "u16")]
-            (Self::BF16(storage), DType::U16) => Self::U16(convert(storage, |&v| v.to_f32() as u16)),
-            (Self::BF16(storage), DType::U32) => Self::U32(convert(storage, |&v| v.to_f32() as u32)),
-            #[cfg(feature = "u64")]
-            (Self::BF16(storage), DType::U64) => Self::U64(convert(storage, |&v| v.to_f32() as u64)),
-            (Self::BF16(storage), DType::I8) => Self::I8(convert(storage, |&v| v.to_f32() as i8)),
-            #[cfg(feature = "i16")]
-            (Self::BF16(storage), DType::I16) => Self::I16(convert(storage, |&v| v.to_f32() as i16)),
-            (Self::BF16(storage), DType::I32) => Self::I32(convert(storage, |&v| v.to_f32() as i32)),
-            #[cfg(feature = "i64")]
-            (Self::BF16(storage), DType::I64) => Self::I64(convert(storage, |&v| v.to_f32() as i64)),
-
-            // F16 conversions
-            (Self::F16(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v.to_f32() != 0.0)),
-            (Self::F16(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v.to_f32()))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F16(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v.to_f32()))),
-            (Self::F16(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v.to_f32()))),
-            (Self::F16(storage), DType::F16) => Self::F16(storage.clone()),
-            (Self::F16(storage), DType::F32) => Self::F32(convert(storage, |&v| v.to_f32())),
-            #[cfg(feature = "f64")]
-            (Self::F16(storage), DType::F64) => Self::F64(convert(storage, |&v| v.to_f64())),
-            (Self::F16(storage), DType::U8) => Self::U8(convert(storage, |&v| v.to_f32() as u8)),
-            #[cfg(feature = "u16")]
-            (Self::F16(storage), DType::U16) => Self::U16(convert(storage, |&v| v.to_f32() as u16)),
-            (Self::F16(storage), DType::U32) => Self::U32(convert(storage, |&v| v.to_f32() as u32)),
-            #[cfg(feature = "u64")]
-            (Self::F16(storage), DType::U64) => Self::U64(convert(storage, |&v| v.to_f32() as u64)),
-            (Self::F16(storage), DType::I8) => Self::I8(convert(storage, |&v| v.to_f32() as i8)),
-            #[cfg(feature = "i16")]
-            (Self::F16(storage), DType::I16) => Self::I16(convert(storage, |&v| v.to_f32() as i16)),
-            (Self::F16(storage), DType::I32) => Self::I32(convert(storage, |&v| v.to_f32() as i32)),
-            #[cfg(feature = "i64")]
-            (Self::F16(storage), DType::I64) => Self::I64(convert(storage, |&v| v.to_f32() as i64)),
-
-            // F32 conversions
-            (Self::F32(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0.0)),
-            (Self::F32(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::F32(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v))),
-            (Self::F32(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v))),
-            (Self::F32(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v))),
-            (Self::F32(storage), DType::F32) => Self::F32(storage.clone()),
-            #[cfg(feature = "f64")]
-            (Self::F32(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            (Self::F32(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "u16")]
-            (Self::F32(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            (Self::F32(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "u64")]
-            (Self::F32(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            (Self::F32(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "i16")]
-            (Self::F32(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            (Self::F32(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "i64")]
-            (Self::F32(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // F64 conversions
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0.0)),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "f64")]
-            #[cfg(feature = "f8e5m2")]
-            (Self::F64(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f64(v))),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f64(v))),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::F64) => Self::F64(storage.clone()),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "f64")]
-            #[cfg(feature = "u16")]
-            (Self::F64(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "f64")]
-            #[cfg(feature = "u64")]
-            (Self::F64(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "f64")]
-            #[cfg(feature = "i16")]
-            (Self::F64(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            #[cfg(feature = "f64")]
-            (Self::F64(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "f64")]
-            #[cfg(feature = "i64")]
-            (Self::F64(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // U8 conversions
-            (Self::U8(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            (Self::U8(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::U8(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            (Self::U8(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            (Self::U8(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            (Self::U8(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "f64")]
-            (Self::U8(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            (Self::U8(storage), DType::U8) => Self::U8(storage.clone()),
-            #[cfg(feature = "u16")]
-            (Self::U8(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            (Self::U8(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "u64")]
-            (Self::U8(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            (Self::U8(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "i16")]
-            (Self::U8(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            (Self::U8(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "i64")]
-            (Self::U8(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // U16 conversions
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "u16")]
-            #[cfg(feature = "f8e5m2")]
-            (Self::U16(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "u16")]
-            #[cfg(feature = "f64")]
-            (Self::U16(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::U16) => Self::U16(storage.clone()),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "u16")]
-            #[cfg(feature = "u64")]
-            (Self::U16(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "u16")]
-            #[cfg(feature = "i16")]
-            (Self::U16(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            #[cfg(feature = "u16")]
-            (Self::U16(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "u16")]
-            #[cfg(feature = "i64")]
-            (Self::U16(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // U32 conversions
-            (Self::U32(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            (Self::U32(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::U32(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            (Self::U32(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            (Self::U32(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            (Self::U32(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "f64")]
-            (Self::U32(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            (Self::U32(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "u16")]
-            (Self::U32(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            (Self::U32(storage), DType::U32) => Self::U32(storage.clone()),
-            #[cfg(feature = "u64")]
-            (Self::U32(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            (Self::U32(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "i16")]
-            (Self::U32(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            (Self::U32(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "i64")]
-            (Self::U32(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // U64 conversions
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "u64")]
-            #[cfg(feature = "f8e5m2")]
-            (Self::U64(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "u64")]
-            #[cfg(feature = "f64")]
-            (Self::U64(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "u64")]
-            #[cfg(feature = "u16")]
-            (Self::U64(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::U64) => Self::U64(storage.clone()),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "u64")]
-            #[cfg(feature = "i16")]
-            (Self::U64(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            #[cfg(feature = "u64")]
-            (Self::U64(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "u64")]
-            #[cfg(feature = "i64")]
-            (Self::U64(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // I8 conversions
-            (Self::I8(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            (Self::I8(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::I8(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            (Self::I8(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            (Self::I8(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            (Self::I8(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "f64")]
-            (Self::I8(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            (Self::I8(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "u16")]
-            (Self::I8(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            (Self::I8(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "u64")]
-            (Self::I8(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            (Self::I8(storage), DType::I8) => Self::I8(storage.clone()),
-            #[cfg(feature = "i16")]
-            (Self::I8(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            (Self::I8(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "i64")]
-            (Self::I8(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // I16 conversions
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "i16")]
-            #[cfg(feature = "f8e5m2")]
-            (Self::I16(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "i16")]
-            #[cfg(feature = "f64")]
-            (Self::I16(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "i16")]
-            #[cfg(feature = "u16")]
-            (Self::I16(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "i16")]
-            #[cfg(feature = "u64")]
-            (Self::I16(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::I16) => Self::I16(storage.clone()),
-            #[cfg(feature = "i16")]
-            (Self::I16(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "i16")]
-            #[cfg(feature = "i64")]
-            (Self::I16(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // I32 conversions
-            (Self::I32(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            (Self::I32(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "f8e5m2")]
-            (Self::I32(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            (Self::I32(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            (Self::I32(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            (Self::I32(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "f64")]
-            (Self::I32(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            (Self::I32(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "u16")]
-            (Self::I32(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            (Self::I32(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "u64")]
-            (Self::I32(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            (Self::I32(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "i16")]
-            (Self::I32(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            (Self::I32(storage), DType::I32) => Self::I32(storage.clone()),
-            #[cfg(feature = "i64")]
-            (Self::I32(storage), DType::I64) => Self::I64(convert(storage, |&v| v as i64)),
-
-            // I64 conversions
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::BOOL) => Self::BOOL(convert(storage, |&v| v != 0)),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::F8E4M3) => Self::F8E4M3(convert(storage, |&v| F8E4M3::from(v as f32))),
-            #[cfg(feature = "i64")]
-            #[cfg(feature = "f8e5m2")]
-            (Self::I64(storage), DType::F8E5M2) => Self::F8E5M2(convert(storage, |&v| F8E5M2::from(v as f32))),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::BF16) => Self::BF16(convert(storage, |&v| bf16::from_f32(v as f32))),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::F16) => Self::F16(convert(storage, |&v| f16::from_f32(v as f32))),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::F32) => Self::F32(convert(storage, |&v| v as f32)),
-            #[cfg(feature = "i64")]
-            #[cfg(feature = "f64")]
-            (Self::I64(storage), DType::F64) => Self::F64(convert(storage, |&v| v as f64)),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::U8) => Self::U8(convert(storage, |&v| v as u8)),
-            #[cfg(feature = "i64")]
-            #[cfg(feature = "u16")]
-            (Self::I64(storage), DType::U16) => Self::U16(convert(storage, |&v| v as u16)),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::U32) => Self::U32(convert(storage, |&v| v as u32)),
-            #[cfg(feature = "i64")]
-            #[cfg(feature = "u64")]
-            (Self::I64(storage), DType::U64) => Self::U64(convert(storage, |&v| v as u64)),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::I8) => Self::I8(convert(storage, |&v| v as i8)),
-            #[cfg(feature = "i64")]
-            #[cfg(feature = "i16")]
-            (Self::I64(storage), DType::I16) => Self::I16(convert(storage, |&v| v as i16)),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::I32) => Self::I32(convert(storage, |&v| v as i32)),
-            #[cfg(feature = "i64")]
-            (Self::I64(storage), DType::I64) => Self::I64(storage.clone()),
-        };
-
-        Ok(result)
-    }
-
-    fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
-        // If already contiguous with zero offset, just clone (data is already in correct order)
-        if layout.is_contiguous() && layout.offset() == 0 {
-            return Ok(self.clone());
-        }
-
-        // If contiguous but with offset, we can optimize by slicing instead of full iteration
-        if layout.is_contiguous() {
-            let offset = layout.offset();
-            let size = layout.size();
-
-            macro_rules! contiguous_slice {
-                ($storage:expr, $dtype_variant:ident) => {{
-                    let end = offset + size;
-                    if end <= $storage.len() {
-                        Self::$dtype_variant($storage[offset..end].to_vec())
-                    } else {
-                        return Err(HoduError::InternalError(format!(
-                            "contiguous slice out of bounds: offset={}, size={}, storage_len={}",
-                            offset,
-                            size,
-                            $storage.len()
-                        )));
-                    }
-                }};
-            }
-
-            let result = match self {
-                Self::BOOL(storage) => contiguous_slice!(storage, BOOL),
-                Self::F8E4M3(storage) => contiguous_slice!(storage, F8E4M3),
-                #[cfg(feature = "f8e5m2")]
-                Self::F8E5M2(storage) => contiguous_slice!(storage, F8E5M2),
-                Self::BF16(storage) => contiguous_slice!(storage, BF16),
-                Self::F16(storage) => contiguous_slice!(storage, F16),
-                Self::F32(storage) => contiguous_slice!(storage, F32),
-                #[cfg(feature = "f64")]
-                Self::F64(storage) => contiguous_slice!(storage, F64),
-                Self::U8(storage) => contiguous_slice!(storage, U8),
-                #[cfg(feature = "u16")]
-                Self::U16(storage) => contiguous_slice!(storage, U16),
-                Self::U32(storage) => contiguous_slice!(storage, U32),
-                #[cfg(feature = "u64")]
-                Self::U64(storage) => contiguous_slice!(storage, U64),
-                Self::I8(storage) => contiguous_slice!(storage, I8),
-                #[cfg(feature = "i16")]
-                Self::I16(storage) => contiguous_slice!(storage, I16),
-                Self::I32(storage) => contiguous_slice!(storage, I32),
-                #[cfg(feature = "i64")]
-                Self::I64(storage) => contiguous_slice!(storage, I64),
-            };
-
-            return Ok(result);
         }
 
         let shape = layout.shape();
         let strides = layout.strides();
-        let total_size = layout.size();
+        let offset = layout.offset();
+        let num_els = layout.size();
 
-        macro_rules! contiguous_impl {
-            ($storage:expr, $dtype_variant:ident) => {{
-                let mut contiguous_data = Vec::with_capacity(total_size as usize);
+        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
+        for i in 0..shape.ndim() {
+            metadata.push(shape[i]);
+        }
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
+        }
+        metadata.push(offset);
 
-                // Multi-dimensional index iteration
-                let mut indices = vec![0; shape.ndim() as usize];
-                for _ in 0..total_size {
-                    // Calculate linear offset from multi-dimensional indices
-                    let mut offset = layout.offset();
-                    for (_i, (&idx, &stride)) in indices.iter().zip(strides.iter()).enumerate() {
-                        offset += idx * stride;
-                    }
+        // Create output storage with target dtype
+        let mut output = CpuDevice::allocate(num_els, target_dtype)?;
 
-                    // Copy element at calculated offset
-                    if (offset as usize) < $storage.len() {
-                        contiguous_data.push($storage[offset as usize]);
-                    }
+        // Build kernel name: cast_<src>_to_<dst>
+        let kernel_name = format!("hodu_cpu_cast_{}_to_{}", self.dtype(), target_dtype);
+        let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
+        let kernel = hodu_cpu_kernels::CastKernel(kernel_name_static);
 
-                    // Increment indices (row-major order)
-                    let mut carry = 1;
-                    for i in (0..shape.ndim()).rev() {
-                        let i_usize = i as usize;
-                        indices[i_usize] += carry;
-                        if indices[i_usize] < shape[i] {
-                            carry = 0;
-                            break;
-                        }
-                        indices[i_usize] = 0;
-                    }
-                    if carry != 0 {
-                        break;
-                    }
-                }
+        let in_ptr = self.as_ptr() as *const c_void;
+        let out_ptr = output.as_mut_ptr() as *mut c_void;
 
-                Self::$dtype_variant(contiguous_data)
+        hodu_cpu_kernels::call_ops_cast(kernel, in_ptr, out_ptr, &metadata)?;
+
+        Ok(output)
+    }
+
+    fn contiguous(&self, layout: &Layout) -> HoduResult<Self> {
+        // If already contiguous with zero offset, just clone
+        if layout.is_contiguous() && layout.offset() == 0 {
+            return Ok(self.clone());
+        }
+
+        let shape = layout.shape();
+        let strides = layout.strides();
+        let offset = layout.offset();
+        let num_els = layout.size();
+
+        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
+        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
+        metadata.push(num_els);
+        metadata.push(shape.ndim());
+        for i in 0..shape.ndim() {
+            metadata.push(shape[i]);
+        }
+        for &stride in strides.iter().take(shape.ndim()) {
+            metadata.push(stride);
+        }
+        metadata.push(offset);
+
+        // Create output storage
+        let mut output = CpuDevice::allocate(num_els, self.dtype())?;
+
+        macro_rules! call_kernel {
+            ($in_data:expr, $out_data:expr, $kernel_variant:ident) => {{
+                let in_ptr = $in_data.as_ptr() as *const c_void;
+                let out_ptr = $out_data.as_mut_ptr() as *mut c_void;
+                hodu_cpu_kernels::call_ops_contiguous(
+                    hodu_cpu_kernels::contiguous::$kernel_variant,
+                    in_ptr,
+                    out_ptr,
+                    &metadata,
+                )?;
             }};
         }
 
-        let result = match self {
-            Self::BOOL(storage) => contiguous_impl!(storage, BOOL),
-            Self::F8E4M3(storage) => contiguous_impl!(storage, F8E4M3),
+        match (self, &mut output) {
+            (Self::BOOL(inp), Self::BOOL(out)) => call_kernel!(inp, out, BOOL),
+            (Self::F8E4M3(inp), Self::F8E4M3(out)) => call_kernel!(inp, out, F8E4M3),
             #[cfg(feature = "f8e5m2")]
-            Self::F8E5M2(storage) => contiguous_impl!(storage, F8E5M2),
-            Self::BF16(storage) => contiguous_impl!(storage, BF16),
-            Self::F16(storage) => contiguous_impl!(storage, F16),
-            Self::F32(storage) => contiguous_impl!(storage, F32),
+            (Self::F8E5M2(inp), Self::F8E5M2(out)) => call_kernel!(inp, out, F8E5M2),
+            (Self::BF16(inp), Self::BF16(out)) => call_kernel!(inp, out, BF16),
+            (Self::F16(inp), Self::F16(out)) => call_kernel!(inp, out, F16),
+            (Self::F32(inp), Self::F32(out)) => call_kernel!(inp, out, F32),
             #[cfg(feature = "f64")]
-            Self::F64(storage) => contiguous_impl!(storage, F64),
-            Self::U8(storage) => contiguous_impl!(storage, U8),
+            (Self::F64(inp), Self::F64(out)) => call_kernel!(inp, out, F64),
+            (Self::U8(inp), Self::U8(out)) => call_kernel!(inp, out, U8),
             #[cfg(feature = "u16")]
-            Self::U16(storage) => contiguous_impl!(storage, U16),
-            Self::U32(storage) => contiguous_impl!(storage, U32),
+            (Self::U16(inp), Self::U16(out)) => call_kernel!(inp, out, U16),
+            (Self::U32(inp), Self::U32(out)) => call_kernel!(inp, out, U32),
             #[cfg(feature = "u64")]
-            Self::U64(storage) => contiguous_impl!(storage, U64),
-            Self::I8(storage) => contiguous_impl!(storage, I8),
+            (Self::U64(inp), Self::U64(out)) => call_kernel!(inp, out, U64),
+            (Self::I8(inp), Self::I8(out)) => call_kernel!(inp, out, I8),
             #[cfg(feature = "i16")]
-            Self::I16(storage) => contiguous_impl!(storage, I16),
-            Self::I32(storage) => contiguous_impl!(storage, I32),
+            (Self::I16(inp), Self::I16(out)) => call_kernel!(inp, out, I16),
+            (Self::I32(inp), Self::I32(out)) => call_kernel!(inp, out, I32),
             #[cfg(feature = "i64")]
-            Self::I64(storage) => contiguous_impl!(storage, I64),
-        };
+            (Self::I64(inp), Self::I64(out)) => call_kernel!(inp, out, I64),
+            _ => unreachable!(),
+        }
 
-        Ok(result)
+        Ok(output)
     }
 }
