@@ -2,6 +2,7 @@
 //!
 //! Converts Snapshot nodes to a sequence of kernel dispatches.
 
+use hodu_core::op_params::OpParams;
 use hodu_core::ops::Op;
 use hodu_core::script::Snapshot;
 use hodu_core::types::DType;
@@ -120,8 +121,13 @@ impl DispatchManifest {
             let kernel_name = op_to_kernel_name(&node.op, node.output_dtype);
             let grid_size = node.output_layout.size();
 
-            // Build metadata
-            let metadata = build_metadata(&node.input_layouts, &node.output_layout);
+            // Build metadata using hodu_core::op_metadatas
+            let metadata = build_metadata(
+                &node.op,
+                node.params.as_ref(),
+                &node.input_layouts,
+                &node.output_layout,
+            );
 
             dispatches.push(KernelDispatch {
                 kernel_name,
@@ -207,27 +213,252 @@ fn op_to_kernel_name(op: &Op, dtype: DType) -> String {
     }
 }
 
-fn build_metadata(input_layouts: &[hodu_core::types::Layout], output_layout: &hodu_core::types::Layout) -> Vec<usize> {
-    // Basic metadata: [num_els, num_dims, dims..., strides..., offset]
-    let shape = output_layout.shape();
-    let strides = output_layout.strides();
-    let offset = output_layout.offset();
-    let num_els = output_layout.size();
-    let num_dims = shape.ndim();
+fn build_metadata(
+    op: &Op,
+    params: Option<&OpParams>,
+    input_layouts: &[hodu_core::types::Layout],
+    output_layout: &hodu_core::types::Layout,
+) -> Vec<usize> {
+    use hodu_core::op_metadatas;
+    use hodu_core::op_params;
 
-    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
-    metadata.push(num_els);
-    metadata.push(num_dims);
-    for i in 0..num_dims {
-        metadata.push(shape[i]);
+    match op {
+        // Binary ops
+        Op::Binary(_) => {
+            if input_layouts.len() >= 2 {
+                op_metadatas::binary_metadata(&input_layouts[0], &input_layouts[1], output_layout)
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+        Op::BinaryLogical(_) => {
+            if input_layouts.len() >= 2 {
+                op_metadatas::binary_logical_metadata(&input_layouts[0], &input_layouts[1], output_layout)
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+        Op::Cmp(_) => {
+            if input_layouts.len() >= 2 {
+                op_metadatas::cmp_metadata(&input_layouts[0], &input_layouts[1], output_layout)
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+        Op::CmpScalar(_) => {
+            if !input_layouts.is_empty() {
+                op_metadatas::cmp_scalar_metadata(&input_layouts[0], output_layout)
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Unary ops
+        Op::Unary(_) | Op::UnaryLogical(_) | Op::UnaryScalar(_) => {
+            if !input_layouts.is_empty() {
+                op_metadatas::unary_metadata(&input_layouts[0], output_layout)
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Matrix ops
+        Op::Matrix(_) => {
+            if input_layouts.len() >= 2 {
+                op_metadatas::matmul_metadata(&input_layouts[0], &input_layouts[1], output_layout)
+                    .unwrap_or_else(|_| op_metadatas::unary_metadata(output_layout, output_layout))
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Reduce ops
+        Op::Reduce(_) => {
+            if let Some(OpParams::Reduce(op_params::ReduceParams { dims, keep_dim })) = params {
+                let dims_usize: Vec<usize> = dims.iter().map(|s| s.to_usize()).collect();
+                if !input_layouts.is_empty() {
+                    op_metadatas::reduce_metadata(&input_layouts[0], &dims_usize, *keep_dim)
+                } else {
+                    op_metadatas::unary_metadata(output_layout, output_layout)
+                }
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Concat ops
+        Op::Concat(_) => {
+            if let Some(OpParams::Concat(op_params::ConcatParams { dim })) = params {
+                let dim_usize = dim.to_usize();
+                let layout_refs: Vec<&hodu_core::types::Layout> = input_layouts.iter().collect();
+                op_metadatas::concat_metadata(&layout_refs, dim_usize, output_layout.shape().dims())
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Split ops
+        Op::Split(_) => {
+            if let Some(OpParams::Split(op_params::SplitParams { dim, sizes, output_index })) = params {
+                let dim_usize = dim.to_usize();
+                // Calculate start position for this output
+                let start: usize = sizes.iter().take(*output_index).map(|s| s.to_usize()).collect::<Vec<_>>().iter().sum();
+                let size = sizes.get(*output_index).map(|s| s.to_usize()).unwrap_or(0);
+                if !input_layouts.is_empty() {
+                    op_metadatas::split_metadata(&input_layouts[0], dim_usize, size, start, output_layout.size())
+                } else {
+                    op_metadatas::unary_metadata(output_layout, output_layout)
+                }
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Indexing ops
+        Op::Indexing(indexing_op) => {
+            use hodu_core::ops::IndexingOp;
+            match indexing_op {
+                IndexingOp::IndexSelect => {
+                    if let Some(OpParams::IndexSelect(op_params::IndexSelectParams { dim })) = params {
+                        // num_indices can be inferred from indices tensor (input_layouts[1])
+                        let num_indices = if input_layouts.len() >= 2 {
+                            input_layouts[1].size()
+                        } else {
+                            0
+                        };
+                        if !input_layouts.is_empty() {
+                            op_metadatas::index_select_metadata(&input_layouts[0], dim.to_usize(), num_indices, output_layout.size())
+                        } else {
+                            op_metadatas::unary_metadata(output_layout, output_layout)
+                        }
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+                IndexingOp::IndexPut => {
+                    if let Some(OpParams::IndexPut(op_params::IndexPutParams { dim })) = params {
+                        let num_indices = if input_layouts.len() >= 2 {
+                            input_layouts[1].size()
+                        } else {
+                            0
+                        };
+                        if input_layouts.len() >= 2 {
+                            op_metadatas::index_put_metadata(&input_layouts[0], &input_layouts[1], dim.to_usize(), num_indices, output_layout.size())
+                        } else {
+                            op_metadatas::unary_metadata(output_layout, output_layout)
+                        }
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+                IndexingOp::Gather => {
+                    if let Some(OpParams::Gather(op_params::GatherParams { dim })) = params {
+                        if input_layouts.len() >= 2 {
+                            op_metadatas::gather_metadata(&input_layouts[0], &input_layouts[1], dim.to_usize(), output_layout.size())
+                        } else {
+                            op_metadatas::unary_metadata(output_layout, output_layout)
+                        }
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+                IndexingOp::Scatter | IndexingOp::ScatterAdd | IndexingOp::ScatterMax | IndexingOp::ScatterMin => {
+                    let dim = match params {
+                        Some(OpParams::Scatter(p)) => p.dim.to_usize(),
+                        Some(OpParams::ScatterAdd(p)) => p.dim.to_usize(),
+                        Some(OpParams::ScatterMax(p)) => p.dim.to_usize(),
+                        Some(OpParams::ScatterMin(p)) => p.dim.to_usize(),
+                        _ => 0,
+                    };
+                    if input_layouts.len() >= 3 {
+                        op_metadatas::scatter_metadata(&input_layouts[0], &input_layouts[1], &input_layouts[2], dim)
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+            }
+        }
+
+        // Conv ops
+        Op::Conv(conv_op) => {
+            use hodu_core::ops::ConvOp;
+            match conv_op {
+                ConvOp::Conv1d => {
+                    if let Some(OpParams::Conv1d(p)) = params {
+                        if input_layouts.len() >= 2 {
+                            op_metadatas::conv1d_metadata(
+                                &input_layouts[0], &input_layouts[1],
+                                p.stride, p.padding, p.dilation,
+                                output_layout.shape().dims(),
+                            )
+                        } else {
+                            op_metadatas::unary_metadata(output_layout, output_layout)
+                        }
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+                ConvOp::Conv2d => {
+                    if let Some(OpParams::Conv2d(p)) = params {
+                        if input_layouts.len() >= 2 {
+                            op_metadatas::conv2d_metadata(
+                                &input_layouts[0], &input_layouts[1],
+                                &[p.stride, p.stride], &[p.padding, p.padding], &[p.dilation, p.dilation],
+                                output_layout.shape().dims(),
+                            )
+                        } else {
+                            op_metadatas::unary_metadata(output_layout, output_layout)
+                        }
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+                ConvOp::Conv3d => {
+                    if let Some(OpParams::Conv3d(p)) = params {
+                        if input_layouts.len() >= 2 {
+                            op_metadatas::conv3d_metadata(
+                                &input_layouts[0], &input_layouts[1],
+                                &[p.stride, p.stride, p.stride],
+                                &[p.padding, p.padding, p.padding],
+                                &[p.dilation, p.dilation, p.dilation],
+                                output_layout.shape().dims(),
+                            )
+                        } else {
+                            op_metadatas::unary_metadata(output_layout, output_layout)
+                        }
+                    } else {
+                        op_metadatas::unary_metadata(output_layout, output_layout)
+                    }
+                }
+                // Transpose and gradient convolutions - use unary for now
+                _ => op_metadatas::unary_metadata(output_layout, output_layout),
+            }
+        }
+
+        // Windowing ops
+        Op::Windowing(_) => {
+            if let Some(OpParams::ReduceWindow(op_params::ReduceWindowParams { window_shape, strides, padding, .. })) = params {
+                if !input_layouts.is_empty() {
+                    // Flatten padding from [(lo, hi), ...] to [lo, hi, lo, hi, ...]
+                    let flat_padding: Vec<usize> = padding.iter().flat_map(|(lo, hi)| vec![*lo, *hi]).collect();
+                    op_metadatas::reduce_window_metadata(
+                        &input_layouts[0],
+                        window_shape,
+                        strides,
+                        &flat_padding,
+                        output_layout.shape().dims(),
+                    )
+                } else {
+                    op_metadatas::unary_metadata(output_layout, output_layout)
+                }
+            } else {
+                op_metadatas::unary_metadata(output_layout, output_layout)
+            }
+        }
+
+        // Shape ops, Cast ops, Memory ops - no kernels needed or use unary
+        Op::Shape(_) | Op::ShapeScalars(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
+            op_metadatas::unary_metadata(output_layout, output_layout)
+        }
     }
-    for &stride in strides.iter().take(num_dims) {
-        metadata.push(stride);
-    }
-    metadata.push(offset);
-
-    // TODO: Add input layouts for binary ops, etc.
-    let _ = input_layouts;
-
-    metadata
 }

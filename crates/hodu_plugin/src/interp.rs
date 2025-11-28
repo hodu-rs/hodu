@@ -5,7 +5,7 @@
 
 use crate::{
     CompiledArtifact, Device, ExecutableModule, ExecutableModuleInner, HoduError, HoduResult, OutputFormat,
-    RuntimePlugin, Tensor,
+    RuntimePlugin, Tensor, TensorData,
 };
 use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
@@ -95,8 +95,33 @@ impl InterpExecutable {
 }
 
 impl ExecutableModuleInner for InterpExecutable {
-    fn execute(&self, inputs: &[(&str, &Tensor)]) -> HoduResult<HashMap<String, Tensor>> {
-        execute_snapshot(&self.snapshot, inputs)
+    fn execute(&self, inputs: &[(&str, TensorData)]) -> HoduResult<HashMap<String, TensorData>> {
+        // Convert TensorData to Tensor
+        let tensor_inputs: Vec<(String, Tensor)> = inputs
+            .iter()
+            .map(|(name, data)| {
+                let tensor = Tensor::from_bytes(&data.data, &data.shape, data.dtype, Device::CPU)?;
+                Ok((name.to_string(), tensor))
+            })
+            .collect::<HoduResult<Vec<_>>>()?;
+
+        let tensor_refs: Vec<(&str, &Tensor)> = tensor_inputs
+            .iter()
+            .map(|(name, tensor)| (name.as_str(), tensor))
+            .collect();
+
+        let outputs = execute_snapshot(&self.snapshot, &tensor_refs)?;
+
+        // Convert Tensor back to TensorData
+        outputs
+            .into_iter()
+            .map(|(name, tensor)| {
+                let data = tensor.to_bytes()?;
+                let shape = tensor.shape().dims().to_vec();
+                let dtype = tensor.dtype();
+                Ok((name, TensorData::new(data, shape, dtype)))
+            })
+            .collect()
     }
 }
 

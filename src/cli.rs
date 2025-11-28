@@ -36,6 +36,14 @@ enum Commands {
         /// Input tensor files, comma-separated (format: name=path.hdt,name=path.json)
         #[arg(short = 'I', long, value_delimiter = ',')]
         inputs: Vec<String>,
+
+        /// Path to compiler plugin (.dylib/.so/.dll) for AOT compilation
+        #[arg(long)]
+        compiler_plugin: Option<PathBuf>,
+
+        /// Path to runtime plugin (.dylib/.so/.dll) for execution
+        #[arg(long)]
+        runtime_plugin: Option<PathBuf>,
     },
 
     /// Compile a .hdss model to target format
@@ -76,7 +84,9 @@ fn main() {
             device,
             input,
             inputs,
-        } => run::execute(path, &device, input, inputs),
+            compiler_plugin,
+            runtime_plugin,
+        } => run::execute(path, &device, input, inputs, compiler_plugin, runtime_plugin),
         Commands::Compile {
             path,
             output,

@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/*", "test-playground"]
-exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels", "plugins/hodu-compiler-metal"]
+exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels", "plugins/hodu-compiler-metal", "plugins/hodu-runtime-metal"]
 resolver = "2"
 
 [package]

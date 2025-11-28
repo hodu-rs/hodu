@@ -7,6 +7,9 @@ use crate::{
     types::{DType, Device, Layout, Shape},
 };
 
+#[cfg(feature = "std")]
+use std::path::Path;
+
 impl Tensor {
     /// Convert tensor to raw bytes (little-endian)
     ///
@@ -62,6 +65,55 @@ impl Tensor {
             #[allow(unreachable_patterns)]
             _ => Ok(tensor),
         }
+    }
+
+    /// Save tensor to .hdt file
+    #[cfg(feature = "std")]
+    pub fn save(&self, path: impl AsRef<Path>) -> HoduResult<()> {
+        use postcard;
+
+        #[derive(serde::Serialize)]
+        struct TensorData {
+            shape: Vec<usize>,
+            dtype: DType,
+            data: Vec<u8>,
+        }
+
+        let tensor_data = TensorData {
+            shape: self.shape().dims().to_vec(),
+            dtype: self.dtype(),
+            data: self.to_bytes()?,
+        };
+
+        let data = postcard::to_allocvec(&tensor_data)
+            .map_err(|e| HoduError::SerializationFailed(format!("Failed to serialize tensor: {}", e)))?;
+
+        std::fs::write(path.as_ref(), data)
+            .map_err(|e| HoduError::IoError(format!("Failed to write hdt file: {}", e)))?;
+
+        Ok(())
+    }
+
+    /// Load tensor from .hdt file
+    #[cfg(feature = "std")]
+    pub fn load(path: impl AsRef<Path>) -> HoduResult<Self> {
+        use postcard;
+
+        #[derive(serde::Deserialize)]
+        struct TensorData {
+            shape: Vec<usize>,
+            dtype: DType,
+            data: Vec<u8>,
+        }
+
+        let data =
+            std::fs::read(path.as_ref()).map_err(|e| HoduError::IoError(format!("Failed to read hdt file: {}", e)))?;
+
+        let tensor_data: TensorData = postcard::from_bytes(&data)
+            .map_err(|e| HoduError::DeserializationFailed(format!("Failed to deserialize tensor: {}", e)))?;
+
+        let shape = Shape::new(&tensor_data.shape);
+        Self::from_bytes(&tensor_data.data, shape, tensor_data.dtype, Device::CPU)
     }
 }
 

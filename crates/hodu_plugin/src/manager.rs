@@ -87,12 +87,16 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        type CreateFn = unsafe extern "C" fn() -> *mut dyn CompilerPlugin;
+        // Plugin returns Box<Box<dyn CompilerPlugin>> to handle fat pointer across FFI
+        type CreateFn = unsafe extern "C" fn() -> *mut Box<dyn CompilerPlugin>;
         let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_compiler_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
         let plugin_ptr = unsafe { create_fn() };
-        let plugin: Box<dyn CompilerPlugin> = unsafe { Box::from_raw(plugin_ptr) };
+        if plugin_ptr.is_null() {
+            return Err(HoduError::IoError("Plugin creation failed".into()));
+        }
+        let plugin: Box<dyn CompilerPlugin> = unsafe { *Box::from_raw(plugin_ptr) };
 
         let name = plugin.name().to_string();
 
@@ -137,12 +141,16 @@ impl PluginManager {
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        type CreateFn = unsafe extern "C" fn() -> *mut dyn RuntimePlugin;
+        // Plugin returns Box<Box<dyn RuntimePlugin>> to handle fat pointer across FFI
+        type CreateFn = unsafe extern "C" fn() -> *mut Box<dyn RuntimePlugin>;
         let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_runtime_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
         let plugin_ptr = unsafe { create_fn() };
-        let plugin: Box<dyn RuntimePlugin> = unsafe { Box::from_raw(plugin_ptr) };
+        if plugin_ptr.is_null() {
+            return Err(HoduError::IoError("Plugin creation failed".into()));
+        }
+        let plugin: Box<dyn RuntimePlugin> = unsafe { *Box::from_raw(plugin_ptr) };
 
         let name = plugin.name().to_string();
 

@@ -1,8 +1,31 @@
 //! Runtime plugin interface for executing compiled artifacts
 
-use crate::{CompiledArtifact, Device, HoduResult, OutputFormat, Tensor};
+use crate::{CompiledArtifact, Device, HoduResult, OutputFormat};
 use hodu_compat::*;
+use hodu_core::types::DType;
 use std::path::Path;
+
+/// Raw tensor data for cross-plugin communication
+///
+/// This struct is used to pass tensor data between the main binary and plugins
+/// without depending on the Tensor registry.
+#[derive(Debug, Clone)]
+pub struct TensorData {
+    pub data: Vec<u8>,
+    pub shape: Vec<usize>,
+    pub dtype: DType,
+}
+
+impl TensorData {
+    pub fn new(data: Vec<u8>, shape: Vec<usize>, dtype: DType) -> Self {
+        Self { data, shape, dtype }
+    }
+
+    /// Number of elements
+    pub fn size(&self) -> usize {
+        self.shape.iter().product()
+    }
+}
 
 /// Executable module loaded into a runtime
 ///
@@ -16,15 +39,15 @@ impl ExecutableModule {
         Self { inner: Box::new(inner) }
     }
 
-    /// Execute with named inputs
-    pub fn execute(&self, inputs: &[(&str, &Tensor)]) -> HoduResult<HashMap<String, Tensor>> {
+    /// Execute with named inputs (raw tensor data)
+    pub fn execute(&self, inputs: &[(&str, TensorData)]) -> HoduResult<HashMap<String, TensorData>> {
         self.inner.execute(inputs)
     }
 }
 
 /// Inner trait for executable module implementations
 pub trait ExecutableModuleInner: Send + Sync {
-    fn execute(&self, inputs: &[(&str, &Tensor)]) -> HoduResult<HashMap<String, Tensor>>;
+    fn execute(&self, inputs: &[(&str, TensorData)]) -> HoduResult<HashMap<String, TensorData>>;
 }
 
 /// Runtime plugin interface

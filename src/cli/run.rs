@@ -1,8 +1,9 @@
 //! Run command - execute a .hdss model
 
+use hodu_core::script::Script;
 use hodu_core::tensor::Tensor;
 use hodu_format::{hdss, hdt, json};
-use hodu_plugin::{Device, HoduError, HoduResult, InterpRuntime};
+use hodu_plugin::{Device, HoduError, HoduResult, InterpRuntime, PluginManager, RuntimePlugin, TensorData};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -16,13 +17,11 @@ fn parse_device(s: &str) -> HoduResult<Device> {
                 .map_err(|_| HoduError::InvalidArgument("Invalid CUDA device ID".into()))?;
             Ok(Device::CUDA(id))
         },
-        #[cfg(feature = "metal")]
         "metal" => Ok(Device::Metal),
         _ => Err(HoduError::InvalidArgument(format!(
-            "Unknown device: {}. Use 'cpu'{}{}",
+            "Unknown device: {}. Use 'cpu', 'metal'{}",
             s,
             if cfg!(feature = "cuda") { ", 'cuda:N'" } else { "" },
-            if cfg!(feature = "metal") { ", 'metal'" } else { "" },
         ))),
     }
 }
@@ -51,8 +50,15 @@ fn parse_input(s: &str) -> HoduResult<(String, PathBuf)> {
     Ok((parts[0].to_string(), PathBuf::from(parts[1])))
 }
 
-pub fn execute(path: PathBuf, device_str: &str, input: Vec<String>, inputs: Vec<String>) -> HoduResult<()> {
-    let _device = parse_device(device_str)?;
+pub fn execute(
+    path: PathBuf,
+    device_str: &str,
+    input: Vec<String>,
+    inputs: Vec<String>,
+    compiler_plugin: Option<PathBuf>,
+    runtime_plugin: Option<PathBuf>,
+) -> HoduResult<()> {
+    let device = parse_device(device_str)?;
     let snapshot = hdss::load(&path)?;
 
     // Merge --input and --inputs
@@ -98,20 +104,80 @@ pub fn execute(path: PathBuf, device_str: &str, input: Vec<String>, inputs: Vec<
         }
     }
 
-    let runtime = InterpRuntime::new();
-    let input_bindings: Vec<(&str, &Tensor)> = snapshot
+    // Convert input tensors to TensorData
+    let input_data: Vec<(String, TensorData)> = snapshot
         .inputs
         .iter()
         .map(|input| {
             let tensor = input_map.get(&input.name).unwrap();
-            (input.name.as_str(), tensor)
+            let data = tensor.to_bytes()?;
+            let shape = tensor.shape().dims().to_vec();
+            let dtype = tensor.dtype();
+            Ok((input.name.clone(), TensorData::new(data, shape, dtype)))
         })
+        .collect::<HoduResult<Vec<_>>>()?;
+
+    let input_bindings: Vec<(&str, TensorData)> = input_data
+        .iter()
+        .map(|(name, data)| (name.as_str(), data.clone()))
         .collect();
-    let outputs = runtime.execute_snapshot(&snapshot, &input_bindings)?;
+
+    // Execute based on device
+    let outputs: HashMap<String, TensorData> = match device {
+        Device::CPU => {
+            // Use interpreter runtime for CPU
+            let runtime = InterpRuntime::new();
+            let snapshot_data = snapshot.serialize()?;
+            let artifact =
+                hodu_plugin::CompiledArtifact::new(hodu_plugin::OutputFormat::HoduSnapshot, Device::CPU, snapshot_data);
+            let module = runtime.load(&artifact, Device::CPU)?;
+            module.execute(&input_bindings)?
+        },
+        Device::Metal => {
+            // Use compiler + runtime plugins for Metal
+            let compiler_path = compiler_plugin
+                .ok_or_else(|| HoduError::InvalidArgument("Metal device requires --compiler-plugin path".into()))?;
+            let runtime_path = runtime_plugin
+                .ok_or_else(|| HoduError::InvalidArgument("Metal device requires --runtime-plugin path".into()))?;
+
+            // Load plugins
+            let mut manager = PluginManager::with_default_dir()?;
+            manager.load_compiler(&compiler_path)?;
+            manager.load_runtime(&runtime_path)?;
+
+            // Find compiler and runtime
+            let compiler = manager
+                .compilers()
+                .find(|c| c.supports_device(device))
+                .ok_or_else(|| HoduError::BackendError("No Metal compiler found".into()))?;
+            let runtime = manager
+                .runtimes()
+                .find(|r| r.supports_device(device))
+                .ok_or_else(|| HoduError::BackendError("No Metal runtime found".into()))?;
+
+            // Compile
+            let script = Script::new(snapshot.clone());
+            let artifact = compiler.compile(&script, device)?;
+
+            // Load and execute
+            let module = runtime.load(&artifact, device)?;
+            module.execute(&input_bindings)?
+        },
+        #[cfg(feature = "cuda")]
+        Device::CUDA(_) => {
+            return Err(HoduError::UnsupportedDevice(device));
+        },
+        #[allow(unreachable_patterns)]
+        _ => {
+            return Err(HoduError::UnsupportedDevice(device));
+        },
+    };
 
     // Print outputs in target order
     for target in &snapshot.targets {
-        if let Some(tensor) = outputs.get(&target.name) {
+        if let Some(tensor_data) = outputs.get(&target.name) {
+            // Convert TensorData back to Tensor for display
+            let tensor = Tensor::from_bytes(&tensor_data.data, &tensor_data.shape, tensor_data.dtype, Device::CPU)?;
             println!("{}", tensor);
         }
     }

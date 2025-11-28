@@ -258,13 +258,15 @@ fn parse_dtype(s: &str) -> HoduResult<ArtifactDType> {
 }
 
 // Plugin entry points for dynamic loading
+// Note: We return a double-boxed pointer to properly handle trait object fat pointers across FFI
 #[no_mangle]
-pub extern "C" fn hodu_compiler_plugin_create() -> *mut dyn CompilerPlugin {
-    Box::into_raw(Box::new(MetalCompiler::new()))
+pub extern "C" fn hodu_compiler_plugin_create() -> *mut Box<dyn CompilerPlugin> {
+    let boxed: Box<dyn CompilerPlugin> = Box::new(MetalCompiler::new());
+    Box::into_raw(Box::new(boxed))
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn hodu_compiler_plugin_destroy(ptr: *mut dyn CompilerPlugin) {
+pub unsafe extern "C" fn hodu_compiler_plugin_destroy(ptr: *mut Box<dyn CompilerPlugin>) {
     if !ptr.is_null() {
         drop(Box::from_raw(ptr));
     }
