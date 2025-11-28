@@ -412,6 +412,8 @@ flowchart TB
 
 - [x] hodu_core에서 script/compiled/ 제거
 - [x] hodu_core는 Script/Snapshot/CaptureBoard만 유지
+- [x] CaptureBoard thread-safe 구현
+- [x] tensor/bytes.rs 추가 (to_bytes, from_bytes with Device support)
 
 ### Phase 2: Plugin API 설계
 
@@ -425,10 +427,21 @@ flowchart TB
 
 ### Phase 3: Builtin 플러그인 구현
 
-- [ ] hodu-runtime-interp (builtin, 순수 인터프리터)
-- [ ] hdss format (builtin)
+- [x] InterpRuntime (builtin, 순수 인터프리터)
+- [x] hodu_format crate 생성
+  - [x] hdss format (Script/Snapshot 직렬화)
+  - [x] hdt format (Tensor 바이너리, postcard)
+  - [x] json format (Tensor JSON, human-readable)
 
-### Phase 4: Compiler 플러그인 구현
+### Phase 4: CLI 구현
+
+- [x] `hodu run` 명령어
+  - [x] --device 옵션 (cpu, cuda:N, metal)
+  - [x] --input 옵션 (반복 가능, name=path.hdt)
+  - [x] --inputs 옵션 (콤마 구분, name=path.hdt,name=path.json)
+- [x] `hodu info` 명령어
+
+### Phase 5: Compiler 플러그인 구현
 
 - [ ] hodu-compiler-llvm
   - [ ] CPU codegen
@@ -437,21 +450,23 @@ flowchart TB
 - [ ] hodu-compiler-metal
   - [ ] MSL codegen
 
-### Phase 5: Runtime 플러그인 구현
+### Phase 6: Runtime 플러그인 구현
 
 - [ ] hodu-runtime-native (dlopen)
 - [ ] hodu-runtime-cuda
 - [ ] hodu-runtime-metal
 
-### Phase 6: Format 플러그인 구현
+### Phase 7: Format 플러그인 구현
 
 - [ ] hodu-format-onnx
+- [ ] hodu-format-safetensors
+- [ ] hodu-format-npy
 
-### Phase 7: CLI 업데이트
+### Phase 8: CLI 확장
 
 - [ ] `hodu plugin` 서브커맨드
-- [ ] `hodu run` 업데이트 (compiler/runtime 옵션)
-- [ ] `hodu build` 업데이트
+- [ ] `hodu run` compiler/runtime 옵션 추가
+- [ ] `hodu build` AOT 빌드 명령어
 
 ---
 
