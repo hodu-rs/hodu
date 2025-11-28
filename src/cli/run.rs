@@ -1,5 +1,6 @@
 //! Run command - execute a .hdss model
 
+use crate::output::{self, OutputFormat};
 use hodu_core::{
     format::{hdss, hdt, json},
     script::Script,
@@ -57,6 +58,8 @@ pub fn execute(
     device_str: &str,
     input: Vec<String>,
     inputs: Vec<String>,
+    output_format: OutputFormat,
+    output_dir: Option<PathBuf>,
     compiler_plugin: Option<PathBuf>,
     runtime_plugin: Option<PathBuf>,
 ) -> HoduResult<()> {
@@ -175,14 +178,7 @@ pub fn execute(
         },
     };
 
-    // Print outputs in target order
-    for target in &snapshot.targets {
-        if let Some(tensor_data) = outputs.get(&target.name) {
-            // Convert TensorData back to Tensor for display
-            let tensor = Tensor::from_bytes(&tensor_data.data, &tensor_data.shape, tensor_data.dtype, Device::CPU)?;
-            println!("{}", tensor);
-        }
-    }
-
-    Ok(())
+    // Output in requested format
+    let target_order: Vec<String> = snapshot.targets.iter().map(|t| t.name.clone()).collect();
+    output::print_outputs(&outputs, &target_order, output_format, output_dir.as_deref())
 }

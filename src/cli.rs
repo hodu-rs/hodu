@@ -4,6 +4,8 @@
 mod compile;
 #[path = "cli/info.rs"]
 mod info;
+#[path = "cli/output.rs"]
+mod output;
 #[path = "cli/run.rs"]
 mod run;
 
@@ -12,7 +14,8 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "hodu")]
-#[command(version, about = "Hodu ML framework CLI", long_about = None)]
+#[command(version, about = "Hodu ML framework CLI")]
+#[command(after_help = "Use 'hodu <COMMAND> --help' for more information about a command.")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -36,6 +39,14 @@ enum Commands {
         /// Input tensor files, comma-separated (format: name=path.hdt,name=path.json)
         #[arg(short = 'I', long, value_delimiter = ',')]
         inputs: Vec<String>,
+
+        /// Output format (pretty, json, hdt)
+        #[arg(short = 'f', long, default_value = "pretty")]
+        output_format: output::OutputFormat,
+
+        /// Output directory for hdt format
+        #[arg(short = 'o', long)]
+        output_dir: Option<PathBuf>,
 
         /// Path to compiler plugin (.dylib/.so/.dll) for AOT compilation
         #[arg(long)]
@@ -84,9 +95,20 @@ fn main() {
             device,
             input,
             inputs,
+            output_format,
+            output_dir,
             compiler_plugin,
             runtime_plugin,
-        } => run::execute(path, &device, input, inputs, compiler_plugin, runtime_plugin),
+        } => run::execute(
+            path,
+            &device,
+            input,
+            inputs,
+            output_format,
+            output_dir,
+            compiler_plugin,
+            runtime_plugin,
+        ),
         Commands::Compile {
             path,
             output,
