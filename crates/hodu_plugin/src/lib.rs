@@ -31,6 +31,7 @@
 mod artifact;
 mod compiler;
 mod format;
+mod interp;
 mod manager;
 mod output;
 mod runtime;
@@ -38,6 +39,7 @@ mod runtime;
 pub use artifact::*;
 pub use compiler::*;
 pub use format::*;
+pub use interp::*;
 pub use manager::*;
 pub use output::*;
 pub use runtime::*;

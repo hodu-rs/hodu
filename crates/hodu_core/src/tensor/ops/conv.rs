@@ -804,8 +804,8 @@ impl Tensor {
         }
     }
 
-    // Convolution gradient operations (internal use for backpropagation)
-    pub(crate) fn conv1d_grad_weight(
+    // Convolution gradient operations (for backpropagation)
+    pub fn conv1d_grad_weight(
         &self,
         grad_output: &Self,
         weight_shape: &[usize],
@@ -891,7 +891,7 @@ impl Tensor {
         }
     }
 
-    pub(crate) fn conv2d_grad_weight(
+    pub fn conv2d_grad_weight(
         &self,
         grad_output: &Self,
         weight_shape: &[usize],
@@ -978,7 +978,7 @@ impl Tensor {
         }
     }
 
-    pub(crate) fn conv3d_grad_weight(
+    pub fn conv3d_grad_weight(
         &self,
         grad_output: &Self,
         weight_shape: &[usize],
@@ -1066,7 +1066,7 @@ impl Tensor {
         }
     }
 
-    pub(crate) fn conv_transpose1d_grad_weight(
+    pub fn conv_transpose1d_grad_weight(
         &self,
         grad_output: &Self,
         weight_shape: &[usize],
@@ -1152,7 +1152,7 @@ impl Tensor {
         }
     }
 
-    pub(crate) fn conv_transpose2d_grad_weight(
+    pub fn conv_transpose2d_grad_weight(
         &self,
         grad_output: &Self,
         weight_shape: &[usize],
@@ -1239,7 +1239,7 @@ impl Tensor {
         }
     }
 
-    pub(crate) fn conv_transpose3d_grad_weight(
+    pub fn conv_transpose3d_grad_weight(
         &self,
         grad_output: &Self,
         weight_shape: &[usize],
