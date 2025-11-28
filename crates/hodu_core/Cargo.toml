@@ -49,7 +49,6 @@ hodu_cpu_kernels = { workspace = true }
 hodu_cuda_kernels = { workspace = true, optional = true }
 hodu_metal_kernels = { workspace = true, optional = true }
 hodu_xla = { workspace = true, optional = true }
-inkwell = { workspace = true }
 num-traits = { workspace = true, default-features = false }
 paste = { workspace = true }
 postcard = { workspace = true, optional = true }

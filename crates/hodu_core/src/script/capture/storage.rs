@@ -114,14 +114,14 @@ pub(super) fn add_target_to_board(id: CaptureBoardId, name: String, tensor: Tens
 
 /// Add an input to the currently active board
 pub fn add_input_to_active(name: &str, tensor: Tensor) -> HoduResult<()> {
-    let board_id = active_board_id().ok_or(HoduError::BuilderNotActive)?;
+    let board_id = active_board_id().ok_or(HoduError::CaptureNotActive)?;
 
     #[cfg(feature = "std")]
     {
         if let Some(mut board) = BOARDS.get_mut(&board_id) {
             board.add_input(name, tensor)
         } else {
-            Err(HoduError::BuilderNotActive)
+            Err(HoduError::CaptureNotActive)
         }
     }
     #[cfg(not(feature = "std"))]
@@ -129,7 +129,7 @@ pub fn add_input_to_active(name: &str, tensor: Tensor) -> HoduResult<()> {
         if let Some(board) = BOARDS.lock().get_mut(&board_id) {
             board.add_input(name, tensor)
         } else {
-            Err(HoduError::BuilderNotActive)
+            Err(HoduError::CaptureNotActive)
         }
     }
 }

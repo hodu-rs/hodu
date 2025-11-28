@@ -17,7 +17,24 @@ readme = "README.md"
 keywords = ["tensor", "machine-learning", "hodu"]
 categories = ["science"]
 
+[[bin]]
+name = "hodu"
+path = "src/cli.rs"
+required-features = ["cli"]
+
 [features]
+cli = [
+    "std",
+    "serde",
+
+    "f8e5m2",
+    "f64",
+    "u16",
+    "u64",
+    "i16",
+    "i64",
+]
+
 default = ["std", "serde"]
 std = ["hodu_internal/std"]
 serde = ["hodu_internal/serde"]
@@ -60,8 +77,9 @@ hodu_nn = { path = "crates/hodu_nn", version = "0.2.4" }
 hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
 hodu_utils = { path = "crates/hodu_utils", version = "0.2.4" }
 hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.4" }
+hodu_plugin = { path = "crates/hodu_plugin", version = "0.2.4" }
 hodu_xla = "0.4.7"
-inkwell = { version = "0.7.1", default-features = false, features = ["llvm21-1"] }
+libloading = "0.9.0"
 num-traits = { version = "0.2.19", default-features = false }
 paste = "1.0.15"
 postcard = { version = "1.1.3", default-features = false, features = ["alloc"] }

@@ -2,13 +2,13 @@ use crate::{
     compat::*,
     ops::Op,
     tensor::TensorId,
-    types::{DType, Device, Runtime, Shape},
+    types::{DType, Device, Shape},
 };
 
 /// Main error type for hodu_core.
 ///
 /// This enum covers all possible error conditions that can occur
-/// during tensor operations, compilation, and execution.
+/// during tensor operations.
 #[derive(Clone)]
 pub enum HoduError {
     // ===== Device Errors =====
@@ -18,8 +18,6 @@ pub enum HoduError {
     DeviceConflictInOp { left: Device, right: Device, op: Op },
     /// Unsupported device type.
     UnsupportedDevice(Device),
-    /// Unsupported device type for a specificRuntime
-    UnsupportedDeviceForRuntime(Device, Runtime),
 
     // ===== DType Errors =====
     /// Data type mismatch between expected and actual dtype.
@@ -32,8 +30,6 @@ pub enum HoduError {
     UnsupportedDTypeForOp { dtype: DType, op: Op },
     /// Unsupported dtype for a specific device.
     UnsupportedDTypeForDevice { dtype: DType, device: Device },
-    /// Unsupported dtype for a specific Runtime.
-    UnsupportedDTypeForRuntime { dtype: DType, runtime: Runtime },
 
     // ===== Shape and Layout Errors =====
     /// Shape mismatch between expected and actual shapes.
@@ -57,25 +53,11 @@ pub enum HoduError {
     /// Requires grad is not set for tensor (only float tensors can have gradients).
     RequiresGradNotSet(TensorId),
 
-    // ===== Builder Errors =====
-    /// Builder context is not active.
-    BuilderNotActive,
-    /// Builder not found with given ID
-    BuilderNotFound(String),
-
-    // ===== Compilation Errors =====
-    /// Module compilation failed
-    CompilationError(String),
-    /// Missing required function in module
-    MissingFunction(String),
-
-    // ===== Execution Errors =====
-    /// Script execution failed
-    ExecutionError(String),
-    /// Missing required input for execution
-    MissingInput(String),
-    /// Missing required attribute
-    MissingAttribute(String),
+    // ===== Capture Errors =====
+    /// Capture board is not active
+    CaptureNotActive,
+    /// Capture board not found with given ID
+    CaptureNotFound(String),
 
     // ===== Backend Errors =====
     /// Backend operation failed
@@ -144,9 +126,6 @@ impl fmt::Display for HoduError {
             Self::UnsupportedDevice(device) => {
                 write!(f, "unsupported {:?} device", device)
             },
-            Self::UnsupportedDeviceForRuntime(device, runtime) => {
-                write!(f, "unsupported {:?} device for {:?} runtime", device, runtime)
-            },
 
             // DType Errors
             Self::DTypeMismatch { expected, got } => {
@@ -167,9 +146,6 @@ impl fmt::Display for HoduError {
             },
             Self::UnsupportedDTypeForDevice { dtype, device } => {
                 write!(f, "unsupported dtype {:?} for {:?} device", dtype, device)
-            },
-            Self::UnsupportedDTypeForRuntime { dtype, runtime } => {
-                write!(f, "unsupported dtype {:?} for {:?} runtime", dtype, runtime)
             },
 
             // Shape and Layout Errors
@@ -207,20 +183,9 @@ impl fmt::Display for HoduError {
                 write!(f, "requires_grad not set or not allowed for tensor: id={:?}", id)
             },
 
-            // Builder Errors
-            Self::BuilderNotActive => {
-                write!(f, "builder context is not active")
-            },
-            Self::BuilderNotFound(msg) => write!(f, "builder not found: {}", msg),
-
-            // Compilation Errors
-            Self::CompilationError(msg) => write!(f, "compilation error: {}", msg),
-            Self::MissingFunction(msg) => write!(f, "missing function: {}", msg),
-
-            // Execution Errors
-            Self::ExecutionError(msg) => write!(f, "execution error: {}", msg),
-            Self::MissingInput(msg) => write!(f, "missing input: {}", msg),
-            Self::MissingAttribute(msg) => write!(f, "missing attribute: {}", msg),
+            // Capture Errors
+            Self::CaptureNotActive => write!(f, "capture board is not active"),
+            Self::CaptureNotFound(msg) => write!(f, "capture board not found: {}", msg),
 
             // Backend Errors
             Self::BackendError(msg) => write!(f, "backend error: {}", msg),
@@ -345,5 +310,5 @@ impl<T> From<std::sync::PoisonError<T>> for HoduError {
     }
 }
 
-/// Result type alias for hodu_core_v2 operations.
+/// Result type alias for hodu_core operations.
 pub type HoduResult<T> = Result<T, HoduError>;

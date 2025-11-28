@@ -42,7 +42,7 @@ impl Tensor {
         validate_dtype_for_device(self.dtype(), device)?;
 
         if crate::script::capture::is_active() {
-            Err(HoduError::BuilderNotActive)
+            Err(HoduError::CaptureNotActive)
         } else {
             let layout = Layout::from_shape(&self.shape());
             let storage = self.with_storage(|storage| storage.to_device(&layout, device))?;

@@ -9,7 +9,7 @@ impl Tensor {
     pub fn input(name: &'static str, shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
         if !crate::script::capture::is_active() {
-            return Err(HoduError::BuilderNotActive);
+            return Err(HoduError::CaptureNotActive);
         }
 
         let layout = Layout::from_shape(&shape);
