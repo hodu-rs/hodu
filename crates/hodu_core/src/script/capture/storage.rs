@@ -21,6 +21,12 @@ static BOARDS: LazyLock<DashMap<CaptureBoardId, CaptureBoard_>> =
 #[cfg(not(feature = "std"))]
 static BOARDS: LazyLock<Mutex<HashMap<CaptureBoardId, CaptureBoard_>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
+#[cfg(feature = "std")]
+thread_local! {
+    static ACTIVE_BOARD: std::cell::RefCell<Option<CaptureBoardId>> = const { std::cell::RefCell::new(None) };
+}
+
+#[cfg(not(feature = "std"))]
 static ACTIVE_BOARD: Mutex<Option<CaptureBoardId>> = Mutex::new(None);
 
 // ============================================================================
@@ -31,7 +37,7 @@ static ACTIVE_BOARD: Mutex<Option<CaptureBoardId>> = Mutex::new(None);
 pub fn is_active() -> bool {
     #[cfg(feature = "std")]
     {
-        ACTIVE_BOARD.lock().unwrap().is_some()
+        ACTIVE_BOARD.with(|cell| cell.borrow().is_some())
     }
     #[cfg(not(feature = "std"))]
     {
@@ -43,7 +49,7 @@ pub fn is_active() -> bool {
 pub fn active_board_id() -> Option<CaptureBoardId> {
     #[cfg(feature = "std")]
     {
-        *ACTIVE_BOARD.lock().unwrap()
+        ACTIVE_BOARD.with(|cell| *cell.borrow())
     }
     #[cfg(not(feature = "std"))]
     {
@@ -55,7 +61,7 @@ pub fn active_board_id() -> Option<CaptureBoardId> {
 pub(super) fn set_active(id: Option<CaptureBoardId>) {
     #[cfg(feature = "std")]
     {
-        *ACTIVE_BOARD.lock().unwrap() = id;
+        ACTIVE_BOARD.with(|cell| *cell.borrow_mut() = id);
     }
     #[cfg(not(feature = "std"))]
     {
