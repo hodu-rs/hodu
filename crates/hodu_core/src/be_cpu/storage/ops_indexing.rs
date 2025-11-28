@@ -71,7 +71,7 @@ pub fn call_ops_index_select(
 
     // Generate kernel name
     let dtype = storage.dtype();
-    let kernel_name = format!("index_select_{}", dtype);
+    let kernel_name = format!("hodu_cpu_index_select_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -194,7 +194,7 @@ pub fn call_ops_index_put(
 
     // Generate kernel name
     let dtype = storage.dtype();
-    let kernel_name = format!("index_put_{}", dtype);
+    let kernel_name = format!("hodu_cpu_index_put_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -333,7 +333,7 @@ pub fn call_ops_gather(
 
     // Generate kernel name
     let dtype = storage.dtype();
-    let kernel_name = format!("gather_{}", dtype);
+    let kernel_name = format!("hodu_cpu_gather_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -455,7 +455,7 @@ pub fn call_ops_scatter(
 
     // Generate kernel name
     let dtype = storage.dtype();
-    let kernel_name = format!("scatter_{}", dtype);
+    let kernel_name = format!("hodu_cpu_scatter_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 

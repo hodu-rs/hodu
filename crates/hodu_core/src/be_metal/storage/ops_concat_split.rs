@@ -131,7 +131,7 @@ pub fn call_ops_concat(
     let output_buffer = device.new_buffer(num_els, dtype, "concat_output")?;
 
     // Call concat kernel
-    let kernel_name = format!("concat_{}", dtype);
+    let kernel_name = format!("hodu_metal_concat_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -201,7 +201,7 @@ pub fn call_ops_split(
     let output_buffer = device.new_buffer(num_els, dtype, "split_output")?;
 
     // Get kernel name
-    let kernel_name = format!("split_{}", dtype);
+    let kernel_name = format!("hodu_metal_split_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

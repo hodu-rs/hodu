@@ -210,7 +210,7 @@ pub fn call_ops_conv(
     };
 
     // Generate kernel name
-    let kernel_name = format!("{}_{}", conv_op, dtype);
+    let kernel_name = format!("hodu_cpu_{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -330,7 +330,7 @@ pub fn call_ops_conv_grad_weight(
     );
 
     // Generate kernel name
-    let kernel_name = format!("{}_{}", conv_op, dtype);
+    let kernel_name = format!("hodu_cpu_{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 

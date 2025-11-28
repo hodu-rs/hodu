@@ -82,7 +82,7 @@ pub fn call_ops_conv(
     let device_id = input_storage.device_id();
     let device_arc = Arc::clone(&input_storage.device);
 
-    let kernel_name = format!("{}_{}", conv_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -177,7 +177,7 @@ pub fn call_ops_conv_grad_weight(
     let device_id = input_storage.device_id();
     let device_arc = Arc::clone(&input_storage.device);
 
-    let kernel_name = format!("{}_{}", conv_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", conv_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

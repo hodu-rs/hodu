@@ -25,7 +25,7 @@ pub fn call_ops_unary(input_storage: &CudaStorage, layout: &Layout, op: Op) -> H
     let device_id = input_storage.device_id();
     let device_arc = Arc::clone(&input_storage.device);
 
-    let kernel_name = format!("{}_{}", unary_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -147,7 +147,7 @@ pub fn call_ops_unary_logical(input_storage: &CudaStorage, layout: &Layout, op: 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
 
-    let kernel_name = format!("{}_{}", unary_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -210,7 +210,7 @@ pub fn call_ops_unary_scalar(
     let device_id = input_storage.device_id();
     let device_arc = Arc::clone(&input_storage.device);
 
-    let kernel_name = format!("{}_{}", unary_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -277,7 +277,7 @@ pub fn call_ops_cmp_scalar(
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
 
-    let kernel_name = format!("{}_{}", cmp_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", cmp_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

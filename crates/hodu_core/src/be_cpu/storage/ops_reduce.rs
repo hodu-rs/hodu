@@ -70,7 +70,7 @@ pub fn call_ops_reduce(
     let metadata = crate::op_metadatas::reduce_metadata(layout, dims, keep_dim);
 
     // Generate kernel name
-    let kernel_name = format!("{}_{}", reduce_op, storage.dtype());
+    let kernel_name = format!("hodu_cpu_{}_{}", reduce_op, storage.dtype());
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 

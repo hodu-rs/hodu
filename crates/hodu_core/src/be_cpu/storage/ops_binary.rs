@@ -31,7 +31,7 @@ pub fn call_ops_binary(
     let metadata = crate::op_metadatas::binary_metadata(lhs_layout, rhs_layout, &output_layout);
 
     // Use Display to get kernel name
-    let kernel_name = format!("{}_{}", binary_op, lhs_storage.dtype());
+    let kernel_name = format!("hodu_cpu_{}_{}", binary_op, lhs_storage.dtype());
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -139,7 +139,7 @@ pub fn call_ops_binary_logical(
     let metadata = crate::op_metadatas::binary_logical_metadata(lhs_layout, rhs_layout, &output_layout);
 
     // Use Display to get kernel name
-    let kernel_name = format!("{}_{}", binary_op, lhs_storage.dtype());
+    let kernel_name = format!("hodu_cpu_{}_{}", binary_op, lhs_storage.dtype());
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -242,7 +242,7 @@ pub fn call_ops_cmp(
     let metadata = crate::op_metadatas::cmp_metadata(lhs_layout, rhs_layout, &output_layout);
 
     // Use Display to get kernel name
-    let kernel_name = format!("{}_{}", cmp_op, lhs_storage.dtype());
+    let kernel_name = format!("hodu_cpu_{}_{}", cmp_op, lhs_storage.dtype());
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 

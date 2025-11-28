@@ -31,7 +31,7 @@ pub fn call_ops_binary(
     let output_buffer = device.new_buffer(num_els, dtype, "binary_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", binary_op, dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", binary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -84,7 +84,7 @@ pub fn call_ops_binary_logical(
     let output_buffer = device.new_buffer(num_els, output_dtype, "binary_logical_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", binary_op, input_dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", binary_op, input_dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -133,7 +133,7 @@ pub fn call_ops_cmp(
     let output_buffer = device.new_buffer(num_els, output_dtype, "cmp_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", cmp_op, input_dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", cmp_op, input_dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

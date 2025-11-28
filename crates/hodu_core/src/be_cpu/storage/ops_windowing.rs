@@ -42,7 +42,7 @@ pub fn call_ops_reduce_window(
     };
 
     // Get kernel prefix from windowing op display
-    let kernel_prefix = format!("{}", windowing_op);
+    let kernel_prefix = format!("hodu_cpu_{}", windowing_op);
 
     let input_shape = layout.shape();
     let ndim = input_shape.ndim();

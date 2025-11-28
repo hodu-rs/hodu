@@ -41,7 +41,7 @@ pub fn call_ops_matmul(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("matmul_{}", dtype);
+    let kernel_name = format!("hodu_cuda_matmul_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -117,7 +117,7 @@ pub fn call_ops_dot(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("dot_{}", dtype);
+    let kernel_name = format!("hodu_cuda_dot_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

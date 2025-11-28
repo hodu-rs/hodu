@@ -78,7 +78,7 @@ pub fn call_ops_matmul(
     let output_buffer = device.new_buffer(num_els, dtype, "matmul_output")?;
 
     // Generate kernel name
-    let kernel_name = format!("matmul_{}", dtype);
+    let kernel_name = format!("hodu_metal_matmul_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -136,7 +136,7 @@ pub fn call_ops_dot(
     let output_buffer = device.new_buffer(num_els, dtype, "dot_output")?;
 
     // Generate kernel name
-    let kernel_name = format!("dot_{}", dtype);
+    let kernel_name = format!("hodu_metal_dot_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

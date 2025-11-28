@@ -36,7 +36,7 @@ pub fn call_ops_cmp_scalar(
     let output_buffer = device.new_buffer(num_els, output_dtype, "cmp_scalar_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", cmp_op, dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", cmp_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -111,7 +111,7 @@ pub fn call_ops_unary(input_storage: &MetalStorage, input_layout: &Layout, op: O
     let output_buffer = device.new_buffer(num_els, dtype, "unary_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", unary_op, dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -156,7 +156,7 @@ pub fn call_ops_unary_logical(input_storage: &MetalStorage, input_layout: &Layou
     let output_buffer = device.new_buffer(num_els, output_dtype, "unary_logical_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", unary_op, dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -205,7 +205,7 @@ pub fn call_ops_unary_scalar(
     let output_buffer = device.new_buffer(num_els, dtype, "unary_scalar_output")?;
 
     // Get kernel name
-    let kernel_name = format!("{}_{}", unary_op, dtype);
+    let kernel_name = format!("hodu_metal_{}_{}", unary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

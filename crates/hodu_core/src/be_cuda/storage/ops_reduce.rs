@@ -56,7 +56,7 @@ pub fn call_ops_reduce(
 
     let dtype = input_storage.dtype();
     let device = input_storage.get_device();
-    let kernel_name = format!("{}_{}", reduce_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", reduce_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

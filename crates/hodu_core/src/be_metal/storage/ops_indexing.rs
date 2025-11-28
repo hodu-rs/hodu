@@ -53,7 +53,7 @@ pub fn call_ops_index_select(
     let output_buffer = device.new_buffer(num_els, dtype, "index_select_output")?;
 
     // Get kernel name
-    let kernel_name = format!("index_select_{}", dtype);
+    let kernel_name = format!("hodu_metal_index_select_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -124,7 +124,7 @@ pub fn call_ops_index_put(
     blit.end_encoding();
 
     // Get kernel name
-    let kernel_name = format!("index_put_{}", dtype);
+    let kernel_name = format!("hodu_metal_index_put_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -180,7 +180,7 @@ pub fn call_ops_gather(
     let output_buffer = device.new_buffer(num_els, dtype, "gather_output")?;
 
     // Get kernel name
-    let kernel_name = format!("gather_{}", dtype);
+    let kernel_name = format!("hodu_metal_gather_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -247,7 +247,7 @@ pub fn call_ops_scatter(
     blit.end_encoding();
 
     // Get kernel name
-    let kernel_name = format!("scatter_{}", dtype);
+    let kernel_name = format!("hodu_metal_scatter_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

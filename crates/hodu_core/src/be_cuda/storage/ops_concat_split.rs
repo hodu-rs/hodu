@@ -93,7 +93,7 @@ pub fn call_ops_concat(
 
     let metadata = crate::op_metadatas::concat_metadata(&layouts, dim, &output_shape_vec);
 
-    let kernel_name = format!("concat_{}", dtype);
+    let kernel_name = format!("hodu_cuda_concat_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -197,7 +197,7 @@ pub fn call_ops_split(
     let device_arc = Arc::clone(&storage.device);
 
     // Get kernel name
-    let kernel_name = format!("split_{}", dtype);
+    let kernel_name = format!("hodu_cuda_split_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

@@ -28,7 +28,7 @@ pub fn call_ops_binary(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("{}_{}", binary_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", binary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
     let device_id = lhs_storage.device_id();
@@ -163,7 +163,7 @@ pub fn call_ops_binary_logical(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("{}_{}", binary_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", binary_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 
@@ -239,7 +239,7 @@ pub fn call_ops_cmp(
     let dtype = lhs_storage.dtype();
     let device = lhs_storage.get_device();
 
-    let kernel_name = format!("{}_{}", cmp_op, dtype);
+    let kernel_name = format!("hodu_cuda_{}_{}", cmp_op, dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
 

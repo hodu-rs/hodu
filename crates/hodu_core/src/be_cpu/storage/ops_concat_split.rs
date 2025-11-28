@@ -99,7 +99,7 @@ pub fn call_ops_concat(
     let metadata = crate::op_metadatas::concat_metadata(layouts, dim, &output_shape_vec);
 
     // Generate kernel name
-    let kernel_name = format!("concat_{}", dtype);
+    let kernel_name = format!("hodu_cpu_concat_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -233,7 +233,7 @@ pub fn call_ops_split(
 
     // Generate kernel name
     let dtype = storage.dtype();
-    let kernel_name = format!("split_{}", dtype);
+    let kernel_name = format!("hodu_cpu_split_{}", dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 

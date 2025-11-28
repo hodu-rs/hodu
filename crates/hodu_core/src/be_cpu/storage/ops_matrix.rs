@@ -107,7 +107,7 @@ pub fn call_ops_matmul(
     let metadata = crate::op_metadatas::matmul_metadata(lhs_layout, rhs_layout, &output_layout)?;
 
     // Generate kernel name
-    let kernel_name = format!("matmul_{}", lhs_storage.dtype());
+    let kernel_name = format!("hodu_cpu_matmul_{}", lhs_storage.dtype());
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
@@ -243,7 +243,7 @@ pub fn call_ops_dot(
     let metadata = crate::op_metadatas::dot_metadata(lhs_layout, rhs_layout)?;
 
     // Generate kernel name
-    let kernel_name = format!("dot_{}", lhs_storage.dtype());
+    let kernel_name = format!("hodu_cpu_dot_{}", lhs_storage.dtype());
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = hodu_cpu_kernels::macros::Kernel(kernel_name_static);
 
