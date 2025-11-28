@@ -1,19 +1,46 @@
 //! Hodu Plugin System (std only)
 //!
 //! This crate provides the plugin system for Hodu:
-//! - `BackendPlugin`: Compilers and runtimes (LLVM, Metal, XLA, etc.)
+//! - `CompilerPlugin`: Compilers for AOT/JIT compilation (LLVM, Metal, XLA, etc.)
+//! - `RuntimePlugin`: Runtimes for executing compiled artifacts (Native, CUDA, Metal, etc.)
 //! - `FormatPlugin`: Model format loaders (ONNX, SafeTensors, etc.)
 //! - `PluginManager`: Dynamic plugin loading and management
+//!
+//! ## Architecture
+//!
+//! ```text
+//! Script (IR)
+//!     │
+//!     ▼
+//! ┌─────────────────┐
+//! │ CompilerPlugin  │  compile() / build()
+//! └─────────────────┘
+//!     │
+//!     ▼
+//! CompiledArtifact
+//!     │
+//!     ▼
+//! ┌─────────────────┐
+//! │ RuntimePlugin   │  load() / execute()
+//! └─────────────────┘
+//!     │
+//!     ▼
+//! Output Tensors
+//! ```
 
-mod backend;
+mod artifact;
+mod compiler;
 mod format;
 mod manager;
 mod output;
+mod runtime;
 
-pub use backend::*;
+pub use artifact::*;
+pub use compiler::*;
 pub use format::*;
 pub use manager::*;
 pub use output::*;
+pub use runtime::*;
 
 // Re-export from hodu_core
 pub use hodu_core::error::{HoduError, HoduResult};

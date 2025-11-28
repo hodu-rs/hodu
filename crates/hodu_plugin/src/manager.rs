@@ -2,13 +2,20 @@
 
 #![allow(improper_ctypes_definitions)]
 
-use crate::{BackendPlugin, FormatPlugin, HoduError, HoduResult};
+use crate::{CompilerPlugin, FormatPlugin, HoduError, HoduResult, RuntimePlugin};
 use hodu_compat::*;
 use std::path::{Path, PathBuf};
 
-/// Loaded backend plugin with its library handle
-struct LoadedBackend {
-    plugin: Box<dyn BackendPlugin>,
+/// Loaded compiler plugin with its library handle
+struct LoadedCompiler {
+    plugin: Box<dyn CompilerPlugin>,
+    #[allow(dead_code)]
+    library: Option<libloading::Library>,
+}
+
+/// Loaded runtime plugin with its library handle
+struct LoadedRuntime {
+    plugin: Box<dyn RuntimePlugin>,
     #[allow(dead_code)]
     library: Option<libloading::Library>,
 }
@@ -20,9 +27,10 @@ struct LoadedFormat {
     library: Option<libloading::Library>,
 }
 
-/// Plugin manager for loading and managing backend and format plugins
+/// Plugin manager for loading and managing compiler, runtime, and format plugins
 pub struct PluginManager {
-    backends: HashMap<String, LoadedBackend>,
+    compilers: HashMap<String, LoadedCompiler>,
+    runtimes: HashMap<String, LoadedRuntime>,
     formats: HashMap<String, LoadedFormat>,
     plugin_dir: PathBuf,
 }
@@ -31,7 +39,8 @@ impl PluginManager {
     /// Create a new plugin manager with the given plugin directory
     pub fn new(plugin_dir: impl Into<PathBuf>) -> Self {
         Self {
-            backends: HashMap::new(),
+            compilers: HashMap::new(),
+            runtimes: HashMap::new(),
             formats: HashMap::new(),
             plugin_dir: plugin_dir.into(),
         }
@@ -56,29 +65,27 @@ impl PluginManager {
         &self.plugin_dir
     }
 
-    /// Load a backend plugin from a dynamic library file
-    pub fn load_backend(&mut self, path: impl AsRef<Path>) -> HoduResult<()> {
+    // ========== Compiler Plugin Loading ==========
+
+    /// Load a compiler plugin from a dynamic library file
+    pub fn load_compiler(&mut self, path: impl AsRef<Path>) -> HoduResult<()> {
         let path = path.as_ref();
 
-        // Load the library
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        // Get the create function
-        // Signature: extern "C" fn() -> *mut dyn BackendPlugin
-        type CreateFn = unsafe extern "C" fn() -> *mut dyn BackendPlugin;
-        let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_backend_plugin_create") }
+        type CreateFn = unsafe extern "C" fn() -> *mut dyn CompilerPlugin;
+        let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_compiler_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
-        // Create the plugin instance
         let plugin_ptr = unsafe { create_fn() };
-        let plugin: Box<dyn BackendPlugin> = unsafe { Box::from_raw(plugin_ptr) };
+        let plugin: Box<dyn CompilerPlugin> = unsafe { Box::from_raw(plugin_ptr) };
 
         let name = plugin.name().to_string();
 
-        self.backends.insert(
+        self.compilers.insert(
             name,
-            LoadedBackend {
+            LoadedCompiler {
                 plugin,
                 library: Some(library),
             },
@@ -87,21 +94,90 @@ impl PluginManager {
         Ok(())
     }
 
+    /// Register a builtin compiler plugin (doesn't need dynamic loading)
+    pub fn register_compiler(&mut self, plugin: Box<dyn CompilerPlugin>) {
+        let name = plugin.name().to_string();
+        self.compilers.insert(name, LoadedCompiler { plugin, library: None });
+    }
+
+    /// Get a compiler plugin by name
+    pub fn compiler(&self, name: &str) -> Option<&dyn CompilerPlugin> {
+        self.compilers.get(name).map(|c| c.plugin.as_ref())
+    }
+
+    /// List all loaded compiler names
+    pub fn compiler_names(&self) -> Vec<&str> {
+        self.compilers.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// List all loaded compilers
+    pub fn compilers(&self) -> impl Iterator<Item = &dyn CompilerPlugin> {
+        self.compilers.values().map(|c| c.plugin.as_ref())
+    }
+
+    // ========== Runtime Plugin Loading ==========
+
+    /// Load a runtime plugin from a dynamic library file
+    pub fn load_runtime(&mut self, path: impl AsRef<Path>) -> HoduResult<()> {
+        let path = path.as_ref();
+
+        let library = unsafe { libloading::Library::new(path) }
+            .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
+
+        type CreateFn = unsafe extern "C" fn() -> *mut dyn RuntimePlugin;
+        let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_runtime_plugin_create") }
+            .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
+
+        let plugin_ptr = unsafe { create_fn() };
+        let plugin: Box<dyn RuntimePlugin> = unsafe { Box::from_raw(plugin_ptr) };
+
+        let name = plugin.name().to_string();
+
+        self.runtimes.insert(
+            name,
+            LoadedRuntime {
+                plugin,
+                library: Some(library),
+            },
+        );
+
+        Ok(())
+    }
+
+    /// Register a builtin runtime plugin (doesn't need dynamic loading)
+    pub fn register_runtime(&mut self, plugin: Box<dyn RuntimePlugin>) {
+        let name = plugin.name().to_string();
+        self.runtimes.insert(name, LoadedRuntime { plugin, library: None });
+    }
+
+    /// Get a runtime plugin by name
+    pub fn runtime(&self, name: &str) -> Option<&dyn RuntimePlugin> {
+        self.runtimes.get(name).map(|r| r.plugin.as_ref())
+    }
+
+    /// List all loaded runtime names
+    pub fn runtime_names(&self) -> Vec<&str> {
+        self.runtimes.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// List all loaded runtimes
+    pub fn runtimes(&self) -> impl Iterator<Item = &dyn RuntimePlugin> {
+        self.runtimes.values().map(|r| r.plugin.as_ref())
+    }
+
+    // ========== Format Plugin Loading ==========
+
     /// Load a format plugin from a dynamic library file
     pub fn load_format(&mut self, path: impl AsRef<Path>) -> HoduResult<()> {
         let path = path.as_ref();
 
-        // Load the library
         let library = unsafe { libloading::Library::new(path) }
             .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
 
-        // Get the create function
-        // Signature: extern "C" fn() -> *mut dyn FormatPlugin
         type CreateFn = unsafe extern "C" fn() -> *mut dyn FormatPlugin;
         let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_format_plugin_create") }
             .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
 
-        // Create the plugin instance
         let plugin_ptr = unsafe { create_fn() };
         let plugin: Box<dyn FormatPlugin> = unsafe { Box::from_raw(plugin_ptr) };
 
@@ -117,6 +193,37 @@ impl PluginManager {
 
         Ok(())
     }
+
+    /// Register a builtin format plugin (doesn't need dynamic loading)
+    pub fn register_format(&mut self, plugin: Box<dyn FormatPlugin>) {
+        let name = plugin.name().to_string();
+        self.formats.insert(name, LoadedFormat { plugin, library: None });
+    }
+
+    /// Get a format plugin by name
+    pub fn format(&self, name: &str) -> Option<&dyn FormatPlugin> {
+        self.formats.get(name).map(|f| f.plugin.as_ref())
+    }
+
+    /// Get a format plugin by file extension
+    pub fn format_for_extension(&self, ext: &str) -> Option<&dyn FormatPlugin> {
+        self.formats
+            .values()
+            .find(|f| f.plugin.supports_extension(ext))
+            .map(|f| f.plugin.as_ref())
+    }
+
+    /// List all loaded format names
+    pub fn format_names(&self) -> Vec<&str> {
+        self.formats.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// List all loaded formats
+    pub fn formats(&self) -> impl Iterator<Item = &dyn FormatPlugin> {
+        self.formats.values().map(|f| f.plugin.as_ref())
+    }
+
+    // ========== Bulk Loading ==========
 
     /// Load all plugins from the plugin directory
     pub fn load_all(&mut self) -> HoduResult<()> {
@@ -139,12 +246,15 @@ impl PluginManager {
                 continue;
             }
 
-            // Try to load as backend first, then as format
             let filename = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
 
-            if filename.contains("backend") {
-                if let Err(e) = self.load_backend(&path) {
-                    eprintln!("Warning: Failed to load backend plugin {:?}: {}", path, e);
+            if filename.contains("compiler") {
+                if let Err(e) = self.load_compiler(&path) {
+                    eprintln!("Warning: Failed to load compiler plugin {:?}: {}", path, e);
+                }
+            } else if filename.contains("runtime") {
+                if let Err(e) = self.load_runtime(&path) {
+                    eprintln!("Warning: Failed to load runtime plugin {:?}: {}", path, e);
                 }
             } else if filename.contains("format") {
                 if let Err(e) = self.load_format(&path) {
@@ -154,55 +264,5 @@ impl PluginManager {
         }
 
         Ok(())
-    }
-
-    /// Get a backend plugin by name
-    pub fn backend(&self, name: &str) -> Option<&dyn BackendPlugin> {
-        self.backends.get(name).map(|b| b.plugin.as_ref())
-    }
-
-    /// Get a format plugin by name
-    pub fn format(&self, name: &str) -> Option<&dyn FormatPlugin> {
-        self.formats.get(name).map(|f| f.plugin.as_ref())
-    }
-
-    /// Get a format plugin by file extension
-    pub fn format_for_extension(&self, ext: &str) -> Option<&dyn FormatPlugin> {
-        self.formats
-            .values()
-            .find(|f| f.plugin.supports_extension(ext))
-            .map(|f| f.plugin.as_ref())
-    }
-
-    /// List all loaded backend names
-    pub fn backend_names(&self) -> Vec<&str> {
-        self.backends.keys().map(|s| s.as_str()).collect()
-    }
-
-    /// List all loaded format names
-    pub fn format_names(&self) -> Vec<&str> {
-        self.formats.keys().map(|s| s.as_str()).collect()
-    }
-
-    /// List all loaded backends with their info
-    pub fn backends(&self) -> impl Iterator<Item = &dyn BackendPlugin> {
-        self.backends.values().map(|b| b.plugin.as_ref())
-    }
-
-    /// List all loaded formats with their info
-    pub fn formats(&self) -> impl Iterator<Item = &dyn FormatPlugin> {
-        self.formats.values().map(|f| f.plugin.as_ref())
-    }
-
-    /// Register a builtin backend plugin (doesn't need dynamic loading)
-    pub fn register_backend(&mut self, plugin: Box<dyn BackendPlugin>) {
-        let name = plugin.name().to_string();
-        self.backends.insert(name, LoadedBackend { plugin, library: None });
-    }
-
-    /// Register a builtin format plugin (doesn't need dynamic loading)
-    pub fn register_format(&mut self, plugin: Box<dyn FormatPlugin>) {
-        let name = plugin.name().to_string();
-        self.formats.insert(name, LoadedFormat { plugin, library: None });
     }
 }

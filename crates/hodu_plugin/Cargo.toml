@@ -1,12 +1,22 @@
 [package]
 name = "hodu_plugin"
 version = "0.2.4"
-description = "Plugin system for Hodu backends and format loaders (std only)"
+description = "Plugin system for Hodu compilers, runtimes and format loaders (std only)"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 publish = true
 repository = "https://github.com/hodu-rs/hodu"
+
+[features]
+default = []
+
+f8e5m2 = ["hodu_core/f8e5m2"]
+f64 = ["hodu_core/f64"]
+u16 = ["hodu_core/u16"]
+u64 = ["hodu_core/u64"]
+i16 = ["hodu_core/i16"]
+i64 = ["hodu_core/i64"]
 
 [dependencies]
 hodu_compat = { workspace = true, features = ["std"] }
