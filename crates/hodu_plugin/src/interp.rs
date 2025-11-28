@@ -104,7 +104,7 @@ impl ExecutableModuleInner for InterpExecutable {
 fn execute_snapshot(snapshot: &Snapshot, inputs: &[(&str, &Tensor)]) -> HoduResult<HashMap<String, Tensor>> {
     let mut tensors: HashMap<SnapshotTensorId, Tensor> = HashMap::new();
 
-    // 1. Load inputs
+    // 1. Load inputs (convert to CPU if needed)
     for input_spec in &snapshot.inputs {
         let input_tensor = inputs
             .iter()
@@ -125,7 +125,13 @@ fn execute_snapshot(snapshot: &Snapshot, inputs: &[(&str, &Tensor)]) -> HoduResu
             });
         }
 
-        tensors.insert(input_spec.id, input_tensor.clone());
+        // InterpRuntime executes on CPU, so convert GPU tensors to CPU
+        let cpu_tensor = if input_tensor.device() != Device::CPU {
+            input_tensor.to_device(Device::CPU)?
+        } else {
+            input_tensor.clone()
+        };
+        tensors.insert(input_spec.id, cpu_tensor);
     }
 
     // 2. Load constants
