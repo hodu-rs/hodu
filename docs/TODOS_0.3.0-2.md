@@ -447,8 +447,10 @@ flowchart TB
   - [ ] CPU codegen
   - [ ] CUDA codegen (PTX)
   - [ ] ROCm codegen
-- [ ] hodu-compiler-metal
-  - [ ] MSL codegen
+- [x] hodu-compiler-metal
+  - [x] MSL codegen
+  - [x] Dispatch manifest generation
+  - [x] Bundled hodu_metal_kernels
 
 ### Phase 6: Runtime 플러그인 구현
 

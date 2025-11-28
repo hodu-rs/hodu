@@ -11,7 +11,7 @@ pub fn validate_dtype_for_device(dtype: DType, device: Device) -> HoduResult<()>
         Device::CPU => Ok(()),
         #[cfg(feature = "cuda")]
         Device::CUDA(_) => Ok(()),
-        #[cfg(feature = "metal")]
+        #[cfg(any(feature = "metal", feature = "metal-device"))]
         Device::Metal => {
             // metal: f8e4m3, f8e5m2, f64 not supported
             match dtype {

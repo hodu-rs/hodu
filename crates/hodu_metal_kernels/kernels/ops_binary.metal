@@ -4,8 +4,6 @@
 using namespace metal;
 
 template <typename T> T sub_with_clamp(T x, T y) { return (x > y) ? (x - y) : 0; }
-template <typename T> T maximum(T x, T y) { return (x > y) ? x : y; }
-template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 
 // Integer power function
 template <typename T> T ipow(T base, T exp) {

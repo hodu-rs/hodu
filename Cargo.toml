@@ -1,6 +1,6 @@
 [workspace]
-members = ["crates/*"]
-exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
+members = ["crates/*", "test-playground"]
+exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels", "plugins/hodu-compiler-metal"]
 resolver = "2"
 
 [package]
@@ -113,11 +113,12 @@ proc-macro2 = "1.0"
 quote = "1.0"
 rand = { version = "0.9.2", default-features = false }
 rand_distr = { version = "0.5.1", default-features = false }
-serde = { version = "1.0.219", default-features = false, features = [
+serde = { version = "1.0.228", default-features = false, features = [
     "derive",
     "alloc",
 ] }
-serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.145", default-features = false, features = ["alloc"] }
+serde_repr = "0.1.20"
 smallvec = { version = "1.15.1" }
 spin = "0.10"
 syn = { version = "2.0", features = ["full"] }

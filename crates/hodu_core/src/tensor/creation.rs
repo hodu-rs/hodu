@@ -19,7 +19,7 @@ pub fn get_runtime_device() -> Device {
         0 => Device::CPU,
         #[cfg(feature = "cuda")]
         1..=16 => Device::CUDA(encoded - 1),
-        #[cfg(feature = "metal")]
+        #[cfg(any(feature = "metal", feature = "metal-device"))]
         17 => Device::Metal,
         _ => Device::CPU, // Fallback
     }
@@ -36,7 +36,7 @@ pub fn set_runtime_device(device: Device) {
             }
             device_id + 1
         },
-        #[cfg(feature = "metal")]
+        #[cfg(any(feature = "metal", feature = "metal-device"))]
         Device::Metal => 17,
     };
     RUNTIME_DEVICE.store(encoded, Ordering::Relaxed);

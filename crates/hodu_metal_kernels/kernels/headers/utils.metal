@@ -4,6 +4,10 @@
 
 using namespace metal;
 
+// Common helper functions
+template <typename T> T maximum(T x, T y) { return (x > y) ? x : y; }
+template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
+
 inline bool is_contiguous(const size_t num_dims, constant size_t *dims, constant size_t *strides) {
     size_t acc = 1;
     for (unsigned int d = 0; d < num_dims; d++) {

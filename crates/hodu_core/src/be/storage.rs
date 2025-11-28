@@ -942,6 +942,8 @@ impl BackendStorage {
                     let converted_storage = MetalStorage::from_cpu_storage(&contiguous_storage)?;
                     Ok(Self::Metal(converted_storage))
                 },
+                #[cfg(all(feature = "metal-device", not(feature = "metal")))]
+                Device::Metal => Err(HoduError::UnsupportedDevice(Device::Metal)),
             },
             #[cfg(feature = "cuda")]
             Self::CUDA(storage) => match target_device {

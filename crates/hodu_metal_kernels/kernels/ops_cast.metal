@@ -45,10 +45,6 @@ using namespace metal;
         }                                                                                          \
     }
 
-// Helper template for clamping
-template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
-template <typename T> T maximum(T x, T y) { return (x > y) ? x : y; }
-
 // ============================================================================
 // BOOL conversions
 // ============================================================================

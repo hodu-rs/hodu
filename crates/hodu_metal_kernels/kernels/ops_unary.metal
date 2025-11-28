@@ -4,8 +4,6 @@
 
 using namespace metal;
 
-template <typename T> T maximum(T x, T y) { return (x > y) ? x : y; }
-template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
 template <typename T> T m_pow_int(T base, unsigned int exponent) {
     T result = 1;
     while (exponent > 0) {

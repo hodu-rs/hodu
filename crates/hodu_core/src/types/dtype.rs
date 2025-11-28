@@ -1,30 +1,31 @@
 use crate::compat::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr))]
+#[repr(u8)]
 pub enum DType {
-    BOOL,
-    F8E4M3,
+    BOOL = 0,
+    F8E4M3 = 1,
     #[cfg(feature = "f8e5m2")]
-    F8E5M2,
-    BF16,
-    F16,
+    F8E5M2 = 2,
+    BF16 = 3,
+    F16 = 4,
     #[default]
-    F32,
+    F32 = 5,
     #[cfg(feature = "f64")]
-    F64,
-    U8,
+    F64 = 6,
+    U8 = 7,
     #[cfg(feature = "u16")]
-    U16,
-    U32,
+    U16 = 8,
+    U32 = 9,
     #[cfg(feature = "u64")]
-    U64,
-    I8,
+    U64 = 10,
+    I8 = 11,
     #[cfg(feature = "i16")]
-    I16,
-    I32,
+    I16 = 12,
+    I32 = 13,
     #[cfg(feature = "i64")]
-    I64,
+    I64 = 14,
 }
 
 impl fmt::Display for DType {

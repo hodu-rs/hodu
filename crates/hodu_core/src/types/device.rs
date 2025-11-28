@@ -6,7 +6,7 @@ pub enum Device {
     CPU,
     #[cfg(feature = "cuda")]
     CUDA(usize),
-    #[cfg(feature = "metal")]
+    #[cfg(any(feature = "metal", feature = "metal-device"))]
     Metal,
 }
 
@@ -16,7 +16,7 @@ impl fmt::Display for Device {
             Device::CPU => write!(f, "cpu"),
             #[cfg(feature = "cuda")]
             Device::CUDA(id) => write!(f, "cuda::{id}"),
-            #[cfg(feature = "metal")]
+            #[cfg(any(feature = "metal", feature = "metal-device"))]
             Device::Metal => write!(f, "Metal"),
         }
     }
@@ -38,7 +38,7 @@ impl Device {
         matches!(self, Device::CUDA(_))
     }
 
-    #[cfg(feature = "metal")]
+    #[cfg(any(feature = "metal", feature = "metal-device"))]
     pub fn is_metal(&self) -> bool {
         matches!(self, Device::Metal)
     }

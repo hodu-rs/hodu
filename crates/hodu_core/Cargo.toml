@@ -20,7 +20,7 @@ std = [
     "rand_distr/std",
     "serde?/std",
 ]
-serde = ["dep:postcard", "dep:serde", "smallvec/serde"]
+serde = ["dep:postcard", "dep:serde", "dep:serde_repr", "smallvec/serde"]
 
 # optional dtype
 f8e5m2 = []
@@ -35,7 +35,8 @@ openblas = ["hodu_cpu_kernels/openblas"]
 
 # optional backend
 cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
-metal = ["std", "dep:hodu_metal_kernels"]
+metal = ["std", "metal-device", "dep:hodu_metal_kernels"]
+metal-device = []  # Device::Metal enum only, no runtime
 
 # optional runtime
 xla = ["std", "i64", "dep:hodu_xla"]
@@ -55,5 +56,6 @@ postcard = { workspace = true, optional = true }
 rand = { workspace = true, default-features = false }
 rand_distr = { workspace = true, default-features = false }
 serde = { workspace = true, optional = true }
+serde_repr = { workspace = true, optional = true }
 smallvec = { workspace = true }
 spin = { workspace = true }

@@ -4,9 +4,6 @@
 
 using namespace metal;
 
-template <typename T> T maximum(T x, T y) { return (x > y) ? x : y; }
-template <typename T> T minimum(T x, T y) { return (x < y) ? x : y; }
-
 // Reduce window operations: Max, Min, Sum
 // These kernels perform reductions over sliding windows with configurable strides and padding
 //

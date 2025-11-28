@@ -1,5 +1,7 @@
 //! Hodu CLI - Execute and inspect Hodu models
 
+#[path = "cli/compile.rs"]
+mod compile;
 #[path = "cli/info.rs"]
 mod info;
 #[path = "cli/run.rs"]
@@ -36,6 +38,28 @@ enum Commands {
         inputs: Vec<String>,
     },
 
+    /// Compile a .hdss model to target format
+    Compile {
+        /// Path to the .hdss file
+        path: PathBuf,
+
+        /// Output file path
+        #[arg(short, long)]
+        output: Option<PathBuf>,
+
+        /// Target device (cpu, metal, cuda:0)
+        #[arg(short, long, default_value = "metal")]
+        device: String,
+
+        /// Output format (msl, air, metallib, ptx, cubin, llvm-ir, object)
+        #[arg(short, long, default_value = "metallib")]
+        format: String,
+
+        /// Path to compiler plugin (.dylib/.so/.dll)
+        #[arg(short, long)]
+        plugin: Option<PathBuf>,
+    },
+
     /// Show information about a .hdss model file
     Info {
         /// Path to the .hdss file
@@ -53,6 +77,13 @@ fn main() {
             input,
             inputs,
         } => run::execute(path, &device, input, inputs),
+        Commands::Compile {
+            path,
+            output,
+            device,
+            format,
+            plugin,
+        } => compile::execute(path, output, &device, &format, plugin),
         Commands::Info { path } => info::execute(path),
     };
 

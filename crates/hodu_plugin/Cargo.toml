@@ -9,7 +9,9 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
-default = []
+default = ["metal-device", "f8e5m2", "f64", "u16", "u64", "i16", "i64"]
+
+metal-device = ["hodu_core/metal-device"]
 
 f8e5m2 = ["hodu_core/f8e5m2"]
 f64 = ["hodu_core/f64"]
