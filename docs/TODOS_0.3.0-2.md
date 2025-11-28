@@ -471,54 +471,121 @@ hodu plugin info llvm
 ## Crate 구조
 
 ```mermaid
-flowchart TB
-    subgraph CLI["hodu (CLI)"]
-        main[main.rs]
-        cli[cli.rs]
+flowchart LR
+    subgraph User["👤 User-Facing"]
+        hodu["hodu<br/>(LIB)"]
+        cli["hodu<br/>(CLI)"]
     end
 
-    subgraph CoreCrate["hodu_core"]
-        script[script/]
-        capture[capture/]
-        snapshot[snapshot.rs]
+    subgraph Core["📦 Core"]
+        internal["hodu_internal"]
+        core["hodu_core"]
+        plugin["hodu_plugin"]
     end
 
-    subgraph PluginCrate["hodu_plugin"]
-        compiler_trait[compiler.rs]
-        runtime_trait[runtime.rs]
-        format_trait[format.rs]
-        artifact[artifact.rs]
-        output[output.rs]
-        manager[manager.rs]
+    subgraph Modules["🧩 Modules"]
+        nn["hodu_nn"]
+        utils["hodu_utils"]
+        compat["hodu_compat"]
     end
 
-    subgraph CompilerPlugins["Compiler Plugins"]
-        llvm[hodu-compiler-llvm]
-        metal_c[hodu-compiler-metal]
-        xla_c[hodu-compiler-xla]
+    subgraph Kernels["⚡ Kernels"]
+        cpu["hodu_cpu<br/>_kernels"]
+        metal_k["hodu_metal<br/>_kernels"]
+        cuda_k["hodu_cuda<br/>_kernels"]
     end
 
-    subgraph RuntimePlugins["Runtime Plugins"]
-        native[hodu-runtime-native]
-        cuda[hodu-runtime-cuda]
-        metal_r[hodu-runtime-metal]
-        onnx_r[hodu-runtime-onnx]
-        interp[hodu-runtime-interp<br/>builtin]
+    subgraph Macros["🔧 Macros"]
+        macro_utils["hodu_macro<br/>_utils"]
+        nn_macros["hodu_nn<br/>_macros"]
+        utils_macros["hodu_utils<br/>_macros"]
     end
 
-    subgraph FormatPlugins["Format Plugins"]
-        onnx_f[hodu-format-onnx]
-        safetensors[hodu-format-safetensors]
-        gguf[hodu-format-gguf]
+    subgraph Plugins["🔌 Plugins (dylib)"]
+        compiler_metal["hodu-compiler<br/>-metal"]
+        runtime_metal["hodu-runtime<br/>-metal"]
     end
 
-    CLI --> PluginCrate
-    CLI --> CoreCrate
-    PluginCrate --> CoreCrate
-    CompilerPlugins --> PluginCrate
-    RuntimePlugins --> PluginCrate
-    FormatPlugins --> PluginCrate
+    %% hodu (LIB)
+    hodu --> internal
+
+    %% hodu (CLI)
+    cli --> core
+    cli --> plugin
+
+    %% hodu_internal
+    internal --> core
+    internal --> nn
+    internal --> utils
+
+    %% hodu_core
+    core --> compat
+    core --> cpu
+    core -.->|feature:metal| metal_k
+    core -.->|feature:cuda| cuda_k
+
+    %% hodu_plugin
+    plugin --> core
+    plugin --> compat
+
+    %% hodu_nn
+    nn --> core
+    nn --> compat
+    nn --> nn_macros
+
+    %% hodu_utils
+    utils --> core
+    utils --> compat
+    utils --> utils_macros
+
+    %% Macros
+    nn_macros --> macro_utils
+    utils_macros --> macro_utils
+
+    %% Plugins
+    compiler_metal --> plugin
+    compiler_metal --> core
+    runtime_metal --> plugin
+    runtime_metal --> core
 ```
+
+### Crate 설명
+
+| Crate | 설명 |
+|-------|------|
+| `hodu` (LIB) | 사용자용 메인 라이브러리, `hodu_internal` re-export |
+| `hodu` (CLI) | 커맨드라인 도구 (`hodu run`, `hodu compile`, `hodu info`) |
+| `hodu_internal` | Tensor, Backend, Ops 구현 (내부용) |
+| `hodu_core` | Script/Snapshot IR, Format (hdss/hdt/json), Tensor |
+| `hodu_plugin` | Plugin traits, PluginManager, CompiledArtifact |
+| `hodu_nn` | Neural Network 레이어 (Linear, Conv2d, etc.) |
+| `hodu_utils` | 유틸리티 함수들 |
+| `hodu_compat` | no_std 호환 HashMap/Vec (std/alloc 선택) |
+| `hodu_cpu_kernels` | CPU 커널 구현 (SIMD) |
+| `hodu_metal_kernels` | Metal 셰이더 (.metal 파일) |
+| `hodu_cuda_kernels` | CUDA 커널 (.cu 파일) |
+| `hodu_macro_utils` | 공통 proc-macro 유틸 |
+| `hodu_nn_macros` | NN 레이어용 proc-macro |
+| `hodu_utils_macros` | Utils용 proc-macro |
+| `hodu-compiler-metal` | Metal 컴파일러 플러그인 (dylib) |
+| `hodu-runtime-metal` | Metal 런타임 플러그인 (dylib) |
+
+### 외부 의존성
+
+| Crate | 외부 의존성 |
+|-------|------------|
+| `hodu` (CLI) | `clap` |
+| `hodu_core` | `dashmap`, `float8`, `half`, `num-traits`, `paste`, `postcard`, `rand`, `rand_distr`, `serde`, `serde_json`, `serde_repr`, `smallvec`, `spin` |
+| `hodu_plugin` | `libloading`, `float8`, `half` |
+| `hodu_compat` | `spin` |
+| `hodu_cpu_kernels` | `float8`, `half`, `paste` |
+| `hodu_metal_kernels` | `half`, `objc2`, `objc2-foundation`, `objc2-metal` |
+| `hodu_cuda_kernels` | `cudarc`, `float8`, `half`, `paste`, `spin` |
+| `hodu_macro_utils` | `proc-macro2`, `quote`, `syn`, `toml_edit` |
+| `hodu_nn_macros` | `proc-macro2`, `quote`, `syn` |
+| `hodu_utils_macros` | `proc-macro2`, `quote`, `syn` |
+| `hodu-compiler-metal` | `serde`, `serde_json`, `serde_bytes` |
+| `hodu-runtime-metal` | `serde`, `serde_json`, `serde_bytes`, `metal`, `objc` |
 
 ---
 
