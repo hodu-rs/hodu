@@ -456,7 +456,11 @@ flowchart TB
 
 - [ ] hodu-runtime-native (dlopen)
 - [ ] hodu-runtime-cuda
-- [ ] hodu-runtime-metal
+- [x] hodu-runtime-metal
+  - [x] Metal device/buffer 관리
+  - [x] Kernel dispatch 실행
+  - [x] TensorData 기반 cross-dylib 통신
+  - [x] FFI double-boxing 패턴 적용
 
 ### Phase 7: Format 플러그인 구현
 
