@@ -297,7 +297,151 @@ impl PluginManager {
 
 ## CLI 명령어
 
-### 플러그인 관리
+```bash
+hodu --help
+# Use 'hodu <COMMAND> --help' for more information about a command.
+```
+
+### hodu run
+
+모델 실행 명령어.
+
+```bash
+hodu run [OPTIONS] <PATH>
+
+Arguments:
+  <PATH>  Path to the .hdss file
+
+Options:
+  -d, --device <DEVICE>            Device (cpu, cuda:N, metal) [default: cpu]
+  -i, --input <INPUT>              Input tensor (name=path.hdt), repeatable
+  -I, --inputs <INPUTS>            Inputs comma-separated (name=a.hdt,name=b.json)
+  -f, --output-format <FORMAT>     Output format (pretty, json, hdt) [default: pretty]
+  -o, --output-dir <DIR>           Output directory for hdt format
+      --compiler-plugin <PATH>     Compiler plugin (.dylib/.so/.dll)
+      --runtime-plugin <PATH>      Runtime plugin (.dylib/.so/.dll)
+  -h, --help                       Print help
+```
+
+**출력 포맷:**
+
+```bash
+# pretty (기본값) - 이름: 타입[shape] = 데이터
+hodu run model.hdss -i a=a.hdt -i b=b.hdt
+> output: f32[2, 3] = [[1.5, 5., 10.5], [18., 27.5, 39.]]
+
+# 큰 텐서는 truncate
+> logits: f32[1, 50257] = [[0.1, 0.2, 0.3, ... (truncated, 50257 elements)]]
+
+# json - 스크립팅용
+hodu run model.hdss -i a=a.hdt -i b=b.hdt -f json
+> {"output": {"dtype": "f32", "shape": [2, 3], "data": [[1.5,5.,10.5],[18.,27.5,39.]]}}
+
+# hdt - 파일로 저장
+hodu run model.hdss -i a=a.hdt -i b=b.hdt -f hdt -o ./outputs/
+> Saved: ./outputs/output.hdt
+```
+
+**예시:**
+
+```bash
+# CPU (interp runtime, builtin)
+hodu run model.hdss -i x=input.hdt
+
+# Metal (플러그인 경로 직접 지정)
+hodu run model.hdss -i a=a.hdt -i b=b.hdt \
+  --device metal \
+  --compiler-plugin ~/.hodu/plugins/libhodu_compiler_metal.dylib \
+  --runtime-plugin ~/.hodu/plugins/libhodu_runtime_metal.dylib
+```
+
+**플러그인 자동 선택 (TODO):**
+
+```bash
+# 플러그인 미지정 시 자동 선택
+# - 설치된 플러그인 중 device에 맞는 최적 플러그인 자동 사용
+# - Metal GPU 있으면 metal, CUDA 있으면 cuda, 없으면 cpu(interp)
+hodu run model.hdss -i x=input.hdt
+# > Using: metal compiler + metal runtime (auto-detected)
+
+# --device만 지정해도 해당 device용 플러그인 자동 선택
+hodu run model.hdss -i x=input.hdt --device metal
+# > Using: metal compiler + metal runtime
+
+# --compiler, --runtime 으로 이름만 지정 (자동 다운로드/로드)
+hodu run model.hdss -i x=input.hdt --device metal --compiler metal --runtime metal
+
+# --pack 으로 compiler+runtime 한번에 지정
+hodu run model.hdss -i x=input.hdt --device metal --pack metal
+# 위 명령은 아래와 동일:
+#   --compiler metal --runtime metal
+
+# 다른 pack 예시
+hodu run model.hdss --device cuda:0 --pack cuda
+hodu run model.hdss --device cpu --pack llvm
+```
+
+### hodu compile
+
+모델을 타겟 포맷으로 AOT 컴파일.
+
+```bash
+hodu compile [OPTIONS] <PATH>
+
+Arguments:
+  <PATH>  Path to the .hdss file
+
+Options:
+  -o, --output <OUTPUT>   Output file path
+  -d, --device <DEVICE>   Target device (cpu, metal, cuda:0) [default: metal]
+  -f, --format <FORMAT>   Output format (msl, air, metallib, ptx, cubin, llvm-ir, object) [default: metallib]
+  -p, --plugin <PLUGIN>   Compiler plugin (.dylib/.so/.dll)
+  -h, --help              Print help
+```
+
+**예시:**
+
+```bash
+# Metal 컴파일
+hodu compile model.hdss -o model.metallib -p libhodu_compiler_metal.dylib
+> Compiled model.hdss -> model.metallib
+
+# MSL 소스 출력 (디버깅용)
+hodu compile model.hdss -o model.metal -f msl -p libhodu_compiler_metal.dylib
+```
+
+### hodu info
+
+모델 정보 출력.
+
+```bash
+hodu info <PATH>
+
+Arguments:
+  <PATH>  Path to the .hdss file
+```
+
+**예시:**
+
+```bash
+hodu info model.hdss
+> Model: model.hdss
+>
+> Inputs: 2
+>   [0] dtype=DType[f32], shape=Shape[[2, 3]]
+>   [1] dtype=DType[f32], shape=Shape[[2, 3]]
+>
+> Nodes: 6
+>   Operations:
+>     Shape[broadcast]: 4
+>     Binary[mul]: 1
+>     Binary[add]: 1
+>
+> Targets: 1
+>   [0] name=output, id=SnapshotTensorId(7)
+```
+
+### 플러그인 관리 (TODO)
 
 ```bash
 # 설치된 플러그인 목록
@@ -320,34 +464,6 @@ hodu plugin info llvm
 >   cpu   → [object, shared, static, executable, llvm-ir, llvm-bc, asm]
 >   cuda  → [ptx, cubin, fatbin, llvm-ir]
 >   rocm  → [hsaco, llvm-ir, asm]
-```
-
-### 모델 실행 (JIT)
-
-```bash
-# 기본 실행 (interp runtime)
-hodu run model.hdss --input input.json
-
-# Compiler + Runtime 지정
-hodu run model.hdss --compiler llvm --runtime native --device cpu
-hodu run model.hdss --compiler llvm --runtime cuda --device cuda:0
-
-# 출력 저장
-hodu run model.hdss --input input.json -o output.json
-```
-
-### AOT 빌드
-
-```bash
-# 공유 라이브러리
-hodu build model.hdss -o libmodel.so --compiler llvm --device cpu
-
-# CUDA PTX/cubin
-hodu build model.hdss -o model.ptx --compiler llvm --device cuda
-hodu build model.hdss -o model.cubin --compiler llvm --device cuda --format cubin
-
-# Metal
-hodu build model.hdss -o model.metallib --compiler metal --device metal
 ```
 
 ---
