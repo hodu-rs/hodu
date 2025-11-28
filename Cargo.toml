@@ -27,8 +27,12 @@ cli = [
     "std",
     "serde",
     "dep:clap",
-    "dep:hodu_plugin",
+    "dep:hodu_core",
     "dep:hodu_format",
+    "dep:hodu_plugin",
+
+    "hodu_format/hdt",
+    "hodu_format/json",
 
     "f8e5m2",
     "f64",
@@ -43,6 +47,13 @@ cli = [
     "hodu_plugin/u64",
     "hodu_plugin/i16",
     "hodu_plugin/i64",
+
+    "hodu_format/f8e5m2",
+    "hodu_format/f64",
+    "hodu_format/u16",
+    "hodu_format/u64",
+    "hodu_format/i16",
+    "hodu_format/i64",
 ]
 
 default = ["std", "serde"]
@@ -65,6 +76,7 @@ xla = ["std", "hodu_internal/xla"]
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"], optional = true }
+hodu_core = { workspace = true, optional = true }
 hodu_internal = { workspace = true }
 hodu_plugin = { workspace = true, optional = true }
 hodu_format = { workspace = true, optional = true }
@@ -105,6 +117,7 @@ serde = { version = "1.0.219", default-features = false, features = [
     "derive",
     "alloc",
 ] }
+serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 smallvec = { version = "1.15.1" }
 spin = "0.10"
 syn = { version = "2.0", features = ["full"] }

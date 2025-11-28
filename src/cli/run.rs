@@ -1,7 +1,9 @@
 //! Run command - execute a .hdss model
 
-use hodu_format::hdss;
+use hodu_core::tensor::Tensor;
+use hodu_format::{hdss, hdt, json};
 use hodu_plugin::{Device, HoduError, HoduResult, InterpRuntime};
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 fn parse_device(s: &str) -> HoduResult<Device> {
@@ -25,36 +27,93 @@ fn parse_device(s: &str) -> HoduResult<Device> {
     }
 }
 
-pub fn execute(path: PathBuf, device_str: &str) -> HoduResult<()> {
+fn load_tensor(path: &PathBuf) -> HoduResult<Tensor> {
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
+    match ext {
+        "hdt" => hdt::load(path),
+        "json" => json::load(path),
+        _ => Err(HoduError::InvalidArgument(format!(
+            "Unsupported tensor format: {}. Use .hdt or .json",
+            ext
+        ))),
+    }
+}
+
+fn parse_input(s: &str) -> HoduResult<(String, PathBuf)> {
+    let parts: Vec<&str> = s.splitn(2, '=').collect();
+    if parts.len() != 2 {
+        return Err(HoduError::InvalidArgument(format!(
+            "Invalid input format: '{}'. Use name=path.hdt or name=path.json",
+            s
+        )));
+    }
+    Ok((parts[0].to_string(), PathBuf::from(parts[1])))
+}
+
+pub fn execute(path: PathBuf, device_str: &str, input: Vec<String>, inputs: Vec<String>) -> HoduResult<()> {
     let _device = parse_device(device_str)?;
-
-    println!("Loading model from: {}", path.display());
-
     let snapshot = hdss::load(&path)?;
 
-    println!("Model loaded successfully");
-    println!("  Inputs: {}", snapshot.inputs.len());
-    println!("  Nodes: {}", snapshot.nodes.len());
-    println!("  Targets: {}", snapshot.targets.len());
+    // Merge --input and --inputs
+    let all_inputs: Vec<&str> = input.iter().chain(inputs.iter()).map(|s| s.as_str()).collect();
 
-    if !snapshot.inputs.is_empty() {
-        println!("\nNote: This model requires {} input(s)", snapshot.inputs.len());
-        println!("Input bindings:");
-        for (i, input) in snapshot.inputs.iter().enumerate() {
-            println!("  [{}] {:?} {:?}", i, input.dtype, input.shape);
+    // Parse and load input tensors
+    let input_map: HashMap<String, Tensor> = if !all_inputs.is_empty() {
+        all_inputs
+            .iter()
+            .map(|s| {
+                let (name, path) = parse_input(s)?;
+                let tensor = load_tensor(&path)?;
+                Ok((name, tensor))
+            })
+            .collect::<HoduResult<HashMap<_, _>>>()?
+    } else if !snapshot.inputs.is_empty() {
+        return Err(HoduError::InvalidArgument(format!(
+            "Missing inputs. Required: {}",
+            snapshot
+                .inputs
+                .iter()
+                .map(|i| format!("{} ({:?} {:?})", i.name, i.dtype, i.shape))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )));
+    } else {
+        HashMap::new()
+    };
+
+    // Validate all required inputs are provided
+    for input in &snapshot.inputs {
+        if !input_map.contains_key(&input.name) {
+            return Err(HoduError::InvalidArgument(format!(
+                "Missing input: '{}'. Required: {}",
+                input.name,
+                snapshot
+                    .inputs
+                    .iter()
+                    .map(|i| i.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )));
         }
-        println!("\nTo run with inputs, use the library API.");
-        return Ok(());
     }
 
-    println!("\nExecuting...");
-
     let runtime = InterpRuntime::new();
-    let outputs = runtime.execute_snapshot(&snapshot, &[])?;
+    let input_bindings: Vec<(&str, &Tensor)> = snapshot
+        .inputs
+        .iter()
+        .map(|input| {
+            let tensor = input_map.get(&input.name).unwrap();
+            (input.name.as_str(), tensor)
+        })
+        .collect();
+    let outputs = runtime.execute_snapshot(&snapshot, &input_bindings)?;
 
-    println!("\nOutputs:");
-    for (name, tensor) in outputs.iter() {
-        println!("  {}: {:?} {:?}", name, tensor.dtype(), tensor.shape());
+    // Print outputs in target order
+    for target in &snapshot.targets {
+        if let Some(tensor) = outputs.get(&target.name) {
+            println!("{}", tensor);
+        }
     }
 
     Ok(())

@@ -23,9 +23,17 @@ enum Commands {
         /// Path to the .hdss file
         path: PathBuf,
 
-        /// Device to run on (cpu, cuda:0, metal:0)
+        /// Device to run on (cpu, cuda:0, metal)
         #[arg(short, long, default_value = "cpu")]
         device: String,
+
+        /// Input tensor file (format: name=path.hdt), can be repeated
+        #[arg(short, long, action = clap::ArgAction::Append)]
+        input: Vec<String>,
+
+        /// Input tensor files, comma-separated (format: name=path.hdt,name=path.json)
+        #[arg(short = 'I', long, value_delimiter = ',')]
+        inputs: Vec<String>,
     },
 
     /// Show information about a .hdss model file
@@ -39,7 +47,12 @@ fn main() {
     let args = Cli::parse();
 
     let result = match args.command {
-        Commands::Run { path, device } => run::execute(path, &device),
+        Commands::Run {
+            path,
+            device,
+            input,
+            inputs,
+        } => run::execute(path, &device, input, inputs),
         Commands::Info { path } => info::execute(path),
     };
 
