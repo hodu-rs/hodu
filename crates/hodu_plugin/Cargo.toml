@@ -22,5 +22,5 @@ i64 = ["hodu_core/i64"]
 float8 = { workspace = true }
 half = { workspace = true }
 hodu_compat = { workspace = true, features = ["std"] }
-hodu_core = { workspace = true, features = ["std"] }
+hodu_core = { workspace = true, features = ["std", "serde"] }
 libloading = { workspace = true }

@@ -6,6 +6,10 @@ use hodu_compat::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(C)]
 pub enum OutputFormat {
+    // === Hodu ===
+    /// Hodu Snapshot (.hdss) - serialized computation graph for interpreter
+    HoduSnapshot,
+
     // === CPU (Native) ===
     /// Object file (.o)
     Object,
@@ -52,6 +56,7 @@ pub enum OutputFormat {
 impl fmt::Display for OutputFormat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            OutputFormat::HoduSnapshot => write!(f, "hdss"),
             OutputFormat::Object => write!(f, "object"),
             OutputFormat::SharedLib => write!(f, "shared"),
             OutputFormat::StaticLib => write!(f, "static"),
@@ -75,6 +80,7 @@ impl OutputFormat {
     /// Parse format from string (e.g., "shared", "ptx", "metallib")
     pub fn parse(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
+            "hdss" | "snapshot" | "hodu-snapshot" => Some(OutputFormat::HoduSnapshot),
             "object" | "obj" => Some(OutputFormat::Object),
             "shared" | "so" | "dylib" | "dll" => Some(OutputFormat::SharedLib),
             "static" | "a" | "lib" => Some(OutputFormat::StaticLib),
@@ -97,6 +103,7 @@ impl OutputFormat {
     /// Infer format from file extension
     pub fn from_extension(ext: &str) -> Option<Self> {
         match ext.to_lowercase().as_str() {
+            "hdss" => Some(OutputFormat::HoduSnapshot),
             "o" => Some(OutputFormat::Object),
             "so" | "dylib" | "dll" => Some(OutputFormat::SharedLib),
             "a" | "lib" => Some(OutputFormat::StaticLib),
@@ -118,6 +125,7 @@ impl OutputFormat {
     /// Get the default file extension for this format
     pub fn extension(&self) -> &'static str {
         match self {
+            OutputFormat::HoduSnapshot => "hdss",
             OutputFormat::Object => "o",
             OutputFormat::SharedLib => {
                 #[cfg(target_os = "linux")]

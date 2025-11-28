@@ -46,23 +46,29 @@ impl RuntimePlugin for InterpRuntime {
     }
 
     fn loadable_formats(&self, _device: Device) -> Vec<OutputFormat> {
-        vec![]
+        vec![OutputFormat::HoduSnapshot]
     }
 
     fn load(&self, artifact: &CompiledArtifact, _device: Device) -> HoduResult<ExecutableModule> {
-        Err(HoduError::UnsupportedOperation(
-            format!(
-                "InterpRuntime does not load compiled artifacts (format: {:?})",
-                artifact.format
-            )
-            .into(),
-        ))
+        match artifact.format {
+            OutputFormat::HoduSnapshot => {
+                let snapshot = Snapshot::deserialize(&artifact.data)?;
+                Ok(ExecutableModule::new(InterpExecutable::new(snapshot)))
+            },
+            _ => Err(HoduError::UnsupportedOperation(
+                format!(
+                    "InterpRuntime only supports HoduSnapshot format, got {:?}",
+                    artifact.format
+                )
+                .into(),
+            )),
+        }
     }
 
-    fn load_file(&self, _path: &Path, _device: Device) -> HoduResult<ExecutableModule> {
-        Err(HoduError::UnsupportedOperation(
-            "InterpRuntime.load_file not implemented yet".into(),
-        ))
+    fn load_file(&self, path: &Path, _device: Device) -> HoduResult<ExecutableModule> {
+        let data = std::fs::read(path).map_err(|e| HoduError::IoError(format!("Failed to read file: {}", e)))?;
+        let snapshot = Snapshot::deserialize(&data)?;
+        Ok(ExecutableModule::new(InterpExecutable::new(snapshot)))
     }
 }
 
@@ -139,7 +145,7 @@ fn execute_snapshot(snapshot: &Snapshot, inputs: &[(&str, &Tensor)]) -> HoduResu
     for target in &snapshot.targets {
         let tensor = tensors
             .get(&target.id)
-            .ok_or_else(|| HoduError::InvalidArgument(format!("Output tensor not found: {}", target.name).into()))?;
+            .ok_or_else(|| HoduError::InvalidArgument(format!("Output tensor not found: {}", target.name)))?;
         outputs.insert(target.name.clone(), tensor.clone());
     }
 

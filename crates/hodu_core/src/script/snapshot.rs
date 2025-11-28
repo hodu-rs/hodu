@@ -82,6 +82,21 @@ impl Snapshot {
             nodes: Vec::new(),
         }
     }
+
+    /// Serialize snapshot to bytes
+    #[cfg(feature = "serde")]
+    pub fn serialize(&self) -> crate::error::HoduResult<Vec<u8>> {
+        postcard::to_allocvec(self)
+            .map_err(|e| crate::error::HoduError::SerializationFailed(format!("Failed to serialize Snapshot: {}", e)))
+    }
+
+    /// Deserialize snapshot from bytes
+    #[cfg(feature = "serde")]
+    pub fn deserialize(data: &[u8]) -> crate::error::HoduResult<Self> {
+        postcard::from_bytes(data).map_err(|e| {
+            crate::error::HoduError::DeserializationFailed(format!("Failed to deserialize Snapshot: {}", e))
+        })
+    }
 }
 
 impl Default for Snapshot {

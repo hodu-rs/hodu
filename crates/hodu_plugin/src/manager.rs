@@ -46,6 +46,19 @@ impl PluginManager {
         }
     }
 
+    /// Create a new plugin manager with builtin plugins registered
+    pub fn with_builtins(plugin_dir: impl Into<PathBuf>) -> Self {
+        let mut manager = Self::new(plugin_dir);
+        manager.register_builtins();
+        manager
+    }
+
+    /// Register all builtin plugins
+    pub fn register_builtins(&mut self) {
+        // Register InterpRuntime as the default builtin runtime
+        self.register_runtime(Box::new(crate::InterpRuntime::new()));
+    }
+
     /// Create a plugin manager with the default plugin directory (~/.hodu/plugins)
     pub fn with_default_dir() -> HoduResult<Self> {
         let home = std::env::var("HOME").map_err(|_| HoduError::IoError("HOME environment variable not set".into()))?;
@@ -57,7 +70,7 @@ impl PluginManager {
                 .map_err(|e| HoduError::IoError(format!("Failed to create plugin directory: {}", e)))?;
         }
 
-        Ok(Self::new(plugin_dir))
+        Ok(Self::with_builtins(plugin_dir))
     }
 
     /// Get the plugin directory path
