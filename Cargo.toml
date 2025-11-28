@@ -26,6 +26,9 @@ required-features = ["cli"]
 cli = [
     "std",
     "serde",
+    "dep:clap",
+    "dep:hodu_plugin",
+    "dep:hodu_format",
 
     "f8e5m2",
     "f64",
@@ -33,6 +36,13 @@ cli = [
     "u64",
     "i16",
     "i64",
+
+    "hodu_plugin/f8e5m2",
+    "hodu_plugin/f64",
+    "hodu_plugin/u16",
+    "hodu_plugin/u64",
+    "hodu_plugin/i16",
+    "hodu_plugin/i64",
 ]
 
 default = ["std", "serde"]
@@ -54,7 +64,10 @@ metal = ["std", "hodu_internal/metal"]
 xla = ["std", "hodu_internal/xla"]
 
 [dependencies]
+clap = { version = "4.5.53", features = ["derive"], optional = true }
 hodu_internal = { workspace = true }
+hodu_plugin = { workspace = true, optional = true }
+hodu_format = { workspace = true, optional = true }
 
 [workspace.dependencies]
 dashmap = "6.1.0"
