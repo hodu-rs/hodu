@@ -1,3 +1,4 @@
+mod bytes;
 mod core;
 mod creation;
 mod creation_from_ops;

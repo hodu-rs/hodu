@@ -1,6 +1,7 @@
 pub mod capture;
 pub mod snapshot;
 
+use crate::compat::*;
 #[cfg(all(feature = "serde", feature = "std"))]
 use crate::error::{HoduError, HoduResult};
 pub use capture::{CaptureBoard, CaptureBoardId, CapturedInput, CapturedOp, CapturedTarget};
