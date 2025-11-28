@@ -3,18 +3,10 @@
 //! A simple binary format for storing tensors using postcard serialization.
 //! Supports single tensor or named tensor collections.
 
-use hodu_core::error::{HoduError, HoduResult};
-use hodu_core::tensor::Tensor;
-use hodu_core::types::{DType, Device, Shape};
-
-#[cfg(not(feature = "std"))]
-use alloc::{string::String, vec::Vec};
-
-#[cfg(feature = "std")]
-use std::collections::HashMap;
-
-#[cfg(not(feature = "std"))]
-use hashbrown::HashMap;
+use crate::compat::*;
+use crate::error::{HoduError, HoduResult};
+use crate::tensor::Tensor;
+use crate::types::{DType, Device, Shape};
 
 /// Single tensor data for serialization
 #[derive(serde::Serialize, serde::Deserialize)]

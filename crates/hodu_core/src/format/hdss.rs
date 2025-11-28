@@ -4,8 +4,8 @@
 //! It stores the complete Snapshot IR which can be loaded and executed by the
 //! InterpRuntime without any compilation.
 
-use hodu_core::error::{HoduError, HoduResult};
-use hodu_core::script::Snapshot;
+use crate::error::{HoduError, HoduResult};
+use crate::script::Snapshot;
 
 /// Load a Snapshot from hdss file
 #[cfg(feature = "std")]

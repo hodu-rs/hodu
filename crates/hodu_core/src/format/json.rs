@@ -20,23 +20,15 @@
 //! }
 //! ```
 
+use crate::compat::*;
+use crate::error::{HoduError, HoduResult};
+use crate::tensor::Tensor;
+use crate::types::{DType, Shape};
 use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
 use float8::F8E5M2;
 use half::{bf16, f16};
-use hodu_core::error::{HoduError, HoduResult};
-use hodu_core::tensor::Tensor;
-use hodu_core::types::{DType, Shape};
 use serde_json::{Map, Value};
-
-#[cfg(not(feature = "std"))]
-use alloc::{format, string::String, vec::Vec};
-
-#[cfg(feature = "std")]
-use std::collections::HashMap;
-
-#[cfg(not(feature = "std"))]
-use hashbrown::HashMap;
 
 /// Load a single tensor from JSON file
 #[cfg(feature = "std")]

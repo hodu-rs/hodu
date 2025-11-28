@@ -2,8 +2,8 @@
 
 use crate::dispatch::{dtype_size, DispatchManifest};
 use hodu_plugin::{
-    CompiledArtifact, Device, ExecutableModule, ExecutableModuleInner, HoduError, HoduResult,
-    OutputFormat, RuntimePlugin, TensorData, DType,
+    CompiledArtifact, DType, Device, ExecutableModule, ExecutableModuleInner, HoduError, HoduResult, OutputFormat,
+    RuntimePlugin, TensorData,
 };
 use metal::{CommandQueue, ComputePipelineState, Device as MTLDevice, MTLSize};
 use std::collections::HashMap;
@@ -18,14 +18,11 @@ pub struct MetalRuntime {
 
 impl MetalRuntime {
     pub fn new() -> HoduResult<Self> {
-        let device = MTLDevice::system_default()
-            .ok_or_else(|| HoduError::BackendError("No Metal device found".into()))?;
+        let device =
+            MTLDevice::system_default().ok_or_else(|| HoduError::BackendError("No Metal device found".into()))?;
         let command_queue = device.new_command_queue();
 
-        Ok(Self {
-            device,
-            command_queue,
-        })
+        Ok(Self { device, command_queue })
     }
 }
 
@@ -65,8 +62,7 @@ impl RuntimePlugin for MetalRuntime {
             return Err(HoduError::BackendError("Invalid artifact data".into()));
         }
 
-        let manifest_len =
-            u64::from_le_bytes(artifact.data[0..8].try_into().unwrap()) as usize;
+        let manifest_len = u64::from_le_bytes(artifact.data[0..8].try_into().unwrap()) as usize;
         let manifest_json = &artifact.data[8..8 + manifest_len];
         let metallib_data = &artifact.data[8 + manifest_len..];
 
@@ -89,14 +85,9 @@ impl RuntimePlugin for MetalRuntime {
                 continue;
             }
 
-            let function = library
-                .get_function(&dispatch.kernel_name, None)
-                .map_err(|e| {
-                    HoduError::BackendError(format!(
-                        "Failed to get function '{}': {}",
-                        dispatch.kernel_name, e
-                    ))
-                })?;
+            let function = library.get_function(&dispatch.kernel_name, None).map_err(|e| {
+                HoduError::BackendError(format!("Failed to get function '{}': {}", dispatch.kernel_name, e))
+            })?;
 
             let pipeline = self
                 .device
@@ -125,17 +116,13 @@ impl RuntimePlugin for MetalRuntime {
         }
 
         // Load metallib file
-        let metallib_data = std::fs::read(path)
-            .map_err(|e| HoduError::BackendError(format!("Failed to read metallib: {}", e)))?;
+        let metallib_data =
+            std::fs::read(path).map_err(|e| HoduError::BackendError(format!("Failed to read metallib: {}", e)))?;
 
         // Load manifest file (same path with .manifest.json extension)
         let manifest_path = path.with_extension("manifest.json");
         let manifest_json = std::fs::read(&manifest_path).map_err(|e| {
-            HoduError::BackendError(format!(
-                "Failed to read manifest at {}: {}",
-                manifest_path.display(),
-                e
-            ))
+            HoduError::BackendError(format!("Failed to read manifest at {}: {}", manifest_path.display(), e))
         })?;
 
         let manifest = DispatchManifest::from_json(&manifest_json)
@@ -157,14 +144,9 @@ impl RuntimePlugin for MetalRuntime {
                 continue;
             }
 
-            let function = library
-                .get_function(&dispatch.kernel_name, None)
-                .map_err(|e| {
-                    HoduError::BackendError(format!(
-                        "Failed to get function '{}': {}",
-                        dispatch.kernel_name, e
-                    ))
-                })?;
+            let function = library.get_function(&dispatch.kernel_name, None).map_err(|e| {
+                HoduError::BackendError(format!("Failed to get function '{}': {}", dispatch.kernel_name, e))
+            })?;
 
             let pipeline = self
                 .device
@@ -228,18 +210,17 @@ impl ExecutableModuleInner for MetalExecutable {
         // Allocate buffers
         for size in &buffer_sizes {
             let size = if *size == 0 { 16 } else { *size }; // Minimum 16 bytes
-            let buffer = self.device.new_buffer(
-                size as u64,
-                metal::MTLResourceOptions::StorageModeShared,
-            );
+            let buffer = self
+                .device
+                .new_buffer(size as u64, metal::MTLResourceOptions::StorageModeShared);
             buffers.push(buffer);
         }
 
         // Copy input data
         for input_spec in &self.manifest.inputs {
-            let tensor_data = input_map.get(input_spec.name.as_str()).ok_or_else(|| {
-                HoduError::BackendError(format!("Missing input: {}", input_spec.name))
-            })?;
+            let tensor_data = input_map
+                .get(input_spec.name.as_str())
+                .ok_or_else(|| HoduError::BackendError(format!("Missing input: {}", input_spec.name)))?;
 
             let buffer = &buffers[input_spec.buffer_id];
             unsafe {
@@ -279,9 +260,10 @@ impl ExecutableModuleInner for MetalExecutable {
                 continue;
             }
 
-            let pipeline = self.pipelines.get(&dispatch.kernel_name).ok_or_else(|| {
-                HoduError::BackendError(format!("Pipeline not found: {}", dispatch.kernel_name))
-            })?;
+            let pipeline = self
+                .pipelines
+                .get(&dispatch.kernel_name)
+                .ok_or_else(|| HoduError::BackendError(format!("Pipeline not found: {}", dispatch.kernel_name)))?;
 
             let encoder = command_buffer.new_compute_command_encoder();
             encoder.set_compute_pipeline_state(pipeline);
@@ -293,11 +275,7 @@ impl ExecutableModuleInner for MetalExecutable {
 
             // Set output buffer
             let output_idx = dispatch.input_buffers.len();
-            encoder.set_buffer(
-                output_idx as u64,
-                Some(&buffers[dispatch.output_buffer]),
-                0,
-            );
+            encoder.set_buffer(output_idx as u64, Some(&buffers[dispatch.output_buffer]), 0);
 
             // Set metadata buffer
             let metadata_bytes: Vec<u8> = dispatch
@@ -313,11 +291,8 @@ impl ExecutableModuleInner for MetalExecutable {
             encoder.set_buffer((output_idx + 1) as u64, Some(&metadata_buffer), 0);
 
             // Dispatch
-            let thread_group_size = MTLSize::new(
-                pipeline.thread_execution_width().min(dispatch.grid_size as u64),
-                1,
-                1,
-            );
+            let thread_group_size =
+                MTLSize::new(pipeline.thread_execution_width().min(dispatch.grid_size as u64), 1, 1);
             let grid_size = MTLSize::new(dispatch.grid_size as u64, 1, 1);
 
             encoder.dispatch_threads(grid_size, thread_group_size);
@@ -337,11 +312,7 @@ impl ExecutableModuleInner for MetalExecutable {
 
             let mut data = vec![0u8; byte_size];
             unsafe {
-                std::ptr::copy_nonoverlapping(
-                    buffer.contents() as *const u8,
-                    data.as_mut_ptr(),
-                    byte_size,
-                );
+                std::ptr::copy_nonoverlapping(buffer.contents() as *const u8, data.as_mut_ptr(), byte_size);
             }
 
             let dtype = parse_dtype(&output_spec.dtype)?;
@@ -385,7 +356,7 @@ pub extern "C" fn hodu_runtime_plugin_create() -> *mut Box<dyn RuntimePlugin> {
         Ok(runtime) => {
             let boxed: Box<dyn RuntimePlugin> = Box::new(runtime);
             Box::into_raw(Box::new(boxed))
-        }
+        },
         Err(_) => std::ptr::null_mut(),
     }
 }

@@ -1,7 +1,6 @@
 //! Compile command - compile .hdss to target format
 
-use hodu_core::script::Script;
-use hodu_format::hdss;
+use hodu_core::{format::hdss, script::Script};
 use hodu_plugin::{Device, HoduError, HoduResult, OutputFormat, PluginManager};
 use std::path::PathBuf;
 

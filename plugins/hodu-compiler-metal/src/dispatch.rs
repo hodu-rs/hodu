@@ -2,10 +2,7 @@
 //!
 //! Converts Snapshot nodes to a sequence of kernel dispatches.
 
-use hodu_core::op_params::OpParams;
-use hodu_core::ops::Op;
-use hodu_core::script::Snapshot;
-use hodu_core::types::DType;
+use hodu_core::{op_params::OpParams, ops::Op, script::Snapshot, types::DType};
 use serde::{Deserialize, Serialize};
 
 /// Dispatch manifest for executing a compiled graph
@@ -83,30 +80,38 @@ impl DispatchManifest {
         let mut tensor_to_buffer: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
 
         // Allocate buffers for inputs
-        let inputs: Vec<TensorSpec> = snapshot.inputs.iter().map(|input| {
-            let buffer_id = num_buffers;
-            tensor_to_buffer.insert(input.id.0, buffer_id);
-            num_buffers += 1;
-            TensorSpec {
-                name: input.name.clone(),
-                buffer_id,
-                shape: input.shape.dims().to_vec(),
-                dtype: dtype_to_string(input.dtype),
-            }
-        }).collect();
+        let inputs: Vec<TensorSpec> = snapshot
+            .inputs
+            .iter()
+            .map(|input| {
+                let buffer_id = num_buffers;
+                tensor_to_buffer.insert(input.id.0, buffer_id);
+                num_buffers += 1;
+                TensorSpec {
+                    name: input.name.clone(),
+                    buffer_id,
+                    shape: input.shape.dims().to_vec(),
+                    dtype: dtype_to_string(input.dtype),
+                }
+            })
+            .collect();
 
         // Allocate buffers for constants
-        let constants: Vec<ConstantData> = snapshot.constants.iter().map(|constant| {
-            let buffer_id = num_buffers;
-            tensor_to_buffer.insert(constant.id.0, buffer_id);
-            num_buffers += 1;
-            ConstantData {
-                buffer_id,
-                shape: constant.shape.dims().to_vec(),
-                dtype: dtype_to_string(constant.dtype),
-                data: constant.data.clone(),
-            }
-        }).collect();
+        let constants: Vec<ConstantData> = snapshot
+            .constants
+            .iter()
+            .map(|constant| {
+                let buffer_id = num_buffers;
+                tensor_to_buffer.insert(constant.id.0, buffer_id);
+                num_buffers += 1;
+                ConstantData {
+                    buffer_id,
+                    shape: constant.shape.dims().to_vec(),
+                    dtype: dtype_to_string(constant.dtype),
+                    data: constant.data.clone(),
+                }
+            })
+            .collect();
 
         // Generate dispatches for each node
         for node in &snapshot.nodes {
@@ -114,7 +119,9 @@ impl DispatchManifest {
             tensor_to_buffer.insert(node.output_id.0, output_buffer);
             num_buffers += 1;
 
-            let input_buffers: Vec<usize> = node.input_ids.iter()
+            let input_buffers: Vec<usize> = node
+                .input_ids
+                .iter()
                 .map(|id| tensor_to_buffer.get(&id.0).copied().unwrap_or(0))
                 .collect();
 
@@ -122,12 +129,7 @@ impl DispatchManifest {
             let grid_size = node.output_layout.size();
 
             // Build metadata using hodu_core::op_metadatas
-            let metadata = build_metadata(
-                &node.op,
-                node.params.as_ref(),
-                &node.input_layouts,
-                &node.output_layout,
-            );
+            let metadata = build_metadata(&node.op, node.params.as_ref(), &node.input_layouts, &node.output_layout);
 
             dispatches.push(KernelDispatch {
                 kernel_name,
@@ -149,18 +151,23 @@ impl DispatchManifest {
         }
 
         // Map outputs
-        let outputs: Vec<TensorSpec> = snapshot.targets.iter().map(|target| {
-            let buffer_id = tensor_to_buffer.get(&target.id.0).copied().unwrap_or(0);
-            let (shape, dtype) = tensor_info.get(&target.id.0)
-                .cloned()
-                .unwrap_or_else(|| (Vec::new(), DType::F32));
-            TensorSpec {
-                name: target.name.clone(),
-                buffer_id,
-                shape,
-                dtype: dtype_to_string(dtype),
-            }
-        }).collect();
+        let outputs: Vec<TensorSpec> = snapshot
+            .targets
+            .iter()
+            .map(|target| {
+                let buffer_id = tensor_to_buffer.get(&target.id.0).copied().unwrap_or(0);
+                let (shape, dtype) = tensor_info
+                    .get(&target.id.0)
+                    .cloned()
+                    .unwrap_or_else(|| (Vec::new(), DType::F32));
+                TensorSpec {
+                    name: target.name.clone(),
+                    buffer_id,
+                    shape,
+                    dtype: dtype_to_string(dtype),
+                }
+            })
+            .collect();
 
         DispatchManifest {
             name: snapshot.name.clone(),
@@ -230,28 +237,28 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
         Op::BinaryLogical(_) => {
             if input_layouts.len() >= 2 {
                 op_metadatas::binary_logical_metadata(&input_layouts[0], &input_layouts[1], output_layout)
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
         Op::Cmp(_) => {
             if input_layouts.len() >= 2 {
                 op_metadatas::cmp_metadata(&input_layouts[0], &input_layouts[1], output_layout)
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
         Op::CmpScalar(_) => {
             if !input_layouts.is_empty() {
                 op_metadatas::cmp_scalar_metadata(&input_layouts[0], output_layout)
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Unary ops
         Op::Unary(_) | Op::UnaryLogical(_) | Op::UnaryScalar(_) => {
@@ -260,7 +267,7 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Matrix ops
         Op::Matrix(_) => {
@@ -270,7 +277,7 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Reduce ops
         Op::Reduce(_) => {
@@ -284,7 +291,7 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Concat ops
         Op::Concat(_) => {
@@ -295,14 +302,25 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Split ops
         Op::Split(_) => {
-            if let Some(OpParams::Split(op_params::SplitParams { dim, sizes, output_index })) = params {
+            if let Some(OpParams::Split(op_params::SplitParams {
+                dim,
+                sizes,
+                output_index,
+            })) = params
+            {
                 let dim_usize = dim.to_usize();
                 // Calculate start position for this output
-                let start: usize = sizes.iter().take(*output_index).map(|s| s.to_usize()).collect::<Vec<_>>().iter().sum();
+                let start: usize = sizes
+                    .iter()
+                    .take(*output_index)
+                    .map(|s| s.to_usize())
+                    .collect::<Vec<_>>()
+                    .iter()
+                    .sum();
                 let size = sizes.get(*output_index).map(|s| s.to_usize()).unwrap_or(0);
                 if !input_layouts.is_empty() {
                     op_metadatas::split_metadata(&input_layouts[0], dim_usize, size, start, output_layout.size())
@@ -312,7 +330,7 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Indexing ops
         Op::Indexing(indexing_op) => {
@@ -327,14 +345,19 @@ fn build_metadata(
                             0
                         };
                         if !input_layouts.is_empty() {
-                            op_metadatas::index_select_metadata(&input_layouts[0], dim.to_usize(), num_indices, output_layout.size())
+                            op_metadatas::index_select_metadata(
+                                &input_layouts[0],
+                                dim.to_usize(),
+                                num_indices,
+                                output_layout.size(),
+                            )
                         } else {
                             op_metadatas::unary_metadata(output_layout, output_layout)
                         }
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
                 IndexingOp::IndexPut => {
                     if let Some(OpParams::IndexPut(op_params::IndexPutParams { dim })) = params {
                         let num_indices = if input_layouts.len() >= 2 {
@@ -343,25 +366,36 @@ fn build_metadata(
                             0
                         };
                         if input_layouts.len() >= 2 {
-                            op_metadatas::index_put_metadata(&input_layouts[0], &input_layouts[1], dim.to_usize(), num_indices, output_layout.size())
+                            op_metadatas::index_put_metadata(
+                                &input_layouts[0],
+                                &input_layouts[1],
+                                dim.to_usize(),
+                                num_indices,
+                                output_layout.size(),
+                            )
                         } else {
                             op_metadatas::unary_metadata(output_layout, output_layout)
                         }
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
                 IndexingOp::Gather => {
                     if let Some(OpParams::Gather(op_params::GatherParams { dim })) = params {
                         if input_layouts.len() >= 2 {
-                            op_metadatas::gather_metadata(&input_layouts[0], &input_layouts[1], dim.to_usize(), output_layout.size())
+                            op_metadatas::gather_metadata(
+                                &input_layouts[0],
+                                &input_layouts[1],
+                                dim.to_usize(),
+                                output_layout.size(),
+                            )
                         } else {
                             op_metadatas::unary_metadata(output_layout, output_layout)
                         }
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
                 IndexingOp::Scatter | IndexingOp::ScatterAdd | IndexingOp::ScatterMax | IndexingOp::ScatterMin => {
                     let dim = match params {
                         Some(OpParams::Scatter(p)) => p.dim.to_usize(),
@@ -375,9 +409,9 @@ fn build_metadata(
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
             }
-        }
+        },
 
         // Conv ops
         Op::Conv(conv_op) => {
@@ -387,8 +421,11 @@ fn build_metadata(
                     if let Some(OpParams::Conv1d(p)) = params {
                         if input_layouts.len() >= 2 {
                             op_metadatas::conv1d_metadata(
-                                &input_layouts[0], &input_layouts[1],
-                                p.stride, p.padding, p.dilation,
+                                &input_layouts[0],
+                                &input_layouts[1],
+                                p.stride,
+                                p.padding,
+                                p.dilation,
                                 output_layout.shape().dims(),
                             )
                         } else {
@@ -397,13 +434,16 @@ fn build_metadata(
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
                 ConvOp::Conv2d => {
                     if let Some(OpParams::Conv2d(p)) = params {
                         if input_layouts.len() >= 2 {
                             op_metadatas::conv2d_metadata(
-                                &input_layouts[0], &input_layouts[1],
-                                &[p.stride, p.stride], &[p.padding, p.padding], &[p.dilation, p.dilation],
+                                &input_layouts[0],
+                                &input_layouts[1],
+                                &[p.stride, p.stride],
+                                &[p.padding, p.padding],
+                                &[p.dilation, p.dilation],
                                 output_layout.shape().dims(),
                             )
                         } else {
@@ -412,12 +452,13 @@ fn build_metadata(
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
                 ConvOp::Conv3d => {
                     if let Some(OpParams::Conv3d(p)) = params {
                         if input_layouts.len() >= 2 {
                             op_metadatas::conv3d_metadata(
-                                &input_layouts[0], &input_layouts[1],
+                                &input_layouts[0],
+                                &input_layouts[1],
                                 &[p.stride, p.stride, p.stride],
                                 &[p.padding, p.padding, p.padding],
                                 &[p.dilation, p.dilation, p.dilation],
@@ -429,15 +470,21 @@ fn build_metadata(
                     } else {
                         op_metadatas::unary_metadata(output_layout, output_layout)
                     }
-                }
+                },
                 // Transpose and gradient convolutions - use unary for now
                 _ => op_metadatas::unary_metadata(output_layout, output_layout),
             }
-        }
+        },
 
         // Windowing ops
         Op::Windowing(_) => {
-            if let Some(OpParams::ReduceWindow(op_params::ReduceWindowParams { window_shape, strides, padding, .. })) = params {
+            if let Some(OpParams::ReduceWindow(op_params::ReduceWindowParams {
+                window_shape,
+                strides,
+                padding,
+                ..
+            })) = params
+            {
                 if !input_layouts.is_empty() {
                     // Flatten padding from [(lo, hi), ...] to [lo, hi, lo, hi, ...]
                     let flat_padding: Vec<usize> = padding.iter().flat_map(|(lo, hi)| vec![*lo, *hi]).collect();
@@ -454,11 +501,11 @@ fn build_metadata(
             } else {
                 op_metadatas::unary_metadata(output_layout, output_layout)
             }
-        }
+        },
 
         // Shape ops, Cast ops, Memory ops - no kernels needed or use unary
         Op::Shape(_) | Op::ShapeScalars(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
             op_metadatas::unary_metadata(output_layout, output_layout)
-        }
+        },
     }
 }

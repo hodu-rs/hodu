@@ -1,8 +1,10 @@
 //! Run command - execute a .hdss model
 
-use hodu_core::script::Script;
-use hodu_core::tensor::Tensor;
-use hodu_format::{hdss, hdt, json};
+use hodu_core::{
+    format::{hdss, hdt, json},
+    script::Script,
+    tensor::Tensor,
+};
 use hodu_plugin::{Device, HoduError, HoduResult, InterpRuntime, PluginManager, RuntimePlugin, TensorData};
 use std::collections::HashMap;
 use std::path::PathBuf;

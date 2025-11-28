@@ -12,6 +12,8 @@ pub(crate) mod be_cuda;
 pub(crate) mod be_metal;
 pub(crate) mod cache;
 pub mod error;
+#[cfg(any(feature = "hdss", feature = "hdt", feature = "json"))]
+pub mod format;
 pub(crate) mod into;
 pub mod op_metadatas;
 pub mod op_params;

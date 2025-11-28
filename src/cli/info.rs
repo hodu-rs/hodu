@@ -1,4 +1,4 @@
-use hodu_format::hdss;
+use hodu_core::format::hdss;
 use hodu_plugin::HoduResult;
 use std::collections::HashMap;
 use std::path::PathBuf;

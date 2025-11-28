@@ -1,6 +1,71 @@
-//! Format definitions for models and compiled outputs
+//! Format definitions for models, tensors, and compiled outputs
 
-use hodu_compat::*;
+use crate::compat::*;
+
+/// Tensor format for loading/saving tensor data
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(C)]
+pub enum TensorFormat {
+    /// Hodu Tensor (.hdt) - native binary tensor
+    Hdt,
+    /// JSON tensor format (.json) - human-readable
+    Json,
+    /// SafeTensors format (.safetensors)
+    SafeTensors,
+    /// NumPy format (.npy)
+    Npy,
+    /// PyTorch tensor format (.pt, .pth)
+    PyTorch,
+}
+
+impl fmt::Display for TensorFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TensorFormat::Hdt => write!(f, "hdt"),
+            TensorFormat::Json => write!(f, "json"),
+            TensorFormat::SafeTensors => write!(f, "safetensors"),
+            TensorFormat::Npy => write!(f, "npy"),
+            TensorFormat::PyTorch => write!(f, "pytorch"),
+        }
+    }
+}
+
+impl TensorFormat {
+    /// Parse format from string
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "hdt" | "hodu-tensor" => Some(TensorFormat::Hdt),
+            "json" => Some(TensorFormat::Json),
+            "safetensors" | "st" => Some(TensorFormat::SafeTensors),
+            "npy" | "numpy" => Some(TensorFormat::Npy),
+            "pytorch" | "pt" | "pth" | "torch" => Some(TensorFormat::PyTorch),
+            _ => None,
+        }
+    }
+
+    /// Infer format from file extension
+    pub fn from_extension(ext: &str) -> Option<Self> {
+        match ext.to_lowercase().as_str() {
+            "hdt" => Some(TensorFormat::Hdt),
+            "json" => Some(TensorFormat::Json),
+            "safetensors" => Some(TensorFormat::SafeTensors),
+            "npy" => Some(TensorFormat::Npy),
+            "pt" | "pth" => Some(TensorFormat::PyTorch),
+            _ => None,
+        }
+    }
+
+    /// Get the default file extension for this format
+    pub fn extension(&self) -> &'static str {
+        match self {
+            TensorFormat::Hdt => "hdt",
+            TensorFormat::Json => "json",
+            TensorFormat::SafeTensors => "safetensors",
+            TensorFormat::Npy => "npy",
+            TensorFormat::PyTorch => "pt",
+        }
+    }
+}
 
 /// Model format for loading pre-trained models
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

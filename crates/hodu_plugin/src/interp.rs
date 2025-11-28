@@ -12,9 +12,11 @@ use float8::F8E4M3;
 use float8::F8E5M2;
 use half::{bf16, f16};
 use hodu_compat::*;
-use hodu_core::ops::*;
-use hodu_core::script::{Snapshot, SnapshotConstant, SnapshotNode, SnapshotTensorId};
-use hodu_core::types::DType;
+use hodu_core::{
+    ops::*,
+    script::{Snapshot, SnapshotConstant, SnapshotNode, SnapshotTensorId},
+    types::DType,
+};
 use std::path::Path;
 
 /// Interpreter runtime plugin

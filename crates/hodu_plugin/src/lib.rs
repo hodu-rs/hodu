@@ -42,8 +42,8 @@ pub use interp::*;
 pub use manager::*;
 pub use runtime::*;
 
-// Re-export from hodu_format
-pub use hodu_format::{ModelFormat, OutputFormat};
+// Re-export from hodu_core::format
+pub use hodu_core::format::{ModelFormat, OutputFormat, TensorFormat};
 
 // Re-export from hodu_core
 pub use hodu_core::error::{HoduError, HoduResult};

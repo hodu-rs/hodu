@@ -28,11 +28,11 @@ cli = [
     "serde",
     "dep:clap",
     "dep:hodu_core",
-    "dep:hodu_format",
     "dep:hodu_plugin",
 
-    "hodu_format/hdt",
-    "hodu_format/json",
+    "hodu_core/hdss",
+    "hodu_core/hdt",
+    "hodu_core/json",
 
     "f8e5m2",
     "f64",
@@ -48,12 +48,12 @@ cli = [
     "hodu_plugin/i16",
     "hodu_plugin/i64",
 
-    "hodu_format/f8e5m2",
-    "hodu_format/f64",
-    "hodu_format/u16",
-    "hodu_format/u64",
-    "hodu_format/i16",
-    "hodu_format/i64",
+    "hodu_core/f8e5m2",
+    "hodu_core/f64",
+    "hodu_core/u16",
+    "hodu_core/u64",
+    "hodu_core/i16",
+    "hodu_core/i64",
 ]
 
 default = ["std", "serde"]
@@ -79,7 +79,6 @@ clap = { version = "4.5.53", features = ["derive"], optional = true }
 hodu_core = { workspace = true, optional = true }
 hodu_internal = { workspace = true }
 hodu_plugin = { workspace = true, optional = true }
-hodu_format = { workspace = true, optional = true }
 
 [workspace.dependencies]
 dashmap = "6.1.0"
@@ -103,7 +102,6 @@ hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
 hodu_utils = { path = "crates/hodu_utils", version = "0.2.4" }
 hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.4" }
 hodu_plugin = { path = "crates/hodu_plugin", version = "0.2.4" }
-hodu_format = { path = "crates/hodu_format", version = "0.2.4" }
 hodu_xla = "0.4.7"
 libloading = "0.9.0"
 num-traits = { version = "0.2.19", default-features = false }
