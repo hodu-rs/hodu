@@ -78,6 +78,7 @@ hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
 hodu_utils = { path = "crates/hodu_utils", version = "0.2.4" }
 hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.4" }
 hodu_plugin = { path = "crates/hodu_plugin", version = "0.2.4" }
+hodu_format = { path = "crates/hodu_format", version = "0.2.4" }
 hodu_xla = "0.4.7"
 libloading = "0.9.0"
 num-traits = { version = "0.2.19", default-features = false }
