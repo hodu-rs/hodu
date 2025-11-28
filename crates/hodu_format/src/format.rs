@@ -1,6 +1,71 @@
-//! Output format definitions for AOT compilation
+//! Format definitions for models and compiled outputs
 
 use hodu_compat::*;
+
+/// Model format for loading pre-trained models
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[repr(C)]
+pub enum ModelFormat {
+    /// Hodu Snapshot (.hdss) - native serialized computation graph
+    HoduSnapshot,
+    /// ONNX format (.onnx)
+    Onnx,
+    /// SafeTensors format (.safetensors)
+    SafeTensors,
+    /// GGUF format (.gguf)
+    Gguf,
+    /// PyTorch format (.pt, .pth)
+    PyTorch,
+}
+
+impl fmt::Display for ModelFormat {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ModelFormat::HoduSnapshot => write!(f, "hdss"),
+            ModelFormat::Onnx => write!(f, "onnx"),
+            ModelFormat::SafeTensors => write!(f, "safetensors"),
+            ModelFormat::Gguf => write!(f, "gguf"),
+            ModelFormat::PyTorch => write!(f, "pytorch"),
+        }
+    }
+}
+
+impl ModelFormat {
+    /// Parse format from string
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "hdss" | "snapshot" | "hodu-snapshot" => Some(ModelFormat::HoduSnapshot),
+            "onnx" => Some(ModelFormat::Onnx),
+            "safetensors" | "st" => Some(ModelFormat::SafeTensors),
+            "gguf" => Some(ModelFormat::Gguf),
+            "pytorch" | "pt" | "pth" | "torch" => Some(ModelFormat::PyTorch),
+            _ => None,
+        }
+    }
+
+    /// Infer format from file extension
+    pub fn from_extension(ext: &str) -> Option<Self> {
+        match ext.to_lowercase().as_str() {
+            "hdss" => Some(ModelFormat::HoduSnapshot),
+            "onnx" => Some(ModelFormat::Onnx),
+            "safetensors" => Some(ModelFormat::SafeTensors),
+            "gguf" => Some(ModelFormat::Gguf),
+            "pt" | "pth" => Some(ModelFormat::PyTorch),
+            _ => None,
+        }
+    }
+
+    /// Get the default file extension for this format
+    pub fn extension(&self) -> &'static str {
+        match self {
+            ModelFormat::HoduSnapshot => "hdss",
+            ModelFormat::Onnx => "onnx",
+            ModelFormat::SafeTensors => "safetensors",
+            ModelFormat::Gguf => "gguf",
+            ModelFormat::PyTorch => "pt",
+        }
+    }
+}
 
 /// Output format for AOT compilation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -1,0 +1,25 @@
+[package]
+name = "hodu_format"
+version = "0.2.4"
+description = "Model format support for Hodu (hdss, onnx, safetensors, gguf, pytorch)"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu"
+
+[features]
+default = ["std", "hdss"]
+
+std = ["hodu_compat/std", "hodu_core?/std"]
+
+# Format support
+hdss = ["dep:hodu_core", "hodu_core/serde"]
+onnx = []
+safetensors = []
+gguf = []
+pytorch = []
+
+[dependencies]
+hodu_compat = { workspace = true }
+hodu_core = { workspace = true, optional = true }
