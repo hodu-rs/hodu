@@ -8,67 +8,75 @@ hodu_core를 순수 IR 생성(Script/Snapshot)까지만 유지하고, 컴파일/
 
 ### 아키텍처 개요
 
-```
-┌─────────────────────────────────────────────────────┐
-│  Format Plugin (모델 포맷)                          │
-│  - onnx, safetensors, gguf, pytorch, ...            │
-└─────────────────────────────────────────────────────┘
-                      ↓ load
-┌─────────────────────────────────────────────────────┐
-│  hodu_core                                          │
-│  - Script / Snapshot IR (플랫폼 독립적)             │
-│  - CaptureBoard (연산 그래프 캡처)                  │
-└─────────────────────────────────────────────────────┘
-                      ↓ compile
-┌─────────────────────────────────────────────────────┐
-│  Compiler Plugin (컴파일)                           │
-│  - llvm: LLVM JIT/AOT → CPU/CUDA/ROCm               │
-│  - metal: MSL → Metal                               │
-│  - xla: XLA 컴파일러 → CPU/GPU/TPU                  │
-└─────────────────────────────────────────────────────┘
-                      ↓ CompiledArtifact
-┌─────────────────────────────────────────────────────┐
-│  Runtime Plugin (실행)                              │
-│  - native: dlopen (.so/.dylib)                      │
-│  - cuda: CUDA Runtime (.ptx/.cubin)                 │
-│  - metal: Metal Runtime (.metallib)                 │
-│  - onnxruntime: ONNX Runtime                        │
-│  - interp: 순수 인터프리터 (builtin)                │
-└─────────────────────────────────────────────────────┘
-                      ↓ execute
-┌─────────────────────────────────────────────────────┐
-│  Device (하드웨어)                                  │
-│  - CPU, CUDA, Metal, ROCm, TPU, ...                 │
-└─────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Format["Format Plugin (모델 포맷)"]
+        F1[onnx] ~~~ F2[safetensors] ~~~ F3[gguf] ~~~ F4[pytorch]
+    end
+
+    subgraph Core["hodu_core"]
+        IR[Script / Snapshot IR] ~~~ CB[CaptureBoard]
+    end
+
+    subgraph Compiler["Compiler Plugin (컴파일)"]
+        C1[llvm: CPU/CUDA/ROCm] ~~~ C2[metal: MSL] ~~~ C3[xla: CPU/GPU/TPU]
+    end
+
+    subgraph Runtime["Runtime Plugin (실행)"]
+        R1[native: dlopen] ~~~ R2[cuda: CUDA Runtime] ~~~ R3[metal: Metal Runtime] ~~~ R4[onnxruntime] ~~~ R5[interp: builtin]
+    end
+
+    subgraph Device["Device (하드웨어)"]
+        D1[CPU] ~~~ D2[CUDA] ~~~ D3[Metal] ~~~ D4[ROCm] ~~~ D5[TPU]
+    end
+
+    Format -->|load| Core
+    Core -->|compile| Compiler
+    Compiler -->|CompiledArtifact| Runtime
+    Runtime -->|execute| Device
 ```
 
 ### 컴파일 체인 (GPU)
 
-```
-Script (Snapshot IR)
-       ↓
-┌──────────────────────────────────────────────────────┐
-│  Compiler Plugin                                     │
-│                                                      │
-│  ┌─────────────┐    ┌─────────────┐                  │
-│  │ Host Code   │    │ Device Code │                  │
-│  │ (CPU)       │    │ (GPU)       │                  │
-│  └─────────────┘    └─────────────┘                  │
-│        ↓                  ↓                          │
-│     LLVM IR           ┌───┴───┐                      │
-│        ↓              ↓       ↓                      │
-│   Native Code      PTX      MSL/AIR                  │
-│   (x86/arm)         ↓         ↓                      │
-│                   cubin    metallib                  │
-└──────────────────────────────────────────────────────┘
-       ↓                 ↓           ↓
-┌──────────────────────────────────────────────────────┐
-│  Runtime Plugin                                      │
-│                                                      │
-│   Native Runtime   CUDA Runtime   Metal Runtime      │
-└──────────────────────────────────────────────────────┘
-       ↓                 ↓           ↓
-      CPU              CUDA        Metal
+```mermaid
+flowchart TB
+    Script[Script / Snapshot IR]
+
+    subgraph CompilerPlugin["Compiler Plugin"]
+        subgraph Host["Host Code (CPU)"]
+            LLVM_IR[LLVM IR]
+            Native[Native Code<br/>x86/arm]
+        end
+        subgraph DeviceCode["Device Code (GPU)"]
+            PTX[PTX]
+            MSL[MSL/AIR]
+            cubin[cubin]
+            metallib[metallib]
+        end
+        LLVM_IR --> Native
+        PTX --> cubin
+        MSL --> metallib
+    end
+
+    subgraph RuntimePlugin["Runtime Plugin"]
+        NativeRT[Native Runtime]
+        CudaRT[CUDA Runtime]
+        MetalRT[Metal Runtime]
+    end
+
+    subgraph Devices["Device"]
+        CPU[CPU]
+        CUDA[CUDA]
+        Metal[Metal]
+    end
+
+    Script --> CompilerPlugin
+    Native --> NativeRT
+    cubin --> CudaRT
+    metallib --> MetalRT
+    NativeRT --> CPU
+    CudaRT --> CUDA
+    MetalRT --> Metal
 ```
 
 ### Device별 IR 및 출력 포맷
@@ -346,45 +354,54 @@ hodu build model.hdss -o model.metallib --compiler metal --device metal
 
 ## Crate 구조
 
-```
-hodu/                           # CLI + 플러그인 로더
-├── src/
-│   ├── main.rs
-│   └── cli.rs
+```mermaid
+flowchart TB
+    subgraph CLI["hodu (CLI)"]
+        main[main.rs]
+        cli[cli.rs]
+    end
 
-hodu_core/                      # 순수 IR (Script/Snapshot)
-├── src/
-│   ├── script/
-│   │   ├── capture/           # CaptureBoard
-│   │   └── snapshot.rs        # Snapshot IR
-│   └── ...
+    subgraph CoreCrate["hodu_core"]
+        script[script/]
+        capture[capture/]
+        snapshot[snapshot.rs]
+    end
 
-hodu_plugin/                    # 플러그인 인터페이스 + 매니저
-├── src/
-│   ├── lib.rs
-│   ├── compiler.rs            # CompilerPlugin trait
-│   ├── runtime.rs             # RuntimePlugin trait
-│   ├── format.rs              # FormatPlugin trait
-│   ├── artifact.rs            # CompiledArtifact
-│   ├── output.rs              # OutputFormat
-│   └── manager.rs             # PluginManager
+    subgraph PluginCrate["hodu_plugin"]
+        compiler_trait[compiler.rs]
+        runtime_trait[runtime.rs]
+        format_trait[format.rs]
+        artifact[artifact.rs]
+        output[output.rs]
+        manager[manager.rs]
+    end
 
-# Compiler 플러그인들
-hodu-compiler-llvm/
-hodu-compiler-metal/
-hodu-compiler-xla/
+    subgraph CompilerPlugins["Compiler Plugins"]
+        llvm[hodu-compiler-llvm]
+        metal_c[hodu-compiler-metal]
+        xla_c[hodu-compiler-xla]
+    end
 
-# Runtime 플러그인들
-hodu-runtime-native/
-hodu-runtime-cuda/
-hodu-runtime-metal/
-hodu-runtime-onnx/
-hodu-runtime-interp/           # builtin (hodu에 포함)
+    subgraph RuntimePlugins["Runtime Plugins"]
+        native[hodu-runtime-native]
+        cuda[hodu-runtime-cuda]
+        metal_r[hodu-runtime-metal]
+        onnx_r[hodu-runtime-onnx]
+        interp[hodu-runtime-interp<br/>builtin]
+    end
 
-# Format 플러그인들
-hodu-format-onnx/
-hodu-format-safetensors/
-hodu-format-gguf/
+    subgraph FormatPlugins["Format Plugins"]
+        onnx_f[hodu-format-onnx]
+        safetensors[hodu-format-safetensors]
+        gguf[hodu-format-gguf]
+    end
+
+    CLI --> PluginCrate
+    CLI --> CoreCrate
+    PluginCrate --> CoreCrate
+    CompilerPlugins --> PluginCrate
+    RuntimePlugins --> PluginCrate
+    FormatPlugins --> PluginCrate
 ```
 
 ---
@@ -393,10 +410,10 @@ hodu-format-gguf/
 
 ### Phase 1: Core 분리
 
-- [ ] hodu_core에서 script/compiled/ 제거
-- [ ] hodu_core는 Script/Snapshot/CaptureBoard만 유지
+- [x] hodu_core에서 script/compiled/ 제거
+- [x] hodu_core는 Script/Snapshot/CaptureBoard만 유지
 
-### Phase 2: Plugin API 설계 ✅
+### Phase 2: Plugin API 설계
 
 - [x] hodu_plugin crate 생성
 - [x] CompilerPlugin trait 정의
@@ -460,9 +477,29 @@ hodu-format-gguf/
 
 ### Compiler → Runtime 조합
 
-| Compiler | Output | Runtime |
-|----------|--------|---------|
-| llvm | .so/.dylib | native |
-| llvm | .ptx/.cubin | cuda |
-| metal | .metallib | metal |
-| - | .onnx | onnxruntime |
+```mermaid
+flowchart LR
+    subgraph Compilers
+        llvm[llvm]
+        metal_c[metal]
+    end
+
+    subgraph Outputs
+        so[.so/.dylib]
+        ptx[.ptx/.cubin]
+        metallib[.metallib]
+        onnx_file[.onnx]
+    end
+
+    subgraph Runtimes
+        native[native]
+        cuda[cuda]
+        metal_r[metal]
+        onnxrt[onnxruntime]
+    end
+
+    llvm --> so --> native
+    llvm --> ptx --> cuda
+    metal_c --> metallib --> metal_r
+    onnx_file --> onnxrt
+```
