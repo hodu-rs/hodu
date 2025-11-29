@@ -31,11 +31,7 @@ pub fn broadcast_tensors2(a: &Tensor, b: &Tensor) -> HoduResult<(Tensor, Tensor)
             output_dims[output_ndim - 1 - i] = a_dim.max(b_dim);
         } else {
             // Only clone shapes for error messages
-            return Err(HoduError::IncompatibleShapes {
-                lhs: a.shape(),
-                rhs: b.shape(),
-                op: Op::Dummy,
-            });
+            return Err(HoduError::incompatible_shapes(a.shape(), b.shape(), Op::Dummy));
         }
     }
 

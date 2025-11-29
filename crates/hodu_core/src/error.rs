@@ -5,6 +5,21 @@ use crate::{
     types::{DType, Device, Shape},
 };
 
+/// Information for shape mismatch errors.
+#[derive(Clone, Debug)]
+pub struct ShapeMismatchInfo {
+    pub expected: Shape,
+    pub got: Shape,
+}
+
+/// Information for incompatible shapes errors.
+#[derive(Clone, Debug)]
+pub struct IncompatibleShapesInfo {
+    pub lhs: Shape,
+    pub rhs: Shape,
+    pub op: Op,
+}
+
 /// Main error type for hodu_core.
 ///
 /// This enum covers all possible error conditions that can occur
@@ -33,11 +48,11 @@ pub enum HoduError {
 
     // ===== Shape and Layout Errors =====
     /// Shape mismatch between expected and actual shapes.
-    ShapeMismatch { expected: Shape, got: Shape },
+    ShapeMismatch(Box<ShapeMismatchInfo>),
     /// Size mismatch between expected and actual sizes.
     SizeMismatch { expected: usize, got: usize },
     /// Incompatible shapes in a binary operation.
-    IncompatibleShapes { lhs: Shape, rhs: Shape, op: Op },
+    IncompatibleShapes(Box<IncompatibleShapesInfo>),
     /// Invalid layout configuration.
     InvalidLayout { reason: String },
     /// Invalid axis for the given shape.
@@ -146,17 +161,17 @@ impl fmt::Display for HoduError {
             },
 
             // Shape and Layout Errors
-            Self::ShapeMismatch { expected, got } => {
-                write!(f, "shape mismatch: expected {:?}, got {:?}", expected, got)
+            Self::ShapeMismatch(info) => {
+                write!(f, "shape mismatch: expected {:?}, got {:?}", info.expected, info.got)
             },
             Self::SizeMismatch { expected, got } => {
                 write!(f, "size mismatch: expected {}, got {}", expected, got)
             },
-            Self::IncompatibleShapes { lhs, rhs, op } => {
+            Self::IncompatibleShapes(info) => {
                 write!(
                     f,
                     "incompatible shapes in operation {:?}: lhs {:?}, rhs {:?}",
-                    op, lhs, rhs
+                    info.op, info.lhs, info.rhs
                 )
             },
             Self::InvalidLayout { reason } => {
@@ -245,6 +260,18 @@ impl fmt::Display for HoduError {
 impl fmt::Debug for HoduError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, f)
+    }
+}
+
+impl HoduError {
+    /// Create a shape mismatch error.
+    pub fn shape_mismatch(expected: Shape, got: Shape) -> Self {
+        Self::ShapeMismatch(Box::new(ShapeMismatchInfo { expected, got }))
+    }
+
+    /// Create an incompatible shapes error.
+    pub fn incompatible_shapes(lhs: Shape, rhs: Shape, op: Op) -> Self {
+        Self::IncompatibleShapes(Box::new(IncompatibleShapesInfo { lhs, rhs, op }))
     }
 }
 

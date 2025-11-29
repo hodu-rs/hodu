@@ -140,11 +140,11 @@ impl Layout {
 
         // Check that total number of elements is the same
         if old_size != new_size {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: self.shape.clone(),
-                rhs: new_shape.clone(),
-                op: Op::Shape(ShapeOp::Reshape),
-            });
+            return Err(HoduError::incompatible_shapes(
+                self.shape.clone(),
+                new_shape.clone(),
+                Op::Shape(ShapeOp::Reshape),
+            ));
         }
 
         // Reshape only works on contiguous tensors
@@ -292,11 +292,11 @@ impl Layout {
         let shape = &self.shape;
 
         if shape.ndim() > target_shape.ndim() {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: shape.clone(),
-                rhs: target_shape.clone(),
-                op: Op::Shape(ShapeOp::Broadcast),
-            });
+            return Err(HoduError::incompatible_shapes(
+                shape.clone(),
+                target_shape.clone(),
+                Op::Shape(ShapeOp::Broadcast),
+            ));
         }
 
         let rank_diff = target_shape.ndim() - shape.ndim();
@@ -321,11 +321,11 @@ impl Layout {
             } else if src_dim == 1 {
                 new_strides[i] = 0;
             } else {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: shape.clone(),
-                    rhs: target_shape.clone(),
-                    op: Op::Shape(ShapeOp::Broadcast),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    shape.clone(),
+                    target_shape.clone(),
+                    Op::Shape(ShapeOp::Broadcast),
+                ));
             }
         }
 
@@ -338,12 +338,9 @@ impl Layout {
 
     /// Broadcasts two layouts to a common shape.
     pub fn broadcast_layouts(lhs: &Self, rhs: &Self) -> HoduResult<(Self, Self)> {
-        let broadcast_shape =
-            Shape::broadcast_shape(&lhs.shape, &rhs.shape).ok_or_else(|| HoduError::IncompatibleShapes {
-                lhs: lhs.shape.clone(),
-                rhs: rhs.shape.clone(),
-                op: Op::Shape(ShapeOp::Broadcast),
-            })?;
+        let broadcast_shape = Shape::broadcast_shape(&lhs.shape, &rhs.shape).ok_or_else(|| {
+            HoduError::incompatible_shapes(lhs.shape.clone(), rhs.shape.clone(), Op::Shape(ShapeOp::Broadcast))
+        })?;
 
         let lhs_broadcast = lhs.broadcast_to(&broadcast_shape)?;
         let rhs_broadcast = rhs.broadcast_to(&broadcast_shape)?;

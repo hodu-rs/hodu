@@ -46,11 +46,11 @@ impl Tensor {
         for layout in &layouts[1..] {
             let dims = layout.shape().dims();
             if dims.len() != output_dims.len() {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: Shape::from(&output_dims),
-                    rhs: layout.shape().clone(),
-                    op: Op::Concat(ConcatOp::Concat),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    Shape::from(&output_dims),
+                    layout.shape().clone(),
+                    Op::Concat(ConcatOp::Concat),
+                ));
             }
             output_dims[dim_usize] += dims[dim_usize];
         }

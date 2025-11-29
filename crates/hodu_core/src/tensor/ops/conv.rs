@@ -24,18 +24,18 @@ impl Tensor {
         // Input: [batch, in_channels, length]
         // Weight: [out_channels, in_channels, kernel_size]
         if input_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv1d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv1d),
+            ));
         }
         if weight_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv1d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                weight_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv1d),
+            ));
         }
 
         let batch_size = input_dims[0];
@@ -45,11 +45,11 @@ impl Tensor {
         let kernel_size = weight_dims[2];
 
         if input_dims[1] != weight_dims[1] {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: weight_shape,
-                op: Op::Conv(ConvOp::Conv1d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                weight_shape,
+                Op::Conv(ConvOp::Conv1d),
+            ));
         }
 
         // Validate device, dtype for device, and dtype for operation
@@ -145,18 +145,18 @@ impl Tensor {
         // Input: [batch, in_channels, height, width]
         // Weight: [out_channels, in_channels, kernel_h, kernel_w]
         if input_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv2d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv2d),
+            ));
         }
         if weight_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv2d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                weight_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv2d),
+            ));
         }
 
         let batch_size = input_dims[0];
@@ -168,11 +168,11 @@ impl Tensor {
         let kernel_width = weight_dims[3];
 
         if input_dims[1] != weight_dims[1] {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: weight_shape,
-                op: Op::Conv(ConvOp::Conv2d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                weight_shape,
+                Op::Conv(ConvOp::Conv2d),
+            ));
         }
 
         // Validate device, dtype for device, and dtype for operation
@@ -271,18 +271,18 @@ impl Tensor {
         // Input: [batch, in_channels, depth, height, width]
         // Weight: [out_channels, in_channels, kernel_d, kernel_h, kernel_w]
         if input_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv3d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv3d),
+            ));
         }
         if weight_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv3d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                weight_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv3d),
+            ));
         }
 
         let batch_size = input_dims[0];
@@ -296,11 +296,11 @@ impl Tensor {
         let kernel_width = weight_dims[4];
 
         if input_dims[1] != weight_dims[1] {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: weight_shape,
-                op: Op::Conv(ConvOp::Conv3d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                weight_shape,
+                Op::Conv(ConvOp::Conv3d),
+            ));
         }
 
         // Validate device, dtype for device, and dtype for operation
@@ -409,18 +409,18 @@ impl Tensor {
         // Input: [batch, in_channels, length]
         // Weight: [out_channels, in_channels, kernel_size] (same as conv1d)
         if input_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose1d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose1d),
+            ));
         }
         if weight_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose1d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                weight_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose1d),
+            ));
         }
 
         let batch_size = input_dims[0];
@@ -431,11 +431,11 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[1] {
             // in_channels must match
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: weight_shape,
-                op: Op::Conv(ConvOp::ConvTranspose1d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                weight_shape,
+                Op::Conv(ConvOp::ConvTranspose1d),
+            ));
         }
 
         // Validate device, dtype for device, and dtype for operation
@@ -540,18 +540,18 @@ impl Tensor {
         // Input: [batch, in_channels, height, width]
         // Weight: [out_channels, in_channels, kernel_h, kernel_w] (same as conv2d)
         if input_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose2d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose2d),
+            ));
         }
         if weight_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose2d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                weight_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose2d),
+            ));
         }
 
         let batch_size = input_dims[0];
@@ -564,11 +564,11 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[1] {
             // in_channels must match
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: weight_shape,
-                op: Op::Conv(ConvOp::ConvTranspose2d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                weight_shape,
+                Op::Conv(ConvOp::ConvTranspose2d),
+            ));
         }
 
         // Validate device, dtype for device, and dtype for operation
@@ -677,18 +677,18 @@ impl Tensor {
         // Input: [batch, in_channels, depth, height, width]
         // Weight: [out_channels, in_channels, kernel_d, kernel_h, kernel_w] (same as conv3d)
         if input_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose3d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose3d),
+            ));
         }
         if weight_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: weight_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose3d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                weight_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose3d),
+            ));
         }
 
         let batch_size = input_dims[0];
@@ -703,11 +703,11 @@ impl Tensor {
 
         if input_dims[1] != weight_dims[1] {
             // in_channels must match
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: weight_shape,
-                op: Op::Conv(ConvOp::ConvTranspose3d),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                weight_shape,
+                Op::Conv(ConvOp::ConvTranspose3d),
+            ));
         }
 
         // Validate device, dtype for device, and dtype for operation
@@ -822,18 +822,18 @@ impl Tensor {
         // GradOutput: [batch, out_channels, length_out]
         // Weight: [out_channels, in_channels, kernel_size]
         if input_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv1dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv1dGradWeight),
+            ));
         }
         if grad_output_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv1dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                grad_output_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv1dGradWeight),
+            ));
         }
         if weight_shape.len() != 3 {
             return Err(HoduError::InternalError(
@@ -908,18 +908,18 @@ impl Tensor {
         // GradOutput: [batch, out_channels, height_out, width_out]
         // Weight: [out_channels, in_channels, kernel_h, kernel_w]
         if input_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv2dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv2dGradWeight),
+            ));
         }
         if grad_output_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv2dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                grad_output_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv2dGradWeight),
+            ));
         }
         if weight_shape.len() != 4 {
             return Err(HoduError::InternalError(
@@ -995,18 +995,18 @@ impl Tensor {
         // GradOutput: [batch, out_channels, depth_out, height_out, width_out]
         // Weight: [out_channels, in_channels, kernel_d, kernel_h, kernel_w]
         if input_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv3dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv3dGradWeight),
+            ));
         }
         if grad_output_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::Conv3dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                grad_output_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::Conv3dGradWeight),
+            ));
         }
         if weight_shape.len() != 5 {
             return Err(HoduError::InternalError(
@@ -1083,18 +1083,18 @@ impl Tensor {
         // GradOutput: [batch, out_channels, length_out]
         // Weight: [in_channels, out_channels, kernel_size]
         if input_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose1dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose1dGradWeight),
+            ));
         }
         if grad_output_dims.len() != 3 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose1dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                grad_output_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose1dGradWeight),
+            ));
         }
         if weight_shape.len() != 3 {
             return Err(HoduError::InternalError(
@@ -1169,18 +1169,18 @@ impl Tensor {
         // GradOutput: [batch, out_channels, height_out, width_out]
         // Weight: [in_channels, out_channels, kernel_height, kernel_width]
         if input_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose2dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose2dGradWeight),
+            ));
         }
         if grad_output_dims.len() != 4 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose2dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                grad_output_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose2dGradWeight),
+            ));
         }
         if weight_shape.len() != 4 {
             return Err(HoduError::InternalError(
@@ -1256,18 +1256,18 @@ impl Tensor {
         // GradOutput: [batch, out_channels, depth_out, height_out, width_out]
         // Weight: [in_channels, out_channels, kernel_depth, kernel_height, kernel_width]
         if input_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: input_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose3dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                input_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose3dGradWeight),
+            ));
         }
         if grad_output_dims.len() != 5 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: grad_output_shape,
-                rhs: Shape::from(vec![]),
-                op: Op::Conv(ConvOp::ConvTranspose3dGradWeight),
-            });
+            return Err(HoduError::incompatible_shapes(
+                grad_output_shape,
+                Shape::from(vec![]),
+                Op::Conv(ConvOp::ConvTranspose3dGradWeight),
+            ));
         }
         if weight_shape.len() != 5 {
             return Err(HoduError::InternalError(

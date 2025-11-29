@@ -17,11 +17,11 @@ impl Tensor {
         let new_size = shape.size();
 
         if current_size != new_size {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: self.shape(),
-                rhs: shape,
-                op: Op::Shape(ShapeOp::Reshape),
-            });
+            return Err(HoduError::incompatible_shapes(
+                self.shape(),
+                shape,
+                Op::Shape(ShapeOp::Reshape),
+            ));
         }
 
         if !self.is_contiguous() {

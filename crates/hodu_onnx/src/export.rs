@@ -59,23 +59,22 @@ fn export_graph(snapshot: &Snapshot) -> HoduResult<GraphProto> {
 
     // Map node output tensor IDs to names (use target name if it's a target, else generate)
     for node in &snapshot.nodes {
-        if !name_map.contains_key(&node.output_id) {
+        name_map.entry(node.output_id).or_insert_with(|| {
             // Check if this is a target output
-            let target_name = snapshot
+            snapshot
                 .targets
                 .iter()
                 .find(|t| t.id == node.output_id)
-                .map(|t| t.name.clone());
-            let name = target_name.unwrap_or_else(|| format!("t_{}", node.output_id.0));
-            name_map.insert(node.output_id, name);
-        }
+                .map(|t| t.name.clone())
+                .unwrap_or_else(|| format!("t_{}", node.output_id.0))
+        });
     }
 
     // Convert inputs
     let inputs: Vec<ValueInfoProto> = snapshot
         .inputs
         .iter()
-        .map(|input| make_value_info(&input.name, &input.shape.dims(), input.dtype))
+        .map(|input| make_value_info(&input.name, input.shape.dims(), input.dtype))
         .collect();
 
     // Convert constants to initializers
@@ -83,7 +82,7 @@ fn export_graph(snapshot: &Snapshot) -> HoduResult<GraphProto> {
         let name = name_map.get(&constant.id).unwrap();
         initializers.push(make_tensor_proto(
             name,
-            &constant.shape.dims(),
+            constant.shape.dims(),
             constant.dtype,
             &constant.data,
         ));

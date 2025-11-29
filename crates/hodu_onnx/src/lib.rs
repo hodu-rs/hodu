@@ -3,6 +3,7 @@
 mod export;
 mod import;
 
+#[allow(clippy::doc_overindented_list_items)]
 pub mod onnx {
     include!(concat!(env!("OUT_DIR"), "/onnx.rs"));
 }

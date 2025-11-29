@@ -28,21 +28,21 @@ impl Tensor {
 
         // Both tensors must be at least 1D
         if lhs_ndim < 1 || rhs_ndim < 1 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape,
-                rhs: rhs_shape,
-                op: Op::Matrix(MatrixOp::Matmul),
-            });
+            return Err(HoduError::incompatible_shapes(
+                lhs_shape,
+                rhs_shape,
+                Op::Matrix(MatrixOp::Matmul),
+            ));
         }
 
         // Handle 1D x 1D case - vector dot product
         if lhs_ndim == 1 && rhs_ndim == 1 {
             if lhs_dims[0] != rhs_dims[0] {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Matmul),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Matmul),
+                ));
             }
             return self.mul(other)?.sum_all();
         }
@@ -53,11 +53,11 @@ impl Tensor {
             let k2 = rhs_dims[0];
 
             if k1 != k2 {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Matmul),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Matmul),
+                ));
             }
 
             let rhs_reshaped = other.reshape(Shape::from(vec![k2, 1]))?;
@@ -71,11 +71,11 @@ impl Tensor {
             let k2 = rhs_dims[0];
 
             if k1 != k2 {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Matmul),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Matmul),
+                ));
             }
 
             let lhs_reshaped = self.reshape(Shape::from(vec![1, k1]))?;
@@ -104,11 +104,11 @@ impl Tensor {
         let rhs_ndim = rhs_dims.len();
 
         if lhs_ndim < 2 || rhs_ndim < 2 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape,
-                rhs: rhs_shape,
-                op: Op::Matrix(MatrixOp::Matmul),
-            });
+            return Err(HoduError::incompatible_shapes(
+                lhs_shape,
+                rhs_shape,
+                Op::Matrix(MatrixOp::Matmul),
+            ));
         }
 
         // Check that last two dimensions are compatible for matmul
@@ -116,11 +116,11 @@ impl Tensor {
         let rhs_outer = rhs_dims[rhs_ndim - 2];
 
         if lhs_inner != rhs_outer {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape,
-                rhs: rhs_shape,
-                op: Op::Matrix(MatrixOp::Matmul),
-            });
+            return Err(HoduError::incompatible_shapes(
+                lhs_shape,
+                rhs_shape,
+                Op::Matrix(MatrixOp::Matmul),
+            ));
         }
 
         // Compute broadcast shape for batch dimensions
@@ -143,11 +143,11 @@ impl Tensor {
             };
 
             if lhs_dim != 1 && rhs_dim != 1 && lhs_dim != rhs_dim {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Matmul),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Matmul),
+                ));
             }
             batch_dims[max_batch_ndim - 1 - i] = lhs_dim.max(rhs_dim);
         }
@@ -242,11 +242,11 @@ impl Tensor {
         // Case 1: 1D x 1D - dot product (inner product)
         if lhs_ndim == 1 && rhs_ndim == 1 {
             if lhs_dims[0] != rhs_dims[0] {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Dot),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Dot),
+                ));
             }
             return self.mul(other)?.sum_all();
         }
@@ -257,11 +257,11 @@ impl Tensor {
             let k2 = rhs_dims[0];
 
             if k1 != k2 {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Dot),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Dot),
+                ));
             }
 
             let rhs_reshaped = other.reshape(Shape::from(vec![k2, 1]))?;
@@ -275,11 +275,11 @@ impl Tensor {
             let k2 = rhs_dims[0];
 
             if k1 != k2 {
-                return Err(HoduError::IncompatibleShapes {
-                    lhs: lhs_shape,
-                    rhs: rhs_shape,
-                    op: Op::Matrix(MatrixOp::Dot),
-                });
+                return Err(HoduError::incompatible_shapes(
+                    lhs_shape,
+                    rhs_shape,
+                    Op::Matrix(MatrixOp::Dot),
+                ));
             }
 
             let lhs_reshaped = self.reshape(Shape::from(vec![1, k1]))?;
@@ -310,11 +310,11 @@ impl Tensor {
         let (k2, n) = (rhs_dims[0], rhs_dims[1]);
 
         if k1 != k2 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape,
-                rhs: rhs_shape,
-                op: Op::Matrix(MatrixOp::Dot),
-            });
+            return Err(HoduError::incompatible_shapes(
+                lhs_shape,
+                rhs_shape,
+                Op::Matrix(MatrixOp::Dot),
+            ));
         }
 
         let result_dims = vec![m, n];

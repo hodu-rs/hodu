@@ -57,13 +57,10 @@ impl RuntimePlugin for InterpRuntime {
                 let snapshot = Snapshot::from_bytes(&artifact.data)?;
                 Ok(ExecutableModule::new(InterpExecutable::new(snapshot)))
             },
-            _ => Err(HoduError::UnsupportedOperation(
-                format!(
-                    "InterpRuntime only supports HoduSnapshot format, got {:?}",
-                    artifact.format
-                )
-                .into(),
-            )),
+            _ => Err(HoduError::UnsupportedOperation(format!(
+                "InterpRuntime only supports HoduSnapshot format, got {:?}",
+                artifact.format
+            ))),
         }
     }
 
@@ -137,13 +134,13 @@ fn execute_snapshot(snapshot: &Snapshot, inputs: &[(&str, &Tensor)]) -> HoduResu
             .iter()
             .find(|(name, _)| *name == input_spec.name)
             .map(|(_, t)| *t)
-            .ok_or_else(|| HoduError::InvalidArgument(format!("Missing input: {}", input_spec.name).into()))?;
+            .ok_or_else(|| HoduError::InvalidArgument(format!("Missing input: {}", input_spec.name)))?;
 
         if input_tensor.shape() != input_spec.shape {
-            return Err(HoduError::ShapeMismatch {
-                expected: input_spec.shape.clone(),
-                got: input_tensor.shape().clone(),
-            });
+            return Err(HoduError::shape_mismatch(
+                input_spec.shape.clone(),
+                input_tensor.shape().clone(),
+            ));
         }
         if input_tensor.dtype() != input_spec.dtype {
             return Err(HoduError::DTypeMismatch {
@@ -293,10 +290,10 @@ fn execute_node(node: &SnapshotNode, tensors: &HashMap<SnapshotTensorId, Tensor>
         let id = node
             .input_ids
             .get(idx)
-            .ok_or_else(|| HoduError::InvalidArgument(format!("Missing input {} for op {:?}", idx, node.op).into()))?;
+            .ok_or_else(|| HoduError::InvalidArgument(format!("Missing input {} for op {:?}", idx, node.op)))?;
         tensors
             .get(id)
-            .ok_or_else(|| HoduError::InvalidArgument(format!("Tensor {:?} not found", id).into()))
+            .ok_or_else(|| HoduError::InvalidArgument(format!("Tensor {:?} not found", id)))
     };
 
     let get_inputs = || -> HoduResult<Vec<&Tensor>> {
@@ -305,7 +302,7 @@ fn execute_node(node: &SnapshotNode, tensors: &HashMap<SnapshotTensorId, Tensor>
             .map(|id| {
                 tensors
                     .get(id)
-                    .ok_or_else(|| HoduError::InvalidArgument(format!("Tensor {:?} not found", id).into()))
+                    .ok_or_else(|| HoduError::InvalidArgument(format!("Tensor {:?} not found", id)))
             })
             .collect()
     };
@@ -464,9 +461,10 @@ fn execute_node(node: &SnapshotNode, tensors: &HashMap<SnapshotTensorId, Tensor>
             let (dim, sizes, output_index) = get_split_params(node)?;
             let input = get_input(0)?;
             let results = input.split(&sizes, dim)?;
-            results.into_iter().nth(output_index).ok_or_else(|| {
-                HoduError::InvalidArgument(format!("Split output_index {} out of bounds", output_index).into())
-            })
+            results
+                .into_iter()
+                .nth(output_index)
+                .ok_or_else(|| HoduError::InvalidArgument(format!("Split output_index {} out of bounds", output_index)))
         },
 
         // ==================== Indexing ====================
@@ -929,10 +927,8 @@ fn get_unsqueeze_dim(node: &SnapshotNode) -> HoduResult<i32> {
     let output_dims = output_shape.dims();
 
     for (idx, &dim) in output_dims.iter().enumerate() {
-        if dim == 1 {
-            if idx >= input_dims.len() || input_dims[idx] != 1 {
-                return Ok(idx as i32);
-            }
+        if dim == 1 && (idx >= input_dims.len() || input_dims[idx] != 1) {
+            return Ok(idx as i32);
         }
     }
 

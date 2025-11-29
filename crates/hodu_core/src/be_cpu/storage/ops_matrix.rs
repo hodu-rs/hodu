@@ -54,11 +54,11 @@ pub fn call_ops_matmul(
 
     // Check that inner dimensions match
     if k_lhs != k_rhs {
-        return Err(HoduError::IncompatibleShapes {
-            lhs: lhs_shape.clone(),
-            rhs: rhs_shape.clone(),
-            op: crate::ops::Op::Matrix(crate::ops::MatrixOp::Matmul),
-        });
+        return Err(HoduError::incompatible_shapes(
+            lhs_shape.clone(),
+            rhs_shape.clone(),
+            crate::ops::Op::Matrix(crate::ops::MatrixOp::Matmul),
+        ));
     }
 
     // Compute batch dimensions and output shape
@@ -84,11 +84,11 @@ pub fn call_ops_matmul(
         };
 
         if lhs_dim != rhs_dim && lhs_dim != 1 && rhs_dim != 1 {
-            return Err(HoduError::IncompatibleShapes {
-                lhs: lhs_shape.clone(),
-                rhs: rhs_shape.clone(),
-                op: crate::ops::Op::Matrix(crate::ops::MatrixOp::Matmul),
-            });
+            return Err(HoduError::incompatible_shapes(
+                lhs_shape.clone(),
+                rhs_shape.clone(),
+                crate::ops::Op::Matrix(crate::ops::MatrixOp::Matmul),
+            ));
         }
 
         batch_shape.push(lhs_dim.max(rhs_dim));
@@ -229,11 +229,11 @@ pub fn call_ops_dot(
 
     // Check that inner dimensions match
     if k_lhs != k_rhs {
-        return Err(HoduError::IncompatibleShapes {
-            lhs: lhs_shape.clone(),
-            rhs: rhs_shape.clone(),
-            op: crate::ops::Op::Matrix(crate::ops::MatrixOp::Dot),
-        });
+        return Err(HoduError::incompatible_shapes(
+            lhs_shape.clone(),
+            rhs_shape.clone(),
+            crate::ops::Op::Matrix(crate::ops::MatrixOp::Dot),
+        ));
     }
 
     // Build output shape [M, N]

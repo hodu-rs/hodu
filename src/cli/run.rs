@@ -189,7 +189,7 @@ fn run_with_plugins(
     // Find appropriate runtime
     let runtime = manager
         .runtimes()
-        .find(|r| r.supports_device(device) && r.loadable_formats(device).iter().any(|f| *f == artifact.format))
+        .find(|r| r.supports_device(device) && r.loadable_formats(device).contains(&artifact.format))
         .ok_or_else(|| {
             HoduError::BackendError(format!(
                 "No runtime found for {:?} supporting {:?} format",
