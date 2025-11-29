@@ -649,6 +649,16 @@ flowchart LR
   - [x] import: ONNX → Snapshot (load, load_from_bytes)
   - [x] export: Snapshot → ONNX (save, save_to_bytes)
   - [x] SnapshotConstant.name 필드 추가 (ONNX 라운드트립용)
+  - 미지원 연산 (TODO):
+    - [ ] RNN/LSTM/GRU
+    - [ ] Attention/MultiHeadAttention
+    - [ ] ConvTranspose, MaxPool, AveragePool, GlobalMaxPool, GlobalAveragePool
+    - [ ] Resize, Upsample, Pad
+    - [ ] Split, Tile, ScatterND, GatherND
+    - [ ] NonMaxSuppression, TopK, ArgMax, ArgMin
+    - [ ] InstanceNormalization, GroupNormalization
+    - [ ] If, Loop, Scan (조건문/루프)
+    - [ ] QuantizeLinear, DequantizeLinear
 - [ ] hodu_safetensors crate
 - [ ] hodu_npy crate
 
