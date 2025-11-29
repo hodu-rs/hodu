@@ -504,9 +504,16 @@ fn build_metadata(
             }
         },
 
-        // Shape ops, Cast ops, Memory ops - no kernels needed or use unary
-        Op::Shape(_) | Op::ShapeScalars(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
-            op_metadatas::unary_metadata(output_layout, output_layout)
-        },
+        // Shape ops - no kernels needed
+        Op::Shape(_) | Op::ShapeScalars(_) => op_metadatas::unary_metadata(output_layout, output_layout),
+
+        // Cast ops
+        Op::Cast(_) => op_metadatas::cast_metadata(output_layout),
+
+        // Memory ops
+        Op::Memory(_) => op_metadatas::contiguous_metadata(output_layout),
+
+        // Dummy - no metadata
+        Op::Dummy => vec![],
     }
 }
