@@ -14,6 +14,7 @@ use crate::{
     be_cpu::device::CpuDevice,
     compat::*,
     error::{HoduError, HoduResult},
+    op_metadatas,
     ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout},
@@ -577,22 +578,8 @@ impl BackendStorageT for CpuStorage {
             return self.contiguous(layout);
         }
 
-        let shape = layout.shape();
-        let strides = layout.strides();
-        let offset = layout.offset();
+        let metadata = op_metadatas::cast_metadata(layout);
         let num_els = layout.size();
-
-        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
-        metadata.push(num_els);
-        metadata.push(shape.ndim());
-        for i in 0..shape.ndim() {
-            metadata.push(shape[i]);
-        }
-        for &stride in strides.iter().take(shape.ndim()) {
-            metadata.push(stride);
-        }
-        metadata.push(offset);
 
         // Create output storage with target dtype
         let mut output = CpuDevice::allocate(num_els, target_dtype)?;
@@ -616,22 +603,8 @@ impl BackendStorageT for CpuStorage {
             return Ok(self.clone());
         }
 
-        let shape = layout.shape();
-        let strides = layout.strides();
-        let offset = layout.offset();
+        let metadata = op_metadatas::contiguous_metadata(layout);
         let num_els = layout.size();
-
-        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
-        metadata.push(num_els);
-        metadata.push(shape.ndim());
-        for i in 0..shape.ndim() {
-            metadata.push(shape[i]);
-        }
-        for &stride in strides.iter().take(shape.ndim()) {
-            metadata.push(stride);
-        }
-        metadata.push(offset);
 
         // Create output storage
         let mut output = CpuDevice::allocate(num_els, self.dtype())?;

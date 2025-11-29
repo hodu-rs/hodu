@@ -1,6 +1,12 @@
 [workspace]
 members = ["crates/*", "test-playground"]
-exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels", "plugins/hodu-compiler-metal", "plugins/hodu-runtime-metal"]
+exclude = [
+    "crates/hodu_cuda_kernels",
+    "crates/hodu_metal_kernels",
+    "plugins/hodu-compiler-cpu",
+    "plugins/hodu-compiler-metal",
+    "plugins/hodu-runtime-metal"
+]
 resolver = "2"
 
 [package]
@@ -30,8 +36,6 @@ cli = [
     "dep:hodu_core",
     "dep:hodu_plugin",
 
-    "hodu_core/hdss",
-    "hodu_core/hdt",
     "hodu_core/json",
 
     "f8e5m2",

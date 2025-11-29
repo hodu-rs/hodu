@@ -9,6 +9,7 @@
 
 #![cfg_attr(not(feature = "std"), allow(unused_imports))]
 
+#[allow(clippy::module_inception)]
 mod format;
 
 #[cfg(feature = "hdss")]

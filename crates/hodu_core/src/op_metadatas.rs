@@ -983,3 +983,58 @@ pub fn reduce_window_metadata(
 
     metadata
 }
+
+// ============================================================================
+// Cast Operations
+// ============================================================================
+
+/// Generate metadata for cast (to_dtype) operations
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: shape
+/// - metadata[2+num_dims..2+2*num_dims]: strides
+/// - metadata[2+2*num_dims]: offset
+pub fn cast_metadata(layout: &Layout) -> Vec<usize> {
+    let shape = layout.shape();
+    let num_els = layout.size();
+    let num_dims = shape.ndim();
+
+    let mut metadata = Vec::with_capacity(2 + 2 * num_dims + 1);
+
+    // num_els, num_dims
+    metadata.push(num_els);
+    metadata.push(num_dims);
+
+    // shape
+    for &dim in shape.dims() {
+        metadata.push(dim);
+    }
+
+    // strides
+    for &stride in layout.strides() {
+        metadata.push(stride);
+    }
+
+    // offset
+    metadata.push(layout.offset());
+
+    metadata
+}
+
+// ============================================================================
+// Memory Operations
+// ============================================================================
+
+/// Generate metadata for contiguous operations
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: shape
+/// - metadata[2+num_dims..2+2*num_dims]: strides
+/// - metadata[2+2*num_dims]: offset
+pub fn contiguous_metadata(layout: &Layout) -> Vec<usize> {
+    cast_metadata(layout)
+}

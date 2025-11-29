@@ -15,6 +15,7 @@ use crate::{
     be_cuda::device::CudaDevice,
     compat::*,
     error::{HoduError, HoduResult},
+    op_metadatas,
     ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout, Shape},
@@ -481,21 +482,8 @@ impl BackendStorageT for CudaStorage {
             return self.contiguous(layout);
         }
 
-        let shape = layout.shape();
-        let strides = layout.strides();
-        let offset = layout.offset();
+        let metadata = op_metadatas::cast_metadata(layout);
         let num_els = layout.size();
-
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
-        metadata.push(num_els);
-        metadata.push(shape.ndim());
-        for i in 0..shape.ndim() {
-            metadata.push(shape[i]);
-        }
-        for &stride in strides.iter().take(shape.ndim()) {
-            metadata.push(stride);
-        }
-        metadata.push(offset);
 
         let src_dtype = self.dtype();
         let device = self.get_device();
@@ -574,21 +562,8 @@ impl BackendStorageT for CudaStorage {
             return Ok(self.clone());
         }
 
-        let shape = layout.shape();
-        let strides = layout.strides();
-        let offset = layout.offset();
+        let metadata = op_metadatas::contiguous_metadata(layout);
         let num_els = layout.size();
-
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
-        metadata.push(num_els);
-        metadata.push(shape.ndim());
-        for i in 0..shape.ndim() {
-            metadata.push(shape[i]);
-        }
-        for &stride in strides.iter().take(shape.ndim()) {
-            metadata.push(stride);
-        }
-        metadata.push(offset);
 
         let dtype = self.dtype();
         let device = self.get_device();

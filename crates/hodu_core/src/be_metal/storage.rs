@@ -13,6 +13,7 @@ use crate::{
     be_metal::device::MetalDevice,
     compat::*,
     error::{HoduError, HoduResult},
+    op_metadatas,
     ops::Op,
     scalar::Scalar,
     types::{DType, Device, Layout, Shape},
@@ -54,6 +55,7 @@ impl MetalStorage {
     }
 
     /// Get device pointer to the underlying Metal buffer data
+    #[allow(dead_code)]
     pub fn as_ptr(&self) -> *const u8 {
         self.buffer.contents() as *const u8
     }
@@ -412,27 +414,13 @@ impl BackendStorageT for MetalStorage {
             return self.contiguous(layout);
         }
 
-        let shape = layout.shape();
-        let strides = layout.strides();
-        let offset = layout.offset();
+        let metadata = op_metadatas::cast_metadata(layout);
         let num_els = layout.size();
 
         // Create output buffer with target dtype
         let output_buffer = self.device.new_buffer(num_els, target_dtype, "to_dtype")?;
 
         let command_buffer = self.device.command_buffer()?;
-
-        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
-        metadata.push(num_els);
-        metadata.push(shape.ndim());
-        for i in 0..shape.ndim() {
-            metadata.push(shape[i]);
-        }
-        for &stride in strides.iter().take(shape.ndim()) {
-            metadata.push(stride);
-        }
-        metadata.push(offset);
 
         let input = BufferOffset {
             buffer: &self.buffer,
@@ -463,27 +451,13 @@ impl BackendStorageT for MetalStorage {
             return Ok(self.clone());
         }
 
-        let shape = layout.shape();
-        let strides = layout.strides();
-        let offset = layout.offset();
+        let metadata = op_metadatas::contiguous_metadata(layout);
         let num_els = layout.size();
 
         // Create output buffer
         let output_buffer = self.device.new_buffer(num_els, self.dtype, "contiguous")?;
 
         let command_buffer = self.device.command_buffer()?;
-
-        // Build metadata: [num_els, num_dims, shape..., strides..., offset]
-        let mut metadata = Vec::with_capacity(2 + shape.ndim() * 2 + 1);
-        metadata.push(num_els);
-        metadata.push(shape.ndim());
-        for i in 0..shape.ndim() {
-            metadata.push(shape[i]);
-        }
-        for &stride in strides.iter().take(shape.ndim()) {
-            metadata.push(stride);
-        }
-        metadata.push(offset);
 
         let input = BufferOffset {
             buffer: &self.buffer,

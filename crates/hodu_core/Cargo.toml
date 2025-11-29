@@ -43,8 +43,6 @@ metal-device = []  # Device::Metal enum only, no runtime
 xla = ["std", "i64", "dep:hodu_xla"]
 
 # format features
-hdss = ["serde"]
-hdt = ["serde"]
 json = ["serde", "dep:serde_json"]
 
 [dependencies]

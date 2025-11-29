@@ -385,7 +385,7 @@ fn json_data_to_tensor(data: &[Value], shape: Shape, dtype: DType) -> HoduResult
                 .iter()
                 .map(|v| {
                     v.as_f64()
-                        .map(|f| bf16::from_f64(f))
+                        .map(bf16::from_f64)
                         .ok_or_else(|| HoduError::DeserializationFailed("Expected number".into()))
                 })
                 .collect::<HoduResult<Vec<_>>>()?;
@@ -396,7 +396,7 @@ fn json_data_to_tensor(data: &[Value], shape: Shape, dtype: DType) -> HoduResult
                 .iter()
                 .map(|v| {
                     v.as_f64()
-                        .map(|f| f16::from_f64(f))
+                        .map(f16::from_f64)
                         .ok_or_else(|| HoduError::DeserializationFailed("Expected number".into()))
                 })
                 .collect::<HoduResult<Vec<_>>>()?;

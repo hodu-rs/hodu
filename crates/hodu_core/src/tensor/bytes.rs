@@ -38,16 +38,13 @@ impl Tensor {
         let expected_size = shape.size() * dtype.get_size_in_bytes();
 
         if data.len() != expected_size {
-            return Err(HoduError::InvalidArgument(
-                format!(
-                    "Data size mismatch: expected {} bytes for shape {:?} with dtype {:?}, got {} bytes",
-                    expected_size,
-                    shape.dims(),
-                    dtype,
-                    data.len()
-                )
-                .into(),
-            ));
+            return Err(HoduError::InvalidArgument(format!(
+                "Data size mismatch: expected {} bytes for shape {:?} with dtype {:?}, got {} bytes",
+                expected_size,
+                shape.dims(),
+                dtype,
+                data.len()
+            )));
         }
 
         let cpu_storage = bytes_to_storage(data, dtype)?;

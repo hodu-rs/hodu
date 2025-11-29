@@ -1,3 +1,4 @@
+#[cfg(feature = "serde")]
 mod bytes;
 mod core;
 mod creation;
