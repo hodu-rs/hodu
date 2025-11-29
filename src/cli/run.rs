@@ -3,7 +3,7 @@
 use crate::common::{load_tensor, parse_device, parse_input_arg};
 use crate::output::{self, OutputFormat};
 use clap::Args;
-use hodu_core::{format::hdss, script::Script};
+use hodu_core::format::hdss;
 use hodu_plugin::{Device, HoduError, HoduResult, InterpRuntime, PluginManager, RuntimePlugin, TensorData};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -68,7 +68,7 @@ pub fn execute(args: RunArgs) -> HoduResult<()> {
 fn load_inputs(
     input: &[String],
     inputs: &[String],
-    snapshot: &hodu_core::script::Snapshot,
+    snapshot: &hodu_core::snapshot::Snapshot,
 ) -> HoduResult<HashMap<String, hodu_core::tensor::Tensor>> {
     let all_inputs: Vec<&str> = input.iter().chain(inputs.iter()).map(|s| s.as_str()).collect();
 
@@ -112,7 +112,7 @@ fn load_inputs(
 
 /// Convert input tensors to TensorData format
 fn prepare_input_data(
-    snapshot: &hodu_core::script::Snapshot,
+    snapshot: &hodu_core::snapshot::Snapshot,
     input_map: &HashMap<String, hodu_core::tensor::Tensor>,
 ) -> HoduResult<Vec<(String, TensorData)>> {
     snapshot
@@ -131,7 +131,7 @@ fn prepare_input_data(
 /// Run model on the specified device
 fn run_model(
     device: Device,
-    snapshot: &hodu_core::script::Snapshot,
+    snapshot: &hodu_core::snapshot::Snapshot,
     input_bindings: &[(&str, TensorData)],
     args: &RunArgs,
 ) -> HoduResult<HashMap<String, TensorData>> {
@@ -148,11 +148,11 @@ fn run_model(
 
 /// Run using interpreter (CPU only, no plugins)
 fn run_with_interpreter(
-    snapshot: &hodu_core::script::Snapshot,
+    snapshot: &hodu_core::snapshot::Snapshot,
     input_bindings: &[(&str, TensorData)],
 ) -> HoduResult<HashMap<String, TensorData>> {
     let runtime = InterpRuntime::new();
-    let snapshot_data = snapshot.serialize()?;
+    let snapshot_data = snapshot.to_bytes()?;
     let artifact =
         hodu_plugin::CompiledArtifact::new(hodu_plugin::OutputFormat::HoduSnapshot, Device::CPU, snapshot_data);
     let module = runtime.load(&artifact, Device::CPU)?;
@@ -162,7 +162,7 @@ fn run_with_interpreter(
 /// Run using compiler and runtime plugins
 fn run_with_plugins(
     device: Device,
-    snapshot: &hodu_core::script::Snapshot,
+    snapshot: &hodu_core::snapshot::Snapshot,
     input_bindings: &[(&str, TensorData)],
     args: &RunArgs,
 ) -> HoduResult<HashMap<String, TensorData>> {
@@ -179,8 +179,7 @@ fn run_with_plugins(
         .find(|c| c.supports_device(device))
         .ok_or_else(|| HoduError::BackendError(format!("No compiler found for {:?}", device)))?;
 
-    let script = Script::new(snapshot.clone());
-    let artifact = compiler.compile(&script, device)?;
+    let artifact = compiler.compile(snapshot, device)?;
 
     // Load runtime if provided
     if let Some(runtime_path) = &args.runtime_plugin {

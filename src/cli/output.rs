@@ -110,24 +110,18 @@ fn format_dtype(dtype: DType) -> &'static str {
     match dtype {
         DType::BOOL => "bool",
         DType::F8E4M3 => "f8e4m3",
-        #[cfg(feature = "f8e5m2")]
         DType::F8E5M2 => "f8e5m2",
         DType::BF16 => "bf16",
         DType::F16 => "f16",
         DType::F32 => "f32",
-        #[cfg(feature = "f64")]
         DType::F64 => "f64",
         DType::U8 => "u8",
-        #[cfg(feature = "u16")]
         DType::U16 => "u16",
         DType::U32 => "u32",
-        #[cfg(feature = "u64")]
         DType::U64 => "u64",
         DType::I8 => "i8",
-        #[cfg(feature = "i16")]
         DType::I16 => "i16",
         DType::I32 => "i32",
-        #[cfg(feature = "i64")]
         DType::I64 => "i64",
     }
 }

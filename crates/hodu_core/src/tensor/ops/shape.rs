@@ -33,10 +33,10 @@ impl Tensor {
         let new_layout = current_layout.reshape(&shape)?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Reshape),
                 None,
                 vec![self.id()],
@@ -85,10 +85,10 @@ impl Tensor {
         let new_layout = current_layout.flatten()?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Flatten),
                 None,
                 vec![self.id()],
@@ -141,10 +141,10 @@ impl Tensor {
         let new_layout = current_layout.squeeze(&dims_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Squeeze),
                 None,
                 vec![self.id()],
@@ -192,10 +192,10 @@ impl Tensor {
         let new_layout = current_layout.unsqueeze(dim_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Unsqueeze),
                 None,
                 vec![self.id()],
@@ -241,10 +241,10 @@ impl Tensor {
         let new_layout = current_layout.broadcast_to(&target_shape)?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Broadcast),
                 None,
                 vec![self.id()],
@@ -308,10 +308,10 @@ impl Tensor {
         let new_layout = current_layout.transpose(dim1_i32, dim2_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Transpose),
                 None,
                 vec![self.id()],
@@ -368,10 +368,10 @@ impl Tensor {
         let new_layout = current_layout.permute(&axes_i32)?;
         let requires_grad = self.is_requires_grad();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Shape(ShapeOp::Permute),
                 None,
                 vec![self.id()],
@@ -487,10 +487,10 @@ impl Tensor {
             step: step_scalar,
         });
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let (result_id, result_tensor) = create_builder_tensor(new_layout.clone(), self.dtype(), requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::ShapeScalars(ShapeScalarsOp::Slice),
                 Some(op_params.clone()),
                 vec![self.id()],

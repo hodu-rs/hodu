@@ -11,7 +11,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 hodu_plugin = { path = "../../crates/hodu_plugin" }
-hodu_core = { path = "../../crates/hodu_core", features = ["std", "serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
 serde_bytes = "0.11.19"

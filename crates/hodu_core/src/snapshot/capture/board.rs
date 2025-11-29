@@ -2,7 +2,7 @@ use crate::{
     compat::*,
     error::HoduResult,
     ops::{Op, OpParams},
-    script::{Script, Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId},
+    snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId},
     tensor::{Tensor, TensorId},
     types::{DType, Layout, Shape},
 };
@@ -127,7 +127,7 @@ impl CaptureBoard {
         self.0
     }
 
-    pub fn capture(&self) -> Script {
+    pub fn capture(&self) -> Snapshot {
         let board = super::storage::take_board(self.0).expect("Board not found in storage");
 
         let reachable = Self::compute_reachable(&board.targets, &board.ops);
@@ -182,15 +182,13 @@ impl CaptureBoard {
             })
             .collect();
 
-        let snapshot = Snapshot {
+        Snapshot {
             name: board.name,
             inputs: snapshot_inputs,
             constants: snapshot_constants,
             targets: snapshot_targets,
             nodes: snapshot_nodes,
-        };
-
-        Script::new(snapshot)
+        }
     }
 
     fn compute_reachable(targets: &[CapturedTarget], ops: &[CapturedOp]) -> HashSet<TensorId> {
@@ -265,7 +263,7 @@ impl CaptureBoard {
         constant_ids
     }
 
-    fn extract_constants(constant_ids: HashSet<TensorId>, offset: usize) -> Vec<crate::script::SnapshotConstant> {
+    fn extract_constants(constant_ids: HashSet<TensorId>, offset: usize) -> Vec<crate::snapshot::SnapshotConstant> {
         fn to_bytes<T>(vec: Vec<T>) -> Vec<u8> {
             let len = vec.len() * core::mem::size_of::<T>();
             let ptr = vec.as_ptr() as *const u8;
@@ -309,8 +307,9 @@ impl CaptureBoard {
                     DType::I64 => to_bytes(tensor.to_flatten_vec::<i64>().ok()?),
                 };
 
-                Some(crate::script::SnapshotConstant {
+                Some(crate::snapshot::SnapshotConstant {
                     id: SnapshotTensorId(tensor_id.as_usize() - offset),
+                    name: None,
                     shape,
                     dtype,
                     data,

@@ -1,11 +1,11 @@
 //! Compiler plugin interface for AOT/JIT compilation
 
-use crate::{CompiledArtifact, Device, HoduResult, OutputFormat, Script};
+use crate::{CompiledArtifact, Device, HoduResult, OutputFormat, Snapshot};
 use std::path::Path;
 
 /// Compiler plugin interface
 ///
-/// A compiler transforms Scripts into executable artifacts or files.
+/// A compiler transforms Snapshots into executable artifacts or files.
 /// Examples: LLVM, Metal Compiler, XLA Compiler
 pub trait CompilerPlugin: Send + Sync {
     /// Plugin name (e.g., "llvm", "metal", "xla")
@@ -30,11 +30,11 @@ pub trait CompilerPlugin: Send + Sync {
         self.supported_formats(device).contains(&format)
     }
 
-    /// JIT compile a Script into an in-memory artifact
-    fn compile(&self, script: &Script, device: Device) -> HoduResult<CompiledArtifact>;
+    /// JIT compile a Snapshot into an in-memory artifact
+    fn compile(&self, snapshot: &Snapshot, device: Device) -> HoduResult<CompiledArtifact>;
 
-    /// AOT build a Script to a file
-    fn build(&self, script: &Script, device: Device, format: OutputFormat, path: &Path) -> HoduResult<()>;
+    /// AOT build a Snapshot to a file
+    fn build(&self, snapshot: &Snapshot, device: Device, format: OutputFormat, path: &Path) -> HoduResult<()>;
 }
 
 /// Plugin information for discovery

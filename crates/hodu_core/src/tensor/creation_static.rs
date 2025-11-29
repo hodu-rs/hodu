@@ -8,7 +8,7 @@ use crate::{
 impl Tensor {
     pub fn input(name: &'static str, shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        if !crate::script::capture::is_active() {
+        if !crate::snapshot::capture::is_active() {
             return Err(HoduError::CaptureNotActive);
         }
 
@@ -29,7 +29,7 @@ impl Tensor {
 
         let tensor = Tensor(tensor_id);
 
-        crate::script::capture::add_input_to_active(name, tensor.clone())?;
+        crate::snapshot::capture::add_input_to_active(name, tensor.clone())?;
 
         Ok(tensor)
     }

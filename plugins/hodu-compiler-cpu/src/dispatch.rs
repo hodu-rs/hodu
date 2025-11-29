@@ -2,7 +2,7 @@
 //!
 //! Converts Snapshot nodes to a sequence of kernel dispatches.
 
-use hodu_core::{op_params::OpParams, ops::Op, script::Snapshot, types::DType};
+use hodu_plugin::{op_params::OpParams, ops::Op, snapshot::Snapshot, types::DType};
 use serde::{Deserialize, Serialize};
 
 /// Dispatch manifest for executing a compiled graph
@@ -313,7 +313,7 @@ fn op_to_kernel_info(op: &Op, output_dtype: DType, input_dtype: Option<DType>) -
 }
 
 fn extract_scalars_from_params(params: Option<&OpParams>) -> Vec<f64> {
-    use hodu_core::op_params;
+    use hodu_plugin::op_params;
     match params {
         Some(OpParams::UnaryScalar(op_params::UnaryScalarParams { scalar })) => {
             vec![scalar.to_f64()]
@@ -328,11 +328,11 @@ fn extract_scalars_from_params(params: Option<&OpParams>) -> Vec<f64> {
 fn build_metadata(
     op: &Op,
     params: Option<&OpParams>,
-    input_layouts: &[hodu_core::types::Layout],
-    output_layout: &hodu_core::types::Layout,
+    input_layouts: &[hodu_plugin::types::Layout],
+    output_layout: &hodu_plugin::types::Layout,
 ) -> Vec<usize> {
-    use hodu_core::op_metadatas;
-    use hodu_core::op_params;
+    use hodu_plugin::op_metadatas;
+    use hodu_plugin::op_params;
 
     match op {
         // Binary ops
@@ -388,7 +388,7 @@ fn build_metadata(
         Op::Concat(_) => {
             if let Some(OpParams::Concat(op_params::ConcatParams { dim })) = params {
                 let dim_usize = dim.to_usize();
-                let layout_refs: Vec<&hodu_core::types::Layout> = input_layouts.iter().collect();
+                let layout_refs: Vec<&hodu_plugin::types::Layout> = input_layouts.iter().collect();
                 op_metadatas::concat_metadata(
                     &layout_refs,
                     dim_usize,
@@ -432,7 +432,7 @@ fn build_metadata(
 
         // Indexing ops
         Op::Indexing(indexing_op) => {
-            use hodu_core::ops::IndexingOp;
+            use hodu_plugin::ops::IndexingOp;
             match indexing_op {
                 IndexingOp::IndexSelect => {
                     if let Some(OpParams::IndexSelect(op_params::IndexSelectParams { dim })) = params
@@ -521,7 +521,7 @@ fn build_metadata(
 
         // Conv ops
         Op::Conv(conv_op) => {
-            use hodu_core::ops::ConvOp;
+            use hodu_plugin::ops::ConvOp;
             match conv_op {
                 ConvOp::Conv1d => {
                     if let Some(OpParams::Conv1d(p)) = params {

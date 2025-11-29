@@ -2,7 +2,7 @@
 
 use crate::common::{format_extension, parse_device, parse_output_format};
 use clap::Args;
-use hodu_core::{format::hdss, script::Script};
+use hodu_core::format::hdss;
 use hodu_plugin::{HoduError, HoduResult, PluginManager};
 use std::path::PathBuf;
 
@@ -34,7 +34,6 @@ pub fn execute(args: CompileArgs) -> HoduResult<()> {
 
     // Load snapshot
     let snapshot = hdss::load(&args.path)?;
-    let script = Script::new(snapshot);
 
     // Initialize plugin manager
     let mut manager = PluginManager::with_default_dir()?;
@@ -60,7 +59,7 @@ pub fn execute(args: CompileArgs) -> HoduResult<()> {
         .unwrap_or_else(|| args.path.with_extension(format_extension(format)));
 
     // Compile
-    compiler.build(&script, device, format, &output_path)?;
+    compiler.build(&snapshot, device, format, &output_path)?;
 
     println!("Compiled {} -> {}", args.path.display(), output_path.display());
 

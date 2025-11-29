@@ -167,7 +167,7 @@ impl Tensor {
 
         let result_layout = Layout::from_shape(&Shape::from(output_dims));
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
 
             let dims_scalars: Vec<Scalar> = reduce_dims.iter().map(|&d| Scalar::from(d)).collect();
@@ -185,7 +185,7 @@ impl Tensor {
 
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), output_dtype, requires_grad);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Reduce(reduce_op),
                 Some(op_params.clone()),
                 vec![self.id()],

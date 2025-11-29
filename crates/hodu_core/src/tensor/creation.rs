@@ -47,7 +47,7 @@ impl Tensor {
     where
         T: IntoFlattened,
     {
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -58,7 +58,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -68,7 +68,7 @@ impl Tensor {
     where
         T: IntoFlattened,
     {
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -89,7 +89,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -97,7 +97,7 @@ impl Tensor {
 
     pub fn empty(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -107,7 +107,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -120,7 +120,7 @@ impl Tensor {
 
     pub fn zeros(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -130,7 +130,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -143,7 +143,7 @@ impl Tensor {
 
     pub fn ones(shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {
         let shape = shape.into();
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -154,7 +154,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -168,7 +168,7 @@ impl Tensor {
     pub fn full<T: Into<Scalar>>(shape: impl Into<Shape>, value: T) -> HoduResult<Self> {
         let shape = shape.into();
         let value = value.into();
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -179,7 +179,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -198,7 +198,7 @@ impl Tensor {
         let shape = shape.into();
         let mean = mean.into();
         let std = std.into();
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -215,7 +215,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))
@@ -230,7 +230,7 @@ impl Tensor {
         let shape = shape.into();
         let low = low.into();
         let high = high.into();
-        let device = if crate::script::capture::is_active() {
+        let device = if crate::snapshot::capture::is_active() {
             Device::CPU
         } else {
             get_runtime_device()
@@ -247,7 +247,7 @@ impl Tensor {
         Ok(from_storage(
             storage,
             layout,
-            !crate::script::capture::is_active(),
+            !crate::snapshot::capture::is_active(),
             false,
             None,
         ))

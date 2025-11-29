@@ -1,3 +1,7 @@
+pub mod capture;
+
+pub use capture::{CaptureBoard, CaptureBoardId};
+
 use crate::{
     compat::*,
     ops::{Op, OpParams},
@@ -32,6 +36,7 @@ pub struct SnapshotTarget {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SnapshotConstant {
     pub id: SnapshotTensorId,
+    pub name: Option<String>,
     pub shape: Shape,
     pub dtype: DType,
     /// Raw tensor data in bytes
@@ -83,19 +88,26 @@ impl Snapshot {
         }
     }
 
-    /// Serialize snapshot to bytes
     #[cfg(feature = "serde")]
-    pub fn serialize(&self) -> crate::error::HoduResult<Vec<u8>> {
-        postcard::to_allocvec(self)
-            .map_err(|e| crate::error::HoduError::SerializationFailed(format!("Failed to serialize Snapshot: {}", e)))
+    pub fn to_bytes(&self) -> crate::error::HoduResult<Vec<u8>> {
+        postcard::to_allocvec(self).map_err(|e| crate::error::HoduError::SerializationFailed(e.to_string()))
     }
 
-    /// Deserialize snapshot from bytes
     #[cfg(feature = "serde")]
-    pub fn deserialize(data: &[u8]) -> crate::error::HoduResult<Self> {
-        postcard::from_bytes(data).map_err(|e| {
-            crate::error::HoduError::DeserializationFailed(format!("Failed to deserialize Snapshot: {}", e))
-        })
+    pub fn from_bytes(data: &[u8]) -> crate::error::HoduResult<Self> {
+        postcard::from_bytes(data).map_err(|e| crate::error::HoduError::DeserializationFailed(e.to_string()))
+    }
+
+    #[cfg(all(feature = "serde", feature = "std"))]
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> crate::error::HoduResult<()> {
+        let bytes = self.to_bytes()?;
+        std::fs::write(path, bytes).map_err(|e| crate::error::HoduError::IoError(e.to_string()))
+    }
+
+    #[cfg(all(feature = "serde", feature = "std"))]
+    pub fn load(path: impl AsRef<std::path::Path>) -> crate::error::HoduResult<Self> {
+        let bytes = std::fs::read(path).map_err(|e| crate::error::HoduError::IoError(e.to_string()))?;
+        Self::from_bytes(&bytes)
     }
 }
 

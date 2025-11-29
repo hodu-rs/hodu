@@ -70,9 +70,6 @@ pub enum HoduError {
     /// Metal kernel error
     #[cfg(feature = "metal")]
     MetalKernelError(String),
-    /// XLA-specific operation failed
-    #[cfg(feature = "xla")]
-    XlaError(String),
 
     // ===== Gradient Errors =====
     /// VJP (Vector-Jacobian Product) function not found for operation.
@@ -194,8 +191,6 @@ impl fmt::Display for HoduError {
             Self::CudaKernelError(msg) => write!(f, "cuda kernel error: {}", msg),
             #[cfg(feature = "metal")]
             Self::MetalKernelError(msg) => write!(f, "metal kernel error: {}", msg),
-            #[cfg(feature = "xla")]
-            Self::XlaError(msg) => write!(f, "xla error: {}", msg),
 
             // Gradient Errors
             Self::VjpFunctionNotFound(msg) => {
@@ -291,14 +286,6 @@ impl From<hodu_cuda_kernels::error::CudaKernelError> for HoduError {
 impl From<hodu_metal_kernels::error::MetalKernelError> for HoduError {
     fn from(e: hodu_metal_kernels::error::MetalKernelError) -> Self {
         HoduError::MetalKernelError(format!("{:?}", e))
-    }
-}
-
-// Conversion from hodu_xla error
-#[cfg(feature = "xla")]
-impl From<hodu_xla::Error> for HoduError {
-    fn from(e: hodu_xla::Error) -> Self {
-        HoduError::XlaError(format!("{:?}", e))
     }
 }
 

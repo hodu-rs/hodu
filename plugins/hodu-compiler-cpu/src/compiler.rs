@@ -5,7 +5,7 @@
 use crate::codegen::generate_c_code;
 use crate::dispatch::DispatchManifest;
 use crate::toolchain::{find_compiler, CCompiler};
-use hodu_core::script::Script;
+use hodu_plugin::snapshot::Snapshot;
 use hodu_plugin::{
     ArtifactDType, ArtifactSymbols, ArtifactTensorInfo, CompiledArtifact, CompilerPlugin, Device, HoduError,
     HoduResult, OutputFormat,
@@ -134,7 +134,7 @@ impl CompilerPlugin for CpuCompiler {
         }
     }
 
-    fn compile(&self, script: &Script, device: Device) -> HoduResult<CompiledArtifact> {
+    fn compile(&self, script: &Snapshot, device: Device) -> HoduResult<CompiledArtifact> {
         if device != Device::CPU {
             return Err(HoduError::UnsupportedDevice(device));
         }
@@ -143,7 +143,7 @@ impl CompilerPlugin for CpuCompiler {
         let compiler = self.get_compiler()?;
 
         // Get snapshot from script
-        let snapshot = script.snapshot();
+        let snapshot = script;
 
         // Generate dispatch manifest
         let manifest = DispatchManifest::from_snapshot(&snapshot);
@@ -216,7 +216,7 @@ impl CompilerPlugin for CpuCompiler {
         Ok(artifact)
     }
 
-    fn build(&self, script: &Script, device: Device, format: OutputFormat, path: &Path) -> HoduResult<()> {
+    fn build(&self, script: &Snapshot, device: Device, format: OutputFormat, path: &Path) -> HoduResult<()> {
         if device != Device::CPU {
             return Err(HoduError::UnsupportedDevice(device));
         }
@@ -232,7 +232,7 @@ impl CompilerPlugin for CpuCompiler {
         let compiler = self.get_compiler()?;
 
         // Get snapshot from script
-        let snapshot = script.snapshot();
+        let snapshot = script;
 
         // Generate dispatch manifest
         let manifest = DispatchManifest::from_snapshot(&snapshot);

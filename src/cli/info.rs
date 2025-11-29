@@ -50,7 +50,7 @@ pub fn execute(path: PathBuf) -> HoduResult<()> {
     Ok(())
 }
 
-fn count_operations(snapshot: &hodu_core::script::Snapshot) -> Vec<(String, usize)> {
+fn count_operations(snapshot: &hodu_core::snapshot::Snapshot) -> Vec<(String, usize)> {
     let mut op_counts: HashMap<String, usize> = HashMap::new();
 
     for node in &snapshot.nodes {

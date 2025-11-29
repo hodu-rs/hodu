@@ -31,16 +31,13 @@ u64 = []
 i16 = []
 i64 = []
 
-# optional cpu backends
+# optional cpu accelerator
 openblas = ["hodu_cpu_kernels/openblas"]
 
-# optional backend
+# optional device
 cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
 metal = ["std", "metal-device", "dep:hodu_metal_kernels"]
 metal-device = []  # Device::Metal enum only, no runtime
-
-# optional runtime
-xla = ["std", "i64", "dep:hodu_xla"]
 
 # format features
 json = ["serde", "dep:serde_json"]

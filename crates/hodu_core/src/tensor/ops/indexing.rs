@@ -42,13 +42,13 @@ impl Tensor {
         let self_layout = self.layout();
         let indices_layout = indices.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::IndexSelect(IndexSelectParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::IndexSelect),
                 Some(op_params.clone()),
                 vec![self.id(), indices.id()],
@@ -118,13 +118,13 @@ impl Tensor {
         let indices_layout = indices.layout();
         let values_layout = values.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || values.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::IndexPut(IndexPutParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::IndexPut),
                 Some(op_params.clone()),
                 vec![self.id(), values.id(), indices.id()],
@@ -197,13 +197,13 @@ impl Tensor {
         let self_layout = self.layout();
         let result_layout = indices.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = self.is_requires_grad() && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::Gather(GatherParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::Gather),
                 Some(op_params.clone()),
                 vec![self.id(), indices.id()],
@@ -274,13 +274,13 @@ impl Tensor {
         let indices_layout = indices.layout();
         let src_layout = src.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::Scatter(ScatterParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::Scatter),
                 Some(op_params.clone()),
                 vec![self.id(), src.id(), indices.id()],
@@ -352,13 +352,13 @@ impl Tensor {
 
         let result_layout = self.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::ScatterAdd(ScatterAddParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::ScatterAdd),
                 Some(op_params.clone()),
                 vec![self.id(), src.id(), indices.id()],
@@ -430,13 +430,13 @@ impl Tensor {
 
         let result_layout = self.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::ScatterMax(ScatterMaxParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::ScatterMax),
                 Some(op_params.clone()),
                 vec![self.id(), src.id(), indices.id()],
@@ -508,13 +508,13 @@ impl Tensor {
 
         let result_layout = self.layout();
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let requires_grad = (self.is_requires_grad() || src.is_requires_grad()) && validate_requires_grad;
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), requires_grad);
 
             let op_params = OpParams::ScatterMin(ScatterMinParams { dim: dim_scalar });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Indexing(IndexingOp::ScatterMin),
                 Some(op_params.clone()),
                 vec![self.id(), src.id(), indices.id()],

@@ -14,7 +14,7 @@ use half::{bf16, f16};
 use hodu_compat::*;
 use hodu_core::{
     ops::*,
-    script::{Snapshot, SnapshotConstant, SnapshotNode, SnapshotTensorId},
+    snapshot::{Snapshot, SnapshotConstant, SnapshotNode, SnapshotTensorId},
     types::DType,
 };
 use std::path::Path;
@@ -54,7 +54,7 @@ impl RuntimePlugin for InterpRuntime {
     fn load(&self, artifact: &CompiledArtifact, _device: Device) -> HoduResult<ExecutableModule> {
         match artifact.format {
             OutputFormat::HoduSnapshot => {
-                let snapshot = Snapshot::deserialize(&artifact.data)?;
+                let snapshot = Snapshot::from_bytes(&artifact.data)?;
                 Ok(ExecutableModule::new(InterpExecutable::new(snapshot)))
             },
             _ => Err(HoduError::UnsupportedOperation(
@@ -69,7 +69,7 @@ impl RuntimePlugin for InterpRuntime {
 
     fn load_file(&self, path: &Path, _device: Device) -> HoduResult<ExecutableModule> {
         let data = std::fs::read(path).map_err(|e| HoduError::IoError(format!("Failed to read file: {}", e)))?;
-        let snapshot = Snapshot::deserialize(&data)?;
+        let snapshot = Snapshot::from_bytes(&data)?;
         Ok(ExecutableModule::new(InterpExecutable::new(snapshot)))
     }
 }

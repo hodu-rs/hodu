@@ -21,7 +21,7 @@ macro_rules! binary_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
-            if crate::script::capture::is_active() {
+            if crate::snapshot::capture::is_active() {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
                 let requires_grad = (lhs.is_requires_grad() || rhs.is_requires_grad()) && validate_requires_grad;
@@ -29,7 +29,7 @@ macro_rules! binary_op {
                 let (result_id, result_tensor) =
                     create_builder_tensor(result_layout.clone(), lhs.dtype(), requires_grad);
 
-                crate::script::capture::capture_operation(
+                crate::snapshot::capture::capture_operation(
                     Op::Binary(BinaryOp::$op_name),
                     Some(OpParams::Binary(BinaryParams)),
                     vec![lhs.id(), rhs.id()],
@@ -93,13 +93,13 @@ macro_rules! binary_logical_op {
 
             let (lhs, rhs) = broadcast_tensors2(self, rhs)?;
 
-            if crate::script::capture::is_active() {
+            if crate::snapshot::capture::is_active() {
                 let lhs_layout = lhs.layout();
                 let rhs_layout = rhs.layout();
                 let result_layout = lhs_layout.clone();
                 let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), DType::BOOL, false);
 
-                crate::script::capture::capture_operation(
+                crate::snapshot::capture::capture_operation(
                     Op::BinaryLogical(BinaryLogicalOp::$op_name),
                     Some(OpParams::BinaryLogical(BinaryLogicalParams)),
                     vec![lhs.id(), rhs.id()],

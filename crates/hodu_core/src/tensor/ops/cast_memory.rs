@@ -12,13 +12,13 @@ impl Tensor {
     pub fn to_dtype(&self, dtype: DType) -> HoduResult<Self> {
         validate_dtype_for_device(dtype, self.device())?;
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let input_layout = self.layout();
             let (result_id, result_tensor) = create_builder_tensor(input_layout.clone(), dtype, false);
 
             let op_params = OpParams::ToDType(ToDTypeParams { dtype });
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Cast(CastOp::ToDType),
                 Some(op_params),
                 vec![self.id()],
@@ -41,7 +41,7 @@ impl Tensor {
     pub fn to_device(&self, device: Device) -> HoduResult<Self> {
         validate_dtype_for_device(self.dtype(), device)?;
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             Err(HoduError::CaptureNotActive)
         } else {
             let layout = Layout::from_shape(&self.shape());
@@ -59,11 +59,11 @@ impl Tensor {
             return Ok(self.clone());
         }
 
-        if crate::script::capture::is_active() {
+        if crate::snapshot::capture::is_active() {
             let result_layout = Layout::from_shape(&self.shape());
             let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), self.dtype(), false);
 
-            crate::script::capture::capture_operation(
+            crate::snapshot::capture::capture_operation(
                 Op::Memory(MemoryOp::Contiguous),
                 Some(OpParams::Contiguous(ContiguousParams)),
                 vec![self.id()],

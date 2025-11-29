@@ -19,7 +19,7 @@ pub mod op_params;
 pub mod ops;
 pub mod prelude;
 pub mod scalar;
-pub mod script;
+pub mod snapshot;
 pub mod tensor;
 pub mod types;
 pub(crate) mod utils;

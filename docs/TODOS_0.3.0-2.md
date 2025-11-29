@@ -4,30 +4,31 @@
 
 ### 목표
 
-hodu_core를 순수 IR 생성(Script/Snapshot)까지만 유지하고, 컴파일/실행은 플러그인 시스템으로 분리하여 동적 로딩 가능하게 함.
+hodu_core를 순수 IR 생성(Snapshot)까지만 유지하고, 컴파일/실행은 플러그인 시스템으로 분리하여 동적 로딩 가능하게 함.
+모델 포맷 로드는 hodu 내부에서 직접 구현 (hodu_onnx 등).
 
 ### 아키텍처 개요
 
 ```mermaid
 flowchart TB
-    subgraph Format["Format Plugin (모델 포맷)"]
-        F1[onnx] ~~~ F2[safetensors] ~~~ F3[gguf] ~~~ F4[pytorch]
+    subgraph Format["Format (hodu 내장)"]
+        F1[hodu_onnx] ~~~ F2[safetensors] ~~~ F3[gguf]
     end
 
     subgraph Core["hodu_core"]
-        IR[Script / Snapshot IR] ~~~ CB[CaptureBoard]
+        IR[Snapshot IR] ~~~ CB[CaptureBoard]
     end
 
     subgraph Compiler["Compiler Plugin (컴파일)"]
-        C1[llvm: CPU/CUDA/ROCm] ~~~ C2[metal: MSL] ~~~ C3[xla: CPU/GPU/TPU]
+        C1[cpu: C codegen] ~~~ C2[metal: MSL] ~~~ C3[llvm: LLVM IR]
     end
 
     subgraph Runtime["Runtime Plugin (실행)"]
-        R1[native: dlopen] ~~~ R2[cuda: CUDA Runtime] ~~~ R3[metal: Metal Runtime] ~~~ R4[onnxruntime] ~~~ R5[interp: builtin]
+        R1[cpu: dlopen] ~~~ R2[cuda: CUDA Runtime] ~~~ R3[metal: Metal Runtime] ~~~ R4[interp: builtin]
     end
 
     subgraph Device["Device (하드웨어)"]
-        D1[CPU] ~~~ D2[CUDA] ~~~ D3[Metal] ~~~ D4[ROCm] ~~~ D5[TPU]
+        D1[CPU] ~~~ D2[CUDA] ~~~ D3[Metal] ~~~ D4[ROCm]
     end
 
     Format -->|load| Core
@@ -93,31 +94,9 @@ flowchart TB
 
 ## 플러그인 타입
 
-### 1. Format Plugin
+### 1. Compiler Plugin
 
-모델 포맷 로드/저장 담당.
-
-```rust
-pub trait FormatPlugin: Send + Sync {
-    fn name(&self) -> &str;
-    fn version(&self) -> &str;
-    fn extensions(&self) -> &[&str];
-
-    fn load(&self, path: &Path) -> HoduResult<Script>;
-    fn save(&self, script: &Script, path: &Path) -> HoduResult<()>;
-    fn can_save(&self) -> bool;
-}
-```
-
-**예시 플러그인:**
-- `hodu-format-onnx`: `.onnx` 파일 로드/저장
-- `hodu-format-safetensors`: `.safetensors` 파일 로드
-- `hodu-format-gguf`: `.gguf` 파일 로드 (llama.cpp 호환)
-- `hodu-format-pytorch`: `.pt`, `.pth` 파일 로드
-
-### 2. Compiler Plugin
-
-Script → CompiledArtifact 변환 담당.
+Snapshot → CompiledArtifact 변환 담당.
 
 ```rust
 pub trait CompilerPlugin: Send + Sync {
@@ -127,12 +106,12 @@ pub trait CompilerPlugin: Send + Sync {
     fn supported_formats(&self, device: Device) -> Vec<OutputFormat>;
 
     /// JIT 컴파일 (메모리에 로드)
-    fn compile(&self, script: &Script, device: Device) -> HoduResult<CompiledArtifact>;
+    fn compile(&self, snapshot: &Snapshot, device: Device) -> HoduResult<CompiledArtifact>;
 
     /// AOT 빌드 (파일로 출력)
     fn build(
         &self,
-        script: &Script,
+        snapshot: &Snapshot,
         device: Device,
         format: OutputFormat,
         path: &Path,
@@ -145,7 +124,7 @@ pub trait CompilerPlugin: Send + Sync {
 - `hodu-compiler-metal`: Metal 지원 (MSL 생성)
 - `hodu-compiler-xla`: XLA 컴파일러
 
-### 3. Runtime Plugin
+### 2. Runtime Plugin
 
 CompiledArtifact 로드 및 실행 담당.
 
@@ -252,9 +231,10 @@ pub enum OutputFormat {
 ```
 ~/.hodu/
 ├── plugins/
-│   ├── hodu-compiler-llvm.dylib
-│   ├── hodu-runtime-cuda.dylib
-│   ├── hodu-format-onnx.dylib
+│   ├── hodu-compiler-cpu.dylib
+│   ├── hodu-compiler-metal.dylib
+│   ├── hodu-runtime-cpu.dylib
+│   ├── hodu-runtime-metal.dylib
 │   └── ...
 ├── config.toml
 └── cache/
@@ -266,7 +246,6 @@ pub enum OutputFormat {
 pub struct PluginManager {
     compilers: HashMap<String, LoadedCompiler>,
     runtimes: HashMap<String, LoadedRuntime>,
-    formats: HashMap<String, LoadedFormat>,
     plugin_dir: PathBuf,
 }
 
@@ -277,19 +256,15 @@ impl PluginManager {
     // 동적 로딩
     pub fn load_compiler(&mut self, path: impl AsRef<Path>) -> HoduResult<()>;
     pub fn load_runtime(&mut self, path: impl AsRef<Path>) -> HoduResult<()>;
-    pub fn load_format(&mut self, path: impl AsRef<Path>) -> HoduResult<()>;
     pub fn load_all(&mut self) -> HoduResult<()>;
 
     // Builtin 등록
     pub fn register_compiler(&mut self, plugin: Box<dyn CompilerPlugin>);
     pub fn register_runtime(&mut self, plugin: Box<dyn RuntimePlugin>);
-    pub fn register_format(&mut self, plugin: Box<dyn FormatPlugin>);
 
     // 조회
     pub fn compiler(&self, name: &str) -> Option<&dyn CompilerPlugin>;
     pub fn runtime(&self, name: &str) -> Option<&dyn RuntimePlugin>;
-    pub fn format(&self, name: &str) -> Option<&dyn FormatPlugin>;
-    pub fn format_for_extension(&self, ext: &str) -> Option<&dyn FormatPlugin>;
 }
 ```
 
@@ -447,23 +422,19 @@ hodu info model.hdss
 # 설치된 플러그인 목록
 hodu plugin list
 > Compilers:
->   llvm        1.0.0  [cpu, cuda, rocm]
+>   cpu         1.0.0  [cpu]
+>   metal       1.0.0  [metal]
 > Runtimes:
 >   interp      1.0.0  [cpu]  (builtin)
->   native      1.0.0  [cpu]
->   cuda        1.0.0  [cuda]
-> Formats:
->   hdss        1.0.0  [.hdss]  (builtin)
->   onnx        1.0.0  [.onnx]
+>   cpu         1.0.0  [cpu]
+>   metal       1.0.0  [metal]
 
 # 플러그인 상세 정보
-hodu plugin info llvm
-> Compiler: llvm
+hodu plugin info cpu
+> Compiler: cpu
 > Version: 1.0.0
 > Devices:
->   cpu   → [object, shared, static, executable, llvm-ir, llvm-bc, asm]
->   cuda  → [ptx, cubin, fatbin, llvm-ir]
->   rocm  → [hsaco, llvm-ir, asm]
+>   cpu   → [shared]
 ```
 
 ---
@@ -481,6 +452,7 @@ flowchart LR
         internal["hodu_internal"]
         core["hodu_core"]
         plugin["hodu_plugin"]
+        onnx["hodu_onnx"]
     end
 
     subgraph Modules["🧩 Modules"]
@@ -514,11 +486,13 @@ flowchart LR
     %% hodu (CLI)
     cli --> core
     cli --> plugin
+    cli --> onnx
 
     %% hodu_internal
     internal --> core
     internal --> nn
     internal --> utils
+    internal -.->|feature:onnx| onnx
 
     %% hodu_core
     core --> compat
@@ -529,6 +503,9 @@ flowchart LR
     %% hodu_plugin
     plugin --> core
     plugin --> compat
+
+    %% hodu_onnx
+    onnx --> core
 
     %% hodu_nn
     nn --> core
@@ -544,16 +521,11 @@ flowchart LR
     nn_macros --> macro_utils
     utils_macros --> macro_utils
 
-    %% Plugins
+    %% Plugins (only depend on hodu_plugin)
     compiler_cpu --> plugin
-    compiler_cpu --> core
-    compiler_cpu --> cpu
     runtime_cpu --> plugin
-    runtime_cpu --> core
     compiler_metal --> plugin
-    compiler_metal --> core
     runtime_metal --> plugin
-    runtime_metal --> core
 ```
 
 ### Crate 설명
@@ -562,9 +534,10 @@ flowchart LR
 |-------|------|
 | `hodu` (LIB) | 사용자용 메인 라이브러리, `hodu_internal` re-export |
 | `hodu` (CLI) | 커맨드라인 도구 (`hodu run`, `hodu compile`, `hodu info`) |
-| `hodu_internal` | Tensor, Backend, Ops 구현 (내부용) |
-| `hodu_core` | Script/Snapshot IR, Format (hdss/hdt/json), Tensor |
-| `hodu_plugin` | Plugin traits, PluginManager, CompiledArtifact |
+| `hodu_internal` | hodu_core, hodu_nn, hodu_utils 통합 re-export (내부용) |
+| `hodu_core` | Snapshot IR, Format (hdss/hdt/json), Tensor, CaptureBoard |
+| `hodu_plugin` | Plugin traits, PluginManager, CompiledArtifact, hodu_core 타입 re-export |
+| `hodu_onnx` | ONNX ↔ Snapshot 양방향 변환 (import/export) |
 | `hodu_nn` | Neural Network 레이어 (Linear, Conv2d, etc.) |
 | `hodu_utils` | 유틸리티 함수들 |
 | `hodu_compat` | no_std 호환 HashMap/Vec (std/alloc 선택) |
@@ -585,18 +558,21 @@ flowchart LR
 |-------|------------|
 | `hodu` (CLI) | `clap` |
 | `hodu_core` | `dashmap`, `float8`, `half`, `num-traits`, `paste`, `postcard`, `rand`, `rand_distr`, `serde`, `serde_json`, `serde_repr`, `smallvec`, `spin` |
-| `hodu_plugin` | `libloading`, `float8`, `half` |
+| `hodu_plugin` | `float8`, `half`, `libloading` |
+| `hodu_onnx` | `prost` (build: `prost-build`, `protobuf-src`) |
 | `hodu_compat` | `spin` |
-| `hodu_cpu_kernels` | `float8`, `half`, `paste` |
+| `hodu_nn` | - |
+| `hodu_utils` | `rand`, `rand_distr` |
+| `hodu_cpu_kernels` | `float8`, `half`, `paste` (build: `cc`, `num_cpus`) |
 | `hodu_metal_kernels` | `half`, `objc2`, `objc2-foundation`, `objc2-metal` |
 | `hodu_cuda_kernels` | `cudarc`, `float8`, `half`, `paste`, `spin` |
 | `hodu_macro_utils` | `proc-macro2`, `quote`, `syn`, `toml_edit` |
 | `hodu_nn_macros` | `proc-macro2`, `quote`, `syn` |
 | `hodu_utils_macros` | `proc-macro2`, `quote`, `syn` |
-| `hodu-compiler-cpu` | `cc`, `serde`, `serde_json` |
+| `hodu-compiler-cpu` | `serde`, `serde_json` (build: `cc`) |
 | `hodu-runtime-cpu` | `libloading`, `serde`, `serde_json` |
 | `hodu-compiler-metal` | `serde`, `serde_json`, `serde_bytes` |
-| `hodu-runtime-metal` | `serde`, `serde_json`, `serde_bytes`, `metal`, `objc` |
+| `hodu-runtime-metal` | `metal`, `objc`, `serde`, `serde_json`, `serde_bytes` |
 
 ---
 
@@ -605,25 +581,27 @@ flowchart LR
 ### Phase 1: Core 분리
 
 - [x] hodu_core에서 script/compiled/ 제거
-- [x] hodu_core는 Script/Snapshot/CaptureBoard만 유지
+- [x] hodu_core는 Snapshot/CaptureBoard만 유지 (Script 제거됨)
+- [x] Snapshot에 save/load/to_bytes/from_bytes 직접 구현
+- [x] script/ 디렉토리를 snapshot/으로 이름 변경
 - [x] CaptureBoard thread-safe 구현
 - [x] tensor/bytes.rs 추가 (to_bytes, from_bytes with Device support)
 
 ### Phase 2: Plugin API 설계
 
 - [x] hodu_plugin crate 생성
-- [x] CompilerPlugin trait 정의
+- [x] CompilerPlugin trait 정의 (Snapshot 기반)
 - [x] RuntimePlugin trait 정의
-- [x] FormatPlugin trait 정의
 - [x] CompiledArtifact 타입 정의
 - [x] OutputFormat enum 정의
 - [x] PluginManager 구현
+- [x] hodu_plugin에서 hodu_core 타입 re-export (플러그인이 hodu_core 직접 의존 제거)
 
 ### Phase 3: Builtin 플러그인 구현
 
 - [x] InterpRuntime (builtin, 순수 인터프리터)
 - [x] hodu_format crate 생성
-  - [x] hdss format (Script/Snapshot 직렬화)
+  - [x] hdss format (Snapshot 직렬화)
   - [x] hdt format (Tensor 바이너리, postcard)
   - [x] json format (Tensor JSON, human-readable)
 
@@ -665,11 +643,14 @@ flowchart LR
   - [x] TensorData 기반 cross-dylib 통신
   - [x] FFI double-boxing 패턴 적용
 
-### Phase 7: Format 플러그인 구현
+### Phase 7: Format 내장 구현 (플러그인 아님)
 
-- [ ] hodu-format-onnx
-- [ ] hodu-format-safetensors
-- [ ] hodu-format-npy
+- [x] hodu_onnx crate (ONNX ↔ Snapshot 양방향 변환)
+  - [x] import: ONNX → Snapshot (load, load_from_bytes)
+  - [x] export: Snapshot → ONNX (save, save_to_bytes)
+  - [x] SnapshotConstant.name 필드 추가 (ONNX 라운드트립용)
+- [ ] hodu_safetensors crate
+- [ ] hodu_npy crate
 
 ### Phase 8: CLI 확장
 

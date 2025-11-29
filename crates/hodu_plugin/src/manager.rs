@@ -1,9 +1,6 @@
 //! Plugin manager for loading and managing plugins
 
-use crate::{
-    CompilerPlugin, CompilerPluginHandle, FormatPlugin, FormatPluginHandle, HoduError, HoduResult, RuntimePlugin,
-    RuntimePluginHandle,
-};
+use crate::{CompilerPlugin, CompilerPluginHandle, HoduError, HoduResult, RuntimePlugin, RuntimePluginHandle};
 use hodu_compat::*;
 use std::path::{Path, PathBuf};
 
@@ -21,18 +18,10 @@ struct LoadedRuntime {
     library: Option<libloading::Library>,
 }
 
-/// Loaded format plugin with its library handle
-struct LoadedFormat {
-    plugin: Box<dyn FormatPlugin>,
-    #[allow(dead_code)]
-    library: Option<libloading::Library>,
-}
-
-/// Plugin manager for loading and managing compiler, runtime, and format plugins
+/// Plugin manager for loading and managing compiler and runtime plugins
 pub struct PluginManager {
     compilers: HashMap<String, LoadedCompiler>,
     runtimes: HashMap<String, LoadedRuntime>,
-    formats: HashMap<String, LoadedFormat>,
     plugin_dir: PathBuf,
 }
 
@@ -42,7 +31,6 @@ impl PluginManager {
         Self {
             compilers: HashMap::new(),
             runtimes: HashMap::new(),
-            formats: HashMap::new(),
             plugin_dir: plugin_dir.into(),
         }
     }
@@ -187,68 +175,6 @@ impl PluginManager {
         self.runtimes.values().map(|r| r.plugin.as_ref())
     }
 
-    // ========== Format Plugin Loading ==========
-
-    /// Load a format plugin from a dynamic library file
-    pub fn load_format(&mut self, path: impl AsRef<Path>) -> HoduResult<()> {
-        let path = path.as_ref();
-
-        let library = unsafe { libloading::Library::new(path) }
-            .map_err(|e| HoduError::IoError(format!("Failed to load plugin: {}", e)))?;
-
-        // Plugin returns opaque handle (wraps Box<Box<dyn FormatPlugin>>)
-        type CreateFn = unsafe extern "C" fn() -> *mut FormatPluginHandle;
-        let create_fn: libloading::Symbol<CreateFn> = unsafe { library.get(b"hodu_format_plugin_create") }
-            .map_err(|e| HoduError::IoError(format!("Plugin missing create function: {}", e)))?;
-
-        let handle = unsafe { create_fn() };
-        if handle.is_null() {
-            return Err(HoduError::IoError("Plugin creation failed".into()));
-        }
-        let plugin: Box<dyn FormatPlugin> = unsafe { *FormatPluginHandle::into_boxed(handle) };
-
-        let name = plugin.name().to_string();
-
-        self.formats.insert(
-            name,
-            LoadedFormat {
-                plugin,
-                library: Some(library),
-            },
-        );
-
-        Ok(())
-    }
-
-    /// Register a builtin format plugin (doesn't need dynamic loading)
-    pub fn register_format(&mut self, plugin: Box<dyn FormatPlugin>) {
-        let name = plugin.name().to_string();
-        self.formats.insert(name, LoadedFormat { plugin, library: None });
-    }
-
-    /// Get a format plugin by name
-    pub fn format(&self, name: &str) -> Option<&dyn FormatPlugin> {
-        self.formats.get(name).map(|f| f.plugin.as_ref())
-    }
-
-    /// Get a format plugin by file extension
-    pub fn format_for_extension(&self, ext: &str) -> Option<&dyn FormatPlugin> {
-        self.formats
-            .values()
-            .find(|f| f.plugin.supports_extension(ext))
-            .map(|f| f.plugin.as_ref())
-    }
-
-    /// List all loaded format names
-    pub fn format_names(&self) -> Vec<&str> {
-        self.formats.keys().map(|s| s.as_str()).collect()
-    }
-
-    /// List all loaded formats
-    pub fn formats(&self) -> impl Iterator<Item = &dyn FormatPlugin> {
-        self.formats.values().map(|f| f.plugin.as_ref())
-    }
-
     // ========== Bulk Loading ==========
 
     /// Load all plugins from the plugin directory
@@ -281,10 +207,6 @@ impl PluginManager {
             } else if filename.contains("runtime") {
                 if let Err(e) = self.load_runtime(&path) {
                     eprintln!("Warning: Failed to load runtime plugin {:?}: {}", path, e);
-                }
-            } else if filename.contains("format") {
-                if let Err(e) = self.load_format(&path) {
-                    eprintln!("Warning: Failed to load format plugin {:?}: {}", path, e);
                 }
             }
         }

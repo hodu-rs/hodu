@@ -4,14 +4,14 @@ use crate::dispatch::DispatchManifest;
 use crate::xcrun;
 use hodu_plugin::{
     ArtifactDType, ArtifactSymbols, ArtifactTensorInfo, CompiledArtifact, CompilerPlugin, Device,
-    HoduError, HoduResult, OutputFormat, Script,
+    HoduError, HoduResult, OutputFormat, Snapshot,
 };
 use std::io::Write;
 use std::path::Path;
 
 /// Metal Compiler Plugin
 ///
-/// Compiles Hodu Scripts/Snapshots to Metal artifacts
+/// Compiles Hodu Snapshots/Snapshots to Metal artifacts
 ///
 /// Supported dtypes: bool, bf16, f16, f32, u8, u16, u32, u64, i8, i16, i32, i64
 /// NOT supported: f8e4m3, f8e5m2, f64 (Metal hardware limitation)
@@ -48,7 +48,7 @@ impl MetalCompiler {
     /// Compile snapshot to artifact
     fn compile_snapshot(
         &self,
-        snapshot: &hodu_core::script::Snapshot,
+        snapshot: &hodu_plugin::snapshot::Snapshot,
         _device: Device,
     ) -> HoduResult<CompiledArtifact> {
         // Generate dispatch manifest
@@ -145,7 +145,7 @@ impl CompilerPlugin for MetalCompiler {
         }
     }
 
-    fn compile(&self, script: &Script, device: Device) -> HoduResult<CompiledArtifact> {
+    fn compile(&self, script: &Snapshot, device: Device) -> HoduResult<CompiledArtifact> {
         if device != Device::Metal {
             return Err(HoduError::UnsupportedDevice(device));
         }
@@ -157,12 +157,12 @@ impl CompilerPlugin for MetalCompiler {
         }
 
         // Get snapshot from script
-        self.compile_snapshot(script.snapshot(), device)
+        self.compile_snapshot(script, device)
     }
 
     fn build(
         &self,
-        script: &Script,
+        script: &Snapshot,
         device: Device,
         format: OutputFormat,
         path: &Path,
@@ -171,7 +171,7 @@ impl CompilerPlugin for MetalCompiler {
             return Err(HoduError::UnsupportedDevice(device));
         }
 
-        let snapshot = script.snapshot();
+        let snapshot = script;
 
         match format {
             OutputFormat::Msl => {
