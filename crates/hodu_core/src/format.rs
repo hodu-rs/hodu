@@ -11,13 +11,8 @@
 
 #[allow(clippy::module_inception)]
 mod format;
-
-#[cfg(feature = "hdss")]
 pub mod hdss;
-
-#[cfg(feature = "hdt")]
 pub mod hdt;
-
 #[cfg(feature = "json")]
 pub mod json;
 
