@@ -2,7 +2,7 @@ use crate::{
     be::device::BackendDevice,
     compat::*,
     error::{HoduError, HoduResult},
-    into::faltten::IntoFlattened,
+    into::flatten::IntoFlattened,
     scalar::Scalar,
     tensor::{from_storage, Tensor},
     types::{DType, Device, Layout, Shape},

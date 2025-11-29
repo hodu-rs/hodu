@@ -4,7 +4,7 @@ use crate::{
     be::storage::{BackendStorage, BackendStorageT},
     be_cpu::device::CpuDevice,
     error::HoduResult,
-    into::faltten::IntoFlattened,
+    into::flatten::IntoFlattened,
     types::{DType, Device},
 };
 

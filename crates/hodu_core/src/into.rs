@@ -1,1 +1,1 @@
-pub mod faltten;
+pub mod flatten;
