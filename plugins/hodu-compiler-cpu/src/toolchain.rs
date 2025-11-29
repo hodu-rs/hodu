@@ -99,6 +99,9 @@ impl CCompiler {
         let mut cmd = Command::new(self.executable());
         let opt_flag = format!("-O{}", opt_level.min(3));
 
+        // Check for BLAS library next to kernels lib
+        let blas_lib = kernels_lib.with_file_name("libhodu_cpu_kernels_blas.a");
+
         match self {
             CCompiler::Clang | CCompiler::Gcc => {
                 // Common flags for clang/gcc
@@ -110,15 +113,23 @@ impl CCompiler {
                     .arg(source_path)
                     .arg(kernels_lib);
 
+                // Link BLAS library if it exists
+                if blas_lib.exists() {
+                    cmd.arg(&blas_lib);
+                }
+
                 // Platform-specific linker flags
                 #[cfg(target_os = "macos")]
                 {
                     cmd.arg("-dynamiclib");
+                    // Link Accelerate framework for BLAS
+                    cmd.arg("-framework").arg("Accelerate");
                 }
 
                 #[cfg(target_os = "linux")]
                 {
                     cmd.arg("-lm"); // math library
+                    cmd.arg("-lpthread"); // pthread library
                 }
             }
             CCompiler::Msvc => {
@@ -128,6 +139,10 @@ impl CCompiler {
                     .arg(format!("/Fe:{}", output_path.display()))
                     .arg(source_path)
                     .arg(kernels_lib);
+
+                if blas_lib.exists() {
+                    cmd.arg(&blas_lib);
+                }
             }
         }
 

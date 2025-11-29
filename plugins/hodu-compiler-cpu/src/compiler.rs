@@ -12,6 +12,15 @@ use hodu_plugin::{
 };
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+
+// Include bundled CPU kernels library
+mod bundled {
+    include!(concat!(env!("OUT_DIR"), "/bundled_kernels.rs"));
+}
+
+// Cached path to extracted kernels library
+static EXTRACTED_KERNELS_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 /// CPU Compiler Plugin
 pub struct CpuCompiler {
@@ -61,24 +70,47 @@ impl CpuCompiler {
     }
 
     fn find_kernels_lib(&self) -> PathBuf {
-        self.kernels_lib_path.clone().unwrap_or_else(|| {
-            // Try to find in standard locations
-            // 1. Environment variable
-            if let Ok(path) = std::env::var("HODU_CPU_KERNELS_LIB") {
-                return PathBuf::from(path);
-            }
-            // 2. Relative to executable
-            if let Ok(exe) = std::env::current_exe() {
-                if let Some(parent) = exe.parent() {
-                    let lib_path = parent.join("libhodu_cpu_kernels.a");
-                    if lib_path.exists() {
-                        return lib_path;
+        // 1. User-specified path
+        if let Some(path) = &self.kernels_lib_path {
+            return path.clone();
+        }
+
+        // 2. Environment variable
+        if let Ok(path) = std::env::var("HODU_CPU_KERNELS_LIB") {
+            return PathBuf::from(path);
+        }
+
+        // 3. Use bundled kernels (extract to temp directory if not already done)
+        EXTRACTED_KERNELS_PATH
+            .get_or_init(|| {
+                let temp_dir = std::env::temp_dir().join("hodu_cpu_kernels");
+                let _ = fs::create_dir_all(&temp_dir);
+
+                // Extract main kernels library
+                let kernels_path = temp_dir.join("libhodu_cpu_kernels.a");
+                if !kernels_path.exists() || should_update_extracted(&kernels_path) {
+                    let _ = fs::write(&kernels_path, bundled::KERNELS_LIB);
+                }
+
+                // Extract BLAS library if available (macOS)
+                if let Some(blas_lib) = bundled::BLAS_LIB {
+                    let blas_path = temp_dir.join("libhodu_cpu_kernels_blas.a");
+                    if !blas_path.exists() || should_update_extracted(&blas_path) {
+                        let _ = fs::write(&blas_path, blas_lib);
                     }
                 }
-            }
-            // 3. Default path (will likely fail, but gives informative error)
-            PathBuf::from("libhodu_cpu_kernels.a")
-        })
+
+                kernels_path
+            })
+            .clone()
+    }
+}
+
+/// Check if the extracted file should be updated (simple size check)
+fn should_update_extracted(path: &Path) -> bool {
+    match fs::metadata(path) {
+        Ok(meta) => meta.len() != bundled::KERNELS_LIB.len() as u64,
+        Err(_) => true,
     }
 }
 

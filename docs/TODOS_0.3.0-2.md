@@ -502,6 +502,8 @@ flowchart LR
     end
 
     subgraph Plugins["🔌 Plugins (dylib)"]
+        compiler_cpu["hodu-compiler<br/>-cpu"]
+        runtime_cpu["hodu-runtime<br/>-cpu"]
         compiler_metal["hodu-compiler<br/>-metal"]
         runtime_metal["hodu-runtime<br/>-metal"]
     end
@@ -543,6 +545,11 @@ flowchart LR
     utils_macros --> macro_utils
 
     %% Plugins
+    compiler_cpu --> plugin
+    compiler_cpu --> core
+    compiler_cpu --> cpu
+    runtime_cpu --> plugin
+    runtime_cpu --> core
     compiler_metal --> plugin
     compiler_metal --> core
     runtime_metal --> plugin
@@ -567,6 +574,8 @@ flowchart LR
 | `hodu_macro_utils` | 공통 proc-macro 유틸 |
 | `hodu_nn_macros` | NN 레이어용 proc-macro |
 | `hodu_utils_macros` | Utils용 proc-macro |
+| `hodu-compiler-cpu` | CPU 컴파일러 플러그인 (C codegen + clang 컴파일, dylib) |
+| `hodu-runtime-cpu` | CPU 런타임 플러그인 (libloading으로 shared lib 실행, dylib) |
 | `hodu-compiler-metal` | Metal 컴파일러 플러그인 (dylib) |
 | `hodu-runtime-metal` | Metal 런타임 플러그인 (dylib) |
 
@@ -584,6 +593,8 @@ flowchart LR
 | `hodu_macro_utils` | `proc-macro2`, `quote`, `syn`, `toml_edit` |
 | `hodu_nn_macros` | `proc-macro2`, `quote`, `syn` |
 | `hodu_utils_macros` | `proc-macro2`, `quote`, `syn` |
+| `hodu-compiler-cpu` | `cc`, `serde`, `serde_json` |
+| `hodu-runtime-cpu` | `libloading`, `serde`, `serde_json` |
 | `hodu-compiler-metal` | `serde`, `serde_json`, `serde_bytes` |
 | `hodu-runtime-metal` | `serde`, `serde_json`, `serde_bytes`, `metal`, `objc` |
 
@@ -630,6 +641,12 @@ flowchart LR
   - [ ] CPU codegen
   - [ ] CUDA codegen (PTX)
   - [ ] ROCm codegen
+- [x] hodu-compiler-cpu
+  - [x] C codegen (generate_c_code)
+  - [x] Dispatch manifest generation
+  - [x] clang 컴파일 (shared library 생성)
+  - [x] extern 함수 선언 생성
+  - [x] Shape ops 버퍼 재사용
 - [x] hodu-compiler-metal
   - [x] MSL codegen
   - [x] Dispatch manifest generation
@@ -637,7 +654,10 @@ flowchart LR
 
 ### Phase 6: Runtime 플러그인 구현
 
-- [ ] hodu-runtime-native (dlopen)
+- [x] hodu-runtime-cpu (dlopen shared library)
+  - [x] libloading으로 .dylib/.so 로드
+  - [x] hodu_init/hodu_execute/hodu_cleanup 호출
+  - [x] TensorData 기반 cross-dylib 통신
 - [ ] hodu-runtime-cuda
 - [x] hodu-runtime-metal
   - [x] Metal device/buffer 관리
@@ -665,16 +685,15 @@ flowchart LR
 
 | Compiler | CPU | CUDA | ROCm | Metal |
 |----------|-----|------|------|-------|
-| llvm | O | O | O | - |
+| cpu | O | - | - | - |
 | metal | - | - | - | O |
-| xla | O | O | - | - |
 
 ### Runtime 지원
 
 | Runtime | CPU | CUDA | Metal | 로드 가능 포맷 |
 |---------|-----|------|-------|--------------|
-| interp | O | - | - | (직접 실행) |
-| native | O | - | - | .so/.dylib |
+| interp | O | - | - | HoduSnapshot (직접 실행) |
+| cpu | O | - | - | .so/.dylib (SharedLib) |
 | cuda | - | O | - | .ptx/.cubin/.fatbin |
 | metal | - | - | O | .metallib |
 | onnxruntime | O | O | - | .onnx |
@@ -684,26 +703,20 @@ flowchart LR
 ```mermaid
 flowchart LR
     subgraph Compilers
-        llvm[llvm]
+        cpu_c[cpu]
         metal_c[metal]
     end
 
     subgraph Outputs
         so[.so/.dylib]
-        ptx[.ptx/.cubin]
         metallib[.metallib]
-        onnx_file[.onnx]
     end
 
     subgraph Runtimes
-        native[native]
-        cuda[cuda]
+        cpu_r[cpu]
         metal_r[metal]
-        onnxrt[onnxruntime]
     end
 
-    llvm --> so --> native
-    llvm --> ptx --> cuda
+    cpu_c --> so --> cpu_r
     metal_c --> metallib --> metal_r
-    onnx_file --> onnxrt
 ```
