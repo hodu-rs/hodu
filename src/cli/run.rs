@@ -129,8 +129,47 @@ pub fn execute(
 
     // Execute based on device
     let outputs: HashMap<String, TensorData> = match device {
+        Device::CPU if compiler_plugin.is_some() => {
+            // Use compiler + runtime plugins for CPU when specified
+            let compiler_path = compiler_plugin.unwrap();
+
+            // Load compiler plugin
+            let mut manager = PluginManager::with_default_dir()?;
+            manager.load_compiler(&compiler_path)?;
+
+            // Find compiler
+            let compiler = manager
+                .compilers()
+                .find(|c| c.supports_device(device))
+                .ok_or_else(|| HoduError::BackendError("No CPU compiler found".into()))?;
+
+            // Compile
+            let script = Script::new(snapshot.clone());
+            let artifact = compiler.compile(&script, device)?;
+
+            // Use runtime plugin if provided, otherwise use interpreter
+            if let Some(runtime_path) = runtime_plugin {
+                manager.load_runtime(&runtime_path)?;
+                // Prefer runtime that supports SharedLib format (the dynamically loaded one)
+                let runtime = manager
+                    .runtimes()
+                    .find(|r| {
+                        r.supports_device(device)
+                            && r.loadable_formats(device)
+                                .contains(&hodu_plugin::OutputFormat::SharedLib)
+                    })
+                    .ok_or_else(|| HoduError::BackendError("No CPU runtime supporting SharedLib found".into()))?;
+                let module = runtime.load(&artifact, device)?;
+                module.execute(&input_bindings)?
+            } else {
+                // Use interpreter runtime with compiled artifact
+                let runtime = InterpRuntime::new();
+                let module = runtime.load(&artifact, Device::CPU)?;
+                module.execute(&input_bindings)?
+            }
+        },
         Device::CPU => {
-            // Use interpreter runtime for CPU
+            // Use interpreter runtime for CPU (no plugins)
             let runtime = InterpRuntime::new();
             let snapshot_data = snapshot.serialize()?;
             let artifact =

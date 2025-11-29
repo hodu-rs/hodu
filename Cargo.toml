@@ -5,6 +5,7 @@ exclude = [
     "crates/hodu_metal_kernels",
     "plugins/hodu-compiler-cpu",
     "plugins/hodu-compiler-metal",
+    "plugins/hodu-runtime-cpu",
     "plugins/hodu-runtime-metal"
 ]
 resolver = "2"
