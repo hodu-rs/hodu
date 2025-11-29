@@ -1,56 +1,39 @@
 //! Compile command - compile .hdss to target format
 
+use crate::common::{format_extension, parse_device, parse_output_format};
+use clap::Args;
 use hodu_core::{format::hdss, script::Script};
-use hodu_plugin::{Device, HoduError, HoduResult, OutputFormat, PluginManager};
+use hodu_plugin::{HoduError, HoduResult, PluginManager};
 use std::path::PathBuf;
 
-fn parse_device(s: &str) -> HoduResult<Device> {
-    match s.to_lowercase().as_str() {
-        "cpu" => Ok(Device::CPU),
-        #[cfg(feature = "cuda")]
-        s if s.starts_with("cuda:") => {
-            let id: usize = s[5..]
-                .parse()
-                .map_err(|_| HoduError::InvalidArgument("Invalid CUDA device ID".into()))?;
-            Ok(Device::CUDA(id))
-        },
-        "metal" => Ok(Device::Metal),
-        _ => Err(HoduError::InvalidArgument(format!(
-            "Unknown device: {}. Use 'cpu', 'metal'{}",
-            s,
-            if cfg!(feature = "cuda") { ", 'cuda:N'" } else { "" },
-        ))),
-    }
+#[derive(Args)]
+pub struct CompileArgs {
+    /// Path to the .hdss file
+    pub path: PathBuf,
+
+    /// Output file path
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
+
+    /// Target device (cpu, metal, cuda:0)
+    #[arg(short, long, default_value = "cpu")]
+    pub device: String,
+
+    /// Output format (sharedlib, msl, metallib, ptx, cubin, llvm-ir, object)
+    #[arg(short, long, default_value = "sharedlib")]
+    pub format: String,
+
+    /// Path to compiler plugin (.dylib/.so/.dll)
+    #[arg(short, long)]
+    pub plugin: Option<PathBuf>,
 }
 
-fn parse_format(s: &str) -> HoduResult<OutputFormat> {
-    match s.to_lowercase().as_str() {
-        "msl" => Ok(OutputFormat::Msl),
-        "air" => Ok(OutputFormat::Air),
-        "metallib" => Ok(OutputFormat::Metallib),
-        "ptx" => Ok(OutputFormat::Ptx),
-        "cubin" => Ok(OutputFormat::Cubin),
-        "llvm-ir" | "llvm" => Ok(OutputFormat::LlvmIR),
-        "object" | "obj" => Ok(OutputFormat::Object),
-        _ => Err(HoduError::InvalidArgument(format!(
-            "Unknown output format: {}. Use 'msl', 'air', 'metallib', 'ptx', 'cubin', 'llvm-ir', 'object'",
-            s
-        ))),
-    }
-}
-
-pub fn execute(
-    path: PathBuf,
-    output: Option<PathBuf>,
-    device_str: &str,
-    format_str: &str,
-    plugin_path: Option<PathBuf>,
-) -> HoduResult<()> {
-    let device = parse_device(device_str)?;
-    let format = parse_format(format_str)?;
+pub fn execute(args: CompileArgs) -> HoduResult<()> {
+    let device = parse_device(&args.device)?;
+    let format = parse_output_format(&args.format)?;
 
     // Load snapshot
-    let snapshot = hdss::load(&path)?;
+    let snapshot = hdss::load(&args.path)?;
     let script = Script::new(snapshot);
 
     // Initialize plugin manager
@@ -58,38 +41,28 @@ pub fn execute(
     manager.load_all()?;
 
     // Load specific plugin if provided
-    if let Some(plugin_path) = plugin_path {
-        manager.load_compiler(&plugin_path)?;
+    if let Some(plugin_path) = &args.plugin {
+        manager.load_compiler(plugin_path)?;
     }
 
     // Find compiler for the device
     let compiler = manager.compilers().find(|c| c.supports_device(device)).ok_or_else(|| {
         HoduError::BackendError(format!(
-            "No compiler found for device {:?}. Available compilers: {:?}",
+            "No compiler found for {:?}. Available: {:?}",
             device,
             manager.compiler_names()
         ))
     })?;
 
     // Determine output path
-    let output_path = output.unwrap_or_else(|| {
-        let ext = match format {
-            OutputFormat::Msl => "metal",
-            OutputFormat::Air => "air",
-            OutputFormat::Metallib => "metallib",
-            OutputFormat::Ptx => "ptx",
-            OutputFormat::Cubin => "cubin",
-            OutputFormat::LlvmIR => "ll",
-            OutputFormat::Object => "o",
-            _ => "bin",
-        };
-        path.with_extension(ext)
-    });
+    let output_path = args
+        .output
+        .unwrap_or_else(|| args.path.with_extension(format_extension(format)));
 
     // Compile
     compiler.build(&script, device, format, &output_path)?;
 
-    println!("Compiled {} -> {}", path.display(), output_path.display());
+    println!("Compiled {} -> {}", args.path.display(), output_path.display());
 
     Ok(())
 }

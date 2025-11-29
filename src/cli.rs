@@ -1,5 +1,7 @@
 //! Hodu CLI - Execute and inspect Hodu models
 
+#[path = "cli/common.rs"]
+mod common;
 #[path = "cli/compile.rs"]
 mod compile;
 #[path = "cli/info.rs"]
@@ -24,60 +26,10 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Run a .hdss model file
-    Run {
-        /// Path to the .hdss file
-        path: PathBuf,
-
-        /// Device to run on (cpu, cuda:0, metal)
-        #[arg(short, long, default_value = "cpu")]
-        device: String,
-
-        /// Input tensor file (format: name=path.hdt), can be repeated
-        #[arg(short, long, action = clap::ArgAction::Append)]
-        input: Vec<String>,
-
-        /// Input tensor files, comma-separated (format: name=path.hdt,name=path.json)
-        #[arg(short = 'I', long, value_delimiter = ',')]
-        inputs: Vec<String>,
-
-        /// Output format (pretty, json, hdt)
-        #[arg(short = 'f', long, default_value = "pretty")]
-        output_format: output::OutputFormat,
-
-        /// Output directory for hdt format
-        #[arg(short = 'o', long)]
-        output_dir: Option<PathBuf>,
-
-        /// Path to compiler plugin (.dylib/.so/.dll) for AOT compilation
-        #[arg(long)]
-        compiler_plugin: Option<PathBuf>,
-
-        /// Path to runtime plugin (.dylib/.so/.dll) for execution
-        #[arg(long)]
-        runtime_plugin: Option<PathBuf>,
-    },
+    Run(run::RunArgs),
 
     /// Compile a .hdss model to target format
-    Compile {
-        /// Path to the .hdss file
-        path: PathBuf,
-
-        /// Output file path
-        #[arg(short, long)]
-        output: Option<PathBuf>,
-
-        /// Target device (cpu, metal, cuda:0)
-        #[arg(short, long, default_value = "metal")]
-        device: String,
-
-        /// Output format (msl, air, metallib, ptx, cubin, llvm-ir, object)
-        #[arg(short, long, default_value = "metallib")]
-        format: String,
-
-        /// Path to compiler plugin (.dylib/.so/.dll)
-        #[arg(short, long)]
-        plugin: Option<PathBuf>,
-    },
+    Compile(compile::CompileArgs),
 
     /// Show information about a .hdss model file
     Info {
@@ -90,32 +42,8 @@ fn main() {
     let args = Cli::parse();
 
     let result = match args.command {
-        Commands::Run {
-            path,
-            device,
-            input,
-            inputs,
-            output_format,
-            output_dir,
-            compiler_plugin,
-            runtime_plugin,
-        } => run::execute(
-            path,
-            &device,
-            input,
-            inputs,
-            output_format,
-            output_dir,
-            compiler_plugin,
-            runtime_plugin,
-        ),
-        Commands::Compile {
-            path,
-            output,
-            device,
-            format,
-            plugin,
-        } => compile::execute(path, output, &device, &format, plugin),
+        Commands::Run(args) => run::execute(args),
+        Commands::Compile(args) => compile::execute(args),
         Commands::Info { path } => info::execute(path),
     };
 
