@@ -65,7 +65,10 @@ pub use tensor::*;
 // Re-export from hodu_core for plugin development
 pub use hodu_core::{
     error::{HoduError, HoduResult},
-    snapshot::Snapshot,
+    op_params::{self, OpParams},
+    ops,
+    scalar::Scalar,
+    snapshot::{self, Snapshot, SnapshotNode},
     types::{DType, Device, Layout, Shape},
 };
 
