@@ -26,11 +26,7 @@ openblas = ["hodu_core/openblas"]
 cuda = ["hodu_core/cuda"]
 metal = ["hodu_core/metal"]
 
-# format
-onnx = ["std", "dep:hodu_onnx"]
-
 [dependencies]
 hodu_core = { workspace = true }
 hodu_nn = { workspace = true }
-hodu_onnx = { workspace = true, optional = true }
 hodu_utils = { workspace = true }

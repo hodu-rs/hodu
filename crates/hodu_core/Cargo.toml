@@ -21,7 +21,7 @@ std = [
     "serde?/std",
     "serde_json?/std",
 ]
-serde = ["dep:postcard", "dep:serde", "dep:serde_repr", "smallvec/serde"]
+serde = ["dep:postcard", "dep:serde", "dep:serde_json", "dep:serde_repr", "smallvec/serde"]
 
 # optional dtype
 f8e5m2 = []
@@ -38,9 +38,6 @@ openblas = ["hodu_cpu_kernels/openblas"]
 cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
 metal = ["std", "metal-device", "dep:hodu_metal_kernels"]
 metal-device = []  # Device::Metal enum only, no runtime
-
-# format features
-json = ["serde", "dep:serde_json"]
 
 [dependencies]
 dashmap = { workspace = true, optional = true }

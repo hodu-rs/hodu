@@ -1,0 +1,13 @@
+[package]
+name = "hodu_plugin_sdk"
+version = "0.3.0"
+description = "Plugin SDK for developing Hodu Backend and Format plugins"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/hodu-rs/hodu"
+
+[dependencies]
+hodu_compat = { workspace = true, features = ["std"] }
+hodu_core = { workspace = true, features = ["std", "serde", "f8e5m2", "f64", "u16", "u64", "i16", "i64"] }

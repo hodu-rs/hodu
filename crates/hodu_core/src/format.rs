@@ -7,13 +7,9 @@
 //! - **hdt**: Hodu Tensor format (native binary tensor)
 //! - **json**: JSON tensor format (human-readable, debugging)
 
-#![cfg_attr(not(feature = "std"), allow(unused_imports))]
-
-#[allow(clippy::module_inception)]
-mod format;
+#[cfg(feature = "serde")]
 pub mod hdss;
+#[cfg(feature = "serde")]
 pub mod hdt;
-#[cfg(feature = "json")]
+#[cfg(feature = "serde")]
 pub mod json;
-
-pub use format::*;

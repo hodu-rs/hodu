@@ -1,13 +1,6 @@
 [workspace]
 members = ["crates/*", "test-playground"]
-exclude = [
-    "crates/hodu_cuda_kernels",
-    "crates/hodu_metal_kernels",
-    "plugins/hodu-compiler-cpu",
-    "plugins/hodu-compiler-metal",
-    "plugins/hodu-runtime-cpu",
-    "plugins/hodu-runtime-metal"
-]
+exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
 resolver = "2"
 
 [package]
@@ -24,38 +17,7 @@ readme = "README.md"
 keywords = ["tensor", "machine-learning", "hodu"]
 categories = ["science"]
 
-[[bin]]
-name = "hodu"
-path = "src/cli.rs"
-required-features = ["cli"]
-
 [features]
-cli = [
-    "dep:clap",
-    "dep:hodu_core",
-    "dep:hodu_onnx",
-    "dep:hodu_plugin",
-
-    "hodu_core/std",
-    "hodu_core/serde",
-
-    "hodu_plugin/f8e5m2",
-    "hodu_plugin/f64",
-    "hodu_plugin/u16",
-    "hodu_plugin/u64",
-    "hodu_plugin/i16",
-    "hodu_plugin/i64",
-
-    "hodu_core/f8e5m2",
-    "hodu_core/f64",
-    "hodu_core/u16",
-    "hodu_core/u64",
-    "hodu_core/i16",
-    "hodu_core/i64",
-
-    "hodu_core/json",
-]
-
 default = ["std", "serde"]
 std = ["hodu_internal/std"]
 serde = ["hodu_internal/serde"]
@@ -75,15 +37,9 @@ openblas = ["hodu_internal/openblas"]
 cuda = ["hodu_internal/cuda"]
 metal = ["std", "hodu_internal/metal"]
 
-# format
-onnx = ["hodu_internal/onnx"]
-
 [dependencies]
-clap = { version = "4.5.53", features = ["derive"], optional = true }
-hodu_core = { workspace = true, optional = true }
 hodu_internal = { workspace = true }
-hodu_onnx = { workspace = true, optional = true }
-hodu_plugin = { workspace = true, optional = true }
+
 
 [workspace.dependencies]
 dashmap = "6.1.0"
@@ -104,10 +60,9 @@ hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.2.4" }
 hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.2.4" }
 hodu_nn = { path = "crates/hodu_nn", version = "0.2.4" }
 hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
-hodu_onnx = { path = "crates/hodu_onnx", version = "0.3.0" }
 hodu_utils = { path = "crates/hodu_utils", version = "0.2.4" }
 hodu_utils_macros = { path = "crates/hodu_utils/macros", version = "0.2.4" }
-hodu_plugin = { path = "crates/hodu_plugin", version = "0.2.4" }
+hodu_plugin_sdk = { path = "crates/hodu_plugin_sdk", version = "0.3.0" }
 hodu_xla = "0.4.7"
 libloading = "0.9.0"
 num-traits = { version = "0.2.19", default-features = false }
