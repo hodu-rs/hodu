@@ -1,6 +1,6 @@
 [package]
 name = "hodu-cli"
-version = "0.3.0"
+version = "0.1.0"
 description = "Command-line interface for Hodu ML framework"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]

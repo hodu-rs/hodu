@@ -449,11 +449,74 @@ fn chrono_now() -> String {
 }
 
 fn remove_plugin(args: RemoveArgs) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: Implement plugin removal
-    println!("Removing plugin: {}", args.name);
-    println!("hodu plugin remove: not yet implemented");
+    let registry_path = PluginRegistry::default_path()?;
+    let mut registry = PluginRegistry::load(&registry_path)?;
 
+    // Find the plugin
+    let plugin = registry.find(&args.name);
+    if plugin.is_none() {
+        // Try with hodu-backend- or hodu-format- prefix
+        let backend_name = format!("hodu-backend-{}", args.name);
+        let format_name = format!("hodu-format-{}", args.name);
+
+        if registry.find(&backend_name).is_some() {
+            return remove_plugin(RemoveArgs { name: backend_name });
+        } else if registry.find(&format_name).is_some() {
+            return remove_plugin(RemoveArgs { name: format_name });
+        }
+
+        return Err(format!(
+            "Plugin '{}' not found.\n\nInstalled plugins:\n{}",
+            args.name,
+            list_installed_plugins(&registry)
+        )
+        .into());
+    }
+
+    let plugin = plugin.unwrap();
+    let library = plugin.library.clone();
+    let name = plugin.name.clone();
+    let version = plugin.version.clone();
+
+    // Delete the library file
+    let plugins_dir = get_plugins_dir()?;
+    let lib_path = plugins_dir.join(&library);
+
+    if lib_path.exists() {
+        std::fs::remove_file(&lib_path)?;
+        println!("Removed library: {}", lib_path.display());
+    }
+
+    // Remove from registry
+    registry.remove(&name);
+    registry.save(&registry_path)?;
+
+    println!("Successfully removed plugin: {} v{}", name, version);
     Ok(())
+}
+
+fn list_installed_plugins(registry: &PluginRegistry) -> String {
+    let mut result = String::new();
+
+    let backends: Vec<_> = registry.backends().collect();
+    if !backends.is_empty() {
+        result.push_str("  Backend: ");
+        result.push_str(&backends.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "));
+        result.push('\n');
+    }
+
+    let formats: Vec<_> = registry.formats().collect();
+    if !formats.is_empty() {
+        result.push_str("  Format: ");
+        result.push_str(&formats.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", "));
+        result.push('\n');
+    }
+
+    if result.is_empty() {
+        result.push_str("  (none installed)\n");
+    }
+
+    result
 }
 
 fn update_plugins(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
