@@ -64,53 +64,28 @@ impl Tensor {
         }
     }
 
-    /// Save tensor to .hdt file
-    #[cfg(feature = "std")]
+    /// Save tensor to file (format determined by extension: .hdt, .json)
+    #[cfg(all(feature = "std", feature = "serde"))]
     pub fn save(&self, path: impl AsRef<Path>) -> HoduResult<()> {
-        use postcard;
+        use crate::types::Format;
 
-        #[derive(serde::Serialize)]
-        struct TensorData {
-            shape: Vec<usize>,
-            dtype: DType,
-            data: Vec<u8>,
+        let path = path.as_ref();
+        match Format::from_path(path).unwrap_or_default() {
+            Format::HDT => crate::format::hdt::save(self, path),
+            Format::JSON => crate::format::json::save(self, path),
         }
-
-        let tensor_data = TensorData {
-            shape: self.shape().dims().to_vec(),
-            dtype: self.dtype(),
-            data: self.to_bytes()?,
-        };
-
-        let data = postcard::to_allocvec(&tensor_data)
-            .map_err(|e| HoduError::SerializationFailed(format!("Failed to serialize tensor: {}", e)))?;
-
-        std::fs::write(path.as_ref(), data)
-            .map_err(|e| HoduError::IoError(format!("Failed to write hdt file: {}", e)))?;
-
-        Ok(())
     }
 
-    /// Load tensor from .hdt file
-    #[cfg(feature = "std")]
+    /// Load tensor from file (format determined by extension: .hdt, .json)
+    #[cfg(all(feature = "std", feature = "serde"))]
     pub fn load(path: impl AsRef<Path>) -> HoduResult<Self> {
-        use postcard;
+        use crate::types::Format;
 
-        #[derive(serde::Deserialize)]
-        struct TensorData {
-            shape: Vec<usize>,
-            dtype: DType,
-            data: Vec<u8>,
+        let path = path.as_ref();
+        match Format::from_path(path).unwrap_or_default() {
+            Format::HDT => crate::format::hdt::load(path),
+            Format::JSON => crate::format::json::load(path),
         }
-
-        let data =
-            std::fs::read(path.as_ref()).map_err(|e| HoduError::IoError(format!("Failed to read hdt file: {}", e)))?;
-
-        let tensor_data: TensorData = postcard::from_bytes(&data)
-            .map_err(|e| HoduError::DeserializationFailed(format!("Failed to deserialize tensor: {}", e)))?;
-
-        let shape = Shape::new(&tensor_data.shape);
-        Self::from_bytes(&tensor_data.data, shape, tensor_data.dtype, Device::CPU)
     }
 }
 

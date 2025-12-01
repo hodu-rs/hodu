@@ -95,11 +95,13 @@ pub use build::{
 
 // Re-export from hodu_core for plugin development
 pub use hodu_core::{
+    format::{hdss, hdt, json},
     op_params::{self, OpParams},
     ops,
     scalar::Scalar,
     snapshot::{self, Snapshot, SnapshotNode},
-    types::{Layout, Shape},
+    tensor::Tensor,
+    types::{DType, Device as CoreDevice, Layout, Shape},
 };
 
 // SDK-specific DType for ABI stability (re-exported from tensor.rs)
