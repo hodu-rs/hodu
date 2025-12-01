@@ -1,0 +1,10 @@
+[plugin]
+name = "aa"
+version = "0.1.0"
+type = "backend"
+
+[backend]
+runner = true
+builder = false
+devices = ["CPU"]
+targets = []

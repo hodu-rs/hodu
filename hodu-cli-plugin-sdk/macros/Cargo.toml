@@ -1,0 +1,17 @@
+[package]
+name = "hodu-cli-plugin-sdk_macros"
+version = "0.3.0"
+description = "Proc macros for Hodu CLI plugin development"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/daminstudio/hodu"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true }

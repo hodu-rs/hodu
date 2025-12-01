@@ -3,7 +3,11 @@
 use hodu_core::types::Device;
 
 /// Build output format for AOT compilation
+///
+/// Note: This enum is `#[non_exhaustive]` - new formats may be added in future versions.
+/// Always include a wildcard pattern when matching.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum BuildFormat {
     // === CPU (Native) ===
     /// Object file (.o)
