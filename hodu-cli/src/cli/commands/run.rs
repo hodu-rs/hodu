@@ -2,7 +2,7 @@ use crate::cli::plugin::{LoadedBackendPlugin, LoadedFormatPlugin, PluginRegistry
 use clap::Args;
 use hodu_cli_plugin_sdk::{Device, SdkDType, Snapshot, TensorData};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Args)]
 pub struct RunArgs {
@@ -174,9 +174,9 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn load_model(
-    path: &PathBuf,
+    path: &Path,
     format_plugin_lib: Option<&String>,
-    plugins_dir: &PathBuf,
+    plugins_dir: &Path,
 ) -> Result<Snapshot, Box<dyn std::error::Error>> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
 
@@ -199,10 +199,10 @@ fn load_model(
 
 fn save_outputs(
     outputs: &HashMap<String, TensorData>,
-    save_dir: &PathBuf,
+    save_dir: &Path,
     format: &str,
     registry: &PluginRegistry,
-    plugins_dir: &PathBuf,
+    plugins_dir: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use hodu_cli_plugin_sdk::{hdt, json, CoreDevice, Shape, Tensor};
 
@@ -314,7 +314,7 @@ fn parse_inputs(
             )
         })?;
 
-        let tensor_data = load_tensor_file(&path, &input_spec.shape.dims(), input_spec.dtype.into())?;
+        let tensor_data = load_tensor_file(&path, input_spec.shape.dims(), input_spec.dtype.into())?;
         inputs.insert(name.to_string(), tensor_data);
     }
 
@@ -766,9 +766,9 @@ fn collect_tensor_values(data: &[u8], dtype: SdkDType, max_display: usize) -> Ve
 }
 
 fn expand_path(path: &str) -> PathBuf {
-    if path.starts_with("~/") {
+    if let Some(stripped) = path.strip_prefix("~/") {
         if let Some(home) = dirs::home_dir() {
-            return home.join(&path[2..]);
+            return home.join(stripped);
         }
     }
     PathBuf::from(path)

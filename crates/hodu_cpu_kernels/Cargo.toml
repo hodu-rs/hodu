@@ -13,7 +13,7 @@ std = []
 openblas = []
 
 [build-dependencies]
-cc = "1.0"
+cc = "1.2.48"
 num_cpus = "1.17"
 
 [dependencies]

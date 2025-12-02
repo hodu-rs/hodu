@@ -4,7 +4,7 @@ use crate::cli::plugin::{
 };
 use clap::{Args, Subcommand};
 use hodu_cli_plugin_sdk::SDK_VERSION;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Args)]
@@ -222,7 +222,7 @@ fn install_plugin(args: InstallArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn install_from_path(path: &PathBuf, debug: bool, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn install_from_path(path: &Path, debug: bool, force: bool) -> Result<(), Box<dyn std::error::Error>> {
     let path = path.canonicalize()?;
     println!("Installing plugin from: {}", path.display());
 
@@ -232,10 +232,16 @@ fn install_from_path(path: &PathBuf, debug: bool, force: bool) -> Result<(), Box
         return Err(format!("No Cargo.toml found at {}", path.display()).into());
     }
 
-    // Build the plugin with cargo
+    // Parse Cargo.toml to get the package name
+    let cargo_content = std::fs::read_to_string(&cargo_toml)?;
+    let package_name = parse_package_name(&cargo_content)
+        .ok_or_else(|| format!("Could not find package name in {}", cargo_toml.display()))?;
+
+    // Build the plugin with cargo, specifying the package
     println!("Building plugin...");
     let mut cargo_cmd = Command::new("cargo");
     cargo_cmd.arg("build");
+    cargo_cmd.arg("-p").arg(&package_name);
     if !debug {
         cargo_cmd.arg("--release");
     }
@@ -258,6 +264,9 @@ fn install_from_path(path: &PathBuf, debug: bool, force: bool) -> Result<(), Box
         "so"
     };
 
+    // Convert package name to library name (replace - with _)
+    let lib_name = package_name.replace('-', "_");
+
     // Try multiple possible target directories:
     // 1. Direct target dir (standalone crate)
     // 2. Parent workspace target dir (workspace member)
@@ -274,23 +283,35 @@ fn install_from_path(path: &PathBuf, debug: bool, force: bool) -> Result<(), Box
             continue;
         }
 
+        // Look for library matching the package name
+        let expected_lib = format!("lib{}.{}", lib_name, lib_ext);
+        let candidate = target_dir.join(&expected_lib);
+        if candidate.exists() {
+            lib_path = Some(candidate);
+            break;
+        }
+
+        // Fallback: look for any matching library
         let lib_files: Vec<_> = std::fs::read_dir(target_dir)?
             .filter_map(|e| e.ok())
             .filter(|e| {
                 let name = e.file_name().to_string_lossy().to_string();
-                name.starts_with("lib") && name.ends_with(&format!(".{}", lib_ext))
+                name.starts_with("lib") && name.contains(&lib_name) && name.ends_with(&format!(".{}", lib_ext))
             })
             .collect();
 
         if !lib_files.is_empty() {
-            // Use the first library found (should usually be only one cdylib)
             lib_path = Some(lib_files[0].path());
             break;
         }
     }
 
-    let lib_path =
-        lib_path.ok_or_else(|| format!("No library (.{}) found. Checked: {:?}", lib_ext, possible_target_dirs))?;
+    let lib_path = lib_path.ok_or_else(|| {
+        format!(
+            "No library (.{}) found for package '{}'. Checked: {:?}",
+            lib_ext, package_name, possible_target_dirs
+        )
+    })?;
     println!("Found library: {}", lib_path.display());
 
     // Detect plugin type and get metadata
@@ -316,17 +337,7 @@ fn install_from_path(path: &PathBuf, debug: bool, force: bool) -> Result<(), Box
                 version.clone(),
                 sdk_version.clone(),
                 PluginType::Backend,
-                PluginCapabilities {
-                    runner: Some(caps.has_runner()),
-                    builder: Some(caps.has_builder()),
-                    devices,
-                    targets,
-                    load_model: None,
-                    save_model: None,
-                    load_tensor: None,
-                    save_tensor: None,
-                    extensions: Vec::new(),
-                },
+                PluginCapabilities::backend(caps.has_runner(), caps.has_builder(), devices, targets),
             )
         },
         DetectedPluginType::Format {
@@ -351,17 +362,13 @@ fn install_from_path(path: &PathBuf, debug: bool, force: bool) -> Result<(), Box
                 version.clone(),
                 sdk_version.clone(),
                 PluginType::Format,
-                PluginCapabilities {
-                    runner: None,
-                    builder: None,
-                    devices: Vec::new(),
-                    targets: Vec::new(),
-                    load_model: Some(caps.has_load_model()),
-                    save_model: Some(caps.has_save_model()),
-                    load_tensor: Some(caps.has_load_tensor()),
-                    save_tensor: Some(caps.has_save_tensor()),
+                PluginCapabilities::format(
+                    caps.has_load_model(),
+                    caps.has_save_model(),
+                    caps.has_load_tensor(),
+                    caps.has_save_tensor(),
                     extensions,
-                },
+                ),
             )
         },
     };
@@ -553,6 +560,32 @@ fn get_plugins_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     Ok(plugins_dir)
 }
 
+/// Parse package name from Cargo.toml content
+fn parse_package_name(content: &str) -> Option<String> {
+    // Simple TOML parsing for [package] name = "..."
+    let mut in_package = false;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed == "[package]" {
+            in_package = true;
+            continue;
+        }
+        if trimmed.starts_with('[') && trimmed != "[package]" {
+            in_package = false;
+            continue;
+        }
+        if in_package && trimmed.starts_with("name") {
+            // name = "package-name"
+            if let Some(eq_pos) = trimmed.find('=') {
+                let value = trimmed[eq_pos + 1..].trim();
+                let value = value.trim_matches('"').trim_matches('\'');
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
 fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
     use hodu_cli_plugin_sdk::{
         build_rs_template, cargo_toml_template, info_toml_backend_template, info_toml_format_template,
@@ -585,7 +618,7 @@ fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Generate struct name from plugin name (e.g., hodu-backend-cpu -> HoduBackendCpu)
     let struct_name: String = args
         .name
-        .split(|c| c == '-' || c == '_')
+        .split(['-', '_'])
         .map(|part| {
             let mut chars = part.chars();
             match chars.next() {

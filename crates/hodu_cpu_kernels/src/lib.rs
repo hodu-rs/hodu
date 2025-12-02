@@ -5,6 +5,10 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+/// Path to the C kernel source files directory.
+/// Useful for AOT compilation backends that need to compile kernels.
+pub const KERNELS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/kernels");
+
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 

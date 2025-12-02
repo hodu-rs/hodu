@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 /// Plugin registry stored in ~/.hodu/plugins.json
@@ -121,13 +120,13 @@ impl PluginRegistry {
 
     /// Get default registry path (~/.hodu/plugins.json)
     pub fn default_path() -> Result<PathBuf, RegistryError> {
-        let home = dirs::home_dir().ok_or_else(|| RegistryError::NoHomeDir)?;
+        let home = dirs::home_dir().ok_or(RegistryError::NoHomeDir)?;
         Ok(home.join(".hodu").join("plugins.json"))
     }
 
     /// Get plugins directory (~/.hodu/plugins/)
     pub fn plugins_dir() -> Result<PathBuf, RegistryError> {
-        let home = dirs::home_dir().ok_or_else(|| RegistryError::NoHomeDir)?;
+        let home = dirs::home_dir().ok_or(RegistryError::NoHomeDir)?;
         Ok(home.join(".hodu").join("plugins"))
     }
 

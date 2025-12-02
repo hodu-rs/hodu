@@ -1,7 +1,7 @@
 use crate::cli::plugin::{LoadedFormatPlugin, PluginRegistry};
 use clap::Args;
 use hodu_cli_plugin_sdk::{hdt, Snapshot, Tensor};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Args)]
 pub struct InspectArgs {
@@ -106,7 +106,7 @@ fn inspect_json_tensor(args: &InspectArgs) -> Result<(), Box<dyn std::error::Err
     print_tensor_info(&tensor, &args.file, args.format == "json")
 }
 
-fn print_tensor_info(tensor: &Tensor, path: &PathBuf, as_json: bool) -> Result<(), Box<dyn std::error::Error>> {
+fn print_tensor_info(tensor: &Tensor, path: &Path, as_json: bool) -> Result<(), Box<dyn std::error::Error>> {
     let tensor_shape = tensor.shape();
     let shape = tensor_shape.dims();
     let dtype = tensor.dtype();
