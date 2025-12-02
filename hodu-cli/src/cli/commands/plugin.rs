@@ -141,17 +141,17 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
             let features_str = if features.is_empty() {
                 String::new()
             } else {
-                format!(" [{}]", features.join(", "))
+                format!("[{}]", features.join(", "))
             };
 
             let devices = if caps.devices.is_empty() {
                 String::new()
             } else {
-                format!(" devices: {}", caps.devices.join(", "))
+                caps.devices.join(", ")
             };
 
             println!(
-                "  {:<20} {:<10}{}{:<20} {}",
+                "  {:<20} {:<10} {:<18} {:<10} {}",
                 plugin.name, plugin.version, features_str, devices, plugin.source
             );
         }
@@ -183,7 +183,7 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
             let features_str = if features.is_empty() {
                 String::new()
             } else {
-                format!(" [{}]", features.join(", "))
+                format!("[{}]", features.join(", "))
             };
 
             let extensions = if caps.extensions.is_empty() {
@@ -193,7 +193,7 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             println!(
-                "  {:<20} {:<10}{:<30} {:<15} {}",
+                "  {:<20} {:<10} {:<40} {:<15} {}",
                 plugin.name, plugin.version, features_str, extensions, plugin.source
             );
         }
