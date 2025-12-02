@@ -99,7 +99,7 @@ pub fn call_ops_concat(
 
     // Calculate total size needed: sum of all storage buffer sizes
     // We need to copy the entire raw buffer data (not just shape size, because of offset/strides)
-    let element_size = dtype.get_size_in_bytes();
+    let element_size = dtype.size_in_bytes();
     let total_bytes: usize = storages.iter().map(|s| s.buffer().length()).sum();
     let temp_input_buffer = device.new_buffer(total_bytes / element_size, dtype, "concat_temp_input")?;
 

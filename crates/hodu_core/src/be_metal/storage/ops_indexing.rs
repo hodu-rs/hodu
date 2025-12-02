@@ -119,7 +119,7 @@ pub fn call_ops_index_put(
         0,
         &output_buffer,
         0,
-        num_els * dtype.get_size_in_bytes(),
+        num_els * dtype.size_in_bytes(),
     );
     blit.end_encoding();
 
@@ -242,7 +242,7 @@ pub fn call_ops_scatter(
         0,
         &output_buffer,
         0,
-        num_els * dtype.get_size_in_bytes(),
+        num_els * dtype.size_in_bytes(),
     );
     blit.end_encoding();
 

@@ -35,7 +35,7 @@ impl Tensor {
     /// Data is first loaded to CPU, then transferred to the target device if needed.
     pub fn from_bytes(data: &[u8], shape: impl Into<Shape>, dtype: DType, device: Device) -> HoduResult<Self> {
         let shape = shape.into();
-        let expected_size = shape.size() * dtype.get_size_in_bytes();
+        let expected_size = shape.size() * dtype.size_in_bytes();
 
         if data.len() != expected_size {
             return Err(HoduError::InvalidArgument(format!(

@@ -67,7 +67,7 @@ impl MetalStorage {
     }
 
     pub fn to_cpu<T: Clone>(&self) -> HoduResult<Vec<T>> {
-        let size = self.count * self.dtype.get_size_in_bytes();
+        let size = self.count * self.dtype.size_in_bytes();
         let buffer = self.device.allocate_buffer(size)?;
         {
             let command_buffer = self.device.command_buffer()?;

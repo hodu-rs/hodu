@@ -15,7 +15,7 @@ pub enum DType {
 }
 
 impl DType {
-    pub fn get_size_in_bytes(&self) -> usize {
+    pub fn size_in_bytes(&self) -> usize {
         match self {
             Self::BOOL => 1,
             Self::BF16 => 2,

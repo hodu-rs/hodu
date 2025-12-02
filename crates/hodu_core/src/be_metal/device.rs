@@ -105,7 +105,7 @@ impl MetalDevice {
     }
 
     pub fn new_buffer(&self, element_count: usize, dtype: DType, _name: &str) -> HoduResult<Arc<Buffer>> {
-        let size = element_count * dtype.get_size_in_bytes();
+        let size = element_count * dtype.size_in_bytes();
         self.allocate_buffer(size)
     }
 
