@@ -1,7 +1,7 @@
 [package]
 name = "hodu"
 version = "0.2.4"
-description = "A user-friendly ML framework built in Rust for rapid prototyping and embedded deployment"
+description = "A user-friendly ML library built in Rust"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
