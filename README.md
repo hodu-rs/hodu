@@ -1,27 +1,16 @@
 # Hodu, a user-friendly ML framework built in Rust.
 
-<p align="center">
-    <img src="./assets/hodu/hodu_avatar.png" alt="Hodu Avatar" width="180"/>
-</p>
-
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
-> [!WARNING]
->
-> This is a personal learning and development project. As such:
-> - The library is under active development
-> - Features may be experimental or incomplete
-> - Functionality is not guaranteed for production use
->
-> It is recommended to use the latest version.
-
-## About Hodu
+<p align="center">
+    <img src="./assets/hodu/hodu_avatar.png" alt="Hodu Avatar" width="256" height="256" />
+</p>
 
 **Hodu** is a Rust-based ML toolkit designed for ease of use, from prototyping to deployment.
 
-- **hodu-lib**: Build and train models with a simple, intuitive API
-- **hodu-cli**: Run inference and convert models with a single command
-- **Plugin system**: Extend with custom formats and backends
+Built on Rust's foundation of memory safety and zero-cost abstractions, Hodu provides a simple API for tensor operations and model building through **hodu-lib**, while **hodu-cli** handles model inference, format conversion, and deployment with a single command.
+
+The plugin system allows you to extend Hodu with custom model formats and execution backends, making it adaptable to various workflows and hardware targets.
 
 ## Components
 
@@ -67,3 +56,6 @@ GUI application for model visualization and editing.
 
 SDK for building format and backend plugins. Create custom plugins to support new model formats or execution backends.
 
+## License
+
+This project is licensed under the [BSD-3-Clause License](./LICENSE).
