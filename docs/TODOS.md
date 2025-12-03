@@ -65,8 +65,5 @@ Items may be added at any time.
 - [ ] Implement repeat, tile, expand operations (🟢 Nice-to-have)
 - [ ] Implement one_hot, topk, sort, argsort (🟢 Nice-to-have)
 
-## hodu_onnx (🟢 Nice-to-have)
-- [ ] ONNX integration
-
-## hodu_utils (🟡 Important)
+## hodu_datasets (🟡 Important)
 - [x] Implement Dataset

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*", "hodu", "hodu-cli", "hodu-cli-plugin-sdk", "hodu-cli-plugin-sdk/macros"]
+members = ["crates/*", "hodu-lib", "hodu-cli", "hodu-cli-plugin-sdk", "hodu-cli-plugin-sdk/macros"]
 exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
 resolver = "2"
 
