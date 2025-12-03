@@ -105,7 +105,7 @@ Additional data types can be enabled with feature flags to reduce compilation ti
 | aarch64-unknown-linux-gnu | CPU | - | ✅ Stable |
 | x86_64-apple-darwin | CPU | - | 🧪 Experimental |
 | aarch64-apple-darwin | CPU | - | ✅ Stable |
-| | Metal | `metal` | 🧪 Experimental |
+| | Metal | `metal` | ✅ Stable |
 | x86_64-pc-windows-msvc | CPU | - | 🧪 Experimental |
 | | CUDA | `cuda` | 🧪 Experimental |
 
