@@ -164,10 +164,10 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
                 format!("[{}]", features.join(", "))
             };
 
-            let extensions = if caps.extensions.is_empty() {
+            let extensions = if caps.model_extensions.is_empty() {
                 String::new()
             } else {
-                caps.extensions.join(", ")
+                caps.model_extensions.join(", ")
             };
 
             println!(
@@ -200,10 +200,10 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
                 format!("[{}]", features.join(", "))
             };
 
-            let extensions = if caps.extensions.is_empty() {
+            let extensions = if caps.tensor_extensions.is_empty() {
                 String::new()
             } else {
-                caps.extensions.join(", ")
+                caps.tensor_extensions.join(", ")
             };
 
             println!(
@@ -257,9 +257,14 @@ fn info_plugin(args: InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
                 println!("  Devices: {}", devices.join(", "));
             }
         }
-        if let Some(extensions) = &info.extensions {
+        if let Some(extensions) = &info.model_extensions {
             if !extensions.is_empty() {
-                println!("  Extensions: {}", extensions.join(", "));
+                println!("  Model extensions: {}", extensions.join(", "));
+            }
+        }
+        if let Some(extensions) = &info.tensor_extensions {
+            if !extensions.is_empty() {
+                println!("  Tensor extensions: {}", extensions.join(", "));
             }
         }
     }

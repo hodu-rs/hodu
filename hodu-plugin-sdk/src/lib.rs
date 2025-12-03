@@ -12,7 +12,7 @@
 //!
 //! fn main() {
 //!     let server = PluginServer::new("my-format", env!("CARGO_PKG_VERSION"))
-//!         .extensions(vec!["onnx"])
+//!         .model_extensions(vec!["onnx"])
 //!         .method("format.load_model", handle_load_model);
 //!
 //!     server.run().unwrap();

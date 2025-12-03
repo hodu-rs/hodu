@@ -64,7 +64,8 @@ pub struct PluginServer {
     name: String,
     version: String,
     capabilities: Vec<String>,
-    extensions: Option<Vec<String>>,
+    model_extensions: Option<Vec<String>>,
+    tensor_extensions: Option<Vec<String>>,
     devices: Option<Vec<String>>,
     handlers: HashMap<String, BoxedHandler>,
     initialized: bool,
@@ -80,16 +81,23 @@ impl PluginServer {
             name: name.into(),
             version: version.into(),
             capabilities: Vec::new(),
-            extensions: None,
+            model_extensions: None,
+            tensor_extensions: None,
             devices: None,
             handlers: HashMap::new(),
             initialized: false,
         }
     }
 
-    /// Set supported file extensions (for format plugins)
-    pub fn extensions(mut self, exts: Vec<&str>) -> Self {
-        self.extensions = Some(exts.into_iter().map(String::from).collect());
+    /// Set supported file extensions for model format plugins
+    pub fn model_extensions(mut self, exts: Vec<&str>) -> Self {
+        self.model_extensions = Some(exts.into_iter().map(String::from).collect());
+        self
+    }
+
+    /// Set supported file extensions for tensor format plugins
+    pub fn tensor_extensions(mut self, exts: Vec<&str>) -> Self {
+        self.tensor_extensions = Some(exts.into_iter().map(String::from).collect());
         self
     }
 
@@ -227,7 +235,8 @@ impl PluginServer {
             protocol_version: PROTOCOL_VERSION.to_string(),
             sdk_version: SDK_VERSION.to_string(),
             capabilities: self.capabilities.clone(),
-            extensions: self.extensions.clone(),
+            model_extensions: self.model_extensions.clone(),
+            tensor_extensions: self.tensor_extensions.clone(),
             devices: self.devices.clone(),
         };
 

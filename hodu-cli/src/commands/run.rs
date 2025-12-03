@@ -544,7 +544,11 @@ fn friendly_format_error(extension: &str, registry: &PluginRegistry) -> String {
     if !formats.is_empty() {
         msg.push_str("Installed model format plugins:\n");
         for p in formats {
-            msg.push_str(&format!("  {} - {}\n", p.name, p.capabilities.extensions.join(", ")));
+            msg.push_str(&format!(
+                "  {} - {}\n",
+                p.name,
+                p.capabilities.model_extensions.join(", ")
+            ));
         }
     }
     msg.push_str("\nBuiltin formats: .hdss");

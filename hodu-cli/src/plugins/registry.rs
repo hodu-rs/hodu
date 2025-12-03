@@ -64,7 +64,9 @@ pub struct PluginCapabilities {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub save_tensor: Option<bool>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub extensions: Vec<String>,
+    pub model_extensions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tensor_extensions: Vec<String>,
 }
 
 /// Installation source
@@ -190,7 +192,7 @@ impl PluginRegistry {
         let ext_normalized = ext.trim_start_matches('.').to_lowercase();
         self.model_formats().find(|p| {
             p.capabilities
-                .extensions
+                .model_extensions
                 .iter()
                 .any(|e| e.trim_start_matches('.').to_lowercase() == ext_normalized)
         })
@@ -202,7 +204,7 @@ impl PluginRegistry {
         let ext_normalized = ext.trim_start_matches('.').to_lowercase();
         self.tensor_formats().find(|p| {
             p.capabilities
-                .extensions
+                .tensor_extensions
                 .iter()
                 .any(|e| e.trim_start_matches('.').to_lowercase() == ext_normalized)
         })
@@ -221,12 +223,13 @@ impl PluginCapabilities {
             save_model: None,
             load_tensor: None,
             save_tensor: None,
-            extensions: Vec::new(),
+            model_extensions: Vec::new(),
+            tensor_extensions: Vec::new(),
         }
     }
 
     /// Create model format capabilities
-    pub fn model_format(load_model: bool, save_model: bool, extensions: Vec<String>) -> Self {
+    pub fn model_format(load_model: bool, save_model: bool, model_extensions: Vec<String>) -> Self {
         Self {
             runner: None,
             builder: None,
@@ -236,12 +239,13 @@ impl PluginCapabilities {
             save_model: Some(save_model),
             load_tensor: None,
             save_tensor: None,
-            extensions,
+            model_extensions,
+            tensor_extensions: Vec::new(),
         }
     }
 
     /// Create tensor format capabilities
-    pub fn tensor_format(load_tensor: bool, save_tensor: bool, extensions: Vec<String>) -> Self {
+    pub fn tensor_format(load_tensor: bool, save_tensor: bool, tensor_extensions: Vec<String>) -> Self {
         Self {
             runner: None,
             builder: None,
@@ -251,7 +255,8 @@ impl PluginCapabilities {
             save_model: None,
             load_tensor: Some(load_tensor),
             save_tensor: Some(save_tensor),
-            extensions,
+            model_extensions: Vec::new(),
+            tensor_extensions,
         }
     }
 }

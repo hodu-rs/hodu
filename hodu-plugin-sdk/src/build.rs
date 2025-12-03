@@ -82,7 +82,7 @@ use std::path::Path;
 
 fn main() {{
     let server = PluginServer::new("{name}", env!("CARGO_PKG_VERSION"))
-        .extensions(vec!["ext"])  // Update with supported extensions
+        .model_extensions(vec!["ext"])  // Update with supported extensions
         .method("format.load_model", handle_load_model);
 
     if let Err(e) = server.run() {{
@@ -124,7 +124,7 @@ use std::path::Path;
 
 fn main() {{
     let server = PluginServer::new("{name}", env!("CARGO_PKG_VERSION"))
-        .extensions(vec!["ext"])  // Update with supported extensions
+        .tensor_extensions(vec!["ext"])  // Update with supported extensions
         .method("format.load_tensor", handle_load_tensor);
 
     if let Err(e) = server.run() {{

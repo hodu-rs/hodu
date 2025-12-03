@@ -96,7 +96,7 @@ fn handle_save_model(params: SaveModelParams) -> Result<serde_json::Value, RpcEr
 
 fn main() {
     PluginServer::new("my-format", env!("CARGO_PKG_VERSION"))
-        .extensions(vec!["myformat", "mf"])
+        .model_extensions(vec!["myformat", "mf"])
         .method("format.load_model", handle_load_model)
         .method("format.save_model", handle_save_model)
         .run()
@@ -130,7 +130,7 @@ fn handle_save_tensor(params: SaveTensorParams) -> Result<serde_json::Value, Rpc
 
 fn main() {
     PluginServer::new("my-tensor", env!("CARGO_PKG_VERSION"))
-        .extensions(vec!["npy", "npz"])
+        .tensor_extensions(vec!["npy", "npz"])
         .method("format.load_tensor", handle_load_tensor)
         .method("format.save_tensor", handle_save_tensor)
         .run()
@@ -146,7 +146,8 @@ Main server struct for handling JSON-RPC requests.
 
 ```rust
 PluginServer::new(name: &str, version: &str) -> Self
-    .extensions(exts: Vec<&str>) -> Self     // File extensions (format plugins)
+    .model_extensions(exts: Vec<&str>) -> Self   // File extensions (model format plugins)
+    .tensor_extensions(exts: Vec<&str>) -> Self  // File extensions (tensor format plugins)
     .devices(devs: Vec<&str>) -> Self        // Supported devices (backend plugins)
     .method(name: &str, handler: F) -> Self  // Register method handler
     .run() -> Result<(), Box<dyn Error>>     // Start server loop
