@@ -3,7 +3,7 @@ use crate::cli::plugin::{
     PluginRegistry, PluginSource, PluginType,
 };
 use clap::{Args, Subcommand};
-use hodu_cli_plugin_sdk::SDK_VERSION;
+use hodu_plugin_sdk::SDK_VERSION;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -587,7 +587,7 @@ fn parse_package_name(content: &str) -> Option<String> {
 }
 
 fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use hodu_cli_plugin_sdk::{
+    use hodu_plugin_sdk::{
         build_rs_template, cargo_toml_template, info_toml_backend_template, info_toml_format_template,
         lib_rs_backend_template, lib_rs_format_template,
     };

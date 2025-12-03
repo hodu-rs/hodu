@@ -1,7 +1,7 @@
 [package]
-name = "hodu-cli-plugin-sdk_macros"
+name = "hodu-plugin-sdk_macros"
 version = "0.1.0"
-description = "Proc macros for Hodu CLI plugin development"
+description = "Proc macros for Hodu plugin development"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"

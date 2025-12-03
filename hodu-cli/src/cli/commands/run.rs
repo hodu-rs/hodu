@@ -1,6 +1,6 @@
 use crate::cli::plugin::{LoadedBackendPlugin, LoadedFormatPlugin, PluginRegistry};
 use clap::Args;
-use hodu_cli_plugin_sdk::{Device, SdkDType, Snapshot, TensorData};
+use hodu_plugin_sdk::{Device, SdkDType, Snapshot, TensorData};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -204,7 +204,7 @@ fn save_outputs(
     registry: &PluginRegistry,
     plugins_dir: &Path,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use hodu_cli_plugin_sdk::{hdt, json, CoreDevice, Shape, Tensor};
+    use hodu_plugin_sdk::{hdt, json, CoreDevice, Shape, Tensor};
 
     // Create directory if it doesn't exist
     std::fs::create_dir_all(save_dir)?;
@@ -265,8 +265,8 @@ fn save_outputs(
     Ok(())
 }
 
-fn sdk_dtype_to_core_dtype(dtype: SdkDType) -> hodu_cli_plugin_sdk::DType {
-    use hodu_cli_plugin_sdk::DType;
+fn sdk_dtype_to_core_dtype(dtype: SdkDType) -> hodu_plugin_sdk::DType {
+    use hodu_plugin_sdk::DType;
     match dtype {
         SdkDType::Bool => DType::BOOL,
         SdkDType::F8E4M3 => DType::F8E4M3,
@@ -352,7 +352,7 @@ fn load_tensor_hdt(
     expected_shape: &[usize],
     expected_dtype: SdkDType,
 ) -> Result<TensorData, Box<dyn std::error::Error>> {
-    use hodu_cli_plugin_sdk::hdt;
+    use hodu_plugin_sdk::hdt;
 
     let tensor = hdt::load(path).map_err(|e| format!("Failed to load HDT file: {}", e))?;
 

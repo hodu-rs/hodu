@@ -1,4 +1,4 @@
-use hodu_cli_plugin_sdk::{
+use hodu_plugin_sdk::{
     BackendPlugin, BackendPluginHandle, BackendPluginMetadata, FormatPlugin, FormatPluginHandle, FormatPluginMetadata,
     FFI_PROTOCOL_VERSION, SDK_VERSION,
 };

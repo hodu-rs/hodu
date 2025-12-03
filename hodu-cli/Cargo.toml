@@ -17,7 +17,7 @@ clap = { workspace = true, features = ["derive"] }
 dirs = { workspace = true }
 float8 = { workspace = true }
 half = { workspace = true }
-hodu-cli-plugin-sdk = { path = "../hodu-cli-plugin-sdk", version = "0.1.0" }
+hodu-plugin-sdk = { path = "../hodu-plugin-sdk", version = "0.1.0" }
 libloading = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

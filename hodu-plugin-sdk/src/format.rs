@@ -140,7 +140,7 @@ impl std::ops::BitAnd for FormatCapabilities {
 /// # Examples
 ///
 /// ```ignore
-/// use hodu_cli_plugin_sdk::*;
+/// use hodu_plugin_sdk::*;
 ///
 /// pub struct NpyFormat;
 ///

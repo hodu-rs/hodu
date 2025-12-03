@@ -1,6 +1,6 @@
 use crate::cli::plugin::{LoadedBackendPlugin, LoadedFormatPlugin, PluginRegistry};
 use clap::Args;
-use hodu_cli_plugin_sdk::{BuildFormat, BuildTarget, Device, Snapshot};
+use hodu_plugin_sdk::{BuildFormat, BuildTarget, Device, Snapshot};
 use std::path::{Path, PathBuf};
 
 #[derive(Args)]

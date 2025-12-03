@@ -1,6 +1,6 @@
 pub fn execute() -> Result<(), Box<dyn std::error::Error>> {
     println!("hodu {}", env!("CARGO_PKG_VERSION"));
-    println!("hodu-cli-plugin-sdk {}", hodu_cli_plugin_sdk::SDK_VERSION);
+    println!("hodu-plugin-sdk {}", hodu_plugin_sdk::SDK_VERSION);
 
     #[cfg(target_os = "macos")]
     let platform = format!("{}-apple-darwin", std::env::consts::ARCH);

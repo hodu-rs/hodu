@@ -177,7 +177,7 @@ impl BuildTarget {
 /// # Examples
 ///
 /// ```ignore
-/// use hodu_cli_plugin_sdk::*;
+/// use hodu_plugin_sdk::*;
 ///
 /// pub struct MyBackend;
 ///

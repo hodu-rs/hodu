@@ -1,6 +1,6 @@
 use crate::cli::plugin::{LoadedFormatPlugin, PluginRegistry};
 use clap::Args;
-use hodu_cli_plugin_sdk::{hdt, Snapshot, Tensor};
+use hodu_plugin_sdk::{hdt, Snapshot, Tensor};
 use std::path::{Path, PathBuf};
 
 #[derive(Args)]
@@ -101,7 +101,7 @@ fn inspect_hdt(args: &InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn inspect_json_tensor(args: &InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use hodu_cli_plugin_sdk::json;
+    use hodu_plugin_sdk::json;
     let tensor = json::load(&args.file).map_err(|e| format!("Failed to load JSON tensor: {}", e))?;
     print_tensor_info(&tensor, &args.file, args.format == "json")
 }

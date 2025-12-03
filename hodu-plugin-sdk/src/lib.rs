@@ -7,7 +7,7 @@
 //! ## Quick Start
 //!
 //! 1. Create `info.toml` with plugin metadata
-//! 2. Call `hodu_cli_plugin_sdk::build()` in your `build.rs`
+//! 2. Call `hodu_plugin_sdk::build()` in your `build.rs`
 //! 3. Use `#[derive(BackendPlugin)]` or `#[derive(FormatPlugin)]`
 //!
 //! ## Plugin Types
@@ -19,7 +19,7 @@
 //! - **Builder**: AOT compile models to native artifacts (`hodu build`)
 //!
 //! ```ignore
-//! use hodu_cli_plugin_sdk::*;
+//! use hodu_plugin_sdk::*;
 //! use std::collections::HashMap;
 //!
 //! #[derive(Default, BackendPlugin)]
@@ -49,7 +49,7 @@
 //! - Load/save tensors (TensorData)
 //!
 //! ```ignore
-//! use hodu_cli_plugin_sdk::*;
+//! use hodu_plugin_sdk::*;
 //! use std::path::Path;
 //!
 //! #[derive(Default, FormatPlugin)]
@@ -83,7 +83,7 @@ pub use backend::*;
 pub use build::build;
 pub use error::{PluginError, PluginResult};
 pub use format::*;
-pub use hodu_cli_plugin_sdk_macros::{BackendPlugin, FormatPlugin};
+pub use hodu_plugin_sdk_macros::{BackendPlugin, FormatPlugin};
 pub use info::{BackendInfo, FormatInfo, PluginInfo, PluginInfoType, PluginMeta};
 pub use tensor::*;
 
