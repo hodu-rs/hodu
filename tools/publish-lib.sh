@@ -36,8 +36,12 @@ done
 
 popd
 
-echo "Publishing root crate"
-cargo publish --allow-dirty
+echo "Publishing hodu-lib"
+cp LICENSE hodu-lib/
+pushd hodu-lib
+git add LICENSE
+cargo publish --no-verify --allow-dirty
+popd
 
 echo "Cleaning local state"
 git reset HEAD --hard
