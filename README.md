@@ -44,8 +44,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Command-line interface for model inference, conversion, and deployment.
 
 ```bash
-hodu run model.hdss --input x=input.hdt --save ./output
+# Run inference
 hodu run model.onnx --input x=input.npy
+hodu run model.hdss --inputs x=input1.hdt,y=input2.json
+
+# Build executable
+hodu build model.hdss -o model
+
+# Build library
+hodu build model.onnx -o model.dylib
 ```
 
 ### hodu-gui (PLANNED)
