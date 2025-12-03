@@ -1,4 +1,4 @@
-# Hodu, a user-friendly ML framework built in Rust.
+# Hodu, a user-friendly ML toolkit built in Rust.
 
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
