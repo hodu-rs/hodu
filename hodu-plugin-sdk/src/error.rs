@@ -21,6 +21,10 @@ pub enum PluginError {
     Execution(String),
     /// Internal error
     Internal(String),
+    /// Load error (failed to load file)
+    Load(String),
+    /// Save error (failed to save file)
+    Save(String),
 }
 
 impl fmt::Display for PluginError {
@@ -31,6 +35,8 @@ impl fmt::Display for PluginError {
             Self::Io(msg) => write!(f, "io error: {}", msg),
             Self::Execution(msg) => write!(f, "execution error: {}", msg),
             Self::Internal(msg) => write!(f, "internal error: {}", msg),
+            Self::Load(msg) => write!(f, "load error: {}", msg),
+            Self::Save(msg) => write!(f, "save error: {}", msg),
         }
     }
 }

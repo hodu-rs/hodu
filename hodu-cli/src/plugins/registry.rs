@@ -22,8 +22,8 @@ pub struct PluginEntry {
     pub plugin_type: PluginType,
     /// Plugin capabilities
     pub capabilities: PluginCapabilities,
-    /// Library filename (e.g., "hodu-backend-interp.dylib")
-    pub library: String,
+    /// Executable binary filename (e.g., "hodu-plugin-onnx")
+    pub binary: String,
     /// Installation source
     pub source: PluginSource,
     /// Installation timestamp (ISO 8601)
@@ -34,10 +34,11 @@ pub struct PluginEntry {
 
 /// Plugin type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "snake_case")]
 pub enum PluginType {
     Backend,
-    Format,
+    ModelFormat,
+    TensorFormat,
 }
 
 /// Plugin capabilities (union of backend and format)
@@ -163,26 +164,48 @@ impl PluginRegistry {
         self.plugins.iter().filter(|p| p.plugin_type == PluginType::Backend)
     }
 
-    /// List format plugins
-    pub fn formats(&self) -> impl Iterator<Item = &PluginEntry> {
-        self.plugins.iter().filter(|p| p.plugin_type == PluginType::Format)
+    /// List model format plugins
+    pub fn model_formats(&self) -> impl Iterator<Item = &PluginEntry> {
+        self.plugins.iter().filter(|p| p.plugin_type == PluginType::ModelFormat)
+    }
+
+    /// List tensor format plugins
+    pub fn tensor_formats(&self) -> impl Iterator<Item = &PluginEntry> {
+        self.plugins
+            .iter()
+            .filter(|p| p.plugin_type == PluginType::TensorFormat)
     }
 
     /// Find backend plugin by device
+    /// Device comparison is case-insensitive (normalized to lowercase)
     pub fn find_backend_by_device(&self, device: &str) -> Option<&PluginEntry> {
+        let device_lower = device.to_lowercase();
         self.backends()
-            .find(|p| p.capabilities.devices.iter().any(|d| d == device))
+            .find(|p| p.capabilities.devices.iter().any(|d| d.to_lowercase() == device_lower))
     }
 
-    /// Find format plugin by extension
-    pub fn find_format_by_extension(&self, ext: &str) -> Option<&PluginEntry> {
-        let ext = if ext.starts_with('.') {
-            ext.to_string()
-        } else {
-            format!(".{}", ext)
-        };
-        self.formats()
-            .find(|p| p.capabilities.extensions.iter().any(|e| e == &ext))
+    /// Find model format plugin by extension
+    /// Extension comparison normalizes to lowercase without leading dot
+    pub fn find_model_format_by_extension(&self, ext: &str) -> Option<&PluginEntry> {
+        let ext_normalized = ext.trim_start_matches('.').to_lowercase();
+        self.model_formats().find(|p| {
+            p.capabilities
+                .extensions
+                .iter()
+                .any(|e| e.trim_start_matches('.').to_lowercase() == ext_normalized)
+        })
+    }
+
+    /// Find tensor format plugin by extension
+    /// Extension comparison normalizes to lowercase without leading dot
+    pub fn find_tensor_format_by_extension(&self, ext: &str) -> Option<&PluginEntry> {
+        let ext_normalized = ext.trim_start_matches('.').to_lowercase();
+        self.tensor_formats().find(|p| {
+            p.capabilities
+                .extensions
+                .iter()
+                .any(|e| e.trim_start_matches('.').to_lowercase() == ext_normalized)
+        })
     }
 }
 
@@ -202,14 +225,8 @@ impl PluginCapabilities {
         }
     }
 
-    /// Create format capabilities
-    pub fn format(
-        load_model: bool,
-        save_model: bool,
-        load_tensor: bool,
-        save_tensor: bool,
-        extensions: Vec<String>,
-    ) -> Self {
+    /// Create model format capabilities
+    pub fn model_format(load_model: bool, save_model: bool, extensions: Vec<String>) -> Self {
         Self {
             runner: None,
             builder: None,
@@ -217,6 +234,21 @@ impl PluginCapabilities {
             targets: Vec::new(),
             load_model: Some(load_model),
             save_model: Some(save_model),
+            load_tensor: None,
+            save_tensor: None,
+            extensions,
+        }
+    }
+
+    /// Create tensor format capabilities
+    pub fn tensor_format(load_tensor: bool, save_tensor: bool, extensions: Vec<String>) -> Self {
+        Self {
+            runner: None,
+            builder: None,
+            devices: Vec::new(),
+            targets: Vec::new(),
+            load_model: None,
+            save_model: None,
             load_tensor: Some(load_tensor),
             save_tensor: Some(save_tensor),
             extensions,
@@ -255,3 +287,114 @@ impl std::fmt::Display for RegistryError {
 }
 
 impl std::error::Error for RegistryError {}
+
+/// Detected plugin type with metadata (from manifest or initialization)
+#[derive(Debug, Clone)]
+pub enum DetectedPluginType {
+    Backend {
+        name: String,
+        version: String,
+        sdk_version: String,
+    },
+    ModelFormat {
+        name: String,
+        version: String,
+        sdk_version: String,
+    },
+    TensorFormat {
+        name: String,
+        version: String,
+        sdk_version: String,
+    },
+}
+
+/// Plugin detection errors
+#[derive(Debug)]
+pub enum PluginDetectError {
+    NotAPlugin,
+    IoError(String),
+    ParseError(String),
+}
+
+impl std::fmt::Display for PluginDetectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PluginDetectError::NotAPlugin => write!(f, "Not a valid plugin"),
+            PluginDetectError::IoError(e) => write!(f, "IO error: {}", e),
+            PluginDetectError::ParseError(e) => write!(f, "Parse error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for PluginDetectError {}
+
+/// Detect plugin type by reading manifest.json or spawning the plugin
+///
+/// For JSON-RPC based plugins, this spawns the plugin executable,
+/// sends an initialize request, and reads the capabilities from the response.
+pub fn detect_plugin_type(path: &std::path::Path) -> Result<DetectedPluginType, PluginDetectError> {
+    // First try to read manifest.json from the plugin directory
+    let manifest_path = path
+        .parent()
+        .map(|p| p.join("manifest.json"))
+        .unwrap_or_else(|| path.with_file_name("manifest.json"));
+
+    if manifest_path.exists() {
+        let content = std::fs::read_to_string(&manifest_path).map_err(|e| PluginDetectError::IoError(e.to_string()))?;
+        let manifest: serde_json::Value =
+            serde_json::from_str(&content).map_err(|e| PluginDetectError::ParseError(e.to_string()))?;
+
+        let name = manifest["name"].as_str().unwrap_or("unknown").to_string();
+        let version = manifest["version"].as_str().unwrap_or("0.0.0").to_string();
+        let sdk_version = manifest["sdk_version"].as_str().unwrap_or("0.1.0").to_string();
+        let capabilities = manifest["capabilities"].as_array();
+
+        // Determine type from capabilities
+        let empty_caps = vec![];
+        let caps = capabilities.unwrap_or(&empty_caps);
+        let has_backend = caps
+            .iter()
+            .any(|c| c.as_str().map(|s| s.starts_with("backend.")).unwrap_or(false));
+        let has_model_format = caps.iter().any(|c| {
+            c.as_str()
+                .map(|s| s == "format.load_model" || s == "format.save_model")
+                .unwrap_or(false)
+        });
+        let has_tensor_format = caps.iter().any(|c| {
+            c.as_str()
+                .map(|s| s == "format.load_tensor" || s == "format.save_tensor")
+                .unwrap_or(false)
+        });
+
+        if has_backend {
+            return Ok(DetectedPluginType::Backend {
+                name,
+                version,
+                sdk_version,
+            });
+        } else if has_model_format {
+            return Ok(DetectedPluginType::ModelFormat {
+                name,
+                version,
+                sdk_version,
+            });
+        } else if has_tensor_format {
+            return Ok(DetectedPluginType::TensorFormat {
+                name,
+                version,
+                sdk_version,
+            });
+        } else {
+            // Default to ModelFormat if type cannot be determined
+            return Ok(DetectedPluginType::ModelFormat {
+                name,
+                version,
+                sdk_version,
+            });
+        }
+    }
+
+    // If no manifest, try to spawn the plugin and initialize it
+    // This is a simplified stub - full implementation would spawn the process
+    Err(PluginDetectError::NotAPlugin)
+}

@@ -222,4 +222,24 @@ impl TensorData {
     pub fn core_dtype(&self) -> hodu_core::types::DType {
         self.dtype.into()
     }
+
+    /// Load tensor data from an HDT file
+    pub fn load(path: impl AsRef<std::path::Path>) -> Result<Self, crate::PluginError> {
+        use crate::hdt;
+        let tensor = hdt::load(path).map_err(|e| crate::PluginError::Load(e.to_string()))?;
+        let shape: Vec<usize> = tensor.shape().dims().to_vec();
+        let dtype: SdkDType = tensor.dtype().into();
+        let data = tensor.to_bytes().map_err(|e| crate::PluginError::Load(e.to_string()))?;
+        Ok(Self::new(data, shape, dtype))
+    }
+
+    /// Save tensor data to an HDT file
+    pub fn save(&self, path: impl AsRef<std::path::Path>) -> Result<(), crate::PluginError> {
+        use crate::{hdt, CoreDevice, Shape, Tensor};
+        let shape = Shape::new(&self.shape);
+        let dtype = self.core_dtype();
+        let tensor = Tensor::from_bytes(&self.data, shape, dtype, CoreDevice::CPU)
+            .map_err(|e| crate::PluginError::Save(e.to_string()))?;
+        hdt::save(&tensor, path).map_err(|e| crate::PluginError::Save(e.to_string()))
+    }
 }

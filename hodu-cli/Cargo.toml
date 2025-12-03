@@ -14,10 +14,10 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { workspace = true, features = ["derive"] }
+ctrlc = { workspace = true }
 dirs = { workspace = true }
 float8 = { workspace = true }
 half = { workspace = true }
 hodu-plugin-sdk = { path = "../hodu-plugin-sdk", version = "0.1.0" }
-libloading = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

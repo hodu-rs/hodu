@@ -12,6 +12,5 @@ readme = "README.md"
 
 [dependencies]
 hodu_core = { workspace = true, features = ["serde", "f8e5m2", "f64", "u16", "u64", "i16", "i64"] }
-hodu-plugin-sdk_macros = { path = "macros", version = "0.1.0" }
 serde = { workspace = true, features = ["derive"] }
-toml_edit = { workspace = true, features = ["serde"] }
+serde_json = { workspace = true }

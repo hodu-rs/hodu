@@ -1,10 +1,11 @@
 [workspace]
-members = ["crates/*", "hodu-lib", "hodu-cli", "hodu-plugin-sdk", "hodu-plugin-sdk/macros"]
+members = ["crates/*", "hodu-cli", "hodu-lib", "hodu-plugin-sdk"]
 exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
 resolver = "2"
 
 [workspace.dependencies]
 clap = { version = "4.5.53" }
+ctrlc = "3.5.1"
 dashmap = "6.1.0"
 dirs = { version = "6.0.0" }
 float8 = { version = "0.5.0", features = ["num-traits", "rand_distr"] }
@@ -17,8 +18,6 @@ hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.2.4" }
 hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.2.4" }
 hodu_nn = { path = "crates/hodu_nn", version = "0.2.4" }
 hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.2.4" }
-hodu-plugin-sdk = { path = "hodu-plugin-sdk", version = "0.3.0" }
-hodu-plugin-sdk_macros = { path = "hodu-plugin-sdk/macros", version = "0.3.0" }
 hodu_datasets = { path = "crates/hodu_datasets", version = "0.2.4" }
 hodu_datasets_macros = { path = "crates/hodu_datasets/macros", version = "0.2.4" }
 hodu_xla = "0.4.7"

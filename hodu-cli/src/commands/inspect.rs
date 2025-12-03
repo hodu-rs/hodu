@@ -1,4 +1,8 @@
-use crate::cli::plugin::{LoadedFormatPlugin, PluginRegistry};
+//! Inspect command - examine model and tensor files
+//!
+//! This command inspects model and tensor files, optionally using format plugins.
+
+use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
 use hodu_plugin_sdk::{hdt, Snapshot, Tensor};
 use std::path::{Path, PathBuf};
@@ -136,26 +140,31 @@ fn print_tensor_info(tensor: &Tensor, path: &Path, as_json: bool) -> Result<(), 
 }
 
 fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std::error::Error>> {
-    let registry_path = PluginRegistry::default_path()?;
-    let registry = PluginRegistry::load(&registry_path)?;
-
-    let plugin_entry = registry.find_format_by_extension(ext).ok_or_else(|| {
+    // Create plugin manager and get format plugin by extension
+    let mut manager = PluginManager::new()?;
+    let client = manager.get_format_for_extension(ext).map_err(|_| {
         format!(
-            "No plugin found for '.{}' format.\n\nBuiltin formats: .hdss, .hdt, .json\n\nInstall a format plugin:\n  hodu plugin install onnx\n  hodu plugin install safetensors",
+            "No plugin found for '.{}' format.\n\nBuiltin formats: .hdss, .hdt, .json\n\nInstall a format plugin:\n  hodu plugin install --git <url>",
             ext
         )
     })?;
 
-    let plugins_dir = PluginRegistry::plugins_dir()?;
-    let lib_path = plugins_dir.join(&plugin_entry.library);
-    let loaded_plugin = LoadedFormatPlugin::load(&lib_path)?;
+    // Get plugin entry from registry for capability check
+    let registry_path = PluginRegistry::default_path()?;
+    let registry = PluginRegistry::load(&registry_path)?;
+
+    // Try model format first, then tensor format
+    let plugin_entry = registry
+        .find_model_format_by_extension(ext)
+        .or_else(|| registry.find_tensor_format_by_extension(ext))
+        .ok_or("Plugin not found")?;
 
     // Try to load as model first
     if plugin_entry.capabilities.load_model.unwrap_or(false) {
-        let snapshot = loaded_plugin
-            .plugin()
-            .load_model(&args.file)
-            .map_err(|e| format!("Failed to load model: {}", e))?;
+        let result = client.load_model(args.file.to_str().unwrap())?;
+
+        // Load the snapshot from the temp path
+        let snapshot = Snapshot::load(&result.snapshot_path).map_err(|e| format!("Failed to load snapshot: {}", e))?;
 
         if args.format == "json" {
             println!("{}", serde_json::to_string_pretty(&snapshot)?);
@@ -191,9 +200,10 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
 
     // Try to load as tensor
     if plugin_entry.capabilities.load_tensor.unwrap_or(false) {
-        let tensor_data = loaded_plugin
-            .plugin()
-            .load_tensor(&args.file)
+        let result = client.load_tensor(args.file.to_str().unwrap())?;
+
+        // Load tensor data from path
+        let tensor_data = hodu_plugin_sdk::TensorData::load(&result.tensor_path)
             .map_err(|e| format!("Failed to load tensor: {}", e))?;
 
         if args.format == "json" {
