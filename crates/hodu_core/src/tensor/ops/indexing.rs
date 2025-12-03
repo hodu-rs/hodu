@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{
         GatherParams, IndexPutParams, IndexSelectParams, IndexingOp, Op, OpParams, ScatterAddParams, ScatterMaxParams,

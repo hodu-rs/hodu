@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     tensor::{Tensor, TensorId},
     types::DType,
 };
@@ -7,6 +6,7 @@ use float8::F8E4M3;
 #[cfg(feature = "f8e5m2")]
 use float8::F8E5M2;
 use half::{bf16, f16};
+use std::fmt;
 
 impl fmt::Display for TensorId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

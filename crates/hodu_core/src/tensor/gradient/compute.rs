@@ -4,11 +4,11 @@ use super::{
     vjp::VjpCompute,
 };
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::{Op, OpParams},
     tensor::{self, set_grad_tensor_id, tensor_from_id, Tensor, TensorId},
 };
+use std::collections::HashMap;
 
 pub fn record_operation(input_ids: Vec<TensorId>, output_id: TensorId, op: Op, op_params: OpParams) -> HoduResult<()> {
     if is_computing_gradients() {
@@ -45,12 +45,9 @@ struct GradientComputationGuard {
 }
 
 impl GradientComputationGuard {
-    fn new_with_capacity(_capacity: usize) -> Self {
+    fn new_with_capacity(capacity: usize) -> Self {
         set_computing_gradients(true);
-        #[cfg(feature = "std")]
-        let keep_alive = HashMap::with_capacity(_capacity);
-        #[cfg(not(feature = "std"))]
-        let keep_alive = HashMap::new();
+        let keep_alive = HashMap::with_capacity(capacity);
         Self { keep_alive }
     }
 

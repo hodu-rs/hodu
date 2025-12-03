@@ -51,8 +51,7 @@ fn main() {
         build.define("ENABLE_SIMD_AUTO", None);
     }
 
-    // Thread parallelization (std feature only)
-    #[cfg(feature = "std")]
+    // Thread parallelization
     if std::env::var("HODU_DISABLE_THREADS").is_err() {
         build.define("ENABLE_THREADS", None);
     }
@@ -64,8 +63,7 @@ fn main() {
 
     build.compile("hodu_cpu_kernels");
 
-    // Link pthread (std feature only)
-    #[cfg(feature = "std")]
+    // Link pthread
     link_pthread();
 
     // Link BLAS library
@@ -170,7 +168,6 @@ fn link_blas() {
     }
 }
 
-#[cfg(feature = "std")]
 fn link_pthread() {
     if std::env::var("HODU_DISABLE_THREADS").is_ok() {
         return;

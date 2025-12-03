@@ -1,4 +1,3 @@
-use crate::compat::*;
 use hodu_core::{error::HoduResult, tensor::Tensor};
 pub use hodu_nn_macros::Module;
 

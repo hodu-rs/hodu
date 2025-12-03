@@ -1,6 +1,5 @@
 use super::{vjp_utils::*, VjpCompute};
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{MatrixOp, OpParams},
     tensor::{tensor_from_id, TensorId},

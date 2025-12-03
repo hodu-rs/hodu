@@ -4,7 +4,6 @@
 use crate::{
     be::device::{BackendDevice, BackendDeviceT},
     be_cpu::storage::CpuStorage,
-    compat::*,
     error::{HoduError, HoduResult},
     ops::Op,
     scalar::Scalar,

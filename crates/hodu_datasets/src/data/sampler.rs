@@ -1,5 +1,3 @@
-use crate::compat::*;
-
 pub trait Sampler {
     fn iter(&self) -> Box<dyn Iterator<Item = usize>>;
 

@@ -1,5 +1,3 @@
-use crate::compat::*;
-
 // Re-export cudarc types
 pub use cudarc::driver::{
     CudaContext, CudaFunction, CudaModule, CudaSlice, CudaStream, DeviceRepr, LaunchConfig, PushKernelArg,

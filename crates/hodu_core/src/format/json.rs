@@ -20,7 +20,6 @@
 //! }
 //! ```
 
-use crate::compat::*;
 use crate::error::{HoduError, HoduResult};
 use crate::tensor::Tensor;
 use crate::types::{DType, Shape};
@@ -29,9 +28,9 @@ use float8::F8E4M3;
 use float8::F8E5M2;
 use half::{bf16, f16};
 use serde_json::{Map, Value};
+use std::collections::HashMap;
 
 /// Load a single tensor from JSON file
-#[cfg(feature = "std")]
 pub fn load(path: impl AsRef<std::path::Path>) -> HoduResult<Tensor> {
     let data = std::fs::read_to_string(path.as_ref())
         .map_err(|e| HoduError::IoError(format!("Failed to read json file: {}", e)))?;
@@ -39,7 +38,6 @@ pub fn load(path: impl AsRef<std::path::Path>) -> HoduResult<Tensor> {
 }
 
 /// Save a single tensor to JSON file
-#[cfg(feature = "std")]
 pub fn save(tensor: &Tensor, path: impl AsRef<std::path::Path>) -> HoduResult<()> {
     let data = serialize(tensor)?;
     std::fs::write(path.as_ref(), data).map_err(|e| HoduError::IoError(format!("Failed to write json file: {}", e)))?;
@@ -47,7 +45,6 @@ pub fn save(tensor: &Tensor, path: impl AsRef<std::path::Path>) -> HoduResult<()
 }
 
 /// Load multiple named tensors from JSON file
-#[cfg(feature = "std")]
 pub fn load_many(path: impl AsRef<std::path::Path>) -> HoduResult<HashMap<String, Tensor>> {
     let data = std::fs::read_to_string(path.as_ref())
         .map_err(|e| HoduError::IoError(format!("Failed to read json file: {}", e)))?;
@@ -55,7 +52,6 @@ pub fn load_many(path: impl AsRef<std::path::Path>) -> HoduResult<HashMap<String
 }
 
 /// Save multiple named tensors to JSON file
-#[cfg(feature = "std")]
 pub fn save_many(tensors: &HashMap<String, Tensor>, path: impl AsRef<std::path::Path>) -> HoduResult<()> {
     let data = serialize_many(tensors)?;
     std::fs::write(path.as_ref(), data).map_err(|e| HoduError::IoError(format!("Failed to write json file: {}", e)))?;
@@ -522,7 +518,7 @@ fn json_data_to_tensor(data: &[Value], shape: Shape, dtype: DType) -> HoduResult
     }
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

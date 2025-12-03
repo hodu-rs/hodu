@@ -1,4 +1,3 @@
-use crate::compat::*;
 use crate::module::Module;
 use crate::state::{get_state, State};
 use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};

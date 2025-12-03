@@ -1,7 +1,6 @@
 use crate::{
     be::device::BackendDeviceT,
     be_cuda::storage::CudaStorage,
-    compat::*,
     error::{HoduError, HoduResult},
     types::DType,
 };
@@ -31,10 +30,7 @@ impl CudaDevice {
     pub fn get(cuda_device_id: usize) -> HoduResult<Arc<CudaDevice>> {
         // Try to get existing device first (read lock)
         {
-            #[cfg(feature = "std")]
             let devices = CUDA_DEVICES.read()?;
-            #[cfg(not(feature = "std"))]
-            let devices = CUDA_DEVICES.read();
 
             if let Some(device) = devices.get(&cuda_device_id) {
                 return Ok(device.clone());
@@ -42,10 +38,7 @@ impl CudaDevice {
         }
 
         // Need to create new device (write lock)
-        #[cfg(feature = "std")]
         let mut devices = CUDA_DEVICES.write()?;
-        #[cfg(not(feature = "std"))]
-        let mut devices = CUDA_DEVICES.write();
 
         // Double-check in case another thread created it
         if let Some(device) = devices.get(&cuda_device_id) {

@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::{
         Conv1dGradWeightParams, Conv1dParams, Conv2dGradWeightParams, Conv2dParams, Conv3dGradWeightParams,

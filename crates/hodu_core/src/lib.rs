@@ -1,8 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
-#[cfg(not(feature = "std"))]
-extern crate alloc;
-
 pub(crate) mod be;
 pub(crate) mod be_cpu;
 #[cfg(feature = "cuda")]
@@ -22,5 +17,3 @@ pub mod snapshot;
 pub mod tensor;
 pub mod types;
 pub(crate) mod utils;
-
-pub(crate) use hodu_compat as compat;

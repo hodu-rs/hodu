@@ -1,9 +1,9 @@
 use crate::{
-    compat::*,
     ops::Op,
     tensor::TensorId,
     types::{DType, Device, Shape},
 };
+use std::fmt;
 
 /// Information for shape mismatch errors.
 #[derive(Clone, Debug)]
@@ -275,18 +275,15 @@ impl HoduError {
     }
 }
 
-#[cfg(feature = "std")]
 impl std::error::Error for HoduError {}
 
 // Conversion from common error types
-#[cfg(feature = "std")]
 impl From<std::io::Error> for HoduError {
     fn from(e: std::io::Error) -> Self {
         HoduError::IoError(e.to_string())
     }
 }
 
-#[cfg(feature = "std")]
 impl From<std::string::FromUtf8Error> for HoduError {
     fn from(e: std::string::FromUtf8Error) -> Self {
         HoduError::InternalError(format!("utf-8 conversion error: {}", e))
@@ -317,7 +314,6 @@ impl From<hodu_metal_kernels::error::MetalKernelError> for HoduError {
 }
 
 // Conversion from PoisonError (for RwLock/Mutex)
-#[cfg(feature = "std")]
 impl<T> From<std::sync::PoisonError<T>> for HoduError {
     fn from(e: std::sync::PoisonError<T>) -> Self {
         HoduError::InternalError(format!("lock poisoned: {}", e))

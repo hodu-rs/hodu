@@ -1,13 +1,9 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 mod losses;
 pub mod module;
 mod modules;
 pub mod optimizer;
 mod optimizers;
 pub mod prelude;
-
-pub(crate) use hodu_compat as compat;
 pub use losses::{
     binary_cross_entropy::{BCELoss, BCEWithLogitsLoss},
     cross_entropy::CrossEntropyLoss,
@@ -34,7 +30,7 @@ pub use optimizers::{
 };
 
 pub(crate) mod state {
-    use crate::compat::*;
+    use std::sync::Mutex;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
     pub(crate) enum State {
@@ -46,25 +42,11 @@ pub(crate) mod state {
 
     #[allow(dead_code)]
     pub fn set_state(new_state: State) {
-        #[cfg(feature = "std")]
-        {
-            *STATE.lock().unwrap() = new_state;
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            *STATE.lock() = new_state;
-        }
+        *STATE.lock().unwrap() = new_state;
     }
 
     pub fn get_state() -> State {
-        #[cfg(feature = "std")]
-        {
-            *STATE.lock().unwrap()
-        }
-        #[cfg(not(feature = "std"))]
-        {
-            *STATE.lock()
-        }
+        *STATE.lock().unwrap()
     }
 }
 

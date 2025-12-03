@@ -3,10 +3,10 @@
 //! A simple binary format for storing tensors using postcard serialization.
 //! Supports single tensor or named tensor collections.
 
-use crate::compat::*;
 use crate::error::{HoduError, HoduResult};
 use crate::tensor::Tensor;
 use crate::types::{DType, Device, Shape};
+use std::collections::HashMap;
 
 /// Single tensor data for serialization
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -23,7 +23,6 @@ struct TensorCollection {
 }
 
 /// Load a single tensor from .hdt file
-#[cfg(feature = "std")]
 pub fn load(path: impl AsRef<std::path::Path>) -> HoduResult<Tensor> {
     let data =
         std::fs::read(path.as_ref()).map_err(|e| HoduError::IoError(format!("Failed to read hdt file: {}", e)))?;
@@ -31,7 +30,6 @@ pub fn load(path: impl AsRef<std::path::Path>) -> HoduResult<Tensor> {
 }
 
 /// Save a single tensor to .hdt file
-#[cfg(feature = "std")]
 pub fn save(tensor: &Tensor, path: impl AsRef<std::path::Path>) -> HoduResult<()> {
     let data = serialize(tensor)?;
     std::fs::write(path.as_ref(), data).map_err(|e| HoduError::IoError(format!("Failed to write hdt file: {}", e)))?;
@@ -39,7 +37,6 @@ pub fn save(tensor: &Tensor, path: impl AsRef<std::path::Path>) -> HoduResult<()
 }
 
 /// Load multiple named tensors from .hdt file
-#[cfg(feature = "std")]
 pub fn load_many(path: impl AsRef<std::path::Path>) -> HoduResult<HashMap<String, Tensor>> {
     let data =
         std::fs::read(path.as_ref()).map_err(|e| HoduError::IoError(format!("Failed to read hdt file: {}", e)))?;
@@ -47,7 +44,6 @@ pub fn load_many(path: impl AsRef<std::path::Path>) -> HoduResult<HashMap<String
 }
 
 /// Save multiple named tensors to .hdt file
-#[cfg(feature = "std")]
 pub fn save_many(tensors: &HashMap<String, Tensor>, path: impl AsRef<std::path::Path>) -> HoduResult<()> {
     let data = serialize_many(tensors)?;
     std::fs::write(path.as_ref(), data).map_err(|e| HoduError::IoError(format!("Failed to write hdt file: {}", e)))?;
@@ -111,7 +107,7 @@ pub fn deserialize_many(data: &[u8]) -> HoduResult<HashMap<String, Tensor>> {
         .collect()
 }
 
-#[cfg(all(test, feature = "std"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 

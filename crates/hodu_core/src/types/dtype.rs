@@ -1,4 +1,4 @@
-use crate::compat::*;
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(feature = "serde", derive(serde_repr::Serialize_repr, serde_repr::Deserialize_repr))]

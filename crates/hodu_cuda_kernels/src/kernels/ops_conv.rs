@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     cuda::*,
     error::{CudaKernelError, Result},
     kernel::Kernels,

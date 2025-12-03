@@ -3,12 +3,10 @@
 use crate::error::HoduResult;
 use crate::snapshot::Snapshot;
 
-#[cfg(feature = "std")]
 pub fn load(path: impl AsRef<std::path::Path>) -> HoduResult<Snapshot> {
     Snapshot::load(path)
 }
 
-#[cfg(feature = "std")]
 pub fn save(snapshot: &Snapshot, path: impl AsRef<std::path::Path>) -> HoduResult<()> {
     snapshot.save(path)
 }

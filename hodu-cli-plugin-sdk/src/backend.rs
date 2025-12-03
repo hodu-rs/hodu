@@ -4,7 +4,7 @@
 //! Plugins can implement one or both functionalities based on their `BackendCapabilities`.
 
 use crate::{BuildFormat, PluginResult, Snapshot, TensorData};
-use hodu_compat::*;
+use std::collections::HashMap;
 use std::path::Path;
 
 /// Target device for plugin execution

@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{Op, OpParams, ReduceOp, ReduceParams},
     scalar::Scalar,

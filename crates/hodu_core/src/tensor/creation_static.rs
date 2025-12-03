@@ -1,9 +1,9 @@
 use crate::{
-    compat::AtomicUsize,
     error::{HoduError, HoduResult},
     tensor::{insert, Tensor, TensorId, Tensor_},
     types::{DType, Layout, Shape},
 };
+use std::sync::atomic::AtomicUsize;
 
 impl Tensor {
     pub fn input(name: &'static str, shape: impl Into<Shape>, dtype: DType) -> HoduResult<Self> {

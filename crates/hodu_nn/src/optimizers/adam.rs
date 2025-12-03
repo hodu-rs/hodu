@@ -1,4 +1,3 @@
-use crate::compat::*;
 use crate::optimizer::Optimizer;
 use hodu_core::{error::HoduResult, scalar::Scalar, tensor::Tensor};
 

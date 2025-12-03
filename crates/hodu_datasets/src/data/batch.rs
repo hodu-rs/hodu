@@ -1,4 +1,3 @@
-use crate::compat::*;
 use hodu_core::tensor::Tensor;
 
 #[derive(Clone)]

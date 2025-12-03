@@ -1,12 +1,12 @@
 use super::core::ContextId;
-#[cfg(feature = "std")]
 use crate::error::HoduError;
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{Op, OpParams},
     tensor::TensorId,
 };
+use std::collections::HashMap;
+use std::sync::{LazyLock, Mutex};
 
 /// A single entry in the gradient tape
 #[derive(Clone)]
@@ -18,14 +18,6 @@ pub(super) struct TapeEntry {
 }
 
 /// Global gradient tape storage (one tape per context)
-#[cfg(feature = "std")]
-static GRADIENT_TAPES: LazyLock<Mutex<HashMap<ContextId, Vec<TapeEntry>>>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-    map.insert(ContextId::DEFAULT, Vec::new()); // Default context
-    Mutex::new(map)
-});
-
-#[cfg(not(feature = "std"))]
 static GRADIENT_TAPES: LazyLock<Mutex<HashMap<ContextId, Vec<TapeEntry>>>> = LazyLock::new(|| {
     let mut map = HashMap::new();
     map.insert(ContextId::DEFAULT, Vec::new()); // Default context
@@ -34,36 +26,20 @@ static GRADIENT_TAPES: LazyLock<Mutex<HashMap<ContextId, Vec<TapeEntry>>>> = Laz
 
 /// Initialize a new tape for a context
 pub(super) fn initialize_tape(context_id: ContextId) {
-    #[cfg(feature = "std")]
-    {
-        GRADIENT_TAPES.lock().unwrap().insert(context_id, Vec::new());
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        GRADIENT_TAPES.lock().insert(context_id, Vec::new());
-    }
+    GRADIENT_TAPES.lock().unwrap().insert(context_id, Vec::new());
 }
 
 /// Remove a tape for a context and clean up context-owned tensors
 pub(super) fn remove_tape(context_id: ContextId) {
-    #[cfg(feature = "std")]
-    {
-        if let Some(tape) = GRADIENT_TAPES.lock().unwrap().remove(&context_id) {
-            cleanup_context_tensors(context_id, &tape);
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        if let Some(tape) = GRADIENT_TAPES.lock().remove(&context_id) {
-            cleanup_context_tensors(context_id, &tape);
-        }
+    if let Some(tape) = GRADIENT_TAPES.lock().unwrap().remove(&context_id) {
+        cleanup_context_tensors(context_id, &tape);
     }
 }
 
 /// Clean up tensors owned by a specific context
 fn cleanup_context_tensors(context_id: ContextId, _tape: &[TapeEntry]) {
-    use crate::compat::Ordering;
     use crate::tensor;
+    use std::sync::atomic::Ordering;
 
     // Collect ALL tensor IDs owned by this context with ref_count=0
     // (not just from tape, because some intermediate tensors may not be on the tape)
@@ -124,50 +100,22 @@ pub(super) fn cleanup_default_context_after_backward() {
 
 /// Add an entry to the tape for a given context
 pub(super) fn push_entry(context_id: ContextId, entry: TapeEntry) -> HoduResult<()> {
-    #[cfg(feature = "std")]
-    {
-        let mut tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
-        if let Some(tape) = tapes.get_mut(&context_id) {
-            tape.push(entry);
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        let mut tapes = GRADIENT_TAPES.lock();
-        if let Some(tape) = tapes.get_mut(&context_id) {
-            tape.push(entry);
-        }
+    let mut tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
+    if let Some(tape) = tapes.get_mut(&context_id) {
+        tape.push(entry);
     }
     Ok(())
 }
 
 /// Get a cloned copy of the tape for a given context
 pub(super) fn get_tape_clone(context_id: ContextId) -> HoduResult<Vec<TapeEntry>> {
-    #[cfg(feature = "std")]
-    {
-        let tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
-        Ok(tapes.get(&context_id).cloned().unwrap_or_default())
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        let tapes = GRADIENT_TAPES.lock();
-        Ok(tapes.get(&context_id).cloned().unwrap_or_default())
-    }
+    let tapes = GRADIENT_TAPES.lock().map_err(|_| HoduError::GradientTapeCorrupted)?;
+    Ok(tapes.get(&context_id).cloned().unwrap_or_default())
 }
 
 /// Clear the tape for a given context (but don't remove tensors)
 pub(super) fn clear_tape_for_context(context_id: ContextId) {
-    #[cfg(feature = "std")]
-    {
-        if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
-            if let Some(tape) = tapes.get_mut(&context_id) {
-                tape.clear();
-            }
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        let mut tapes = GRADIENT_TAPES.lock();
+    if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
         if let Some(tape) = tapes.get_mut(&context_id) {
             tape.clear();
         }
@@ -177,19 +125,9 @@ pub(super) fn clear_tape_for_context(context_id: ContextId) {
 /// Remove tape entries that have the given tensor as input
 /// This is called when a tensor with requires_grad=true is dropped
 pub(super) fn remove_entries_with_input(context_id: ContextId, tensor_id: TensorId) {
-    #[cfg(feature = "std")]
-    {
-        if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
-            if let Some(tape) = tapes.get_mut(&context_id) {
-                // Remove entries where tensor_id is an input
-                tape.retain(|entry| !entry.input_ids.contains(&tensor_id));
-            }
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        let mut tapes = GRADIENT_TAPES.lock();
+    if let Ok(mut tapes) = GRADIENT_TAPES.lock() {
         if let Some(tape) = tapes.get_mut(&context_id) {
+            // Remove entries where tensor_id is an input
             tape.retain(|entry| !entry.input_ids.contains(&tensor_id));
         }
     }

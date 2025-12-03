@@ -1,11 +1,12 @@
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{Op, OpParams},
     snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId},
     tensor::{Tensor, TensorId},
     types::{DType, Layout, Shape},
 };
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct CaptureBoardId(usize);

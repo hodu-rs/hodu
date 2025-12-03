@@ -9,7 +9,6 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
-std = []
 openblas = []
 
 [build-dependencies]
@@ -18,5 +17,5 @@ num_cpus = "1.17"
 
 [dependencies]
 float8 = { workspace = true }
-half = { workspace = true, default-features = false }
+half = { workspace = true }
 paste = { workspace = true }

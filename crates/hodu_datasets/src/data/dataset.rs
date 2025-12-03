@@ -1,6 +1,6 @@
-use crate::{compat::*, data::batch::DataItem};
+use crate::data::batch::DataItem;
 use hodu_core::{error::HoduResult, tensor::Tensor};
-pub use hodu_utils_macros::Dataset;
+pub use hodu_datasets_macros::Dataset;
 
 pub trait Dataset {
     fn len(&self) -> usize;

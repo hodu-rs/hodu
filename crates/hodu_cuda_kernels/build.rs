@@ -72,41 +72,16 @@ fn generate_source_rs(out_dir: &Path, kernel_files: &[&str]) {
 
     content.push('\n');
 
-    // Generate getter functions for std
-    content.push_str("#[cfg(feature = \"std\")]\n");
-    content.push_str("mod sources {\n");
-    content.push_str("    use super::*;\n\n");
-
+    // Generate getter functions
     for kernel_file in kernel_files {
         let var_name = kernel_file.replace(".cu", "").to_uppercase();
         let fn_name = format!("get_{}", kernel_file.replace(".cu", ""));
 
         content.push_str(&format!(
-            "    pub fn {}() -> &'static str {{\n        {}_PTX\n    }}\n\n",
+            "pub fn {}() -> &'static str {{\n    {}_PTX\n}}\n\n",
             fn_name, var_name
         ));
     }
-
-    content.push_str("}\n\n");
-
-    // Generate getter functions for no_std
-    content.push_str("#[cfg(not(feature = \"std\"))]\n");
-    content.push_str("mod sources {\n");
-    content.push_str("    use super::*;\n\n");
-
-    for kernel_file in kernel_files {
-        let var_name = kernel_file.replace(".cu", "").to_uppercase();
-        let fn_name = format!("get_{}", kernel_file.replace(".cu", ""));
-
-        content.push_str(&format!(
-            "    pub fn {}() -> &'static str {{\n        {}_PTX\n    }}\n\n",
-            fn_name, var_name
-        ));
-    }
-
-    content.push_str("}\n\n");
-
-    content.push_str("pub use sources::*;\n");
 
     fs::write(source_rs_path, content).expect("Failed to write generated_source.rs");
 }

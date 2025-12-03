@@ -1,7 +1,7 @@
 mod compiler;
 mod device;
 mod dtype;
-#[cfg(all(feature = "std", feature = "serde"))]
+#[cfg(feature = "serde")]
 mod format;
 mod layout;
 mod shape;
@@ -9,7 +9,7 @@ mod shape;
 pub use compiler::Compiler;
 pub use device::Device;
 pub use dtype::DType;
-#[cfg(all(feature = "std", feature = "serde"))]
+#[cfg(feature = "serde")]
 pub use format::Format;
 pub use layout::Layout;
 pub use shape::Shape;

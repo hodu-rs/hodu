@@ -1,4 +1,5 @@
-use crate::compat::*;
+use std::cell::RefCell;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
@@ -13,49 +14,24 @@ impl ContextId {
     }
 }
 
-#[cfg(feature = "std")]
 thread_local! {
     static CONTEXT_STACK: RefCell<Vec<ContextId>> = const { RefCell::new(vec![]) };
 }
 
-#[cfg(not(feature = "std"))]
-static CONTEXT_STACK: Mutex<Vec<ContextId>> = Mutex::new(Vec::new());
-
 pub(crate) fn get_active_context() -> ContextId {
-    #[cfg(feature = "std")]
-    {
-        CONTEXT_STACK.with(|stack| stack.borrow().last().copied().unwrap_or(ContextId::DEFAULT))
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        CONTEXT_STACK.lock().last().copied().unwrap_or(ContextId::DEFAULT)
-    }
+    CONTEXT_STACK.with(|stack| stack.borrow().last().copied().unwrap_or(ContextId::DEFAULT))
 }
 
 pub(super) fn push_context(context_id: ContextId) {
-    #[cfg(feature = "std")]
-    {
-        CONTEXT_STACK.with(|stack| {
-            stack.borrow_mut().push(context_id);
-        });
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        CONTEXT_STACK.lock().push(context_id);
-    }
+    CONTEXT_STACK.with(|stack| {
+        stack.borrow_mut().push(context_id);
+    });
 }
 
 pub(super) fn pop_context() {
-    #[cfg(feature = "std")]
-    {
-        CONTEXT_STACK.with(|stack| {
-            stack.borrow_mut().pop();
-        });
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        CONTEXT_STACK.lock().pop();
-    }
+    CONTEXT_STACK.with(|stack| {
+        stack.borrow_mut().pop();
+    });
 }
 
 static IS_COMPUTING_GRADIENTS: AtomicBool = AtomicBool::new(false);

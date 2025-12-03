@@ -1,4 +1,5 @@
-use crate::compat::*;
+use std::collections::HashMap;
+use std::sync::{LazyLock, RwLock};
 
 /// Maximum number of kernel names to cache before warning
 const MAX_KERNEL_NAMES: usize = 1024;
@@ -24,10 +25,7 @@ impl KernelNameCache {
     pub fn get_or_insert(&self, name: String) -> &'static str {
         // Fast path: check if already cached (read lock)
         {
-            #[cfg(feature = "std")]
             let cache = self.cache.read().unwrap();
-            #[cfg(not(feature = "std"))]
-            let cache = self.cache.read();
 
             if let Some(&cached) = cache.get(&name) {
                 return cached;
@@ -35,10 +33,7 @@ impl KernelNameCache {
         }
 
         // Slow path: insert new entry (write lock)
-        #[cfg(feature = "std")]
         let mut cache = self.cache.write().unwrap();
-        #[cfg(not(feature = "std"))]
-        let mut cache = self.cache.write();
 
         // Double-check in case another thread inserted it
         if let Some(&cached) = cache.get(&name) {
@@ -47,7 +42,6 @@ impl KernelNameCache {
 
         // Check cache size limit
         if cache.len() >= MAX_KERNEL_NAMES {
-            #[cfg(feature = "std")]
             eprintln!(
                 "WARNING: Kernel name cache exceeded {} entries. This may indicate a memory leak.",
                 MAX_KERNEL_NAMES

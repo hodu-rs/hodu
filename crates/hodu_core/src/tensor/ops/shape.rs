@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::{
         BroadcastParams, FlattenParams, Op, OpParams, PermuteParams, ReshapeParams, ShapeOp, ShapeScalarsOp,

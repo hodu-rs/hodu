@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     module::Module,
     state::{get_state, State},
 };

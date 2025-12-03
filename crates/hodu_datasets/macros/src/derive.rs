@@ -10,10 +10,10 @@ pub fn derive_dataset_impl(input: TokenStream) -> TokenStream {
 
     let manifest = Manifest::default();
     let hodu_core_path = manifest.get_path("hodu_core");
-    let hodu_utils_path = manifest.get_path("hodu_utils");
+    let hodu_datasets_path = manifest.get_path("hodu_datasets");
 
     let expanded = quote! {
-        impl #impl_generics #hodu_utils_path::data::dataset::Dataset
+        impl #impl_generics #hodu_datasets_path::data::dataset::Dataset
             for #name #ty_generics #where_clause
         {
             fn len(&self) -> usize {
@@ -21,7 +21,7 @@ pub fn derive_dataset_impl(input: TokenStream) -> TokenStream {
             }
 
             fn get(&self, index: usize)
-                -> #hodu_core_path::error::HoduResult<#hodu_utils_path::data::batch::DataItem> {
+                -> #hodu_core_path::error::HoduResult<#hodu_datasets_path::data::batch::DataItem> {
                 self.get(index)
             }
         }

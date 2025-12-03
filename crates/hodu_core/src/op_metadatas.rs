@@ -9,7 +9,6 @@
 //! Each operation type has a specific metadata format that matches the kernel expectations.
 
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     types::Layout,
 };

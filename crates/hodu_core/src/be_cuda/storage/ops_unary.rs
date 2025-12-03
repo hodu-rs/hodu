@@ -1,7 +1,6 @@
 use crate::{
     be::storage::BackendStorageT,
     be_cuda::storage::{CudaStorage, CudaStorageData},
-    compat::*,
     error::{HoduError, HoduResult},
     ops::Op,
     scalar::Scalar,

@@ -1,4 +1,4 @@
-use hodu_cuda_kernels::{compat::*, kernel::Kernels, kernels::*};
+use hodu_cuda_kernels::{kernel::Kernels, kernels::*};
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()

@@ -1,5 +1,5 @@
-use crate::compat::*;
 use smallvec::SmallVec;
+use std::fmt;
 
 /// Shape represents the dimensions of a tensor using usize for native platform compatibility.
 ///

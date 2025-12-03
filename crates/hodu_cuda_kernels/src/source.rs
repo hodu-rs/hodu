@@ -1,4 +1,4 @@
-use crate::compat::*;
+use std::collections::HashMap;
 
 // Include pre-compiled PTX from build.rs
 include!(concat!(env!("OUT_DIR"), "/generated_source.rs"));

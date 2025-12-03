@@ -1,12 +1,12 @@
 use crate::{
     be::device::BackendDevice,
-    compat::*,
     error::{HoduError, HoduResult},
     into::flatten::IntoFlattened,
     scalar::Scalar,
     tensor::{from_storage, Tensor},
     types::{DType, Device, Layout, Shape},
 };
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 // Use AtomicUsize for lock-free access to runtime device with CUDA device ID
 // Device encoding: 0 = CPU, 1-16 = CUDA(0-15), 17 = Metal

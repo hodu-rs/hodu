@@ -1,10 +1,10 @@
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::{Op, ShapeOp},
     types::shape::Shape,
 };
 use smallvec::SmallVec;
+use std::fmt;
 
 /// Layout describes the memory layout of a tensor, including shape, strides, and offset.
 ///

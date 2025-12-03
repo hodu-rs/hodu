@@ -13,6 +13,16 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
+# Track results for summary (passed/failed/skipped)
+result_c="skipped"
+result_cuda="skipped"
+result_metal="skipped"
+result_cargo="skipped"
+details_c=""
+details_cuda=""
+details_metal=""
+details_cargo=""
+
 # Parse command line arguments
 ADDITIONAL_FEATURES=()
 while [[ $# -gt 0 ]]; do
@@ -50,6 +60,8 @@ if ! command -v clang &> /dev/null
 then
     echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} clang is not available"
     echo -e "${DIM}   Skipping C/C++ syntax check${NC}\n"
+    result_c="skipped"
+    details_c="clang not available"
 else
     # Counter for checked files
     c_count=0
@@ -73,12 +85,17 @@ else
 
     if [ $c_count -eq 0 ]; then
         echo -e "${DIM}  No C/C++ files found${NC}"
+        result_c="skipped"
+        details_c="no files found"
     else
         if [ $c_failed -eq 0 ]; then
             echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${c_count}${NC} C/C++ file(s)"
+            result_c="passed"
+            details_c="${c_count} file(s)"
         else
             echo -e "${BRIGHT_RED}✗${NC} ${c_failed}/${c_count} C/C++ file(s) failed"
-            exit 1
+            result_c="failed"
+            details_c="${c_failed}/${c_count} failed"
         fi
     fi
 fi
@@ -92,6 +109,8 @@ if [ "$HAS_CUDA" = true ]; then
     then
         echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} nvcc is not available"
         echo -e "${DIM}   Skipping CUDA syntax check (requires CUDA Toolkit)${NC}\n"
+        result_cuda="skipped"
+        details_cuda="nvcc not available"
     else
         # Counter for checked files
         cuda_count=0
@@ -115,12 +134,17 @@ if [ "$HAS_CUDA" = true ]; then
 
         if [ $cuda_count -eq 0 ]; then
             echo -e "${DIM}  No CUDA files found${NC}"
+            result_cuda="skipped"
+            details_cuda="no files found"
         else
             if [ $cuda_failed -eq 0 ]; then
                 echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${cuda_count}${NC} CUDA file(s)"
+                result_cuda="passed"
+                details_cuda="${cuda_count} file(s)"
             else
                 echo -e "${BRIGHT_RED}✗${NC} ${cuda_failed}/${cuda_count} CUDA file(s) failed"
-                exit 1
+                result_cuda="failed"
+                details_cuda="${cuda_failed}/${cuda_count} failed"
             fi
         fi
     fi
@@ -129,6 +153,8 @@ if [ "$HAS_CUDA" = true ]; then
 else
     echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[CUDA] Checking kernel syntax...${NC}"
     echo -e "${DIM}  Skipping CUDA check (cuda feature not enabled)${NC}\n"
+    result_cuda="skipped"
+    details_cuda="feature not enabled"
 fi
 
 # Check Metal kernel syntax
@@ -138,6 +164,8 @@ if [ "$HAS_METAL" = true ]; then
     then
         echo -e "${BRIGHT_RED}⚠${NC}  ${BRIGHT_YELLOW}Warning:${NC} xcrun is not available"
         echo -e "${DIM}   Skipping Metal syntax check (macOS only)${NC}\n"
+        result_metal="skipped"
+        details_metal="xcrun not available"
     else
         # Counter for checked files
         metal_count=0
@@ -161,12 +189,17 @@ if [ "$HAS_METAL" = true ]; then
 
         if [ $metal_count -eq 0 ]; then
             echo -e "${DIM}  No .metal files found${NC}"
+            result_metal="skipped"
+            details_metal="no files found"
         else
             if [ $metal_failed -eq 0 ]; then
                 echo -e "${BRIGHT_GREEN}✓${NC} Checked ${BOLD}${metal_count}${NC} Metal file(s)"
+                result_metal="passed"
+                details_metal="${metal_count} file(s)"
             else
                 echo -e "${BRIGHT_RED}✗${NC} ${metal_failed}/${metal_count} Metal file(s) failed"
-                exit 1
+                result_metal="failed"
+                details_metal="${metal_failed}/${metal_count} failed"
             fi
         fi
     fi
@@ -175,13 +208,14 @@ if [ "$HAS_METAL" = true ]; then
 else
     echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Metal] Checking kernel syntax...${NC}"
     echo -e "${DIM}  Skipping Metal check (metal feature not enabled)${NC}\n"
+    result_metal="skipped"
+    details_metal="feature not enabled"
 fi
 
 # Test Cargo feature combinations
 echo -e "${BRIGHT_BLUE}▶${NC} ${BOLD}[Cargo] Testing feature combinations...${NC}"
 
 # Data type feature presets
-DTYPE_NONE=""
 DTYPE_ALL="f8e5m2,f64,u16,u64,i16,i64"
 
 # Initialize tests array
@@ -190,66 +224,40 @@ tests=()
 echo -e "${DIM}Building test matrix...${NC}"
 
 # ============================================================================
-# PHASE 1: Basic configurations (no dtype features)
+# PHASE 1: Basic configurations
 # ============================================================================
 tests+=(
-    "|[basic] no features (no-std)"
-    "serde|[basic] serde (no-std)"
-    "std|[basic] std only"
-    "std,serde|[basic] std + serde"
+    "!|[basic] no features (no serde)"
+    "|[basic] default (serde)"
 )
 
 # ============================================================================
-# PHASE 2: Data type feature combinations (no-std and std)
+# PHASE 2: Data type feature combinations
 # ============================================================================
 tests+=(
-    "$DTYPE_ALL|[dtype] all dtypes (no-std)"
-    "std,$DTYPE_ALL|[dtype] all dtypes (std)"
-    "std,serde,$DTYPE_ALL|[dtype] all dtypes + serde (std)"
+    "!$DTYPE_ALL|[dtype] all dtypes (no serde)"
+    "$DTYPE_ALL|[dtype] all dtypes (serde)"
 )
 
 # ============================================================================
-# PHASE 3: XLA backend combinations
-# ============================================================================
-tests+=(
-    "std,xla|[xla] xla only (std)"
-    "std,serde,xla|[xla] xla + serde (std)"
-    "std,serde,xla,$DTYPE_ALL|[xla] xla + serde + all dtypes (std)"
-)
-
-# ============================================================================
-# PHASE 4: CUDA backend combinations
+# PHASE 3: CUDA backend combinations
 # ============================================================================
 if [ "$HAS_CUDA" = true ]; then
     tests+=(
-        "std,cuda|[cuda] cuda only (std)"
-        "std,serde,cuda|[cuda] cuda + serde (std)"
-        "std,serde,cuda,$DTYPE_ALL|[cuda] cuda + serde + all dtypes (std)"
-    )
-
-    # CUDA + XLA combinations
-    tests+=(
-        "std,xla,cuda|[cuda+xla] xla + cuda (std)"
-        "std,serde,xla,cuda|[cuda+xla] xla + cuda + serde (std)"
-        "std,serde,xla,cuda,$DTYPE_ALL|[cuda+xla] xla + cuda + all dtypes (std)"
+        "!cuda|[cuda] cuda only (no serde)"
+        "cuda|[cuda] cuda (serde)"
+        "cuda,$DTYPE_ALL|[cuda] cuda + all dtypes (serde)"
     )
 fi
 
 # ============================================================================
-# PHASE 5: Metal backend combinations (macOS only)
+# PHASE 4: Metal backend combinations (macOS only)
 # ============================================================================
 if [ "$HAS_METAL" = true ]; then
     tests+=(
-        "std,metal|[metal] metal only (std)"
-        "std,serde,metal|[metal] metal + serde (std)"
-        "std,serde,metal,$DTYPE_ALL|[metal] metal + serde + all dtypes (std)"
-    )
-
-    # Metal + XLA combinations
-    tests+=(
-        "std,xla,metal|[metal+xla] xla + metal (std)"
-        "std,serde,xla,metal|[metal+xla] xla + metal + serde (std)"
-        "std,serde,xla,metal,$DTYPE_ALL|[metal+xla] all features + all dtypes (std)"
+        "!metal|[metal] metal only (no serde)"
+        "metal|[metal] metal (serde)"
+        "metal,$DTYPE_ALL|[metal] metal + all dtypes (serde)"
     )
 fi
 
@@ -265,12 +273,24 @@ for test in "${tests[@]}"; do
 
     echo -ne "  ${CYAN}→${NC} ${DIM}$desc${NC} ... "
 
-    if [ -z "$features" ]; then
-        cmd="cargo check --no-default-features"
-        clippy_cmd="cargo clippy --no-default-features"
+    # Check if starts with ! (no-default-features)
+    if [[ "$features" == "!"* ]]; then
+        features="${features#!}"
+        if [ -z "$features" ]; then
+            cmd="cargo check --no-default-features"
+            clippy_cmd="cargo clippy --no-default-features"
+        else
+            cmd="cargo check --no-default-features --features $features"
+            clippy_cmd="cargo clippy --no-default-features --features $features"
+        fi
     else
-        cmd="cargo check --no-default-features --features $features"
-        clippy_cmd="cargo clippy --no-default-features --features $features"
+        if [ -z "$features" ]; then
+            cmd="cargo check"
+            clippy_cmd="cargo clippy"
+        else
+            cmd="cargo check --features $features"
+            clippy_cmd="cargo clippy --features $features"
+        fi
     fi
 
     # Capture output to check for warnings
@@ -300,16 +320,88 @@ done
 
 if [ $passed -eq $total ]; then
     echo -e "${BRIGHT_GREEN}✓${NC} All ${BOLD}${total}${NC} feature combination(s) passed"
+    result_cargo="passed"
+    details_cargo="${total} combination(s)"
 else
     echo -e "${BRIGHT_RED}✗${NC} ${passed}/${total} feature combination(s) passed"
+    result_cargo="failed"
+    details_cargo="$((total - passed))/${total} failed"
 fi
 
 echo ""
 
-if [ $passed -eq $total ]; then
-    echo -e "${BOLD}${BRIGHT_GREEN}All checks passed!${NC}"
-    exit 0
-else
+# ============================================================================
+# Summary
+# ============================================================================
+echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}Summary${NC}"
+echo -e "${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
+
+has_failures=false
+
+# C/C++
+case "$result_c" in
+    "passed")
+        echo -e "  ${BRIGHT_GREEN}✓${NC} ${BOLD}C/C++${NC}: ${DIM}${details_c}${NC}"
+        ;;
+    "failed")
+        echo -e "  ${BRIGHT_RED}✗${NC} ${BOLD}C/C++${NC}: ${details_c}"
+        has_failures=true
+        ;;
+    "skipped")
+        echo -e "  ${BRIGHT_YELLOW}○${NC} ${BOLD}C/C++${NC}: ${DIM}${details_c}${NC}"
+        ;;
+esac
+
+# CUDA
+case "$result_cuda" in
+    "passed")
+        echo -e "  ${BRIGHT_GREEN}✓${NC} ${BOLD}CUDA${NC}: ${DIM}${details_cuda}${NC}"
+        ;;
+    "failed")
+        echo -e "  ${BRIGHT_RED}✗${NC} ${BOLD}CUDA${NC}: ${details_cuda}"
+        has_failures=true
+        ;;
+    "skipped")
+        echo -e "  ${BRIGHT_YELLOW}○${NC} ${BOLD}CUDA${NC}: ${DIM}${details_cuda}${NC}"
+        ;;
+esac
+
+# Metal
+case "$result_metal" in
+    "passed")
+        echo -e "  ${BRIGHT_GREEN}✓${NC} ${BOLD}Metal${NC}: ${DIM}${details_metal}${NC}"
+        ;;
+    "failed")
+        echo -e "  ${BRIGHT_RED}✗${NC} ${BOLD}Metal${NC}: ${details_metal}"
+        has_failures=true
+        ;;
+    "skipped")
+        echo -e "  ${BRIGHT_YELLOW}○${NC} ${BOLD}Metal${NC}: ${DIM}${details_metal}${NC}"
+        ;;
+esac
+
+# Cargo
+case "$result_cargo" in
+    "passed")
+        echo -e "  ${BRIGHT_GREEN}✓${NC} ${BOLD}Cargo${NC}: ${DIM}${details_cargo}${NC}"
+        ;;
+    "failed")
+        echo -e "  ${BRIGHT_RED}✗${NC} ${BOLD}Cargo${NC}: ${details_cargo}"
+        has_failures=true
+        ;;
+    "skipped")
+        echo -e "  ${BRIGHT_YELLOW}○${NC} ${BOLD}Cargo${NC}: ${DIM}${details_cargo}${NC}"
+        ;;
+esac
+
+echo ""
+
+if [ "$has_failures" = true ]; then
     echo -e "${BOLD}${BRIGHT_RED}Some checks failed!${NC}"
     exit 1
+else
+    echo -e "${BOLD}${BRIGHT_GREEN}All checks passed!${NC}"
+    exit 0
 fi

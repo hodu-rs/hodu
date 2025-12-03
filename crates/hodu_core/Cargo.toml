@@ -9,24 +9,12 @@ publish = true
 repository = "https://github.com/hodu-rs/hodu"
 
 [features]
-std = [
-    "dep:dashmap",
-    "half/std",
-    "hodu_compat/std",
-    "hodu_cpu_kernels/std",
-    "hodu_cuda_kernels?/std",
-    "num-traits/std",
-    "rand/std",
-    "rand_distr/std",
-    "serde?/std",
-    "serde_json?/std",
-]
 serde = ["dep:postcard", "dep:serde", "dep:serde_json", "dep:serde_repr", "smallvec/serde"]
 
 # optional dtype
 f8e5m2 = []
 f64 = []
-u16 =[]
+u16 = []
 u64 = []
 i16 = []
 i64 = []
@@ -36,25 +24,23 @@ openblas = ["hodu_cpu_kernels/openblas"]
 
 # optional device
 cuda = ["dep:hodu_cuda_kernels", "float8/cuda"]
-metal = ["std", "metal-device", "dep:hodu_metal_kernels"]
+metal = ["metal-device", "dep:hodu_metal_kernels"]
 metal-device = []  # Device::Metal enum only, no runtime
 
 [dependencies]
-dashmap = { workspace = true, optional = true }
+dashmap = { workspace = true }
 float8 = { workspace = true }
-half = { workspace = true, default-features = false }
-hodu_compat = { workspace = true }
+half = { workspace = true }
 hodu_cpu_kernels = { workspace = true }
 hodu_cuda_kernels = { workspace = true, optional = true }
 hodu_metal_kernels = { workspace = true, optional = true }
 hodu_xla = { workspace = true, optional = true }
-num-traits = { workspace = true, default-features = false }
+num-traits = { workspace = true }
 paste = { workspace = true }
 postcard = { workspace = true, optional = true }
-rand = { workspace = true, default-features = false }
-rand_distr = { workspace = true, default-features = false }
+rand = { workspace = true }
+rand_distr = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 serde_repr = { workspace = true, optional = true }
 smallvec = { workspace = true }
-spin = { workspace = true }

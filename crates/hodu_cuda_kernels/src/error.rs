@@ -1,6 +1,6 @@
 //! Error types for CUDA kernel operations
 
-use crate::compat::*;
+use std::fmt;
 
 /// Error type for CUDA kernel operations
 #[derive(Debug, Clone)]
@@ -29,8 +29,7 @@ impl fmt::Display for CudaKernelError {
     }
 }
 
-#[cfg(feature = "std")]
 impl std::error::Error for CudaKernelError {}
 
 /// Result type for CUDA kernel operations
-pub type Result<T> = core::result::Result<T, CudaKernelError>;
+pub type Result<T> = std::result::Result<T, CudaKernelError>;

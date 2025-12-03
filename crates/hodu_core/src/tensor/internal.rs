@@ -4,10 +4,11 @@ use super::{
 };
 use crate::{
     be::storage::BackendStorage,
-    compat::*,
     error::{HoduError, HoduResult},
     types::{DType, Layout},
 };
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 pub(crate) fn from_storage(
     storage: BackendStorage,

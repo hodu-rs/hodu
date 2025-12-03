@@ -1,6 +1,6 @@
 //! Prelude module for convenient imports
 //!
-//! Usage: `use hodu_utils::prelude::*;`
+//! Usage: `use hodu_datasets::prelude::*;`
 
 // Re-export
 pub use crate::data::batch::{Batch, DataItem};

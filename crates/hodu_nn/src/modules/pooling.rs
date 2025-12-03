@@ -1,4 +1,3 @@
-use crate::compat::*;
 use crate::module::Module;
 use hodu_core::{error::HoduResult, tensor::Tensor};
 

@@ -1,8 +1,6 @@
 //! Error types for CPU kernel operations
 
-#[cfg(not(feature = "std"))]
-use alloc::string::String;
-use core::fmt;
+use std::fmt;
 
 /// Error type for CPU kernel operations
 #[derive(Debug, Clone)]
@@ -28,8 +26,7 @@ impl fmt::Display for CpuKernelError {
     }
 }
 
-#[cfg(feature = "std")]
 impl std::error::Error for CpuKernelError {}
 
 /// Result type for CPU kernel operations
-pub type Result<T> = core::result::Result<T, CpuKernelError>;
+pub type Result<T> = std::result::Result<T, CpuKernelError>;

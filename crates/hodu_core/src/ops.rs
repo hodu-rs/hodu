@@ -3,7 +3,7 @@
 // UnaryLogicalOp -> unary_logical_not (not unary_logical_logical_not)
 
 pub use super::op_params::*;
-use crate::compat::*;
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

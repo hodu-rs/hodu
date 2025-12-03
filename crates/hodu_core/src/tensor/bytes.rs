@@ -1,13 +1,11 @@
 use crate::{
     be::storage::BackendStorage,
     be_cpu::storage::CpuStorage,
-    compat::*,
     error::{HoduError, HoduResult},
     tensor::{internal::from_storage_with_context, Tensor},
     types::{DType, Device, Layout, Shape},
 };
 
-#[cfg(feature = "std")]
 use std::path::Path;
 
 impl Tensor {
@@ -65,7 +63,7 @@ impl Tensor {
     }
 
     /// Save tensor to file (format determined by extension: .hdt, .json)
-    #[cfg(all(feature = "std", feature = "serde"))]
+    #[cfg(feature = "serde")]
     pub fn save(&self, path: impl AsRef<Path>) -> HoduResult<()> {
         use crate::types::Format;
 
@@ -77,7 +75,7 @@ impl Tensor {
     }
 
     /// Load tensor from file (format determined by extension: .hdt, .json)
-    #[cfg(all(feature = "std", feature = "serde"))]
+    #[cfg(feature = "serde")]
     pub fn load(path: impl AsRef<Path>) -> HoduResult<Self> {
         use crate::types::Format;
 

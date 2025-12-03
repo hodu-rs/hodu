@@ -1,7 +1,6 @@
 use crate::{
     be::device::BackendDeviceT,
     be_cpu::storage::CpuStorage,
-    compat::*,
     error::{HoduError, HoduResult},
     types::DType,
 };

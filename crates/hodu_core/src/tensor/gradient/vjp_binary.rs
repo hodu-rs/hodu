@@ -1,6 +1,5 @@
 use super::{vjp_utils::*, VjpCompute};
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{BinaryLogicalOp, BinaryOp, OpParams},
     scalar::Scalar,

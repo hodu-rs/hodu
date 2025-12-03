@@ -7,12 +7,11 @@ crates=(
     hodu_cuda_kernels
     hodu_metal_kernels
 
-    hodu_compat
     hodu_core
     hodu_nn/macros
     hodu_nn
-    hodu_utils/macros
-    hodu_utils
+    hodu_datasets/macros
+    hodu_datasets
 
     hodu_internal
 )

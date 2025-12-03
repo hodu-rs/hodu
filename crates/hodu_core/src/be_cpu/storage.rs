@@ -12,7 +12,6 @@ mod ops_windowing;
 use crate::{
     be::{device::BackendDeviceT, storage::BackendStorageT},
     be_cpu::device::CpuDevice,
-    compat::*,
     error::{HoduError, HoduResult},
     op_metadatas,
     ops::Op,

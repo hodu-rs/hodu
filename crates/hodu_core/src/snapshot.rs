@@ -3,7 +3,6 @@ pub mod capture;
 pub use capture::{CaptureBoard, CaptureBoardId};
 
 use crate::{
-    compat::*,
     ops::{Op, OpParams},
     types::{DType, Layout, Shape},
 };
@@ -98,13 +97,13 @@ impl Snapshot {
         postcard::from_bytes(data).map_err(|e| crate::error::HoduError::DeserializationFailed(e.to_string()))
     }
 
-    #[cfg(all(feature = "serde", feature = "std"))]
+    #[cfg(feature = "serde")]
     pub fn save(&self, path: impl AsRef<std::path::Path>) -> crate::error::HoduResult<()> {
         let bytes = self.to_bytes()?;
         std::fs::write(path, bytes).map_err(|e| crate::error::HoduError::IoError(e.to_string()))
     }
 
-    #[cfg(all(feature = "serde", feature = "std"))]
+    #[cfg(feature = "serde")]
     pub fn load(path: impl AsRef<std::path::Path>) -> crate::error::HoduResult<Self> {
         let bytes = std::fs::read(path).map_err(|e| crate::error::HoduError::IoError(e.to_string()))?;
         Self::from_bytes(&bytes)

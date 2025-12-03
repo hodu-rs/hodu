@@ -1,4 +1,4 @@
-use crate::compat::*;
+use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Device {

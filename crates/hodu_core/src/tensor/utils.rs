@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::Op,
     tensor::Tensor,

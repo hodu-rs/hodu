@@ -13,7 +13,6 @@ use crate::{
     be::storage::BackendStorageT,
     be_cpu::storage::CpuStorage,
     be_cuda::device::CudaDevice,
-    compat::*,
     error::{HoduError, HoduResult},
     op_metadatas,
     ops::Op,

@@ -1,11 +1,12 @@
 use super::{gradient, registry};
 use crate::{
     be::storage::BackendStorage,
-    compat::*,
     error::{HoduError, HoduResult},
     types::{DType, Device, Layout, Shape},
 };
 pub use gradient::ContextId;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]

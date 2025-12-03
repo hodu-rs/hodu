@@ -13,8 +13,7 @@ keywords = ["tensor", "machine-learning", "hodu"]
 categories = ["science"]
 
 [features]
-default = ["std", "serde"]
-std = ["hodu_internal/std"]
+default = ["serde"]
 serde = ["hodu_internal/serde"]
 
 # optional dtype
@@ -30,7 +29,7 @@ openblas = ["hodu_internal/openblas"]
 
 # optional device
 cuda = ["hodu_internal/cuda"]
-metal = ["std", "hodu_internal/metal"]
+metal = ["hodu_internal/metal"]
 
 [dependencies]
 hodu_internal = { workspace = true }

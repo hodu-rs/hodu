@@ -19,5 +19,5 @@ float8 = { workspace = true }
 half = { workspace = true }
 hodu-cli-plugin-sdk = { path = "../hodu-cli-plugin-sdk", version = "0.1.0" }
 libloading = { workspace = true }
-serde = { workspace = true, features = ["std"] }
-serde_json = { workspace = true, features = ["std"] }
+serde = { workspace = true }
+serde_json = { workspace = true }

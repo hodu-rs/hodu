@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::HoduResult,
     ops::{CmpOp, CmpParams, CmpScalarOp, CmpScalarParams, Op, OpParams},
     scalar::Scalar,

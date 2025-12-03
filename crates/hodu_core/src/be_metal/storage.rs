@@ -11,7 +11,6 @@ use crate::{
     be::storage::BackendStorageT,
     be_cpu::storage::CpuStorage,
     be_metal::device::MetalDevice,
-    compat::*,
     error::{HoduError, HoduResult},
     op_metadatas,
     ops::Op,

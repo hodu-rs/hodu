@@ -12,7 +12,6 @@ repository = "https://github.com/hodu-rs/hodu"
 proc-macro = true
 
 [features]
-std = []
 serde = []
 
 [dependencies]

@@ -1,4 +1,4 @@
-use crate::{compat::*, scalar::Scalar, tensor::TensorId, types::DType};
+use crate::{scalar::Scalar, tensor::TensorId, types::DType};
 
 // Binary Operations
 

@@ -1,4 +1,39 @@
-use crate::{compat::*, cuda::*, error::CudaKernelError, source::Source};
+use crate::{cuda::*, error::CudaKernelError, source::Source};
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::sync::RwLock;
+
+/// RwLock compatibility wrapper
+struct RwLockGuard<T>(T);
+
+impl<T> core::ops::Deref for RwLockGuard<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> core::ops::DerefMut for RwLockGuard<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+/// Extension trait for RwLock to provide Result-returning API
+trait RwLockExt<T> {
+    fn read_compat(&self) -> Result<RwLockGuard<impl core::ops::Deref<Target = T> + '_>, String>;
+    fn write_compat(&self) -> Result<RwLockGuard<impl core::ops::DerefMut<Target = T> + '_>, String>;
+}
+
+impl<T> RwLockExt<T> for RwLock<T> {
+    fn read_compat(&self) -> Result<RwLockGuard<impl core::ops::Deref<Target = T> + '_>, String> {
+        self.read().map(RwLockGuard).map_err(|e| format!("{:?}", e))
+    }
+
+    fn write_compat(&self) -> Result<RwLockGuard<impl core::ops::DerefMut<Target = T> + '_>, String> {
+        self.write().map(RwLockGuard).map_err(|e| format!("{:?}", e))
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum KernelName {

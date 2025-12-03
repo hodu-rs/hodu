@@ -1,33 +1,23 @@
 use super::board::{CaptureBoardId, CaptureBoard_, CapturedOp};
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::{Op, OpParams},
     tensor::{Tensor, TensorId},
     types::Layout,
 };
-
-#[cfg(feature = "std")]
 use dashmap::DashMap;
+use std::sync::LazyLock;
 
 // ============================================================================
 // Global Storage
 // ============================================================================
 
-#[cfg(feature = "std")]
 static BOARDS: LazyLock<DashMap<CaptureBoardId, CaptureBoard_>> =
     LazyLock::new(|| DashMap::with_capacity_and_shard_amount(1 << 4, 4));
 
-#[cfg(not(feature = "std"))]
-static BOARDS: LazyLock<Mutex<HashMap<CaptureBoardId, CaptureBoard_>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
-
-#[cfg(feature = "std")]
 thread_local! {
     static ACTIVE_BOARD: std::cell::RefCell<Option<CaptureBoardId>> = const { std::cell::RefCell::new(None) };
 }
-
-#[cfg(not(feature = "std"))]
-static ACTIVE_BOARD: Mutex<Option<CaptureBoardId>> = Mutex::new(None);
 
 // ============================================================================
 // Active Board Management
@@ -35,38 +25,17 @@ static ACTIVE_BOARD: Mutex<Option<CaptureBoardId>> = Mutex::new(None);
 
 /// Check if any capture board is currently active
 pub fn is_active() -> bool {
-    #[cfg(feature = "std")]
-    {
-        ACTIVE_BOARD.with(|cell| cell.borrow().is_some())
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        ACTIVE_BOARD.lock().is_some()
-    }
+    ACTIVE_BOARD.with(|cell| cell.borrow().is_some())
 }
 
 /// Get the currently active board ID
 pub fn active_board_id() -> Option<CaptureBoardId> {
-    #[cfg(feature = "std")]
-    {
-        ACTIVE_BOARD.with(|cell| *cell.borrow())
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        *ACTIVE_BOARD.lock()
-    }
+    ACTIVE_BOARD.with(|cell| *cell.borrow())
 }
 
 /// Set the active board ID
 pub(super) fn set_active(id: Option<CaptureBoardId>) {
-    #[cfg(feature = "std")]
-    {
-        ACTIVE_BOARD.with(|cell| *cell.borrow_mut() = id);
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        *ACTIVE_BOARD.lock() = id;
-    }
+    ACTIVE_BOARD.with(|cell| *cell.borrow_mut() = id);
 }
 
 // ============================================================================
@@ -76,26 +45,12 @@ pub(super) fn set_active(id: Option<CaptureBoardId>) {
 /// Register a new board in global storage
 pub(super) fn register_board(board: CaptureBoard_) {
     let id = board.id;
-    #[cfg(feature = "std")]
-    {
-        BOARDS.insert(id, board);
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        BOARDS.lock().insert(id, board);
-    }
+    BOARDS.insert(id, board);
 }
 
 /// Take a board out of storage (removes it)
 pub(super) fn take_board(id: CaptureBoardId) -> Option<CaptureBoard_> {
-    #[cfg(feature = "std")]
-    {
-        BOARDS.remove(&id).map(|(_, b)| b)
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        BOARDS.lock().remove(&id)
-    }
+    BOARDS.remove(&id).map(|(_, b)| b)
 }
 
 // ============================================================================
@@ -104,17 +59,8 @@ pub(super) fn take_board(id: CaptureBoardId) -> Option<CaptureBoard_> {
 
 /// Add a target to a specific board
 pub(super) fn add_target_to_board(id: CaptureBoardId, name: String, tensor: Tensor) {
-    #[cfg(feature = "std")]
-    {
-        if let Some(mut board) = BOARDS.get_mut(&id) {
-            board.add_target(&name, tensor);
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        if let Some(board) = BOARDS.lock().get_mut(&id) {
-            board.add_target(&name, tensor);
-        }
+    if let Some(mut board) = BOARDS.get_mut(&id) {
+        board.add_target(&name, tensor);
     }
 }
 
@@ -122,21 +68,10 @@ pub(super) fn add_target_to_board(id: CaptureBoardId, name: String, tensor: Tens
 pub fn add_input_to_active(name: &str, tensor: Tensor) -> HoduResult<()> {
     let board_id = active_board_id().ok_or(HoduError::CaptureNotActive)?;
 
-    #[cfg(feature = "std")]
-    {
-        if let Some(mut board) = BOARDS.get_mut(&board_id) {
-            board.add_input(name, tensor)
-        } else {
-            Err(HoduError::CaptureNotActive)
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        if let Some(board) = BOARDS.lock().get_mut(&board_id) {
-            board.add_input(name, tensor)
-        } else {
-            Err(HoduError::CaptureNotActive)
-        }
+    if let Some(mut board) = BOARDS.get_mut(&board_id) {
+        board.add_input(name, tensor)
+    } else {
+        Err(HoduError::CaptureNotActive)
     }
 }
 
@@ -163,17 +98,8 @@ pub fn capture_operation(
         output_layout,
     };
 
-    #[cfg(feature = "std")]
-    {
-        if let Some(mut board) = BOARDS.get_mut(&board_id) {
-            board.add_op(captured);
-        }
-    }
-    #[cfg(not(feature = "std"))]
-    {
-        if let Some(board) = BOARDS.lock().get_mut(&board_id) {
-            board.add_op(captured);
-        }
+    if let Some(mut board) = BOARDS.get_mut(&board_id) {
+        board.add_op(captured);
     }
 
     Ok(())

@@ -1,5 +1,4 @@
 use crate::{
-    compat::*,
     error::{HoduError, HoduResult},
     ops::{Op, OpParams, ReduceWindowParams, WindowingOp},
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
