@@ -64,17 +64,6 @@ impl PluginManager {
         Ok(&mut self.processes.get_mut(name).unwrap().client)
     }
 
-    /// Get a backend plugin by device
-    pub fn get_backend_for_device(&mut self, device: &str) -> Result<&mut PluginClient, ProcessError> {
-        let entry = self
-            .registry
-            .find_backend_by_device(device)
-            .ok_or_else(|| ProcessError::NoBackendForDevice(device.to_string()))?
-            .clone();
-
-        self.get_plugin(&entry.name)
-    }
-
     /// Get a format plugin by extension (tries model format first, then tensor format)
     pub fn get_format_for_extension(&mut self, ext: &str) -> Result<&mut PluginClient, ProcessError> {
         let entry = self
@@ -154,7 +143,6 @@ impl Drop for PluginManager {
 pub enum ProcessError {
     Registry(RegistryError),
     NotFound(String),
-    NoBackendForDevice(String),
     NoFormatForExtension(String),
     BinaryNotFound(String),
     Spawn(String),
@@ -166,9 +154,6 @@ impl std::fmt::Display for ProcessError {
         match self {
             ProcessError::Registry(e) => write!(f, "Registry error: {}", e),
             ProcessError::NotFound(name) => write!(f, "Plugin not found: {}", name),
-            ProcessError::NoBackendForDevice(device) => {
-                write!(f, "No backend plugin found for device: {}", device)
-            },
             ProcessError::NoFormatForExtension(ext) => {
                 write!(f, "No format plugin found for extension: {}", ext)
             },

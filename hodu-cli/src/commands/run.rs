@@ -171,7 +171,7 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         .ok();
     }
 
-    let backend_client = manager.get_backend_for_device(&device)?;
+    let backend_client = manager.get_plugin(&backend_plugin.name)?;
     let result = backend_client.run(snapshot_path.to_str().unwrap(), &device, input_refs)?;
 
     // Check if was cancelled
