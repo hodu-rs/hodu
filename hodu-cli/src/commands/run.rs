@@ -431,6 +431,8 @@ fn parse_inputs(
 }
 
 fn output_results(outputs: &HashMap<String, TensorData>, args: &RunArgs) -> Result<(), Box<dyn std::error::Error>> {
+    use hodu_plugin_sdk::{CoreDevice, DType, Tensor};
+
     match args.format.as_str() {
         "json" => {
             let json_outputs: HashMap<String, serde_json::Value> = outputs
@@ -452,7 +454,10 @@ fn output_results(outputs: &HashMap<String, TensorData>, args: &RunArgs) -> Resu
             names.sort();
             for name in names {
                 let data = &outputs[name];
-                println!("{}: shape={:?}, dtype={}", name, data.shape, data.dtype.name());
+                let dtype: DType = data.dtype.into();
+                let tensor = Tensor::from_bytes(&data.data, data.shape.clone(), dtype, CoreDevice::CPU)?;
+                println!("{}:", name);
+                println!("{}", tensor);
             }
         },
     }
