@@ -54,8 +54,14 @@ impl PluginManager {
         let entry = self
             .registry
             .find(name)
-            .ok_or_else(|| ProcessError::NotFound(name.to_string()))?
-            .clone();
+            .ok_or_else(|| ProcessError::NotFound(name.to_string()))?;
+
+        // Check if plugin is enabled
+        if !entry.enabled {
+            return Err(ProcessError::Disabled(name.to_string()));
+        }
+
+        let entry = entry.clone();
 
         // Spawn plugin
         let managed = self.spawn_plugin(&entry)?;
@@ -143,6 +149,7 @@ impl Drop for PluginManager {
 pub enum ProcessError {
     Registry(RegistryError),
     NotFound(String),
+    Disabled(String),
     NoFormatForExtension(String),
     BinaryNotFound(String),
     Spawn(String),
@@ -154,6 +161,11 @@ impl std::fmt::Display for ProcessError {
         match self {
             ProcessError::Registry(e) => write!(f, "Registry error: {}", e),
             ProcessError::NotFound(name) => write!(f, "Plugin not found: {}", name),
+            ProcessError::Disabled(name) => write!(
+                f,
+                "Plugin is disabled: {} (use `hodu plugin enable {}` to enable)",
+                name, name
+            ),
             ProcessError::NoFormatForExtension(ext) => {
                 write!(f, "No format plugin found for extension: {}", ext)
             },

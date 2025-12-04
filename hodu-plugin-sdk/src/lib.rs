@@ -62,6 +62,7 @@ pub use tensor::*;
 // Re-export build templates for hodu CLI
 pub use build::{
     cargo_toml_template, main_rs_backend_template, main_rs_model_format_template, main_rs_tensor_format_template,
+    manifest_json_backend_template, manifest_json_model_format_template, manifest_json_tensor_format_template,
 };
 
 // Re-export from hodu_core for plugin development

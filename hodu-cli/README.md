@@ -31,6 +31,9 @@ cargo install hodu-cli
 | `hodu plugin install --git <url> [--subdir <path>]` | Install plugin from git repository |
 | `hodu plugin remove <name>` | Remove installed plugin |
 | `hodu plugin update [name]` | Update plugin(s) from source |
+| `hodu plugin enable <name>` | Enable a disabled plugin |
+| `hodu plugin disable <name>` | Disable a plugin without removing |
+| `hodu plugin verify` | Verify plugin integrity |
 | `hodu plugin create <name> -t <type>` | Create new plugin project |
 
 ## Usage Examples
@@ -113,6 +116,10 @@ hodu plugin create my-format -t model_format
 
 # Create new tensor format plugin (e.g., NPY loader)
 hodu plugin create my-tensor -t tensor_format
+
+# Enable/disable plugins
+hodu plugin disable aot-cpu
+hodu plugin enable aot-cpu
 ```
 
 ### Official Plugins
@@ -130,6 +137,25 @@ Official plugins are available at [hodu-plugins](https://github.com/daminstudio/
 | `backend` | Execute/compile models | `backend.run`, `backend.build` |
 | `model_format` | Load/save model files | `format.load_model`, `format.save_model` |
 | `tensor_format` | Load/save tensor files | `format.load_tensor`, `format.save_tensor` |
+
+## Plugin Dependencies
+
+Plugins can declare dependencies on other plugins in their `manifest.json`:
+
+```json
+{
+  "name": "my-plugin",
+  "version": "0.1.0",
+  "capabilities": ["backend.run"],
+  "dependencies": ["hodu-format-onnx"]
+}
+```
+
+When installing a plugin with dependencies, missing dependencies will be reported as warnings. When disabling a plugin, it will be blocked if other enabled plugins depend on it.
+
+Additional metadata fields supported in `manifest.json`:
+- `description`: Short description of the plugin
+- `license`: License identifier (e.g., "MIT", "Apache-2.0")
 
 ## Device Naming Convention
 

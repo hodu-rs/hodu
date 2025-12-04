@@ -33,6 +33,15 @@ pub enum PluginCommands {
     /// Update plugins
     Update(UpdateArgs),
 
+    /// Enable a plugin
+    Enable(EnableArgs),
+
+    /// Disable a plugin
+    Disable(DisableArgs),
+
+    /// Verify plugin integrity (check binaries exist, dependencies satisfied)
+    Verify,
+
     /// Create a new plugin project
     Create(CreateArgs),
 }
@@ -86,6 +95,18 @@ pub struct UpdateArgs {
 }
 
 #[derive(Args)]
+pub struct EnableArgs {
+    /// Plugin name
+    pub name: String,
+}
+
+#[derive(Args)]
+pub struct DisableArgs {
+    /// Plugin name
+    pub name: String,
+}
+
+#[derive(Args)]
 pub struct CreateArgs {
     /// Plugin name (e.g., hodu-backend-mybackend)
     pub name: String,
@@ -106,6 +127,9 @@ pub fn execute(args: PluginArgs) -> Result<(), Box<dyn std::error::Error>> {
         PluginCommands::Install(install_args) => install_plugin(install_args),
         PluginCommands::Remove(remove_args) => remove_plugin(remove_args),
         PluginCommands::Update(update_args) => update_plugins(update_args),
+        PluginCommands::Enable(enable_args) => enable_plugin(enable_args),
+        PluginCommands::Disable(disable_args) => disable_plugin(disable_args),
+        PluginCommands::Verify => verify_plugins(),
         PluginCommands::Create(create_args) => create_plugin(create_args),
     }
 }
@@ -116,7 +140,7 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
 
     // Backend plugins
     println!("Backend plugins:");
-    let backends: Vec<_> = registry.backends().collect();
+    let backends: Vec<_> = registry.all_backends().collect();
     if backends.is_empty() {
         println!("  (none installed)");
     } else {
@@ -141,9 +165,11 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
                 caps.devices.join(", ")
             };
 
+            let status = if plugin.enabled { "" } else { " (disabled)" };
+
             println!(
-                "  {:<20} {:<10} {:<18} {:<10} {}",
-                plugin.name, plugin.version, features_str, devices, plugin.source
+                "  {:<20} {:<10} {:<18} {:<10} {}{}",
+                plugin.name, plugin.version, features_str, devices, plugin.source, status
             );
         }
     }
@@ -152,7 +178,7 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
 
     // Model format plugins
     println!("Model format plugins:");
-    let model_formats: Vec<_> = registry.model_formats().collect();
+    let model_formats: Vec<_> = registry.all_model_formats().collect();
     if model_formats.is_empty() {
         println!("  (none installed)");
     } else {
@@ -177,9 +203,11 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
                 caps.model_extensions.join(", ")
             };
 
+            let status = if plugin.enabled { "" } else { " (disabled)" };
+
             println!(
-                "  {:<20} {:<10} {:<18} {:<15} {}",
-                plugin.name, plugin.version, features_str, extensions, plugin.source
+                "  {:<20} {:<10} {:<18} {:<15} {}{}",
+                plugin.name, plugin.version, features_str, extensions, plugin.source, status
             );
         }
     }
@@ -188,7 +216,7 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
 
     // Tensor format plugins
     println!("Tensor format plugins:");
-    let tensor_formats: Vec<_> = registry.tensor_formats().collect();
+    let tensor_formats: Vec<_> = registry.all_tensor_formats().collect();
     if tensor_formats.is_empty() {
         println!("  (none installed)");
     } else {
@@ -213,9 +241,11 @@ fn list_plugins() -> Result<(), Box<dyn std::error::Error>> {
                 caps.tensor_extensions.join(", ")
             };
 
+            let status = if plugin.enabled { "" } else { " (disabled)" };
+
             println!(
-                "  {:<20} {:<10} {:<18} {:<15} {}",
-                plugin.name, plugin.version, features_str, extensions, plugin.source
+                "  {:<20} {:<10} {:<18} {:<15} {}{}",
+                plugin.name, plugin.version, features_str, extensions, plugin.source, status
             );
         }
     }
@@ -244,10 +274,20 @@ fn info_plugin(args: InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Print registry info
     println!("Plugin: {}", plugin.name);
     println!("Version: {}", plugin.version);
+    if let Some(desc) = &plugin.description {
+        println!("Description: {}", desc);
+    }
+    if let Some(lic) = &plugin.license {
+        println!("License: {}", lic);
+    }
     println!("Type: {:?}", plugin.plugin_type);
     println!("Source: {}", plugin.source);
     println!("SDK Version: {}", plugin.sdk_version);
     println!("Installed: {}", plugin.installed_at);
+    println!("Enabled: {}", plugin.enabled);
+    if !plugin.dependencies.is_empty() {
+        println!("Dependencies: {}", plugin.dependencies.join(", "));
+    }
     println!();
 
     // Spawn plugin to get runtime info
@@ -281,7 +321,9 @@ fn info_plugin(args: InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
 
 fn install_plugin(args: InstallArgs) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(path) = &args.path {
-        let source = PluginSource::Local(path.canonicalize()?.to_string_lossy().to_string());
+        let source = PluginSource::Local {
+            path: path.canonicalize()?.to_string_lossy().to_string(),
+        };
         install_from_path(path, args.debug, args.force, source)
     } else if let Some(git) = &args.git {
         install_from_git(git, args.subdir.as_deref(), args.tag.as_deref(), args.debug, args.force)
@@ -481,7 +523,11 @@ fn install_from_git(
     }
 
     // Install from the cloned path
-    let source = PluginSource::Git(url.to_string());
+    let source = PluginSource::Git {
+        url: url.to_string(),
+        tag: tag.map(|t| t.to_string()),
+        subdir: subdir.map(|s| s.to_string()),
+    };
     let result = install_from_path(&install_path, debug, force, source);
 
     // Cleanup temp directory
@@ -748,33 +794,54 @@ fn install_from_path(
         std::fs::set_permissions(&dest_path, perms)?;
     }
 
+    // Parse metadata from manifest if available
+    let (description, license, dependencies) = if manifest_path.exists() {
+        let manifest_content = std::fs::read_to_string(&manifest_path)?;
+        let manifest: serde_json::Value = serde_json::from_str(&manifest_content)?;
+        let desc = manifest["description"].as_str().map(String::from);
+        let lic = manifest["license"].as_str().map(String::from);
+        let deps = manifest["dependencies"]
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .unwrap_or_default();
+        (desc, lic, deps)
+    } else {
+        (None, None, Vec::new())
+    };
+
     // Create registry entry
     let entry = PluginEntry {
         name: name.clone(),
         version: version.clone(),
+        description,
+        license,
         plugin_type,
         capabilities,
         binary: bin_filename,
         source,
         installed_at: chrono_now(),
         sdk_version,
+        enabled: true,
+        dependencies: dependencies.clone(),
     };
 
     // Update registry
     registry.upsert(entry);
     registry.save(&registry_path)?;
 
+    // Check dependencies after installation
+    if !dependencies.is_empty() {
+        if let Err(missing) = registry.check_dependencies(&name) {
+            eprintln!("Warning: Missing dependencies for {}: {}", name, missing.join(", "));
+        }
+    }
+
     eprintln!("Installed: {} v{}", name, version);
     Ok(())
 }
 
 fn chrono_now() -> String {
-    use std::time::SystemTime;
-    let now = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    format!("{}", now)
+    chrono::Utc::now().to_rfc3339()
 }
 
 fn remove_plugin(args: RemoveArgs) -> Result<(), Box<dyn std::error::Error>> {
@@ -820,6 +887,127 @@ fn remove_plugin(args: RemoveArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Successfully removed plugin: {} v{}", name, version);
     Ok(())
+}
+
+fn enable_plugin(args: EnableArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let registry_path = PluginRegistry::default_path()?;
+    let mut registry = PluginRegistry::load(&registry_path)?;
+
+    // Try to find plugin with various name formats
+    let name = find_plugin_name(&registry, &args.name)?;
+
+    if registry.enable(&name) {
+        registry.save(&registry_path)?;
+        println!("Enabled plugin: {}", name);
+    } else {
+        return Err(format!("Plugin '{}' not found.", args.name).into());
+    }
+
+    Ok(())
+}
+
+fn disable_plugin(args: DisableArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let registry_path = PluginRegistry::default_path()?;
+    let mut registry = PluginRegistry::load(&registry_path)?;
+
+    // Try to find plugin with various name formats
+    let name = find_plugin_name(&registry, &args.name)?;
+
+    // Check if other plugins depend on this one
+    let dependents: Vec<String> = registry
+        .plugins
+        .iter()
+        .filter(|p| p.enabled && p.dependencies.contains(&name))
+        .map(|p| p.name.clone())
+        .collect();
+
+    if !dependents.is_empty() {
+        return Err(format!("Cannot disable '{}': required by {}", name, dependents.join(", ")).into());
+    }
+
+    if registry.disable(&name) {
+        registry.save(&registry_path)?;
+        println!("Disabled plugin: {}", name);
+    } else {
+        return Err(format!("Plugin '{}' not found.", args.name).into());
+    }
+
+    Ok(())
+}
+
+fn verify_plugins() -> Result<(), Box<dyn std::error::Error>> {
+    let registry_path = PluginRegistry::default_path()?;
+    let registry = PluginRegistry::load(&registry_path)?;
+    let plugins_dir = get_plugins_dir()?;
+
+    let mut issues = Vec::new();
+    let mut ok_count = 0;
+
+    for plugin in &registry.plugins {
+        let mut plugin_issues = Vec::new();
+
+        // Check if binary exists
+        let binary_path = plugins_dir.join(&plugin.name).join(&plugin.binary);
+        if !binary_path.exists() {
+            plugin_issues.push(format!("binary not found: {}", binary_path.display()));
+        }
+
+        // Check dependencies (only for enabled plugins)
+        if plugin.enabled {
+            let missing_deps: Vec<&String> = plugin
+                .dependencies
+                .iter()
+                .filter(|dep| registry.find(dep).map(|p| !p.enabled).unwrap_or(true))
+                .collect();
+
+            if !missing_deps.is_empty() {
+                plugin_issues.push(format!(
+                    "missing dependencies: {}",
+                    missing_deps.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+                ));
+            }
+        }
+
+        if plugin_issues.is_empty() {
+            ok_count += 1;
+        } else {
+            let status = if plugin.enabled { "" } else { " (disabled)" };
+            issues.push(format!("  {}{}: {}", plugin.name, status, plugin_issues.join("; ")));
+        }
+    }
+
+    if issues.is_empty() {
+        println!("All {} plugins verified OK.", ok_count);
+    } else {
+        println!(
+            "Verified {} plugins, {} with issues:",
+            ok_count + issues.len(),
+            issues.len()
+        );
+        for issue in issues {
+            println!("{}", issue);
+        }
+    }
+
+    Ok(())
+}
+
+fn find_plugin_name(registry: &PluginRegistry, name: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if registry.find(name).is_some() {
+        return Ok(name.to_string());
+    }
+
+    let backend_name = format!("hodu-backend-{}", name);
+    if registry.find(&backend_name).is_some() {
+        return Ok(backend_name);
+    }
+
+    let format_name = format!("hodu-format-{}", name);
+    if registry.find(&format_name).is_some() {
+        return Ok(format_name);
+    }
+
+    Err(format!("Plugin '{}' not found.", name).into())
 }
 
 fn list_installed_plugins(registry: &PluginRegistry) -> String {
@@ -929,13 +1117,13 @@ fn update_plugins(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
 
         // Fallback to source-based update
         match &plugin.source {
-            PluginSource::Git(url) => {
-                install_from_git(url, None, None, false, true)?;
+            PluginSource::Git { url, tag, subdir } => {
+                install_from_git(url, subdir.as_deref(), tag.as_deref(), false, true)?;
             },
-            PluginSource::Local(path) => {
+            PluginSource::Local { path } => {
                 let path_buf = PathBuf::from(path);
                 if path_buf.exists() {
-                    let source = PluginSource::Local(path.clone());
+                    let source = PluginSource::Local { path: path.clone() };
                     install_from_path(&path_buf, false, true, source)?;
                 } else {
                     println!("  Warning: Source path no longer exists: {}", path_buf.display());
@@ -1000,6 +1188,7 @@ fn parse_package_name(content: &str) -> Option<String> {
 fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
     use hodu_plugin_sdk::{
         cargo_toml_template, main_rs_backend_template, main_rs_model_format_template, main_rs_tensor_format_template,
+        manifest_json_backend_template, manifest_json_model_format_template, manifest_json_tensor_format_template,
     };
 
     let plugin_type = args.plugin_type.to_lowercase();
@@ -1028,6 +1217,15 @@ fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
     let cargo_toml = cargo_toml_template(&args.name);
     std::fs::write(project_dir.join("Cargo.toml"), cargo_toml)?;
 
+    // manifest.json
+    let manifest = match plugin_type.as_str() {
+        "backend" => manifest_json_backend_template(&args.name),
+        "model_format" => manifest_json_model_format_template(&args.name),
+        "tensor_format" => manifest_json_tensor_format_template(&args.name),
+        _ => unreachable!(),
+    };
+    std::fs::write(project_dir.join("manifest.json"), manifest)?;
+
     // main.rs
     let main_rs = match plugin_type.as_str() {
         "backend" => main_rs_backend_template(&args.name),
@@ -1041,8 +1239,9 @@ fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
     println!();
     println!("Next steps:");
     println!("  1. cd {}", args.name);
-    println!("  2. Implement the plugin in src/main.rs");
-    println!("  3. Install with: hodu plugin install --path .");
+    println!("  2. Edit manifest.json with your plugin details");
+    println!("  3. Implement the plugin in src/main.rs");
+    println!("  4. Install with: hodu plugin install --path .");
 
     Ok(())
 }

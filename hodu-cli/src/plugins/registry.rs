@@ -1,4 +1,6 @@
+use fs2::FileExt;
 use serde::{Deserialize, Serialize};
+use std::fs::OpenOptions;
 use std::path::{Path, PathBuf};
 
 /// Plugin registry stored in ~/.hodu/plugins.json
@@ -17,6 +19,12 @@ pub struct PluginEntry {
     pub name: String,
     /// Plugin version
     pub version: String,
+    /// Plugin description
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    /// Plugin license (e.g., "MIT", "Apache-2.0")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
     /// Plugin type
     #[serde(rename = "type")]
     pub plugin_type: PluginType,
@@ -30,6 +38,16 @@ pub struct PluginEntry {
     pub installed_at: String,
     /// SDK version used to build
     pub sdk_version: String,
+    /// Whether the plugin is enabled (default: true)
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+    /// Plugin dependencies (other plugin names)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub dependencies: Vec<String>,
+}
+
+fn default_enabled() -> bool {
+    true
 }
 
 /// Plugin type
@@ -71,15 +89,20 @@ pub struct PluginCapabilities {
 
 /// Installation source
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "value")]
-#[serde(rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum PluginSource {
     /// From crates.io
     CratesIo,
     /// From git repository
-    Git(String),
+    Git {
+        url: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        tag: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        subdir: Option<String>,
+    },
     /// From local path
-    Local(String),
+    Local { path: String },
 }
 
 impl PluginRegistry {
@@ -94,30 +117,50 @@ impl PluginRegistry {
         }
     }
 
-    /// Load registry from file
+    /// Load registry from file with shared lock
     pub fn load(path: &Path) -> Result<Self, RegistryError> {
         if !path.exists() {
             return Ok(Self::new());
         }
 
+        let file = OpenOptions::new()
+            .read(true)
+            .open(path)
+            .map_err(|e| RegistryError::Io(e.to_string()))?;
+
+        // Acquire shared lock for reading
+        file.lock_shared().map_err(|e| RegistryError::Lock(e.to_string()))?;
+
         let content = std::fs::read_to_string(path).map_err(|e| RegistryError::Io(e.to_string()))?;
 
         let registry: Self = serde_json::from_str(&content).map_err(|e| RegistryError::Parse(e.to_string()))?;
 
+        // Lock released when file is dropped
         Ok(registry)
     }
 
-    /// Save registry to file
+    /// Save registry to file with exclusive lock
     pub fn save(&self, path: &Path) -> Result<(), RegistryError> {
         // Ensure parent directory exists
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| RegistryError::Io(e.to_string()))?;
         }
 
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)
+            .map_err(|e| RegistryError::Io(e.to_string()))?;
+
+        // Acquire exclusive lock for writing
+        file.lock_exclusive().map_err(|e| RegistryError::Lock(e.to_string()))?;
+
         let content = serde_json::to_string_pretty(self).map_err(|e| RegistryError::Serialize(e.to_string()))?;
 
         std::fs::write(path, content).map_err(|e| RegistryError::Io(e.to_string()))?;
 
+        // Lock released when file is dropped
         Ok(())
     }
 
@@ -161,24 +204,88 @@ impl PluginRegistry {
         }
     }
 
-    /// List backend plugins
-    pub fn backends(&self) -> impl Iterator<Item = &PluginEntry> {
+    /// List all backend plugins (including disabled)
+    pub fn all_backends(&self) -> impl Iterator<Item = &PluginEntry> {
         self.plugins.iter().filter(|p| p.plugin_type == PluginType::Backend)
     }
 
-    /// List model format plugins
-    pub fn model_formats(&self) -> impl Iterator<Item = &PluginEntry> {
+    /// List enabled backend plugins
+    pub fn backends(&self) -> impl Iterator<Item = &PluginEntry> {
+        self.plugins
+            .iter()
+            .filter(|p| p.plugin_type == PluginType::Backend && p.enabled)
+    }
+
+    /// List all model format plugins (including disabled)
+    pub fn all_model_formats(&self) -> impl Iterator<Item = &PluginEntry> {
         self.plugins.iter().filter(|p| p.plugin_type == PluginType::ModelFormat)
     }
 
-    /// List tensor format plugins
-    pub fn tensor_formats(&self) -> impl Iterator<Item = &PluginEntry> {
+    /// List enabled model format plugins
+    pub fn model_formats(&self) -> impl Iterator<Item = &PluginEntry> {
+        self.plugins
+            .iter()
+            .filter(|p| p.plugin_type == PluginType::ModelFormat && p.enabled)
+    }
+
+    /// List all tensor format plugins (including disabled)
+    pub fn all_tensor_formats(&self) -> impl Iterator<Item = &PluginEntry> {
         self.plugins
             .iter()
             .filter(|p| p.plugin_type == PluginType::TensorFormat)
     }
 
-    /// Find backend plugin by device
+    /// List enabled tensor format plugins
+    pub fn tensor_formats(&self) -> impl Iterator<Item = &PluginEntry> {
+        self.plugins
+            .iter()
+            .filter(|p| p.plugin_type == PluginType::TensorFormat && p.enabled)
+    }
+
+    /// Enable a plugin by name
+    pub fn enable(&mut self, name: &str) -> bool {
+        if let Some(plugin) = self.find_mut(name) {
+            plugin.enabled = true;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Disable a plugin by name
+    pub fn disable(&mut self, name: &str) -> bool {
+        if let Some(plugin) = self.find_mut(name) {
+            plugin.enabled = false;
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Check if all dependencies of a plugin are installed and enabled
+    pub fn check_dependencies(&self, name: &str) -> Result<(), Vec<String>> {
+        let plugin = match self.find(name) {
+            Some(p) => p,
+            None => return Ok(()),
+        };
+
+        let missing: Vec<String> = plugin
+            .dependencies
+            .iter()
+            .filter(|dep| {
+                self.find(dep).map(|p| !p.enabled).unwrap_or(true) // not found = missing
+            })
+            .cloned()
+            .collect();
+
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(missing)
+        }
+    }
+
+    /// Find backend plugin by device (enabled only)
     /// Device comparison is case-insensitive (normalized to lowercase)
     pub fn find_backend_by_device(&self, device: &str) -> Option<&PluginEntry> {
         let device_lower = device.to_lowercase();
@@ -186,7 +293,7 @@ impl PluginRegistry {
             .find(|p| p.capabilities.devices.iter().any(|d| d.to_lowercase() == device_lower))
     }
 
-    /// Find model format plugin by extension
+    /// Find model format plugin by extension (enabled only)
     /// Extension comparison normalizes to lowercase without leading dot
     pub fn find_model_format_by_extension(&self, ext: &str) -> Option<&PluginEntry> {
         let ext_normalized = ext.trim_start_matches('.').to_lowercase();
@@ -198,7 +305,7 @@ impl PluginRegistry {
         })
     }
 
-    /// Find tensor format plugin by extension
+    /// Find tensor format plugin by extension (enabled only)
     /// Extension comparison normalizes to lowercase without leading dot
     pub fn find_tensor_format_by_extension(&self, ext: &str) -> Option<&PluginEntry> {
         let ext_normalized = ext.trim_start_matches('.').to_lowercase();
@@ -265,8 +372,14 @@ impl std::fmt::Display for PluginSource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PluginSource::CratesIo => write!(f, "crates.io"),
-            PluginSource::Git(url) => write!(f, "git:{}", url),
-            PluginSource::Local(path) => write!(f, "local:{}", path),
+            PluginSource::Git { url, tag, .. } => {
+                if let Some(t) = tag {
+                    write!(f, "git:{}@{}", url, t)
+                } else {
+                    write!(f, "git:{}", url)
+                }
+            },
+            PluginSource::Local { path } => write!(f, "local:{}", path),
         }
     }
 }
@@ -276,6 +389,7 @@ impl std::fmt::Display for PluginSource {
 pub enum RegistryError {
     NoHomeDir,
     Io(String),
+    Lock(String),
     Parse(String),
     Serialize(String),
 }
@@ -285,6 +399,7 @@ impl std::fmt::Display for RegistryError {
         match self {
             RegistryError::NoHomeDir => write!(f, "Could not find home directory"),
             RegistryError::Io(e) => write!(f, "IO error: {}", e),
+            RegistryError::Lock(e) => write!(f, "Lock error: {}", e),
             RegistryError::Parse(e) => write!(f, "Parse error: {}", e),
             RegistryError::Serialize(e) => write!(f, "Serialize error: {}", e),
         }

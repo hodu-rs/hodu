@@ -2,6 +2,60 @@
 //!
 //! These templates are used by `hodu plugin create` command.
 
+/// Template for manifest.json (backend plugin)
+pub fn manifest_json_backend_template(name: &str) -> String {
+    let sdk_version = env!("CARGO_PKG_VERSION");
+    format!(
+        r#"{{
+  "name": "{name}",
+  "version": "0.1.0",
+  "description": "Backend plugin for Hodu",
+  "license": "MIT",
+  "sdk_version": "{sdk_version}",
+  "capabilities": ["backend.run"],
+  "devices": ["cpu"],
+  "dependencies": []
+}}
+"#
+    )
+}
+
+/// Template for manifest.json (model format plugin)
+pub fn manifest_json_model_format_template(name: &str) -> String {
+    let sdk_version = env!("CARGO_PKG_VERSION");
+    format!(
+        r#"{{
+  "name": "{name}",
+  "version": "0.1.0",
+  "description": "Model format plugin for Hodu",
+  "license": "MIT",
+  "sdk_version": "{sdk_version}",
+  "capabilities": ["format.load_model"],
+  "extensions": ["ext"],
+  "dependencies": []
+}}
+"#
+    )
+}
+
+/// Template for manifest.json (tensor format plugin)
+pub fn manifest_json_tensor_format_template(name: &str) -> String {
+    let sdk_version = env!("CARGO_PKG_VERSION");
+    format!(
+        r#"{{
+  "name": "{name}",
+  "version": "0.1.0",
+  "description": "Tensor format plugin for Hodu",
+  "license": "MIT",
+  "sdk_version": "{sdk_version}",
+  "capabilities": ["format.load_tensor"],
+  "extensions": ["ext"],
+  "dependencies": []
+}}
+"#
+    )
+}
+
 /// Template for Cargo.toml
 pub fn cargo_toml_template(name: &str) -> String {
     let sdk_version = env!("CARGO_PKG_VERSION");

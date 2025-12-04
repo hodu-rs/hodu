@@ -13,10 +13,12 @@ name = "hodu"
 path = "src/main.rs"
 
 [dependencies]
+chrono = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 ctrlc = { workspace = true }
 dirs = { workspace = true }
 float8 = { workspace = true }
+fs2 = { workspace = true }
 half = { workspace = true }
 hodu-plugin-sdk = { path = "../hodu-plugin-sdk", version = "0.1.0" }
 serde = { workspace = true }
