@@ -26,8 +26,9 @@ cargo install hodu-cli
 |---------|-------------|
 | `hodu plugin list` | List installed plugins |
 | `hodu plugin info <name>` | Show detailed plugin information |
+| `hodu plugin install <name>` | Install plugin from official registry |
 | `hodu plugin install --path <dir>` | Install plugin from local path |
-| `hodu plugin install --git <url>` | Install plugin from git repository |
+| `hodu plugin install --git <url> [--subdir <path>]` | Install plugin from git repository |
 | `hodu plugin remove <name>` | Remove installed plugin |
 | `hodu plugin update [name]` | Update plugin(s) from source |
 | `hodu plugin create <name> -t <type>` | Create new plugin project |
@@ -89,11 +90,17 @@ hodu inspect model.hdss -f json
 ### Plugin Management
 
 ```bash
+# Install from official registry (recommended)
+hodu plugin install aot-cpu
+
 # Install from local development
 hodu plugin install --path ./my-plugin
 
-# Install from git
+# Install from git repository
 hodu plugin install --git https://github.com/user/hodu-backend-cuda
+
+# Install from git with subdirectory
+hodu plugin install --git https://github.com/daminstudio/hodu-plugins --subdir hodu-backend-aot-cpu-plugin
 
 # Install specific tag/branch
 hodu plugin install --git https://github.com/user/plugin --tag v1.0.0
@@ -107,6 +114,14 @@ hodu plugin create my-format -t model_format
 # Create new tensor format plugin (e.g., NPY loader)
 hodu plugin create my-tensor -t tensor_format
 ```
+
+### Official Plugins
+
+Official plugins are available at [hodu-plugins](https://github.com/daminstudio/hodu-plugins).
+
+| Plugin | Description |
+|--------|-------------|
+| `aot-cpu` | AOT compiler for CPU via C code generation |
 
 ## Plugin Types
 

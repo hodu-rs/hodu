@@ -45,6 +45,9 @@ pub struct InfoArgs {
 
 #[derive(Args)]
 pub struct InstallArgs {
+    /// Plugin name (from official registry)
+    pub name: Option<String>,
+
     /// Install from local path
     #[arg(long)]
     pub path: Option<PathBuf>,
@@ -52,6 +55,10 @@ pub struct InstallArgs {
     /// Install from git repository
     #[arg(long)]
     pub git: Option<String>,
+
+    /// Subdirectory in git repository
+    #[arg(long)]
+    pub subdir: Option<String>,
 
     /// Git tag or branch
     #[arg(long)]
@@ -277,14 +284,77 @@ fn install_plugin(args: InstallArgs) -> Result<(), Box<dyn std::error::Error>> {
         let source = PluginSource::Local(path.canonicalize()?.to_string_lossy().to_string());
         install_from_path(path, args.debug, args.force, source)
     } else if let Some(git) = &args.git {
-        install_from_git(git, args.tag.as_deref(), args.debug, args.force)
+        install_from_git(git, args.subdir.as_deref(), args.tag.as_deref(), args.debug, args.force)
+    } else if let Some(name) = &args.name {
+        install_from_registry(name, args.tag.as_deref(), args.debug, args.force)
     } else {
-        Err("No plugin specified. Use --path or --git.".into())
+        Err("No plugin specified. Use <name>, --path, or --git.".into())
     }
 }
 
-fn install_from_git(url: &str, tag: Option<&str>, debug: bool, force: bool) -> Result<(), Box<dyn std::error::Error>> {
+/// Official plugin registry URL
+const PLUGIN_REGISTRY_URL: &str = "https://raw.githubusercontent.com/daminstudio/hodu-plugins/main/plugins.toml";
+
+/// Plugin entry in the registry
+#[derive(Debug, serde::Deserialize)]
+struct RegistryPlugin {
+    name: String,
+    #[allow(dead_code)]
+    description: Option<String>,
+    git: String,
+    path: Option<String>,
+}
+
+/// Registry file structure
+#[derive(Debug, serde::Deserialize)]
+struct PluginRegistryFile {
+    plugin: Vec<RegistryPlugin>,
+}
+
+fn install_from_registry(
+    name: &str,
+    tag: Option<&str>,
+    debug: bool,
+    force: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Looking up '{}' in official plugin registry...", name);
+
+    // Fetch registry
+    let body = ureq::get(PLUGIN_REGISTRY_URL)
+        .call()
+        .map_err(|e| format!("Failed to fetch plugin registry: {}", e))?
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| format!("Failed to read registry: {}", e))?;
+
+    let registry: PluginRegistryFile = toml::from_str(&body).map_err(|e| format!("Failed to parse registry: {}", e))?;
+
+    // Find plugin
+    let plugin = registry.plugin.iter().find(|p| p.name == name).ok_or_else(|| {
+        let available: Vec<_> = registry.plugin.iter().map(|p| p.name.as_str()).collect();
+        format!(
+            "Plugin '{}' not found in registry.\n\nAvailable plugins:\n  {}",
+            name,
+            available.join("\n  ")
+        )
+    })?;
+
+    println!("Found: {} -> {}", plugin.name, plugin.git);
+
+    install_from_git(&plugin.git, plugin.path.as_deref(), tag, debug, force)
+}
+
+fn install_from_git(
+    url: &str,
+    subdir: Option<&str>,
+    tag: Option<&str>,
+    debug: bool,
+    force: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("Installing from git: {}", url);
+    if let Some(s) = subdir {
+        println!("Subdirectory: {}", s);
+    }
     if let Some(t) = tag {
         println!("Tag/branch: {}", t);
     }
@@ -323,9 +393,20 @@ fn install_from_git(url: &str, tag: Option<&str>, debug: bool, force: bool) -> R
         }
     }
 
+    // Determine install path (with optional subdir)
+    let install_path = match subdir {
+        Some(s) => temp_dir.join(s),
+        None => temp_dir.clone(),
+    };
+
+    if !install_path.exists() {
+        std::fs::remove_dir_all(&temp_dir)?;
+        return Err(format!("Subdirectory '{}' not found in repository", subdir.unwrap_or("")).into());
+    }
+
     // Install from the cloned path
     let source = PluginSource::Git(url.to_string());
-    let result = install_from_path(&temp_dir, debug, force, source);
+    let result = install_from_path(&install_path, debug, force, source);
 
     // Cleanup temp directory
     let _ = std::fs::remove_dir_all(&temp_dir);
@@ -748,7 +829,7 @@ fn update_plugins(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
         println!("Updating {}...", plugin.name);
         match &plugin.source {
             PluginSource::Git(url) => {
-                install_from_git(url, None, false, true)?;
+                install_from_git(url, None, None, false, true)?;
             },
             PluginSource::Local(path) => {
                 let path_buf = PathBuf::from(path);

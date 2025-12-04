@@ -44,6 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Command-line interface for model inference, conversion, and deployment.
 
 ```bash
+# Install Ofiicial Plugin
+hodu plugin install aot-cpu
+
 # Run inference
 hodu run model.onnx --input x=input.npy
 hodu run model.hdss --inputs x=input1.hdt,y=input2.json
