@@ -115,10 +115,10 @@ impl PluginServer {
         R: Serialize + 'static,
     {
         // Auto-register capability based on method name
-        if name.starts_with("format.") || name.starts_with("backend.") {
-            if !self.capabilities.contains(&name.to_string()) {
-                self.capabilities.push(name.to_string());
-            }
+        if (name.starts_with("format.") || name.starts_with("backend."))
+            && !self.capabilities.contains(&name.to_string())
+        {
+            self.capabilities.push(name.to_string());
         }
 
         // Create type-erased handler
@@ -141,10 +141,10 @@ impl PluginServer {
         F: Fn() -> Result<R, RpcError> + Send + 'static,
         R: Serialize + 'static,
     {
-        if name.starts_with("format.") || name.starts_with("backend.") {
-            if !self.capabilities.contains(&name.to_string()) {
-                self.capabilities.push(name.to_string());
-            }
+        if (name.starts_with("format.") || name.starts_with("backend."))
+            && !self.capabilities.contains(&name.to_string())
+        {
+            self.capabilities.push(name.to_string());
         }
 
         let boxed: BoxedHandler = Box::new(move |_params| {

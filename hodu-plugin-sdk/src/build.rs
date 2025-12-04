@@ -81,7 +81,11 @@ hodu_plugin_sdk = "{sdk_version}"
 /// Template for main.rs (backend plugin)
 pub fn main_rs_backend_template(name: &str) -> String {
     format!(
-        r#"use hodu_plugin_sdk::{{
+        r#"//! {name} - Backend plugin for Hodu
+//!
+//! This plugin implements model execution for the specified device.
+
+use hodu_plugin_sdk::{{
     rpc::{{RunParams, RunResult, RpcError, TensorOutput}},
     server::PluginServer,
     hdss, TensorData,
@@ -90,7 +94,7 @@ use std::collections::HashMap;
 
 fn main() {{
     let server = PluginServer::new("{name}", env!("CARGO_PKG_VERSION"))
-        .devices(vec!["cpu"])  // Update with supported devices
+        .devices(vec!["cpu"])  // TODO: Update with your supported devices
         .method("backend.run", handle_run);
 
     if let Err(e) = server.run() {{
@@ -100,25 +104,32 @@ fn main() {{
 }}
 
 fn handle_run(params: RunParams) -> Result<RunResult, RpcError> {{
-    // Load snapshot
+    // Load the model snapshot
     let snapshot = hdss::load(&params.snapshot_path)
-        .map_err(|e| RpcError::internal_error(e.to_string()))?;
+        .map_err(|e| RpcError::internal_error(format!("Failed to load snapshot: {{}}", e)))?;
 
     // Load input tensors
     let mut inputs: HashMap<String, TensorData> = HashMap::new();
     for input in &params.inputs {{
         let tensor = TensorData::load(&input.path)
-            .map_err(|e| RpcError::internal_error(e.to_string()))?;
+            .map_err(|e| RpcError::internal_error(format!("Failed to load input '{{}}': {{}}", input.name, e)))?;
         inputs.insert(input.name.clone(), tensor);
     }}
 
-    // TODO: Implement model execution
-    // let outputs = execute(&snapshot, &params.device, &inputs)?;
-
-    // For now, return empty outputs
-    let outputs: Vec<TensorOutput> = vec![];
-
-    Ok(RunResult {{ outputs }})
+    // TODO: Implement your model execution logic here
+    //
+    // Example workflow:
+    // 1. Parse the snapshot to get the computation graph
+    // 2. Execute each operation in topological order
+    // 3. Collect output tensors
+    //
+    // For now, this returns an error indicating not implemented
+    Err(RpcError::internal_error(format!(
+        "Backend '{{}}' execution not implemented. Model has {{}} nodes, {{}} inputs provided.",
+        params.device,
+        snapshot.nodes.len(),
+        inputs.len()
+    )))
 }}
 "#
     )
@@ -127,16 +138,21 @@ fn handle_run(params: RunParams) -> Result<RunResult, RpcError> {{
 /// Template for main.rs (model format plugin)
 pub fn main_rs_model_format_template(name: &str) -> String {
     format!(
-        r#"use hodu_plugin_sdk::{{
+        r#"//! {name} - Model format plugin for Hodu
+//!
+//! This plugin loads models from a specific format and converts them to Hodu snapshots.
+
+use hodu_plugin_sdk::{{
     rpc::{{LoadModelParams, LoadModelResult, RpcError}},
     server::PluginServer,
     hdss,
+    snapshot::{{Snapshot, SnapshotNode}},
 }};
 use std::path::Path;
 
 fn main() {{
     let server = PluginServer::new("{name}", env!("CARGO_PKG_VERSION"))
-        .model_extensions(vec!["ext"])  // Update with supported extensions
+        .model_extensions(vec!["ext"])  // TODO: Update with your supported extensions (e.g., "onnx", "pb")
         .method("format.load_model", handle_load_model);
 
     if let Err(e) = server.run() {{
@@ -146,21 +162,31 @@ fn main() {{
 }}
 
 fn handle_load_model(params: LoadModelParams) -> Result<LoadModelResult, RpcError> {{
-    let _path = Path::new(&params.path);
+    let path = Path::new(&params.path);
 
-    // TODO: Implement model loading
-    // Parse the model file and convert to Hodu Snapshot
-    // let snapshot = parse_model(path)?;
+    // Check if file exists
+    if !path.exists() {{
+        return Err(RpcError::invalid_params(format!("File not found: {{}}", params.path)));
+    }}
 
-    // For now, return error
-    Err(RpcError::internal_error("Not implemented"))
-
-    // Save snapshot to temp file and return path
-    // let snapshot_path = format!("/tmp/snapshot_{{}}.hdss", uuid::Uuid::new_v4());
-    // hdss::save(&snapshot, &snapshot_path)
-    //     .map_err(|e| RpcError::internal_error(e.to_string()))?;
+    // TODO: Implement your model parsing logic here
     //
-    // Ok(LoadModelResult {{ snapshot_path }})
+    // Example workflow:
+    // 1. Read and parse the model file
+    // 2. Convert operations to Hodu snapshot nodes
+    // 3. Build the computation graph
+    //
+    // For now, return an error with helpful information
+    let file_size = std::fs::metadata(path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    Err(RpcError::internal_error(format!(
+        "Model format '{{}}' parsing not implemented. File: {{}} ({{}} bytes)",
+        path.extension().and_then(|e| e.to_str()).unwrap_or("unknown"),
+        params.path,
+        file_size
+    )))
 }}
 "#
     )
@@ -169,7 +195,11 @@ fn handle_load_model(params: LoadModelParams) -> Result<LoadModelResult, RpcErro
 /// Template for main.rs (tensor format plugin)
 pub fn main_rs_tensor_format_template(name: &str) -> String {
     format!(
-        r#"use hodu_plugin_sdk::{{
+        r#"//! {name} - Tensor format plugin for Hodu
+//!
+//! This plugin loads tensors from a specific format and converts them to Hodu tensor format.
+
+use hodu_plugin_sdk::{{
     rpc::{{LoadTensorParams, LoadTensorResult, RpcError}},
     server::PluginServer,
     TensorData,
@@ -178,7 +208,7 @@ use std::path::Path;
 
 fn main() {{
     let server = PluginServer::new("{name}", env!("CARGO_PKG_VERSION"))
-        .tensor_extensions(vec!["ext"])  // Update with supported extensions
+        .tensor_extensions(vec!["ext"])  // TODO: Update with your supported extensions (e.g., "npy", "npz")
         .method("format.load_tensor", handle_load_tensor);
 
     if let Err(e) = server.run() {{
@@ -188,21 +218,31 @@ fn main() {{
 }}
 
 fn handle_load_tensor(params: LoadTensorParams) -> Result<LoadTensorResult, RpcError> {{
-    let _path = Path::new(&params.path);
+    let path = Path::new(&params.path);
 
-    // TODO: Implement tensor loading
-    // Parse the tensor file and save as .hdt format
-    // let tensor = parse_tensor(path)?;
+    // Check if file exists
+    if !path.exists() {{
+        return Err(RpcError::invalid_params(format!("File not found: {{}}", params.path)));
+    }}
 
-    // For now, return error
-    Err(RpcError::internal_error("Not implemented"))
-
-    // Save tensor to temp file and return path
-    // let tensor_path = format!("/tmp/tensor_{{}}.hdt", std::process::id());
-    // tensor.save(&tensor_path)
-    //     .map_err(|e| RpcError::internal_error(e.to_string()))?;
+    // TODO: Implement your tensor parsing logic here
     //
-    // Ok(LoadTensorResult {{ tensor_path }})
+    // Example workflow:
+    // 1. Read and parse the tensor file
+    // 2. Extract shape, dtype, and data
+    // 3. Create TensorData and save as .hdt
+    //
+    // For now, return an error with helpful information
+    let file_size = std::fs::metadata(path)
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    Err(RpcError::internal_error(format!(
+        "Tensor format '{{}}' parsing not implemented. File: {{}} ({{}} bytes)",
+        path.extension().and_then(|e| e.to_str()).unwrap_or("unknown"),
+        params.path,
+        file_size
+    )))
 }}
 "#
     )
