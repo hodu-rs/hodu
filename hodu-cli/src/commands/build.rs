@@ -220,6 +220,7 @@ fn determine_format(format_arg: &Option<String>, output: &Path) -> String {
     let ext = output.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     match ext {
+        "" | "exe" | "bin" => "executable".to_string(),
         "so" | "dylib" | "dll" => "sharedlib".to_string(),
         "a" | "lib" => "staticlib".to_string(),
         "o" | "obj" => "object".to_string(),
@@ -230,7 +231,6 @@ fn determine_format(format_arg: &Option<String>, output: &Path) -> String {
         "bc" => "llvmbitcode".to_string(),
         "wgsl" => "wgsl".to_string(),
         "spv" => "spirv".to_string(),
-        "" => "executable".to_string(),
         _ => "sharedlib".to_string(),
     }
 }
