@@ -308,9 +308,13 @@ fn default_notification_handler(method: &str, params: Option<&serde_json::Value>
             if let Some(params) = params {
                 if let Ok(p) = serde_json::from_value::<ProgressParams>(params.clone()) {
                     if let Some(percent) = p.percent {
-                        eprint!("\r[{:3}%] {}", percent, p.message);
+                        // Clear line and print progress
+                        eprint!("\r\x1b[K[{:3}%] {}", percent, p.message);
+                        if percent >= 100 {
+                            eprintln!(); // newline after 100%
+                        }
                     } else {
-                        eprint!("\r[...] {}", p.message);
+                        eprint!("\r\x1b[K[...] {}", p.message);
                     }
                     let _ = std::io::stderr().flush();
                 }
