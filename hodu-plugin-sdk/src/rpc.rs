@@ -124,6 +124,7 @@ pub mod capabilities {
     pub const FORMAT_SAVE_TENSOR: &str = "format.save_tensor";
     pub const BACKEND_RUN: &str = "backend.run";
     pub const BACKEND_BUILD: &str = "backend.build";
+    pub const BACKEND_SUPPORTED_TARGETS: &str = "backend.supported_targets";
 }
 
 // ============================================================================
@@ -227,6 +228,15 @@ pub struct BuildParams {
     pub device: String,
     pub format: String,
     pub output_path: String,
+}
+
+/// Backend list targets response result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListTargetsResult {
+    /// List of supported target triples
+    pub targets: Vec<String>,
+    /// Human-readable formatted list of targets (for display)
+    pub formatted: String,
 }
 
 /// Progress notification params (plugin -> CLI)

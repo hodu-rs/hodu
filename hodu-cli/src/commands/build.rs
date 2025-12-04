@@ -10,11 +10,11 @@ use std::path::{Path, PathBuf};
 #[derive(Args)]
 pub struct BuildArgs {
     /// Model file (.onnx, .hdss, etc.)
-    pub model: PathBuf,
+    pub model: Option<PathBuf>,
 
     /// Output file path
     #[arg(short, long)]
-    pub output: PathBuf,
+    pub output: Option<PathBuf>,
 
     /// Target triple (default: current system)
     #[arg(short, long)]
@@ -23,6 +23,10 @@ pub struct BuildArgs {
     /// Target device (cpu, metal, cuda::0)
     #[arg(short, long, default_value = "cpu")]
     pub device: String,
+
+    /// Backend plugin name (default: auto-detect by device)
+    #[arg(short, long)]
+    pub backend: Option<String>,
 
     /// Output format (sharedlib, staticlib, object, metallib, ptx)
     #[arg(short, long)]
@@ -39,21 +43,39 @@ pub struct BuildArgs {
     /// Verbose output
     #[arg(short, long)]
     pub verbose: bool,
+
+    /// List supported build targets for the backend
+    #[arg(long)]
+    pub list_targets: bool,
 }
 
 pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
-    if !args.model.exists() {
-        return Err(format!("Model file not found: {}", args.model.display()).into());
-    }
-
-    let extension = args
-        .model
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|e| e.to_lowercase());
-
     let registry_path = PluginRegistry::default_path()?;
     let registry = PluginRegistry::load(&registry_path)?;
+
+    // Normalize device (lowercase)
+    let device = args.device.to_lowercase();
+
+    // Find backend: explicit --backend or auto-detect by device
+    let backend_name = match &args.backend {
+        Some(name) => find_backend_by_name(name, &registry)?.name.clone(),
+        None => find_builder_backend(&device, &registry)?.name.clone(),
+    };
+
+    // Handle --list-targets
+    if args.list_targets {
+        return list_targets(&backend_name);
+    }
+
+    // For normal build, model and output are required
+    let model = args.model.ok_or("Model file is required for building")?;
+    let output = args.output.ok_or("Output path is required (use -o/--output)")?;
+
+    if !model.exists() {
+        return Err(format!("Model file not found: {}", model.display()).into());
+    }
+
+    let extension = model.extension().and_then(|e| e.to_str()).map(|e| e.to_lowercase());
 
     // Find model format plugin if needed
     let format_plugin = match extension.as_deref() {
@@ -68,16 +90,10 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         None => return Err("Model file has no extension".into()),
     };
 
-    // Normalize device (lowercase)
-    let device = args.device.to_lowercase();
-
-    // Find builder backend plugin
-    let backend_entry = find_builder_backend(&device, &registry)?;
-
     if args.verbose {
-        println!("Model: {}", args.model.display());
-        println!("Output: {}", args.output.display());
-        println!("Backend: {} v{}", backend_entry.name, backend_entry.version);
+        println!("Model: {}", model.display());
+        println!("Output: {}", output.display());
+        println!("Backend: {}", backend_name);
         println!("Device: {}", device);
     }
 
@@ -87,17 +103,17 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Load model (using format plugin if needed)
     let snapshot_path = if let Some(format_entry) = format_plugin {
         let client = manager.get_plugin(&format_entry.name)?;
-        let result = client.load_model(args.model.to_str().unwrap())?;
+        let result = client.load_model(model.to_str().unwrap())?;
         PathBuf::from(result.snapshot_path)
     } else {
-        args.model.clone()
+        model.clone()
     };
 
     // Load snapshot for validation
     let _snapshot = Snapshot::load(&snapshot_path)?;
 
     // Determine build format from arg or output extension
-    let format = determine_format(&args.format, &args.output);
+    let format = determine_format(&args.format, &output);
 
     // Determine build target
     let build_target = match &args.target {
@@ -110,18 +126,61 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Call backend.build via JSON-RPC
-    let client = manager.get_plugin(&backend_entry.name)?;
+    let client = manager.get_plugin(&backend_name)?;
     client.build(
         snapshot_path.to_str().unwrap(),
         &build_target.triple,
         &build_target.device,
         &format,
-        args.output.to_str().unwrap(),
+        output.to_str().unwrap(),
     )?;
 
-    println!("Built: {}", args.output.display());
+    println!("Built: {}", output.display());
 
     Ok(())
+}
+
+fn list_targets(backend_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut manager = PluginManager::new()?;
+    let client = manager.get_plugin(backend_name)?;
+
+    let result = client.list_targets()?;
+
+    println!("Supported build targets for {} backend:\n", backend_name);
+    println!("{}", result.formatted);
+
+    Ok(())
+}
+
+fn find_backend_by_name<'a>(
+    name: &str,
+    registry: &'a PluginRegistry,
+) -> Result<&'a crate::plugins::PluginEntry, Box<dyn std::error::Error>> {
+    // Try exact match first
+    if let Some(plugin) = registry.find(name) {
+        if plugin.capabilities.builder == Some(true) {
+            return Ok(plugin);
+        }
+    }
+
+    // Try with "aot-" prefix
+    let prefixed = format!("aot-{}", name);
+    if let Some(plugin) = registry.find(&prefixed) {
+        if plugin.capabilities.builder == Some(true) {
+            return Ok(plugin);
+        }
+    }
+
+    Err(format!(
+        "Backend '{}' not found or does not support building.\n\nInstalled backends:\n{}",
+        name,
+        registry
+            .backends()
+            .map(|p| format!("  {} - builder: {}", p.name, p.capabilities.builder.unwrap_or(false)))
+            .collect::<Vec<_>>()
+            .join("\n")
+    )
+    .into())
 }
 
 fn find_builder_backend<'a>(

@@ -4,9 +4,10 @@
 //! with plugin processes over stdio.
 
 use hodu_plugin_sdk::rpc::{
-    methods, BuildParams, CancelParams, InitializeParams, InitializeResult, LoadModelParams, LoadModelResult,
-    LoadTensorParams, LoadTensorResult, LogParams, Notification, ProgressParams, Request, RequestId, Response,
-    RpcError, RunParams, RunResult, SaveModelParams, SaveTensorParams, TensorInput, JSONRPC_VERSION, PROTOCOL_VERSION,
+    methods, BuildParams, CancelParams, InitializeParams, InitializeResult, ListTargetsResult, LoadModelParams,
+    LoadModelResult, LoadTensorParams, LoadTensorResult, LogParams, Notification, ProgressParams, Request, RequestId,
+    Response, RpcError, RunParams, RunResult, SaveModelParams, SaveTensorParams, TensorInput, JSONRPC_VERSION,
+    PROTOCOL_VERSION,
 };
 use hodu_plugin_sdk::SDK_VERSION;
 use std::io::{BufRead, BufReader, Write};
@@ -206,6 +207,11 @@ impl PluginClient {
         };
         self.call::<_, serde_json::Value>(methods::BACKEND_BUILD, Some(params))?;
         Ok(())
+    }
+
+    /// List supported build targets
+    pub fn list_targets(&mut self) -> Result<ListTargetsResult, ClientError> {
+        self.call(methods::BACKEND_SUPPORTED_TARGETS, Some(serde_json::json!({})))
     }
 
     // ========================================================================
