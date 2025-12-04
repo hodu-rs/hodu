@@ -12,6 +12,7 @@ dirs = { version = "6.0.0" }
 float8 = { version = "0.5.0", features = ["num-traits", "rand_distr"] }
 fs2 = "0.4.3"
 half = { version = "2.7.1", features = ["num-traits", "rand_distr"] }
+hex = "0.4.3"
 hodu_core = { path = "crates/hodu_core", version = "0.2.4" }
 hodu_cpu_kernels = { path = "crates/hodu_cpu_kernels", version = "0.2.4" }
 hodu_cuda_kernels = { path = "crates/hodu_cuda_kernels", version = "0.2.4" }
@@ -32,6 +33,7 @@ rand_distr = { version = "0.5.1" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145" }
 serde_repr = "0.1.20"
+sha2 = "0.10.9"
 smallvec = { version = "1.15.1" }
 syn = { version = "2.0", features = ["full"] }
 toml = { version = "0.9.8" }

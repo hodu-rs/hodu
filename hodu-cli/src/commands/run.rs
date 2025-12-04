@@ -6,6 +6,7 @@ use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
 use hodu_plugin_sdk::rpc::TensorInput;
 use hodu_plugin_sdk::{Device, SdkDType, Snapshot, TensorData};
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -171,8 +172,49 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         .ok();
     }
 
+    // Compute cache key from snapshot content
+    let snapshot_content = std::fs::read(&snapshot_path).map_err(|e| format!("Failed to read snapshot: {}", e))?;
+    let mut hasher = Sha256::new();
+    hasher.update(&snapshot_content);
+    hasher.update(current_target_triple().as_bytes());
+    let snapshot_hash = hex::encode(hasher.finalize());
+
+    // Determine library extension and cache path
+    let lib_ext = if cfg!(target_os = "macos") {
+        "dylib"
+    } else if cfg!(target_os = "windows") {
+        "dll"
+    } else {
+        "so"
+    };
+
+    let cache_dir = dirs::home_dir()
+        .ok_or("Could not determine home directory")?
+        .join(".hodu")
+        .join("cache")
+        .join(&backend_plugin.name);
+    std::fs::create_dir_all(&cache_dir)?;
+    let library_path = cache_dir.join(format!("{}.{}", snapshot_hash, lib_ext));
+
+    // Build if not cached
     let backend_client = manager.get_plugin(&backend_plugin.name)?;
-    let result = backend_client.run(snapshot_path.to_str().unwrap(), &device, input_refs)?;
+    if !library_path.exists() {
+        backend_client.build(
+            snapshot_path.to_str().unwrap(),
+            &current_target_triple(),
+            &device,
+            "sharedlib",
+            library_path.to_str().unwrap(),
+        )?;
+    }
+
+    // Run with cached library
+    let result = backend_client.run(
+        library_path.to_str().unwrap(),
+        snapshot_path.to_str().unwrap(),
+        &device,
+        input_refs,
+    )?;
 
     // Check if was cancelled
     if cancelled.load(Ordering::SeqCst) {
@@ -576,4 +618,25 @@ fn friendly_backend_error(device: &Device, registry: &PluginRegistry) -> String 
     }
 
     msg
+}
+
+fn current_target_triple() -> String {
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    return "x86_64-unknown-linux-gnu".to_string();
+    #[cfg(all(target_arch = "aarch64", target_os = "linux"))]
+    return "aarch64-unknown-linux-gnu".to_string();
+    #[cfg(all(target_arch = "x86_64", target_os = "macos"))]
+    return "x86_64-apple-darwin".to_string();
+    #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
+    return "aarch64-apple-darwin".to_string();
+    #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
+    return "x86_64-pc-windows-msvc".to_string();
+    #[cfg(not(any(
+        all(target_arch = "x86_64", target_os = "linux"),
+        all(target_arch = "aarch64", target_os = "linux"),
+        all(target_arch = "x86_64", target_os = "macos"),
+        all(target_arch = "aarch64", target_os = "macos"),
+        all(target_arch = "x86_64", target_os = "windows"),
+    )))]
+    return String::new();
 }

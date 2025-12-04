@@ -28,6 +28,9 @@ pub enum Commands {
     /// Manage plugins
     Plugin(commands::plugin::PluginArgs),
 
+    /// Clean build cache
+    Clean(commands::clean::CleanArgs),
+
     /// Show version information
     Version,
 }
@@ -41,6 +44,7 @@ fn main() {
         Commands::Convert(args) => commands::convert::execute(args),
         Commands::Inspect(args) => commands::inspect::execute(args),
         Commands::Plugin(args) => commands::plugin::execute(args),
+        Commands::Clean(args) => commands::clean::execute(args),
         Commands::Version => commands::version::execute(),
     };
 

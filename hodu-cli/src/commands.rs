@@ -1,4 +1,5 @@
 pub mod build;
+pub mod clean;
 pub mod convert;
 pub mod inspect;
 pub mod plugin;

@@ -18,6 +18,7 @@ cargo install hodu-cli
 | `hodu build <model> -o output` | AOT compile model to native artifact |
 | `hodu convert <input> -o output` | Convert models/tensors between formats |
 | `hodu inspect <file>` | Inspect model or tensor file |
+| `hodu clean` | Clean build cache |
 | `hodu version` | Show version information |
 
 ### Plugin Management
@@ -156,6 +157,33 @@ When installing a plugin with dependencies, missing dependencies will be reporte
 Additional metadata fields supported in `manifest.json`:
 - `description`: Short description of the plugin
 - `license`: License identifier (e.g., "MIT", "Apache-2.0")
+
+## Build Cache
+
+When running models with AOT backends, compiled libraries are cached in `~/.hodu/cache/<backend>/`. The cache key is a SHA256 hash of the snapshot content and target triple.
+
+```bash
+# Cache location
+~/.hodu/cache/hodu-backend-aot-cpu-plugin/<hash>.dylib  # macOS
+~/.hodu/cache/hodu-backend-aot-cpu-plugin/<hash>.so     # Linux
+~/.hodu/cache/hodu-backend-aot-cpu-plugin/<hash>.dll    # Windows
+```
+
+First run compiles the model (`backend.build`), subsequent runs use the cached library (`backend.run` only).
+
+```bash
+# Clean all build cache
+hodu clean
+
+# Dry run (show what would be deleted)
+hodu clean --dry-run
+
+# Clean specific backend cache
+hodu clean --backend aot-cpu
+
+# Clean everything including plugin registry
+hodu clean --all
+```
 
 ## Device Naming Convention
 

@@ -177,11 +177,13 @@ impl PluginClient {
     /// Run model inference using backend plugin
     pub fn run(
         &mut self,
+        library_path: &str,
         snapshot_path: &str,
         device: &str,
         inputs: Vec<TensorInput>,
     ) -> Result<RunResult, ClientError> {
         let params = RunParams {
+            library_path: library_path.to_string(),
             snapshot_path: snapshot_path.to_string(),
             device: device.to_string(),
             inputs,

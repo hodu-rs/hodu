@@ -195,6 +195,9 @@ pub struct SaveTensorParams {
 /// Backend run request params
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunParams {
+    /// Path to compiled library (.dylib, .so, .dll)
+    pub library_path: String,
+    /// Path to snapshot (needed for input/output metadata)
     pub snapshot_path: String,
     pub device: String,
     pub inputs: Vec<TensorInput>,
