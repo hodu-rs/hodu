@@ -1,5 +1,6 @@
 //! Clean command - remove cached build artifacts
 
+use crate::output;
 use clap::Args;
 use std::path::PathBuf;
 
@@ -65,10 +66,11 @@ fn clean_directory(path: &PathBuf, name: &str, dry_run: bool) -> Result<(), Box<
     let size_str = format_size(size);
 
     if dry_run {
-        println!("Would remove {} ({}) at {}", name, size_str, path.display());
+        output::skipping(&format!("{} ({}) - dry run", name, size_str));
     } else {
+        output::cleaning(&format!("{} ({})", name, size_str));
         std::fs::remove_dir_all(path)?;
-        println!("Removed {} ({})", name, size_str);
+        output::removed(&format!("{}", name));
     }
 
     Ok(())

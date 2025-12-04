@@ -5,9 +5,8 @@
 
 use hodu_plugin_sdk::rpc::{
     methods, BuildParams, CancelParams, InitializeParams, InitializeResult, ListTargetsResult, LoadModelParams,
-    LoadModelResult, LoadTensorParams, LoadTensorResult, LogParams, Notification, ProgressParams, Request, RequestId,
-    Response, RpcError, RunParams, RunResult, SaveModelParams, SaveTensorParams, TensorInput, JSONRPC_VERSION,
-    PROTOCOL_VERSION,
+    LoadModelResult, LoadTensorParams, LoadTensorResult, LogParams, Notification, Request, RequestId, Response,
+    RpcError, RunParams, RunResult, SaveModelParams, SaveTensorParams, TensorInput, JSONRPC_VERSION, PROTOCOL_VERSION,
 };
 use hodu_plugin_sdk::SDK_VERSION;
 use std::io::{BufRead, BufReader, Write};
@@ -303,29 +302,25 @@ impl PluginClient {
     }
 }
 
-/// Default notification handler that prints to stderr
+/// Default notification handler that prints to stderr in Cargo style
 fn default_notification_handler(method: &str, params: Option<&serde_json::Value>) {
+    use crate::output;
+
     match method {
         methods::NOTIFY_PROGRESS => {
-            if let Some(params) = params {
-                if let Ok(p) = serde_json::from_value::<ProgressParams>(params.clone()) {
-                    if let Some(percent) = p.percent {
-                        // Clear line and print progress
-                        eprint!("\r\x1b[K[{:3}%] {}", percent, p.message);
-                        if percent >= 100 {
-                            eprintln!(); // newline after 100%
-                        }
-                    } else {
-                        eprint!("\r\x1b[K[...] {}", p.message);
-                    }
-                    let _ = std::io::stderr().flush();
-                }
-            }
+            // Progress notifications are now silent - status is shown via output module
+            // Only show log-level messages
         },
         methods::NOTIFY_LOG => {
             if let Some(params) = params {
                 if let Ok(p) = serde_json::from_value::<LogParams>(params.clone()) {
-                    eprintln!("[{}] {}", p.level.to_uppercase(), p.message);
+                    match p.level.to_lowercase().as_str() {
+                        "error" => output::error(&p.message),
+                        "warn" | "warning" => output::warning(&p.message),
+                        _ => {
+                            // Info and debug logs are silent in normal mode
+                        },
+                    }
                 }
             }
         },

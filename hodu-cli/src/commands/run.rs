@@ -2,6 +2,7 @@
 //!
 //! This command uses JSON-RPC based plugins to load models and run inference.
 
+use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
 use hodu_plugin_sdk::rpc::TensorInput;
@@ -128,8 +129,10 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     let mut manager = PluginManager::new()?;
 
     // Load model (using format plugin if needed)
+    let model_name = args.model.file_name().unwrap_or_default().to_string_lossy();
     let snapshot_path = if let Some(format_entry) = format_plugin {
         // Use format plugin to convert to snapshot
+        output::loading(&format!("{}", model_name));
         let client = manager.get_plugin(&format_entry.name)?;
         let result = client.load_model(args.model.to_str().unwrap())?;
         PathBuf::from(result.snapshot_path)
@@ -198,7 +201,9 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     // Build if not cached
     let backend_client = manager.get_plugin(&backend_plugin.name)?;
+    let start = std::time::Instant::now();
     if !library_path.exists() {
+        output::compiling(&format!("{} ({})", model_name, device));
         backend_client.build(
             snapshot_path.to_str().unwrap(),
             &current_target_triple(),
@@ -206,15 +211,22 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
             "sharedlib",
             library_path.to_str().unwrap(),
         )?;
+    } else {
+        output::cached(&format!("{}", model_name));
     }
 
     // Run with cached library
+    output::running(&format!("{} ({})", model_name, device));
     let result = backend_client.run(
         library_path.to_str().unwrap(),
         snapshot_path.to_str().unwrap(),
         &device,
         input_refs,
     )?;
+    let duration = start.elapsed().as_secs_f64();
+    if !args.quiet {
+        output::finished(&format!("inference in {}", output::format_duration(duration)));
+    }
 
     // Check if was cancelled
     if cancelled.load(Ordering::SeqCst) {

@@ -2,6 +2,7 @@
 //!
 //! This command inspects model and tensor files, optionally using format plugins.
 
+use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
 use hodu_plugin_sdk::{hdt, Snapshot, Tensor};
@@ -32,6 +33,11 @@ pub fn execute(args: InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
+
+    output::inspecting(&format!(
+        "{}",
+        args.file.file_name().unwrap_or_default().to_string_lossy()
+    ));
 
     match ext.as_str() {
         "hdss" => inspect_hdss(&args),

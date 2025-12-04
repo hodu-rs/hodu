@@ -2,6 +2,7 @@
 //!
 //! This command manages JSON-RPC based plugins as standalone executables.
 
+use crate::output;
 use crate::plugins::{
     detect_plugin_type, DetectedPluginType, PluginCapabilities, PluginEntry, PluginRegistry, PluginSource, PluginType,
 };
@@ -378,7 +379,7 @@ fn install_from_registry(
         (name_with_version, None)
     };
 
-    eprintln!("Looking up '{}'...", name);
+    output::fetching(&format!("plugin registry for '{}'", name));
 
     // Fetch registry
     let body = ureq::get(PLUGIN_REGISTRY_URL)
@@ -556,7 +557,7 @@ fn install_from_path(
         .ok_or_else(|| format!("Could not find package name in {}", cargo_toml.display()))?;
 
     // Build the plugin with cargo (as executable)
-    eprint!("Building {}... ", package_name);
+    output::compiling(&format!("{}", package_name));
     let mut cargo_cmd = Command::new("cargo");
     cargo_cmd.arg("build");
     cargo_cmd.arg("-p").arg(&package_name);
@@ -566,12 +567,15 @@ fn install_from_path(
     cargo_cmd.arg("-q"); // Quiet output
     cargo_cmd.current_dir(&path);
 
-    let output = cargo_cmd.output()?;
-    if !output.status.success() {
-        eprintln!("failed");
-        return Err(format!("Failed to build plugin:\n{}", String::from_utf8_lossy(&output.stderr)).into());
+    let cmd_output = cargo_cmd.output()?;
+    if !cmd_output.status.success() {
+        output::error("build failed");
+        return Err(format!(
+            "Failed to build plugin:\n{}",
+            String::from_utf8_lossy(&cmd_output.stderr)
+        )
+        .into());
     }
-    eprintln!("done");
 
     // Find the built executable
     let profile = if debug { "debug" } else { "release" };
@@ -836,7 +840,7 @@ fn install_from_path(
         }
     }
 
-    eprintln!("Installed: {} v{}", name, version);
+    output::installed(&format!("{} v{}", name, version));
     Ok(())
 }
 
@@ -876,16 +880,17 @@ fn remove_plugin(args: RemoveArgs) -> Result<(), Box<dyn std::error::Error>> {
     let plugins_dir = get_plugins_dir()?;
     let plugin_dir = plugins_dir.join(&name);
 
+    output::removing(&format!("{} v{}", name, version));
+
     if plugin_dir.exists() {
         std::fs::remove_dir_all(&plugin_dir)?;
-        println!("Removed plugin directory: {}", plugin_dir.display());
     }
 
     // Remove from registry
     registry.remove(&name);
     registry.save(&registry_path)?;
 
-    println!("Successfully removed plugin: {} v{}", name, version);
+    output::removed(&format!("{} v{}", name, version));
     Ok(())
 }
 
@@ -898,7 +903,7 @@ fn enable_plugin(args: EnableArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     if registry.enable(&name) {
         registry.save(&registry_path)?;
-        println!("Enabled plugin: {}", name);
+        output::finished(&format!("enabled {}", name));
     } else {
         return Err(format!("Plugin '{}' not found.", args.name).into());
     }
@@ -927,7 +932,7 @@ fn disable_plugin(args: DisableArgs) -> Result<(), Box<dyn std::error::Error>> {
 
     if registry.disable(&name) {
         registry.save(&registry_path)?;
-        println!("Disabled plugin: {}", name);
+        output::finished(&format!("disabled {}", name));
     } else {
         return Err(format!("Plugin '{}' not found.", args.name).into());
     }
@@ -1088,7 +1093,7 @@ fn update_plugins(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
     let official_registry = fetch_official_registry().ok();
 
     for plugin in plugins_to_update {
-        println!("Updating {}...", plugin.name);
+        output::updating(&format!("{}", plugin.name));
 
         // Check if plugin is from official registry and has a newer version
         if let Some(ref reg) = official_registry {

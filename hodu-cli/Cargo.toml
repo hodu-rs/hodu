@@ -12,6 +12,10 @@ repository = "https://github.com/daminstudio/hodu"
 name = "hodu"
 path = "src/main.rs"
 
+[lib]
+name = "hodu_cli"
+path = "src/lib.rs"
+
 [dependencies]
 chrono = { workspace = true }
 clap = { workspace = true, features = ["derive"] }

@@ -1,7 +1,6 @@
-mod commands;
-mod plugins;
-
 use clap::{Parser, Subcommand};
+use hodu_cli::commands;
+use hodu_cli::output;
 
 #[derive(Parser)]
 #[command(name = "hodu")]
@@ -49,7 +48,7 @@ fn main() {
     };
 
     if let Err(e) = result {
-        eprintln!("Error: {e}");
+        output::error(&format!("{e}"));
         std::process::exit(1);
     }
 }

@@ -1,5 +1,6 @@
 //! Convert command - convert models and tensors between formats
 
+use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
 use std::path::PathBuf;
@@ -50,6 +51,12 @@ pub fn execute(args: ConvertArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut manager = PluginManager::new()?;
+
+    output::converting(&format!(
+        "{} -> .{}",
+        args.input.file_name().unwrap_or_default().to_string_lossy(),
+        output_ext
+    ));
 
     if is_model {
         convert_model(&args, &input_ext, &output_ext, &registry, &mut manager)
@@ -106,7 +113,11 @@ fn convert_model(
         client.save_model(snapshot_path.to_str().unwrap(), args.output.to_str().unwrap())?;
     }
 
-    println!("Converted: {} -> {}", args.input.display(), args.output.display());
+    output::finished(&format!(
+        "{} -> {}",
+        args.input.file_name().unwrap_or_default().to_string_lossy(),
+        args.output.file_name().unwrap_or_default().to_string_lossy()
+    ));
     Ok(())
 }
 
@@ -179,6 +190,10 @@ fn convert_tensor(
         },
     }
 
-    println!("Converted: {} -> {}", args.input.display(), args.output.display());
+    output::finished(&format!(
+        "{} -> {}",
+        args.input.file_name().unwrap_or_default().to_string_lossy(),
+        args.output.file_name().unwrap_or_default().to_string_lossy()
+    ));
     Ok(())
 }

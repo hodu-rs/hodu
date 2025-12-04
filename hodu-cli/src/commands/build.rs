@@ -2,6 +2,7 @@
 //!
 //! This command uses JSON-RPC based plugins to compile models.
 
+use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
 use hodu_plugin_sdk::{BuildTarget, Snapshot};
@@ -90,18 +91,12 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         None => return Err("Model file has no extension".into()),
     };
 
-    if args.verbose {
-        println!("Model: {}", model.display());
-        println!("Output: {}", output.display());
-        println!("Backend: {}", backend_name);
-        println!("Device: {}", device);
-    }
-
     // Create plugin manager
     let mut manager = PluginManager::new()?;
 
     // Load model (using format plugin if needed)
     let snapshot_path = if let Some(format_entry) = format_plugin {
+        output::loading(&format!("{}", model.file_name().unwrap_or_default().to_string_lossy()));
         let client = manager.get_plugin(&format_entry.name)?;
         let result = client.load_model(model.to_str().unwrap())?;
         PathBuf::from(result.snapshot_path)
@@ -121,11 +116,12 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         None => BuildTarget::host(device.clone()),
     };
 
-    if args.verbose {
-        println!("Building...");
-    }
+    // Build message
+    let model_name = model.file_name().unwrap_or_default().to_string_lossy();
+    output::compiling(&format!("{} ({}, {})", model_name, build_target.triple, device));
 
     // Call backend.build via JSON-RPC
+    let start = std::time::Instant::now();
     let client = manager.get_plugin(&backend_name)?;
     client.build(
         snapshot_path.to_str().unwrap(),
@@ -135,7 +131,12 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         output.to_str().unwrap(),
     )?;
 
-    println!("Built: {}", output.display());
+    let duration = start.elapsed().as_secs_f64();
+    output::finished(&format!(
+        "{} target(s) in {}",
+        format,
+        output::format_duration(duration)
+    ));
 
     Ok(())
 }
