@@ -510,7 +510,12 @@ fn output_results(outputs: &HashMap<String, TensorData>, args: &RunArgs) -> Resu
                 let data = &outputs[name];
                 let dtype: DType = data.dtype.into();
                 let tensor = Tensor::from_bytes(&data.data, data.shape.clone(), dtype, CoreDevice::CPU)?;
-                println!("{}:", name);
+                // Colored ">" prefix, white name
+                if output::supports_color() {
+                    println!("{}>{}  {}", output::colors::BOLD_YELLOW, output::colors::RESET, name);
+                } else {
+                    println!(">  {}", name);
+                }
                 println!("{}", tensor);
             }
         },

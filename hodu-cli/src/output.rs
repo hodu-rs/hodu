@@ -19,7 +19,7 @@ pub mod colors {
 }
 
 /// Check if terminal supports colors
-fn supports_color() -> bool {
+pub fn supports_color() -> bool {
     std::env::var("NO_COLOR").is_err() && std::env::var("TERM").map(|t| t != "dumb").unwrap_or(true)
 }
 
@@ -135,7 +135,6 @@ pub fn cached(message: &str) {
 
 /// Progress indicator that updates in place
 pub struct Progress {
-    message: String,
     show_spinner: bool,
 }
 
@@ -148,21 +147,16 @@ impl Progress {
         }
         let _ = io::stderr().flush();
         Self {
-            message: message.to_string(),
             show_spinner: supports_color(),
         }
     }
 
     pub fn done(self) {
-        if self.show_spinner {
-            eprintln!(" done");
-        } else {
-            eprintln!(" done");
-        }
+        eprintln!(" done");
     }
 
     pub fn fail(self, err_msg: &str) {
-        if supports_color() {
+        if self.show_spinner {
             eprintln!(" {}failed{}", colors::BOLD_RED, colors::RESET);
             error(err_msg);
         } else {
