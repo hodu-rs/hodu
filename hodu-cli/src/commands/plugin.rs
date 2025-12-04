@@ -295,6 +295,15 @@ fn install_plugin(args: InstallArgs) -> Result<(), Box<dyn std::error::Error>> {
 /// Official plugin registry URL
 const PLUGIN_REGISTRY_URL: &str = "https://raw.githubusercontent.com/daminstudio/hodu-plugins/main/plugins.toml";
 
+/// Version entry in the registry
+#[derive(Debug, serde::Deserialize)]
+struct PluginVersionEntry {
+    version: String,
+    tag: String,
+    /// SDK version requirement (e.g., "0.1" means compatible with 0.1.x)
+    sdk: String,
+}
+
 /// Plugin entry in the registry
 #[derive(Debug, serde::Deserialize)]
 struct RegistryPlugin {
@@ -303,6 +312,7 @@ struct RegistryPlugin {
     description: Option<String>,
     git: String,
     path: Option<String>,
+    versions: Vec<PluginVersionEntry>,
 }
 
 /// Registry file structure
@@ -312,12 +322,21 @@ struct PluginRegistryFile {
 }
 
 fn install_from_registry(
-    name: &str,
-    tag: Option<&str>,
+    name_with_version: &str,
+    tag_override: Option<&str>,
     debug: bool,
     force: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Looking up '{}' in official plugin registry...", name);
+    // Parse name@version syntax
+    let (name, requested_version) = if let Some(at_pos) = name_with_version.find('@') {
+        let n = &name_with_version[..at_pos];
+        let v = &name_with_version[at_pos + 1..];
+        (n, Some(v))
+    } else {
+        (name_with_version, None)
+    };
+
+    eprintln!("Looking up '{}'...", name);
 
     // Fetch registry
     let body = ureq::get(PLUGIN_REGISTRY_URL)
@@ -339,9 +358,75 @@ fn install_from_registry(
         )
     })?;
 
-    println!("Found: {} -> {}", plugin.name, plugin.git);
+    // Get host SDK version (major.minor)
+    let host_sdk_parts: Vec<&str> = SDK_VERSION.split('.').collect();
+    let host_sdk_major_minor = if host_sdk_parts.len() >= 2 {
+        format!("{}.{}", host_sdk_parts[0], host_sdk_parts[1])
+    } else {
+        SDK_VERSION.to_string()
+    };
 
-    install_from_git(&plugin.git, plugin.path.as_deref(), tag, debug, force)
+    // Filter compatible versions (same major.minor)
+    let compatible_versions: Vec<_> = plugin
+        .versions
+        .iter()
+        .filter(|v| v.sdk == host_sdk_major_minor)
+        .collect();
+
+    // Determine the tag to use
+    let tag = if let Some(t) = tag_override {
+        // --tag flag takes precedence
+        Some(t.to_string())
+    } else if let Some(ver) = requested_version {
+        // @version syntax
+        if ver == "latest" {
+            // Use the first compatible version (latest)
+            if compatible_versions.is_empty() {
+                return Err(format!(
+                    "No compatible version found for SDK {}.\n\nAvailable versions:\n  {}",
+                    host_sdk_major_minor,
+                    plugin
+                        .versions
+                        .iter()
+                        .map(|v| format!("{} (sdk {})", v.version, v.sdk))
+                        .collect::<Vec<_>>()
+                        .join("\n  ")
+                )
+                .into());
+            }
+            compatible_versions.first().map(|v| v.tag.clone())
+        } else {
+            // Find specific version
+            let version_entry = plugin.versions.iter().find(|v| v.version == ver).ok_or_else(|| {
+                let available: Vec<_> = plugin.versions.iter().map(|v| v.version.as_str()).collect();
+                format!(
+                    "Version '{}' not found for plugin '{}'.\n\nAvailable versions:\n  {}",
+                    ver,
+                    name,
+                    available.join("\n  ")
+                )
+            })?;
+            Some(version_entry.tag.clone())
+        }
+    } else {
+        // No version specified, use latest compatible
+        if compatible_versions.is_empty() {
+            return Err(format!(
+                "No compatible version found for SDK {}.\n\nAvailable versions:\n  {}",
+                host_sdk_major_minor,
+                plugin
+                    .versions
+                    .iter()
+                    .map(|v| format!("{} (sdk {})", v.version, v.sdk))
+                    .collect::<Vec<_>>()
+                    .join("\n  ")
+            )
+            .into());
+        }
+        compatible_versions.first().map(|v| v.tag.clone())
+    };
+
+    install_from_git(&plugin.git, plugin.path.as_deref(), tag.as_deref(), debug, force)
 }
 
 fn install_from_git(
@@ -351,24 +436,15 @@ fn install_from_git(
     debug: bool,
     force: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Installing from git: {}", url);
-    if let Some(s) = subdir {
-        println!("Subdirectory: {}", s);
-    }
-    if let Some(t) = tag {
-        println!("Tag/branch: {}", t);
-    }
-
     // Create temp directory
     let temp_dir = std::env::temp_dir().join(format!("hodu_plugin_{}", std::process::id()));
     if temp_dir.exists() {
         std::fs::remove_dir_all(&temp_dir)?;
     }
 
-    // Clone repository
-    println!("Cloning repository...");
+    // Clone repository (quietly)
     let mut git_cmd = Command::new("git");
-    git_cmd.arg("clone");
+    git_cmd.arg("clone").arg("-q");
     if tag.is_none() {
         git_cmd.arg("--depth").arg("1");
     }
@@ -379,11 +455,11 @@ fn install_from_git(
         return Err(format!("Failed to clone repository: {}", url).into());
     }
 
-    // Checkout tag/branch if specified
+    // Checkout tag/branch if specified (quietly)
     if let Some(t) = tag {
-        println!("Checking out: {}", t);
         let status = Command::new("git")
             .arg("checkout")
+            .arg("-q")
             .arg(t)
             .current_dir(&temp_dir)
             .status()?;
@@ -421,7 +497,6 @@ fn install_from_path(
     source: PluginSource,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let path = path.canonicalize()?;
-    println!("Installing plugin from: {}", path.display());
 
     // Check if it's a Cargo project
     let cargo_toml = path.join("Cargo.toml");
@@ -435,19 +510,22 @@ fn install_from_path(
         .ok_or_else(|| format!("Could not find package name in {}", cargo_toml.display()))?;
 
     // Build the plugin with cargo (as executable)
-    println!("Building plugin...");
+    eprint!("Building {}... ", package_name);
     let mut cargo_cmd = Command::new("cargo");
     cargo_cmd.arg("build");
     cargo_cmd.arg("-p").arg(&package_name);
     if !debug {
         cargo_cmd.arg("--release");
     }
+    cargo_cmd.arg("-q"); // Quiet output
     cargo_cmd.current_dir(&path);
 
-    let status = cargo_cmd.status()?;
-    if !status.success() {
-        return Err("Failed to build plugin".into());
+    let output = cargo_cmd.output()?;
+    if !output.status.success() {
+        eprintln!("failed");
+        return Err(format!("Failed to build plugin:\n{}", String::from_utf8_lossy(&output.stderr)).into());
     }
+    eprintln!("done");
 
     // Find the built executable
     let profile = if debug { "debug" } else { "release" };
@@ -490,7 +568,6 @@ fn install_from_path(
             package_name, possible_target_dirs
         )
     })?;
-    println!("Found executable: {}", bin_path.display());
 
     // Read manifest.json if it exists, or detect from binary
     let manifest_path = path.join("manifest.json");
@@ -591,7 +668,6 @@ fn install_from_path(
                 version,
                 sdk_version,
             } => {
-                println!("Detected backend plugin: {} v{}", name, version);
                 let capabilities = PluginCapabilities::backend(true, false, vec![], vec![]);
                 (name, version, sdk_version, PluginType::Backend, capabilities)
             },
@@ -600,7 +676,6 @@ fn install_from_path(
                 version,
                 sdk_version,
             } => {
-                println!("Detected model format plugin: {} v{}", name, version);
                 let capabilities = PluginCapabilities::model_format(true, false, vec![]);
                 (name, version, sdk_version, PluginType::ModelFormat, capabilities)
             },
@@ -609,7 +684,6 @@ fn install_from_path(
                 version,
                 sdk_version,
             } => {
-                println!("Detected tensor format plugin: {} v{}", name, version);
                 let capabilities = PluginCapabilities::tensor_format(true, false, vec![]);
                 (name, version, sdk_version, PluginType::TensorFormat, capabilities)
             },
@@ -654,7 +728,6 @@ fn install_from_path(
             )
             .into());
         }
-        println!("Reinstalling {} (--force)", name);
     }
 
     // Copy executable to plugins directory
@@ -664,8 +737,6 @@ fn install_from_path(
 
     let bin_filename = bin_path.file_name().unwrap().to_string_lossy().to_string();
     let dest_path = plugin_dir.join(&bin_filename);
-
-    println!("Copying to: {}", dest_path.display());
     std::fs::copy(&bin_path, &dest_path)?;
 
     // Make executable on Unix
@@ -680,7 +751,7 @@ fn install_from_path(
     // Create registry entry
     let entry = PluginEntry {
         name: name.clone(),
-        version,
+        version: version.clone(),
         plugin_type,
         capabilities,
         binary: bin_filename,
@@ -693,7 +764,7 @@ fn install_from_path(
     registry.upsert(entry);
     registry.save(&registry_path)?;
 
-    println!("Successfully installed plugin: {}", name);
+    eprintln!("Installed: {} v{}", name, version);
     Ok(())
 }
 
@@ -825,8 +896,38 @@ fn update_plugins(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    // Try to fetch the official registry for version info
+    let official_registry = fetch_official_registry().ok();
+
     for plugin in plugins_to_update {
         println!("Updating {}...", plugin.name);
+
+        // Check if plugin is from official registry and has a newer version
+        if let Some(ref reg) = official_registry {
+            if let Some(reg_plugin) = reg.plugin.iter().find(|p| p.name == plugin.name) {
+                // Get host SDK version
+                let host_sdk_parts: Vec<&str> = SDK_VERSION.split('.').collect();
+                let host_sdk = if host_sdk_parts.len() >= 2 {
+                    format!("{}.{}", host_sdk_parts[0], host_sdk_parts[1])
+                } else {
+                    SDK_VERSION.to_string()
+                };
+
+                // Find latest compatible version
+                if let Some(latest) = reg_plugin.versions.iter().find(|v| v.sdk == host_sdk) {
+                    if latest.version != plugin.version {
+                        println!("  {} -> {} (sdk {})", plugin.version, latest.version, latest.sdk);
+                        install_from_registry(&plugin.name, None, false, true)?;
+                        continue;
+                    } else {
+                        println!("  Already at latest compatible version: {}", plugin.version);
+                        continue;
+                    }
+                }
+            }
+        }
+
+        // Fallback to source-based update
         match &plugin.source {
             PluginSource::Git(url) => {
                 install_from_git(url, None, None, false, true)?;
@@ -847,6 +948,18 @@ fn update_plugins(args: UpdateArgs) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn fetch_official_registry() -> Result<PluginRegistryFile, Box<dyn std::error::Error>> {
+    let body = ureq::get(PLUGIN_REGISTRY_URL)
+        .call()
+        .map_err(|e| format!("Failed to fetch plugin registry: {}", e))?
+        .body_mut()
+        .read_to_string()
+        .map_err(|e| format!("Failed to read registry: {}", e))?;
+
+    let registry: PluginRegistryFile = toml::from_str(&body).map_err(|e| format!("Failed to parse registry: {}", e))?;
+    Ok(registry)
 }
 
 fn get_plugins_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
