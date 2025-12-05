@@ -1,78 +1,64 @@
-# Contribution Guide
+# Contributing to Hodu
 
-## Development Environment
+## Project Structure
 
-**Requirements:**
+```
+hodu/
+├── hodu-lib/              # Main library (re-exports all crates)
+├── hodu-cli/              # Command-line interface
+├── hodu-plugin-sdk/       # Plugin SDK for backends/formats
+├── crates/
+│   ├── hodu_core/         # Core tensor operations
+│   ├── hodu_nn/           # Neural network layers
+│   ├── hodu_datasets/     # Dataset loaders
+│   ├── hodu_cpu_kernels/  # CPU SIMD kernels
+│   ├── hodu_metal_kernels/# Metal GPU kernels (macOS)
+│   ├── hodu_cuda_kernels/ # CUDA GPU kernels
+│   ├── hodu_internal/     # Internal utilities
+│   └── hodu_macro_utils/  # Macro utilities
+└── tools/                 # Development scripts
+```
+
+## Requirements
+
 - Rust 1.90.0 or higher
-
-**Optional (for specific features):**
-- CUDA Toolkit (for `cuda` feature)
-- Xcode Command Line Tools (for `metal` feature on macOS)
-- LLVM/Clang (for C/C++ checking && for `xla` feature - requires 8GB+ RAM, 20GB+ disk)
-- clang-format (for C/C++/Metal shader formatting)
-- ruff (for Python formatting)
+- (Optional) CUDA Toolkit, Xcode Command Line Tools, clang-format
 
 ## Getting Started
 
-1. Fork the repository on GitHub
-2. Clone your fork:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/hodu.git
-   cd hodu
-   ```
-3. Build the project:
-   ```bash
-   cargo build
-   ```
-4. Run tests:
-   ```bash
-   cargo test
-   ```
-5. Check and format code before submitting:
-   ```bash
-   bash ./tools/format.sh  # Format code
-   bash ./tools/check.sh   # Run lints and checks
-
-   # To test additional features (e.g., metal):
-   bash ./tools/check.sh -f metal
-   bash ./tools/check.sh --features metal
-
-   # Multiple features:
-   bash ./tools/check.sh -f metal cuda
-   ```
-
-## Commit Guidelines
-
-We follow a conventional commit style for clear and consistent commit history.
-
-**Format:**
+```bash
+git clone https://github.com/daminstudio/hodu.git
+cd hodu
+cargo build
+cargo test
+./tools/format.sh
+./tools/check-lib.sh        # Check hodu-lib
+./tools/check-cli.sh        # Check hodu-cli
+./tools/check-plugin-sdk.sh # Check hodu-plugin-sdk
 ```
-<type>: <description>
+
+## Commit Style
+
+```
 <type>(<scope>): <description>
 ```
 
-**Types:**
-- `feat`: New feature or functionality
-- `fix`: Bug fix
-- `refactor`: Code restructuring without changing functionality
-- `chore`: Maintenance tasks, dependency updates, configuration changes
-- `docs`: Documentation updates
-- `merge`: Merge commits
-
-**Scope (optional):**
-- Specific component or area affected (e.g., `benchmark`, `deps`, `metal`, `simd`)
+**Types:** `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `chore`
 
 **Examples:**
 ```
-feat: add blocking, packing, and parallelization to NEON SIMD matmul
-fix: use Metal storage for Metal device in script executor
-refactor(benchmark): remove redundant cargo build step before cargo run
-chore(deps): update burn requirement from 0.16.0 to 0.18.0
-docs: add contribution guide and related projects section
+feat(nn): add batch normalization layer
+fix(core): correct broadcasting for matmul
+chore(deps): bump serde to 1.0.228
 ```
 
-**Best Practices:**
-- Use lowercase for type and description
-- Keep descriptions concise and clear
-- Start descriptions with a verb (add, fix, update, remove, etc.)
-- Don't end with a period
+## Pull Request
+
+1. Create a feature branch from `main`
+2. Squash commits into one before submitting
+3. Ensure tests pass and code is formatted
+4. Add appropriate labels:
+   - Category: `c-bug`, `c-feature`, `c-docs`, `c-performance`, `c-dependencies`
+   - Component: `m-lib`, `m-cli`, `m-gui`, `m-plugin-sdk`
+   - Crate: `h-core`, `h-nn`, `h-datasets`, `h-kernels(cpu)`, `h-kernels(cuda)`, `h-kernels(metal)`
+   - OS: `o-linux`, `o-macos`, `o-windows`

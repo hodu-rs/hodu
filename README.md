@@ -1,4 +1,4 @@
-# Hodu, a user-friendly ML toolkit built in Rust.
+# Hodu, a user-friendly ML toolkit built in Rust
 
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
@@ -44,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Command-line interface for model inference, conversion, and deployment.
 
 ```bash
-# Install Ofiicial Plugin
+# Install official plugin
 hodu plugin install aot-cpu
 
 # Run inference
