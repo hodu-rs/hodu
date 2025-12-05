@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Publish hodu-cli to crates.io
+# Publish hodu-plugin-sdk to crates.io
 
 set -e
 
@@ -9,9 +9,9 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-echo "Publishing hodu-cli"
-cp LICENSE hodu-cli/
-pushd hodu-cli
+echo "Publishing hodu-plugin-sdk"
+cp LICENSE hodu-plugin-sdk/
+pushd hodu-plugin-sdk
 git add LICENSE
 cargo publish --no-verify --allow-dirty
 popd
