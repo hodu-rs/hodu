@@ -1,5 +1,9 @@
 # hodu-plugin-sdk
 
+[![Crates.io](https://img.shields.io/crates/v/hodu-plugin-sdk.svg)](https://crates.io/crates/hodu-plugin-sdk)
+[![Doc.rs](https://docs.rs/hodu-plugin-sdk/badge.svg)](https://docs.rs/hodu-plugin-sdk)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/daminstudio/hodu#license)
+
 SDK for building Hodu ML framework plugins.
 
 ## Overview

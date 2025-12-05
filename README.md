@@ -1,5 +1,10 @@
 # Hodu, a user-friendly ML toolkit built in Rust
 
+[![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu)](https://crates.io/crates/hodu)
+[![hodu-cli](https://img.shields.io/crates/v/hodu-cli.svg?label=hodu-cli)](https://crates.io/crates/hodu-cli)
+[![hodu-plugin-sdk](https://img.shields.io/crates/v/hodu-plugin-sdk.svg?label=hodu-plugin-sdk)](https://crates.io/crates/hodu-plugin-sdk)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
+
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
 <p align="center">
