@@ -1,7 +1,7 @@
 [package]
 name = "hodu-plugin-sdk"
 version = "0.1.0"
-description = "Plugin SDK for developing Hodu Backend and Format plugins"
+description = "SDK for building Hodu ML toolkit plugins"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
@@ -9,6 +9,8 @@ publish = true
 repository = "https://github.com/daminstudio/hodu"
 documentation = "https://docs.rs/hodu-plugin-sdk"
 readme = "README.md"
+keywords = ["plugin", "sdk", "machine-learning", "hodu"]
+categories = ["development-tools", "science"]
 
 [dependencies]
 hodu_core = { workspace = true, features = ["serde", "f8e5m2", "f64", "u16", "u64", "i16", "i64"] }

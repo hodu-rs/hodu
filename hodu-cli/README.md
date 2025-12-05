@@ -3,7 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/hodu-cli.svg)](https://crates.io/crates/hodu-cli)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/daminstudio/hodu#license)
 
-Command-line interface for the Hodu ML framework.
+Command-line interface for the Hodu ML toolkit.
 
 ## Installation
 

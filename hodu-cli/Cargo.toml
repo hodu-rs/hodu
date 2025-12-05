@@ -1,12 +1,15 @@
 [package]
 name = "hodu-cli"
 version = "0.1.0"
-description = "Command-line interface for Hodu ML framework"
+description = "Command-line interface for the Hodu ML toolkit"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 publish = true
 repository = "https://github.com/daminstudio/hodu"
+readme = "README.md"
+keywords = ["cli", "machine-learning", "inference", "hodu"]
+categories = ["command-line-utilities", "science"]
 
 [[bin]]
 name = "hodu"

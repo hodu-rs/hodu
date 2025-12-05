@@ -4,7 +4,7 @@
 [![Doc.rs](https://docs.rs/hodu-plugin-sdk/badge.svg)](https://docs.rs/hodu-plugin-sdk)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](https://github.com/daminstudio/hodu#license)
 
-SDK for building Hodu ML framework plugins.
+SDK for building Hodu ML toolkit plugins.
 
 ## Overview
 
