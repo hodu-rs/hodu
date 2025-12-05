@@ -3,7 +3,7 @@
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
 <p align="center">
-    <img src="./assets/hodu/hodu_avatar.png" alt="Hodu Avatar" width="256" height="256" />
+    <img src="./assets/hodu/sd_type_b.png" alt="Hodu Avatar" width="384" />
 </p>
 
 **Hodu** is a Rust-based ML toolkit designed for ease of use, from prototyping to deployment.
@@ -69,3 +69,9 @@ SDK for building format and backend plugins. Create custom plugins to support ne
 ## License
 
 This project is licensed under the [BSD-3-Clause License](./LICENSE).
+
+### Assets
+
+All icons, characters, and visual assets are created by **해꿈** and © Han Damin. All rights reserved. These assets may not be used, modified, or distributed for any purpose, commercial or non-commercial, without explicit written permission from the copyright holder. See [Assets License](./assets/hodu/LICENSE) for details.
+
+For licensing inquiries, contact: [miniex@daminstudio.net](mailto:miniex@daminstudio.net)
