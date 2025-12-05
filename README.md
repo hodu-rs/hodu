@@ -69,7 +69,16 @@ GUI application for model visualization and editing.
 
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
 
-SDK for building format and backend plugins. Create custom plugins to support new model formats or execution backends.
+SDK for building format and backend plugins. Plugins communicate via JSON-RPC over stdio, enabling custom model formats (ONNX, TensorFlow, etc.), tensor formats (NumPy, SafeTensors, etc.), and execution backends (CUDA, Metal, etc.).
+
+```bash
+# Create a new plugin using hodu-cli
+hodu plugin create my-format -t model_format
+hodu plugin create my-tensor -t tensor_format
+hodu plugin create my-backend -t backend
+```
+
+Official plugins are available at [hodu-plugins](https://github.com/daminstudio/hodu-plugins).
 
 ## Contributing
 
