@@ -19,7 +19,7 @@ The plugin system allows you to extend Hodu with custom model formats and execut
 
 ## Components
 
-### [hodu-lib](./hodu-lib/README.md)
+### [hodu-lib(hodu)](./hodu-lib/README.md)
 
 Core ML library for tensor operations and model building. Use it as a Rust dependency for building ML applications.
 
