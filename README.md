@@ -72,6 +72,6 @@ This project is licensed under the [BSD-3-Clause License](./LICENSE).
 
 ### Assets
 
-All icons, characters, and visual assets are created by **해꿈** and © Han Damin. All rights reserved. These assets may not be used, modified, or distributed for any purpose, commercial or non-commercial, without explicit written permission from the copyright holder. See [Assets License](./assets/hodu/LICENSE) for details.
+All icons, characters, and visual assets are created by **해꿈(sundream)** and © Han Damin. All rights reserved. These assets may not be used, modified, or distributed for any purpose, commercial or non-commercial, without explicit written permission from the copyright holder. See [Assets License](./assets/hodu/LICENSE) for details.
 
 For licensing inquiries, contact: [miniex@daminstudio.net](mailto:miniex@daminstudio.net)
