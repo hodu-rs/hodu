@@ -71,6 +71,12 @@ GUI application for model visualization and editing.
 
 SDK for building format and backend plugins. Create custom plugins to support new model formats or execution backends.
 
+## Contributing
+
+Contributions are always welcome! Whether it's bug reports, feature requests, documentation improvements, or code contributions - every bit helps make Hodu better.
+
+Check out [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+
 ## License
 
 This project is licensed under the [BSD-3-Clause License](./LICENSE).
