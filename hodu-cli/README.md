@@ -11,6 +11,30 @@ Command-line interface for the Hodu ML toolkit.
 cargo install hodu-cli
 ```
 
+### Shell Completions
+
+When installing via `cargo install`, shell completions are not automatically installed. To enable tab completion, add the following to your shell configuration:
+
+**Zsh** (~/.zshrc):
+```bash
+eval "$(hodu completions zsh)"
+```
+
+**Bash** (~/.bashrc):
+```bash
+eval "$(hodu completions bash)"
+```
+
+**Fish** (~/.config/fish/config.fish):
+```bash
+hodu completions fish | source
+```
+
+**PowerShell**:
+```powershell
+hodu completions power-shell | Out-String | Invoke-Expression
+```
+
 ## Commands
 
 ### Model Operations
@@ -23,6 +47,7 @@ cargo install hodu-cli
 | `hodu inspect <file>` | Inspect model or tensor file |
 | `hodu clean` | Clean build cache |
 | `hodu version` | Show version information |
+| `hodu completions <shell>` | Generate shell completions (bash, zsh, fish, powershell, elvish) |
 
 ### Plugin Management
 
@@ -53,6 +78,9 @@ hodu run model.hdss -i x=input.hdt -d cuda::0
 
 # Save outputs to directory
 hodu run model.onnx -i input=data.hdt --save ./outputs
+
+# Set timeout for plugin operations (in seconds)
+hodu run model.onnx -i input=data.hdt --timeout 600
 ```
 
 ### Build Model
@@ -66,6 +94,9 @@ hodu build model.hdss -o model.metallib -d metal
 
 # Build with specific format
 hodu build model.onnx -o model.a -f staticlib
+
+# Set timeout for plugin operations (in seconds)
+hodu build model.hdss -o model.so --timeout 600
 ```
 
 ### Convert Formats

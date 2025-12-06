@@ -10,9 +10,14 @@ use hodu_plugin_sdk::rpc::{
 };
 use hodu_plugin_sdk::SDK_VERSION;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, ChildStdout};
+use std::process::{Child, ChildStdin};
 use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+
+/// Default timeout for RPC requests (5 minutes)
+pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
 
 /// Notification handler callback type
 pub type NotificationHandler = Box<dyn Fn(&str, Option<&serde_json::Value>) + Send>;
@@ -53,10 +58,11 @@ impl CancellationHandle {
 /// JSON-RPC client for communicating with a plugin process
 pub struct PluginClient {
     stdin: Arc<Mutex<ChildStdin>>,
-    stdout: BufReader<ChildStdout>,
+    line_receiver: mpsc::Receiver<Result<String, std::io::Error>>,
     next_id: Arc<AtomicI64>,
     current_request_id: Arc<AtomicI64>,
     notification_handler: Option<NotificationHandler>,
+    timeout: Duration,
 }
 
 impl PluginClient {
@@ -65,13 +71,40 @@ impl PluginClient {
         let stdin = child.stdin.take().ok_or(ClientError::NoStdin)?;
         let stdout = child.stdout.take().ok_or(ClientError::NoStdout)?;
 
+        // Spawn a reader thread that sends lines through a channel
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let mut reader = BufReader::new(stdout);
+            loop {
+                let mut line = String::new();
+                match reader.read_line(&mut line) {
+                    Ok(0) => break, // EOF
+                    Ok(_) => {
+                        if tx.send(Ok(line)).is_err() {
+                            break; // Receiver dropped
+                        }
+                    },
+                    Err(e) => {
+                        let _ = tx.send(Err(e));
+                        break;
+                    },
+                }
+            }
+        });
+
         Ok(Self {
             stdin: Arc::new(Mutex::new(stdin)),
-            stdout: BufReader::new(stdout),
+            line_receiver: rx,
             next_id: Arc::new(AtomicI64::new(1)),
             current_request_id: Arc::new(AtomicI64::new(0)),
             notification_handler: None,
+            timeout: DEFAULT_TIMEOUT,
         })
+    }
+
+    /// Set the timeout for RPC requests
+    pub fn set_timeout(&mut self, timeout: Duration) {
+        self.timeout = timeout;
     }
 
     /// Get a cancellation handle for use from another thread (e.g., Ctrl+C handler)
@@ -253,8 +286,12 @@ impl PluginClient {
 
         // Read response, handling notifications along the way
         loop {
-            let mut line = String::new();
-            self.stdout.read_line(&mut line).map_err(ClientError::Io)?;
+            let line = match self.line_receiver.recv_timeout(self.timeout) {
+                Ok(Ok(line)) => line,
+                Ok(Err(e)) => return Err(ClientError::Io(e)),
+                Err(RecvTimeoutError::Timeout) => return Err(ClientError::Timeout(self.timeout)),
+                Err(RecvTimeoutError::Disconnected) => return Err(ClientError::ConnectionClosed),
+            };
 
             if line.is_empty() {
                 return Err(ClientError::ConnectionClosed);
@@ -344,6 +381,7 @@ pub enum ClientError {
     Rpc(RpcError),
     ProtocolMismatch { cli: String, plugin: String },
     LockError,
+    Timeout(Duration),
 }
 
 /// Check if two protocol versions are compatible
@@ -389,6 +427,9 @@ impl std::fmt::Display for ClientError {
                 cli, plugin
             ),
             ClientError::LockError => write!(f, "Failed to acquire lock"),
+            ClientError::Timeout(duration) => {
+                write!(f, "Plugin request timed out after {} seconds", duration.as_secs())
+            },
         }
     }
 }

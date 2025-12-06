@@ -3,12 +3,13 @@
 //! This module handles spawning, managing, and keeping alive plugin processes.
 //! Plugins are standalone executables that communicate via JSON-RPC over stdio.
 
-use super::client::{CancellationHandle, ClientError, PluginClient};
+use super::client::{CancellationHandle, ClientError, PluginClient, DEFAULT_TIMEOUT};
 use super::registry::{PluginEntry, PluginRegistry, RegistryError};
 use hodu_plugin_sdk::rpc::InitializeResult;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
+use std::time::Duration;
 
 /// Plugin process manager
 ///
@@ -20,6 +21,8 @@ pub struct PluginManager {
     registry: PluginRegistry,
     /// Plugins directory
     plugins_dir: PathBuf,
+    /// Timeout for plugin operations
+    timeout: Duration,
 }
 
 /// A managed plugin process
@@ -40,14 +43,32 @@ impl PluginManager {
             processes: HashMap::new(),
             registry,
             plugins_dir,
+            timeout: DEFAULT_TIMEOUT,
         })
+    }
+
+    /// Create a new plugin manager with a custom timeout
+    pub fn with_timeout(timeout_secs: u64) -> Result<Self, ProcessError> {
+        let mut manager = Self::new()?;
+        manager.timeout = Duration::from_secs(timeout_secs);
+        Ok(manager)
+    }
+
+    /// Set the timeout for plugin operations
+    pub fn set_timeout(&mut self, timeout_secs: u64) {
+        self.timeout = Duration::from_secs(timeout_secs);
     }
 
     /// Get or spawn a plugin by name
     pub fn get_plugin(&mut self, name: &str) -> Result<&mut PluginClient, ProcessError> {
         // Check if already running
         if self.processes.contains_key(name) {
-            return Ok(&mut self.processes.get_mut(name).unwrap().client);
+            // SAFETY: We just checked that the key exists
+            return Ok(&mut self
+                .processes
+                .get_mut(name)
+                .expect("key exists after contains_key check")
+                .client);
         }
 
         // Find plugin in registry
@@ -67,7 +88,8 @@ impl PluginManager {
         let managed = self.spawn_plugin(&entry)?;
         self.processes.insert(name.to_string(), managed);
 
-        Ok(&mut self.processes.get_mut(name).unwrap().client)
+        // SAFETY: We just inserted the key
+        Ok(&mut self.processes.get_mut(name).expect("key exists after insert").client)
     }
 
     /// Get a format plugin by extension (tries model format first, then tensor format)
@@ -100,6 +122,9 @@ impl PluginManager {
 
         // Create client
         let mut client = PluginClient::new(&mut child).map_err(ProcessError::Client)?;
+
+        // Set timeout
+        client.set_timeout(self.timeout);
 
         // Enable notification handling (progress, logs)
         client.use_default_notification_handler();

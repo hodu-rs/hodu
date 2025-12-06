@@ -32,6 +32,9 @@ pub enum Commands {
 
     /// Show version information
     Version,
+
+    /// Generate shell completions
+    Completions(commands::completions::CompletionsArgs),
 }
 
 fn main() {
@@ -45,6 +48,7 @@ fn main() {
         Commands::Plugin(args) => commands::plugin::execute(args),
         Commands::Clean(args) => commands::clean::execute(args),
         Commands::Version => commands::version::execute(),
+        Commands::Completions(args) => commands::completions::execute::<Cli>(args),
     };
 
     if let Err(e) = result {

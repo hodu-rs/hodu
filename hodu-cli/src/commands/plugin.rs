@@ -785,7 +785,11 @@ fn install_from_path(
     let plugin_dir = plugins_dir.join(&name);
     std::fs::create_dir_all(&plugin_dir)?;
 
-    let bin_filename = bin_path.file_name().unwrap().to_string_lossy().to_string();
+    let bin_filename = bin_path
+        .file_name()
+        .ok_or("Invalid binary path: no filename")?
+        .to_string_lossy()
+        .to_string();
     let dest_path = plugin_dir.join(&bin_filename);
     std::fs::copy(&bin_path, &dest_path)?;
 
@@ -872,7 +876,8 @@ fn remove_plugin(args: RemoveArgs) -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
-    let plugin = plugin.unwrap();
+    // SAFETY: We just checked is_none() above, so plugin must be Some
+    let plugin = plugin.expect("plugin exists after is_none check");
     let name = plugin.name.clone();
     let version = plugin.version.clone();
 
@@ -1206,7 +1211,10 @@ fn create_plugin(args: CreateArgs) -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
 
-    let output_dir = args.output.unwrap_or_else(|| std::env::current_dir().unwrap());
+    let output_dir = match args.output {
+        Some(dir) => dir,
+        None => std::env::current_dir().map_err(|e| format!("Failed to get current directory: {}", e))?,
+    };
     let project_dir = output_dir.join(&args.name);
 
     if project_dir.exists() {

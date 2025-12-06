@@ -8,6 +8,12 @@ use clap::Args;
 use hodu_plugin_sdk::{hdt, Snapshot, Tensor};
 use std::path::{Path, PathBuf};
 
+/// Convert a path to a string, returning an error if the path is not valid UTF-8
+fn path_to_str(path: &Path) -> Result<&str, Box<dyn std::error::Error>> {
+    path.to_str()
+        .ok_or_else(|| format!("Invalid UTF-8 in path: {}", path.display()).into())
+}
+
 #[derive(Args)]
 pub struct InspectArgs {
     /// File to inspect (.hdss, .hdt, .json, .onnx, etc.)
@@ -167,7 +173,7 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
 
     // Try to load as model first
     if plugin_entry.capabilities.load_model.unwrap_or(false) {
-        let result = client.load_model(args.file.to_str().unwrap())?;
+        let result = client.load_model(path_to_str(&args.file)?)?;
 
         // Load the snapshot from the temp path
         let snapshot = Snapshot::load(&result.snapshot_path).map_err(|e| format!("Failed to load snapshot: {}", e))?;
@@ -206,7 +212,7 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
 
     // Try to load as tensor
     if plugin_entry.capabilities.load_tensor.unwrap_or(false) {
-        let result = client.load_tensor(args.file.to_str().unwrap())?;
+        let result = client.load_tensor(path_to_str(&args.file)?)?;
 
         // Load tensor data from path
         let tensor_data = hodu_plugin_sdk::TensorData::load(&result.tensor_path)

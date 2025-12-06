@@ -8,6 +8,12 @@ use clap::Args;
 use hodu_plugin_sdk::{BuildTarget, Snapshot};
 use std::path::{Path, PathBuf};
 
+/// Convert a path to a string, returning an error if the path is not valid UTF-8
+fn path_to_str(path: &Path) -> Result<&str, Box<dyn std::error::Error>> {
+    path.to_str()
+        .ok_or_else(|| format!("Invalid UTF-8 in path: {}", path.display()).into())
+}
+
 #[derive(Args)]
 pub struct BuildArgs {
     /// Model file (.onnx, .hdss, etc.)
@@ -48,6 +54,10 @@ pub struct BuildArgs {
     /// List supported build targets for the backend
     #[arg(long)]
     pub list_targets: bool,
+
+    /// Timeout in seconds for plugin operations (default: 300)
+    #[arg(long, value_name = "SECONDS")]
+    pub timeout: Option<u64>,
 }
 
 pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
@@ -91,14 +101,17 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
         None => return Err("Model file has no extension".into()),
     };
 
-    // Create plugin manager
-    let mut manager = PluginManager::new()?;
+    // Create plugin manager with optional timeout
+    let mut manager = match args.timeout {
+        Some(secs) => PluginManager::with_timeout(secs)?,
+        None => PluginManager::new()?,
+    };
 
     // Load model (using format plugin if needed)
     let snapshot_path = if let Some(format_entry) = format_plugin {
         output::loading(&format!("{}", model.file_name().unwrap_or_default().to_string_lossy()));
         let client = manager.get_plugin(&format_entry.name)?;
-        let result = client.load_model(model.to_str().unwrap())?;
+        let result = client.load_model(path_to_str(&model)?)?;
         PathBuf::from(result.snapshot_path)
     } else {
         model.clone()
@@ -124,11 +137,11 @@ pub fn execute(args: BuildArgs) -> Result<(), Box<dyn std::error::Error>> {
     let start = std::time::Instant::now();
     let client = manager.get_plugin(&backend_name)?;
     client.build(
-        snapshot_path.to_str().unwrap(),
+        path_to_str(&snapshot_path)?,
         &build_target.triple,
         &build_target.device,
         &format,
-        output.to_str().unwrap(),
+        path_to_str(&output)?,
     )?;
 
     let duration = start.elapsed().as_secs_f64();

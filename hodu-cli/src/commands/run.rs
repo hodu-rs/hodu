@@ -13,6 +13,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+/// Convert a path to a string, returning an error if the path is not valid UTF-8
+fn path_to_str(path: &Path) -> Result<&str, Box<dyn std::error::Error>> {
+    path.to_str()
+        .ok_or_else(|| format!("Invalid UTF-8 in path: {}", path.display()).into())
+}
+
 #[derive(Args)]
 pub struct RunArgs {
     /// Model file (.onnx, .hdss, etc.)
@@ -53,6 +59,10 @@ pub struct RunArgs {
     /// Suppress all output
     #[arg(short, long)]
     pub quiet: bool,
+
+    /// Timeout in seconds for plugin operations (default: 300)
+    #[arg(long, value_name = "SECONDS")]
+    pub timeout: Option<u64>,
 }
 
 pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
@@ -125,8 +135,11 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Create plugin manager
-    let mut manager = PluginManager::new()?;
+    // Create plugin manager with optional timeout
+    let mut manager = match args.timeout {
+        Some(secs) => PluginManager::with_timeout(secs)?,
+        None => PluginManager::new()?,
+    };
 
     // Load model (using format plugin if needed)
     let model_name = args.model.file_name().unwrap_or_default().to_string_lossy();
@@ -134,7 +147,7 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
         // Use format plugin to convert to snapshot
         output::loading(&format!("{}", model_name));
         let client = manager.get_plugin(&format_entry.name)?;
-        let result = client.load_model(args.model.to_str().unwrap())?;
+        let result = client.load_model(path_to_str(&args.model)?)?;
         PathBuf::from(result.snapshot_path)
     } else {
         // Builtin format - model is already a snapshot
@@ -205,11 +218,11 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     if !library_path.exists() {
         output::compiling(&format!("{} ({})", model_name, device));
         backend_client.build(
-            snapshot_path.to_str().unwrap(),
+            path_to_str(&snapshot_path)?,
             &current_target_triple(),
             &device,
             "sharedlib",
-            library_path.to_str().unwrap(),
+            path_to_str(&library_path)?,
         )?;
     } else {
         output::cached(&format!("{}", model_name));
@@ -218,8 +231,8 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Run with cached library
     output::running(&format!("{} ({})", model_name, device));
     let result = backend_client.run(
-        library_path.to_str().unwrap(),
-        snapshot_path.to_str().unwrap(),
+        path_to_str(&library_path)?,
+        path_to_str(&snapshot_path)?,
         &device,
         input_refs,
     )?;
@@ -543,16 +556,14 @@ fn parse_device(device_str: &str) -> Result<Device, Box<dyn std::error::Error>> 
         s if s.starts_with("cuda") => {
             if s == "cuda" {
                 Ok("cuda::0".to_string())
-            } else if s.starts_with("cuda::") {
+            } else if let Some(idx_str) = s.strip_prefix("cuda::") {
                 // Validate index
-                let idx_str = s.strip_prefix("cuda::").unwrap();
                 idx_str
                     .parse::<usize>()
                     .map_err(|_| format!("Invalid CUDA device index: {}", idx_str))?;
                 Ok(device)
-            } else if s.starts_with("cuda:") && !s.starts_with("cuda::") {
+            } else if let Some(idx_str) = s.strip_prefix("cuda:") {
                 // Convert cuda:N to cuda::N
-                let idx_str = s.strip_prefix("cuda:").unwrap();
                 idx_str
                     .parse::<usize>()
                     .map_err(|_| format!("Invalid CUDA device index: {}", idx_str))?;
@@ -564,8 +575,7 @@ fn parse_device(device_str: &str) -> Result<Device, Box<dyn std::error::Error>> 
         s if s.starts_with("rocm") => {
             if s == "rocm" {
                 Ok("rocm::0".to_string())
-            } else if s.starts_with("rocm::") {
-                let idx_str = s.strip_prefix("rocm::").unwrap();
+            } else if let Some(idx_str) = s.strip_prefix("rocm::") {
                 idx_str
                     .parse::<usize>()
                     .map_err(|_| format!("Invalid ROCm device index: {}", idx_str))?;

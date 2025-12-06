@@ -22,6 +22,7 @@ path = "src/lib.rs"
 [dependencies]
 chrono = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+clap_complete = { workspace = true }
 ctrlc = { workspace = true }
 dirs = { workspace = true }
 float8 = { workspace = true }

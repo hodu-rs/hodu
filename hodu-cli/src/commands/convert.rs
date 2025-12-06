@@ -3,7 +3,13 @@
 use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// Convert a path to a string, returning an error if the path is not valid UTF-8
+fn path_to_str(path: &Path) -> Result<&str, Box<dyn std::error::Error>> {
+    path.to_str()
+        .ok_or_else(|| format!("Invalid UTF-8 in path: {}", path.display()).into())
+}
 
 #[derive(Args)]
 pub struct ConvertArgs {
@@ -91,7 +97,7 @@ fn convert_model(
         }
 
         let client = manager.get_plugin(&plugin.name)?;
-        let result = client.load_model(args.input.to_str().unwrap())?;
+        let result = client.load_model(path_to_str(&args.input)?)?;
         PathBuf::from(result.snapshot_path)
     };
 
@@ -110,7 +116,7 @@ fn convert_model(
         }
 
         let client = manager.get_plugin(&plugin.name)?;
-        client.save_model(snapshot_path.to_str().unwrap(), args.output.to_str().unwrap())?;
+        client.save_model(path_to_str(&snapshot_path)?, path_to_str(&args.output)?)?;
     }
 
     output::finished(&format!(
@@ -151,7 +157,7 @@ fn convert_tensor(
             }
 
             let client = manager.get_plugin(&plugin.name)?;
-            let result = client.load_tensor(args.input.to_str().unwrap())?;
+            let result = client.load_tensor(path_to_str(&args.input)?)?;
             TensorData::load(&result.tensor_path)?
         },
     };
@@ -184,7 +190,7 @@ fn convert_tensor(
             tensor_data.save(&temp_path)?;
 
             let client = manager.get_plugin(&plugin.name)?;
-            client.save_tensor(temp_path.to_str().unwrap(), args.output.to_str().unwrap())?;
+            client.save_tensor(path_to_str(&temp_path)?, path_to_str(&args.output)?)?;
 
             let _ = std::fs::remove_file(&temp_path);
         },
