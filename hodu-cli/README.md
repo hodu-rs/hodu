@@ -95,6 +95,9 @@ hodu build model.hdss -o model.metallib -d metal
 # Build with specific format
 hodu build model.onnx -o model.a -f staticlib
 
+# Cross-compile for embedded target
+hodu build model.hdss -o model.o -t thumbv7em-none-eabihf -f object
+
 # Set timeout for plugin operations (in seconds)
 hodu build model.hdss -o model.so --timeout 600
 ```
