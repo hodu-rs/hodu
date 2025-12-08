@@ -1,4 +1,4 @@
-# Hodu, a user-friendly ML toolkit built in Rust
+# Hodu, a Rust ML toolkit
 
 [![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu)](https://crates.io/crates/hodu)
 [![hodu-cli](https://img.shields.io/crates/v/hodu-cli.svg?label=hodu-cli)](https://crates.io/crates/hodu-cli)
@@ -11,74 +11,56 @@
     <img src="./assets/hodu/sd_1_type_a.png" alt="Hodu Avatar" width="384" />
 </p>
 
-**Hodu** is a Rust-based ML toolkit designed for ease of use, from prototyping to deployment.
-
-Built on Rust's foundation of memory safety and zero-cost abstractions, Hodu provides a simple API for tensor operations and model building through **hodu-lib**, while **hodu-cli** handles model inference, format conversion, and deployment with a single command.
-
-The plugin system allows you to extend Hodu with custom model formats and execution backends, making it adaptable to various workflows and hardware targets.
+Tensor ops, model building, inference, deployment. All in one.
 
 ## Components
 
-### [hodu-lib(hodu)](./hodu-lib/README.md)
+### [hodu-lib](./hodu-lib/README.md)
 
-Core ML library for tensor operations and model building. Use it as a Rust dependency for building ML applications.
+Core library for tensors and models.
 
 ```rust
 use hodu::prelude::*;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Set the runtime device (CPU, CUDA, Metal)
     set_runtime_device(Device::CPU);
 
-    // Create random tensors
     let a = Tensor::randn(&[2, 3], 0f32, 1.)?;
     let b = Tensor::randn(&[3, 4], 0f32, 1.)?;
-
-    // Matrix multiplication
     let c = a.matmul(&b)?;
 
     println!("{}", c);
-    println!("{:?}", c);
-
+    // println!("{:?}", c);
     Ok(())
 }
 ```
 
 ### [hodu-cli](./hodu-cli/README.md)
 
-Command-line interface for model inference, conversion, and deployment.
+Run, convert, build models from the command line.
 
 ```bash
-# Install official plugin
 hodu plugin install aot-cpu
 
-# Run inference
 hodu run model.onnx --input x=input.npy
-hodu run model.hdss --inputs x=input1.hdt,y=input2.json
-
-# Build executable
 hodu build model.hdss -o model
-
-# Build library
 hodu build model.onnx -o model.dylib
 ```
 
-### hodu-gui (PLANNED)
+### hodu-gui (planned)
 
-GUI application for model visualization and editing.
+Model visualization and editing.
 
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
 
-SDK for building format and backend plugins. Plugins communicate via JSON-RPC over stdio, enabling custom model formats (ONNX, TensorFlow, etc.), tensor formats (NumPy, SafeTensors, etc.), and execution backends (CUDA, Metal, etc.).
+Build your own format/backend plugins. JSON-RPC over stdio.
 
 ```bash
-# Create a new plugin using hodu-cli
 hodu plugin create my-format -t model_format
-hodu plugin create my-tensor -t tensor_format
 hodu plugin create my-backend -t backend
 ```
 
-Official plugins are available at [hodu-plugins](https://github.com/daminstudio/hodu-plugins).
+Official plugins: [hodu-plugins](https://github.com/daminstudio/hodu-plugins)
 
 ## Ideology
 
