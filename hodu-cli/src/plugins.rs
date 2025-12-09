@@ -6,6 +6,8 @@
 mod client;
 mod process;
 mod registry;
+mod types;
 
 pub use process::*;
 pub use registry::*;
+pub use types::*;

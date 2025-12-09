@@ -55,7 +55,10 @@ pub use server::{log_debug, log_error, log_info, log_warn, notify_log, notify_pr
 
 // SDK types
 pub use artifact::*;
-pub use backend::*;
+pub use backend::{
+    check_build_capability, current_host_triple, device_type, host_matches_pattern, is_tool_available, parse_device_id,
+    BuildCapability, BuildTarget, Device, PluginManifest, SupportedTarget,
+};
 pub use error::{PluginError, PluginResult};
 pub use tensor::*;
 

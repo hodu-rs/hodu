@@ -24,6 +24,9 @@ pub enum Commands {
     /// Inspect a model file
     Inspect(commands::inspect::InspectArgs),
 
+    /// Diagnose available devices and buildable targets on this host
+    Doctor,
+
     /// Manage plugins
     Plugin(commands::plugin::PluginArgs),
 
@@ -45,6 +48,7 @@ fn main() {
         Commands::Build(args) => commands::build::execute(args),
         Commands::Convert(args) => commands::convert::execute(args),
         Commands::Inspect(args) => commands::inspect::execute(args),
+        Commands::Doctor => commands::doctor::execute(),
         Commands::Plugin(args) => commands::plugin::execute(args),
         Commands::Clean(args) => commands::clean::execute(args),
         Commands::Version => commands::version::execute(),

@@ -70,7 +70,7 @@ fn clean_directory(path: &PathBuf, name: &str, dry_run: bool) -> Result<(), Box<
     } else {
         output::cleaning(&format!("{} ({})", name, size_str));
         std::fs::remove_dir_all(path)?;
-        output::removed(&format!("{}", name));
+        output::removed(name);
     }
 
     Ok(())

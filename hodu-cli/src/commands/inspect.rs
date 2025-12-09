@@ -2,9 +2,10 @@
 //!
 //! This command inspects model and tensor files, optionally using format plugins.
 
-use crate::output;
+use crate::output::{self, colors};
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
+use hodu_plugin_sdk::ops::Op;
 use hodu_plugin_sdk::{hdt, Snapshot, Tensor};
 use std::path::{Path, PathBuf};
 
@@ -54,6 +55,7 @@ pub fn execute(args: InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn inspect_hdss(args: &InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
+    let use_color = output::supports_color();
     let snapshot = Snapshot::load(&args.file).map_err(|e| format!("Failed to load snapshot: {}", e))?;
 
     if args.format == "json" {
@@ -61,50 +63,122 @@ fn inspect_hdss(args: &InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Pretty format
-    if let Some(name) = &snapshot.name {
-        println!("Model: {}", name);
+    // Header
+    let model_name = snapshot.name.as_deref().unwrap_or("unnamed");
+    if use_color {
+        println!(
+            "{}{}{} {}",
+            colors::BOLD,
+            model_name,
+            colors::RESET,
+            format_file_size(&args.file)
+        );
     } else {
-        println!("Model: {}", args.file.display());
-    }
-
-    println!("Inputs ({}):", snapshot.inputs.len());
-    for input in &snapshot.inputs {
-        println!("  - {} : {:?} ({:?})", input.name, input.shape.dims(), input.dtype);
+        println!("{} {}", model_name, format_file_size(&args.file));
     }
     println!();
 
+    // Inputs
+    print_section_header("Inputs", snapshot.inputs.len(), use_color);
+    for input in &snapshot.inputs {
+        print_tensor_row(
+            &input.name,
+            input.shape.dims(),
+            &format!("{:?}", input.dtype),
+            use_color,
+        );
+    }
+    println!();
+
+    // Constants (if any)
     if !snapshot.constants.is_empty() {
-        println!("Constants ({}):", snapshot.constants.len());
+        print_section_header("Constants", snapshot.constants.len(), use_color);
         for constant in &snapshot.constants {
             let name = constant.name.as_deref().unwrap_or("(unnamed)");
-            println!(
-                "  - {} : {:?} ({:?}, {} bytes)",
-                name,
-                constant.shape.dims(),
-                constant.dtype,
-                constant.data.len()
-            );
+            let size_str = format_bytes(constant.data.len());
+            if use_color {
+                println!(
+                    "  {}•{} {:<16} {:?} {}{:?}{} {}{}{}",
+                    colors::CYAN,
+                    colors::RESET,
+                    name,
+                    constant.shape.dims(),
+                    colors::CYAN,
+                    constant.dtype,
+                    colors::RESET,
+                    colors::YELLOW,
+                    size_str,
+                    colors::RESET
+                );
+            } else {
+                println!(
+                    "  • {:<16} {:?} {:?} {}",
+                    name,
+                    constant.shape.dims(),
+                    constant.dtype,
+                    size_str
+                );
+            }
         }
         println!();
     }
 
-    println!("Outputs ({}):", snapshot.targets.len());
+    // Outputs
+    print_section_header("Outputs", snapshot.targets.len(), use_color);
     for target in &snapshot.targets {
-        println!("  - {}", target.name);
+        if use_color {
+            println!("  {}→{} {}", colors::GREEN, colors::RESET, target.name);
+        } else {
+            println!("  → {}", target.name);
+        }
     }
     println!();
 
-    println!("Nodes ({}):", snapshot.nodes.len());
+    // Nodes
+    print_section_header("Graph", snapshot.nodes.len(), use_color);
     if args.verbose {
         for (i, node) in snapshot.nodes.iter().enumerate() {
-            println!("  [{}] {:?}", i, node.op);
-            println!("      inputs: {:?}", node.input_ids);
-            println!("      output: {:?} ({:?})", node.output_id, node.output_dtype);
+            let op_str = format_op(&node.op);
+            if use_color {
+                println!(
+                    "  {}[{:3}]{} {} {}→ {:?}{}",
+                    colors::CYAN,
+                    i,
+                    colors::RESET,
+                    op_str,
+                    colors::YELLOW,
+                    node.output_id,
+                    colors::RESET
+                );
+            } else {
+                println!("  [{:3}] {} → {:?}", i, op_str, node.output_id);
+            }
         }
     } else {
+        // Group by op category
+        let mut categories = std::collections::HashMap::new();
         for node in &snapshot.nodes {
-            println!("  - {:?}", node.op);
+            let cat = get_op_category(&node.op);
+            *categories.entry(cat).or_insert(0) += 1;
+        }
+
+        let mut sorted: Vec<_> = categories.into_iter().collect();
+        sorted.sort_by(|a, b| b.1.cmp(&a.1));
+
+        for (cat, count) in sorted {
+            if use_color {
+                println!(
+                    "  {}•{} {:<20} {}×{}{}",
+                    colors::CYAN,
+                    colors::RESET,
+                    cat,
+                    colors::YELLOW,
+                    count,
+                    colors::RESET
+                );
+            } else {
+                println!("  • {:<20} ×{}", cat, count);
+            }
         }
     }
 
@@ -123,6 +197,7 @@ fn inspect_json_tensor(args: &InspectArgs) -> Result<(), Box<dyn std::error::Err
 }
 
 fn print_tensor_info(tensor: &Tensor, path: &Path, as_json: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let use_color = output::supports_color();
     let tensor_shape = tensor.shape();
     let shape = tensor_shape.dims();
     let dtype = tensor.dtype();
@@ -141,17 +216,30 @@ fn print_tensor_info(tensor: &Tensor, path: &Path, as_json: bool) -> Result<(), 
             })
         );
     } else {
-        println!("File: {}", path.display());
-        println!("Shape: {:?}", shape);
-        println!("DType: {:?}", dtype);
-        println!("Elements: {}", numel);
-        println!("Size: {} bytes", size_bytes);
+        let filename = path.file_name().unwrap_or_default().to_string_lossy();
+        if use_color {
+            println!("{}{}{}", colors::BOLD, filename, colors::RESET);
+            println!();
+            println!("  {}Shape{} {:?}", colors::CYAN, colors::RESET, shape);
+            println!("  {}DType{} {:?}", colors::CYAN, colors::RESET, dtype);
+            println!("  {}Elements{} {}", colors::CYAN, colors::RESET, format_number(numel));
+            println!("  {}Size{} {}", colors::CYAN, colors::RESET, format_bytes(size_bytes));
+        } else {
+            println!("{}", filename);
+            println!();
+            println!("  Shape    {:?}", shape);
+            println!("  DType    {:?}", dtype);
+            println!("  Elements {}", format_number(numel));
+            println!("  Size     {}", format_bytes(size_bytes));
+        }
     }
 
     Ok(())
 }
 
 fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let use_color = output::supports_color();
+
     // Create plugin manager and get format plugin by extension
     let mut manager = PluginManager::new()?;
     let client = manager.get_format_for_extension(ext).map_err(|_| {
@@ -181,29 +269,56 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
         if args.format == "json" {
             println!("{}", serde_json::to_string_pretty(&snapshot)?);
         } else {
-            if let Some(name) = &snapshot.name {
-                println!("Model: {}", name);
+            // Header
+            let model_name = snapshot.name.as_deref().unwrap_or("unnamed");
+            if use_color {
+                println!(
+                    "{}{}{} {}via {}{}",
+                    colors::BOLD,
+                    model_name,
+                    colors::RESET,
+                    colors::CYAN,
+                    plugin_entry.name,
+                    colors::RESET
+                );
             } else {
-                println!("Model: {}", args.file.display());
+                println!("{} via {}", model_name, plugin_entry.name);
             }
-            println!("Format: {} ({})", ext, plugin_entry.name);
+            println!();
 
-            println!("Inputs ({}):", snapshot.inputs.len());
+            // Inputs
+            print_section_header("Inputs", snapshot.inputs.len(), use_color);
             for input in &snapshot.inputs {
-                println!("  - {} : {:?} ({:?})", input.name, input.shape.dims(), input.dtype);
+                print_tensor_row(
+                    &input.name,
+                    input.shape.dims(),
+                    &format!("{:?}", input.dtype),
+                    use_color,
+                );
             }
             println!();
 
-            println!("Outputs ({}):", snapshot.targets.len());
+            // Outputs
+            print_section_header("Outputs", snapshot.targets.len(), use_color);
             for target in &snapshot.targets {
-                println!("  - {}", target.name);
+                if use_color {
+                    println!("  {}→{} {}", colors::GREEN, colors::RESET, target.name);
+                } else {
+                    println!("  → {}", target.name);
+                }
             }
             println!();
 
-            println!("Nodes: {}", snapshot.nodes.len());
+            // Nodes summary
+            print_section_header("Graph", snapshot.nodes.len(), use_color);
             if args.verbose {
                 for (i, node) in snapshot.nodes.iter().enumerate() {
-                    println!("  [{}] {:?}", i, node.op);
+                    let op_str = format_op(&node.op);
+                    if use_color {
+                        println!("  {}[{:3}]{} {}", colors::CYAN, i, colors::RESET, op_str);
+                    } else {
+                        println!("  [{:3}] {}", i, op_str);
+                    }
                 }
             }
         }
@@ -229,10 +344,25 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
                 })
             );
         } else {
-            println!("File: {}", args.file.display());
-            println!("Shape: {:?}", tensor_data.shape);
-            println!("DType: {}", tensor_data.dtype.name());
-            println!("Size: {} bytes", tensor_data.data.len());
+            let filename = args.file.file_name().unwrap_or_default().to_string_lossy();
+            if use_color {
+                println!("{}{}{}", colors::BOLD, filename, colors::RESET);
+                println!();
+                println!("  {}Shape{} {:?}", colors::CYAN, colors::RESET, tensor_data.shape);
+                println!("  {}DType{} {}", colors::CYAN, colors::RESET, tensor_data.dtype.name());
+                println!(
+                    "  {}Size{} {}",
+                    colors::CYAN,
+                    colors::RESET,
+                    format_bytes(tensor_data.data.len())
+                );
+            } else {
+                println!("{}", filename);
+                println!();
+                println!("  Shape {:?}", tensor_data.shape);
+                println!("  DType {}", tensor_data.dtype.name());
+                println!("  Size  {}", format_bytes(tensor_data.data.len()));
+            }
         }
         return Ok(());
     }
@@ -242,4 +372,124 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
         plugin_entry.name
     )
     .into())
+}
+
+// Helper functions
+
+fn print_section_header(title: &str, count: usize, use_color: bool) {
+    if use_color {
+        println!(
+            "{}{}{} {}({}){}",
+            colors::BOLD,
+            colors::CYAN,
+            title,
+            colors::RESET,
+            count,
+            colors::RESET
+        );
+    } else {
+        println!("{} ({})", title, count);
+    }
+}
+
+fn print_tensor_row(name: &str, shape: &[usize], dtype: &str, use_color: bool) {
+    if use_color {
+        println!(
+            "  {}•{} {:<16} {:?} {}{}{}",
+            colors::CYAN,
+            colors::RESET,
+            name,
+            shape,
+            colors::CYAN,
+            dtype,
+            colors::RESET
+        );
+    } else {
+        println!("  • {:<16} {:?} {}", name, shape, dtype);
+    }
+}
+
+fn format_op(op: &Op) -> String {
+    // Format as "Category[variant]" e.g., "Matrix[dot]", "Binary[mul]"
+    let debug_str = format!("{:?}", op);
+
+    // Parse "Category(Variant)" or "Category(Variant { ... })"
+    if let Some(paren_pos) = debug_str.find('(') {
+        let category = &debug_str[..paren_pos];
+        let rest = &debug_str[paren_pos + 1..];
+
+        // Extract variant name (before any whitespace or brace)
+        let variant = rest
+            .trim_end_matches(')')
+            .split(|c: char| c.is_whitespace() || c == '{')
+            .next()
+            .unwrap_or("")
+            .to_lowercase();
+
+        if variant.is_empty() {
+            category.to_string()
+        } else {
+            format!("{}[{}]", category, variant)
+        }
+    } else {
+        debug_str
+    }
+}
+
+fn get_op_category(op: &Op) -> &'static str {
+    match op {
+        Op::Binary(_) => "Binary",
+        Op::BinaryLogical(_) => "BinaryLogical",
+        Op::Cmp(_) => "Compare",
+        Op::CmpScalar(_) => "CmpScalar",
+        Op::Unary(_) => "Unary",
+        Op::UnaryLogical(_) => "UnaryLogical",
+        Op::UnaryScalar(_) => "UnaryScalar",
+        Op::Matrix(_) => "Matrix",
+        Op::Reduce(_) => "Reduce",
+        Op::Concat(_) => "Concat",
+        Op::Split(_) => "Split",
+        Op::Indexing(_) => "Indexing",
+        Op::Conv(_) => "Conv",
+        Op::Windowing(_) => "Windowing",
+        Op::Shape(_) => "Shape",
+        Op::ShapeScalars(_) => "ShapeScalars",
+        Op::Cast(_) => "Cast",
+        Op::Memory(_) => "Memory",
+        Op::Dummy => "Dummy",
+    }
+}
+
+fn format_bytes(bytes: usize) -> String {
+    const KB: usize = 1024;
+    const MB: usize = KB * 1024;
+    const GB: usize = MB * 1024;
+
+    if bytes >= GB {
+        format!("{:.2} GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
+        format!("{:.2} MB", bytes as f64 / MB as f64)
+    } else if bytes >= KB {
+        format!("{:.2} KB", bytes as f64 / KB as f64)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
+fn format_number(n: usize) -> String {
+    if n >= 1_000_000_000 {
+        format!("{:.2}B", n as f64 / 1_000_000_000.0)
+    } else if n >= 1_000_000 {
+        format!("{:.2}M", n as f64 / 1_000_000.0)
+    } else if n >= 1_000 {
+        format!("{:.2}K", n as f64 / 1_000.0)
+    } else {
+        format!("{}", n)
+    }
+}
+
+fn format_file_size(path: &Path) -> String {
+    std::fs::metadata(path)
+        .map(|m| format_bytes(m.len() as usize))
+        .unwrap_or_default()
 }

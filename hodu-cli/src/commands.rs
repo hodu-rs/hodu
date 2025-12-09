@@ -2,6 +2,7 @@ pub mod build;
 pub mod clean;
 pub mod completions;
 pub mod convert;
+pub mod doctor;
 pub mod inspect;
 pub mod plugin;
 pub mod run;
