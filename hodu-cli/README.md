@@ -46,6 +46,7 @@ hodu completions power-shell | Out-String | Invoke-Expression
 | `hodu convert <input> -o output` | Convert models/tensors between formats |
 | `hodu inspect <file>` | Inspect model or tensor file |
 | `hodu clean` | Clean build cache |
+| `hodu doctor` | Check system environment and plugin build capabilities |
 | `hodu version` | Show version information |
 | `hodu completions <shell>` | Generate shell completions (bash, zsh, fish, powershell, elvish) |
 
@@ -126,6 +127,24 @@ hodu inspect model.onnx -v
 
 # Output as JSON
 hodu inspect model.hdss -f json
+```
+
+### Check Environment
+
+```bash
+# Check host system and available devices
+hodu doctor
+
+# Example output:
+# Host
+#   aarch64-apple-darwin
+#
+# Devices
+#   cpu, metal
+#
+# Buildable Targets (aot-cpu)
+#   ✓ aarch64-apple-darwin
+#   ✗ x86_64-unknown-linux-gnu
 ```
 
 ### Plugin Management
