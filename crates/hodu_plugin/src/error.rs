@@ -1,10 +1,8 @@
-//! Plugin SDK error types
-//!
-//! This module provides SDK-specific error types, independent from `hodu_core::HoduError`.
+//! Plugin error types
 
 use std::fmt;
 
-/// Plugin SDK error type
+/// Plugin error type
 ///
 /// Note: This enum is `#[non_exhaustive]` - new error variants may be added in future versions.
 /// Always include a wildcard pattern when matching.

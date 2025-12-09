@@ -6,7 +6,7 @@ use crate::rpc::{
     error_codes, methods, InitializeParams, InitializeResult, Notification, Request, RequestId, Response, RpcError,
     PROTOCOL_VERSION,
 };
-use crate::SDK_VERSION;
+use crate::PLUGIN_VERSION;
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
@@ -233,7 +233,7 @@ impl PluginServer {
             name: self.name.clone(),
             version: self.version.clone(),
             protocol_version: PROTOCOL_VERSION.to_string(),
-            sdk_version: SDK_VERSION.to_string(),
+            plugin_version: PLUGIN_VERSION.to_string(),
             capabilities: self.capabilities.clone(),
             model_extensions: self.model_extensions.clone(),
             tensor_extensions: self.tensor_extensions.clone(),

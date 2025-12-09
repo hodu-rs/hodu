@@ -6,8 +6,12 @@ use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use crate::tensor::{load_tensor_file, save_outputs};
 use clap::Args;
-use hodu_plugin_sdk::rpc::TensorInput;
-use hodu_plugin_sdk::{CoreDevice, DType, Device, Snapshot, Tensor, TensorData};
+use hodu_core::format::hdt;
+use hodu_core::snapshot::Snapshot;
+use hodu_core::tensor::Tensor;
+use hodu_core::types::{DType, Device as CoreDevice, Shape};
+use hodu_plugin::rpc::TensorInput;
+use hodu_plugin::{Device, PluginDType, TensorData};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -165,7 +169,7 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     let mut input_refs = Vec::new();
     for (name, tensor_data) in &inputs {
         let temp_path = std::env::temp_dir().join(format!("hodu_input_{}_{}.hdt", name, std::process::id()));
-        tensor_data.save(&temp_path)?;
+        save_tensor_data(tensor_data, &temp_path)?;
         input_refs.push(TensorInput {
             name: name.clone(),
             path: temp_path.to_string_lossy().to_string(),
@@ -250,7 +254,7 @@ pub fn execute(args: RunArgs) -> Result<(), Box<dyn std::error::Error>> {
     // Load output tensors from paths
     let mut outputs: HashMap<String, TensorData> = HashMap::new();
     for output_ref in result.outputs {
-        let tensor_data = TensorData::load(&output_ref.path)?;
+        let tensor_data = load_tensor_data(&output_ref.path)?;
         outputs.insert(output_ref.name, tensor_data);
     }
 
@@ -294,7 +298,7 @@ fn parse_inputs(
             )
         })?;
 
-        let tensor_data = load_tensor_file(&path, input_spec.shape.dims(), input_spec.dtype.into())?;
+        let tensor_data = load_tensor_file(&path, input_spec.shape.dims(), core_dtype_to_plugin(input_spec.dtype))?;
         inputs.insert(name.to_string(), tensor_data);
     }
 
@@ -335,8 +339,9 @@ fn output_results(outputs: &HashMap<String, TensorData>, args: &RunArgs) -> Resu
             names.sort();
             for name in names {
                 let data = &outputs[name];
-                let dtype: DType = data.dtype.into();
-                let tensor = Tensor::from_bytes(&data.data, data.shape.clone(), dtype, CoreDevice::CPU)?;
+                let dtype = plugin_dtype_to_core(data.dtype);
+                let shape = Shape::new(&data.shape);
+                let tensor = Tensor::from_bytes(&data.data, shape, dtype, CoreDevice::CPU)?;
                 // Colored ">" prefix, white name
                 if output::supports_color() {
                     println!("{}>{}  {}", output::colors::BOLD_YELLOW, output::colors::RESET, name);
@@ -480,4 +485,68 @@ fn current_target_triple() -> String {
         all(target_arch = "x86_64", target_os = "windows"),
     )))]
     return String::new();
+}
+
+fn load_tensor_data(path: &str) -> Result<TensorData, Box<dyn std::error::Error>> {
+    let tensor = hdt::load(path).map_err(|e| format!("Failed to load HDT: {}", e))?;
+    let shape: Vec<usize> = tensor.shape().dims().to_vec();
+    let dtype = core_dtype_to_plugin(tensor.dtype());
+    let data = tensor
+        .to_bytes()
+        .map_err(|e| format!("Failed to get tensor bytes: {}", e))?;
+    Ok(TensorData::new(data, shape, dtype))
+}
+
+fn core_dtype_to_plugin(dtype: DType) -> PluginDType {
+    match dtype {
+        DType::BOOL => PluginDType::Bool,
+        DType::F8E4M3 => PluginDType::F8E4M3,
+        DType::F8E5M2 => PluginDType::F8E5M2,
+        DType::BF16 => PluginDType::BF16,
+        DType::F16 => PluginDType::F16,
+        DType::F32 => PluginDType::F32,
+        DType::F64 => PluginDType::F64,
+        DType::U8 => PluginDType::U8,
+        DType::U16 => PluginDType::U16,
+        DType::U32 => PluginDType::U32,
+        DType::U64 => PluginDType::U64,
+        DType::I8 => PluginDType::I8,
+        DType::I16 => PluginDType::I16,
+        DType::I32 => PluginDType::I32,
+        DType::I64 => PluginDType::I64,
+    }
+}
+
+fn plugin_dtype_to_core(dtype: PluginDType) -> DType {
+    match dtype {
+        PluginDType::Bool => DType::BOOL,
+        PluginDType::F8E4M3 => DType::F8E4M3,
+        PluginDType::F8E5M2 => DType::F8E5M2,
+        PluginDType::BF16 => DType::BF16,
+        PluginDType::F16 => DType::F16,
+        PluginDType::F32 => DType::F32,
+        PluginDType::F64 => DType::F64,
+        PluginDType::U8 => DType::U8,
+        PluginDType::U16 => DType::U16,
+        PluginDType::U32 => DType::U32,
+        PluginDType::U64 => DType::U64,
+        PluginDType::I8 => DType::I8,
+        PluginDType::I16 => DType::I16,
+        PluginDType::I32 => DType::I32,
+        PluginDType::I64 => DType::I64,
+        _ => DType::F32, // fallback for future dtypes
+    }
+}
+
+fn save_tensor_data(
+    tensor_data: &TensorData,
+    path: impl AsRef<std::path::Path>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use hodu_core::format::hdt;
+
+    let shape = Shape::new(&tensor_data.shape);
+    let dtype = plugin_dtype_to_core(tensor_data.dtype);
+    let tensor = Tensor::from_bytes(&tensor_data.data, shape, dtype, CoreDevice::CPU).map_err(|e| e.to_string())?;
+    hdt::save(&tensor, path).map_err(|e| e.to_string())?;
+    Ok(())
 }

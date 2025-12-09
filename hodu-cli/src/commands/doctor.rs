@@ -2,7 +2,7 @@
 
 use crate::output::{self, colors};
 use crate::plugins::{PluginManager, PluginRegistry};
-use hodu_plugin_sdk::current_host_triple;
+use hodu_plugin::current_host_triple;
 
 pub fn execute() -> Result<(), Box<dyn std::error::Error>> {
     let host = current_host_triple();

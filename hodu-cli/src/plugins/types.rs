@@ -26,8 +26,8 @@ pub struct PluginEntry {
     pub source: PluginSource,
     /// Installation timestamp (ISO 8601)
     pub installed_at: String,
-    /// SDK version used to build
-    pub sdk_version: String,
+    /// Plugin protocol version used to build
+    pub plugin_version: String,
     /// Whether the plugin is enabled (default: true)
     #[serde(default = "default_enabled")]
     pub enabled: bool,
@@ -53,26 +53,36 @@ pub enum PluginType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginCapabilities {
     // Backend capabilities
+    /// Supports `backend.run` RPC method
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub runner: Option<bool>,
+    /// Supports `backend.build` RPC method
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub builder: Option<bool>,
+    /// Supported devices (e.g., "cpu", "cuda", "metal")
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub devices: Vec<String>,
+    /// Supported build targets
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub targets: Vec<String>,
 
     // Format capabilities
+    /// Supports `format.load_model` RPC method
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub load_model: Option<bool>,
+    /// Supports `format.save_model` RPC method
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub save_model: Option<bool>,
+    /// Supports `format.load_tensor` RPC method
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub load_tensor: Option<bool>,
+    /// Supports `format.save_tensor` RPC method
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub save_tensor: Option<bool>,
+    /// Supported model file extensions (e.g., ["onnx", "pb"])
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub model_extensions: Vec<String>,
+    /// Supported tensor file extensions (e.g., ["npy", "npz"])
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tensor_extensions: Vec<String>,
 }
@@ -167,16 +177,16 @@ pub enum DetectedPluginType {
     Backend {
         name: String,
         version: String,
-        sdk_version: String,
+        plugin_version: String,
     },
     ModelFormat {
         name: String,
         version: String,
-        sdk_version: String,
+        plugin_version: String,
     },
     TensorFormat {
         name: String,
         version: String,
-        sdk_version: String,
+        plugin_version: String,
     },
 }

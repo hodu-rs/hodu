@@ -5,8 +5,11 @@
 use crate::output::{self, colors};
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
-use hodu_plugin_sdk::ops::Op;
-use hodu_plugin_sdk::{hdt, Snapshot, Tensor};
+use hodu_core::format::hdt;
+use hodu_core::ops::Op;
+use hodu_core::snapshot::Snapshot;
+use hodu_core::tensor::Tensor;
+use hodu_plugin::{PluginDType, TensorData};
 use std::path::{Path, PathBuf};
 
 /// Convert a path to a string, returning an error if the path is not valid UTF-8
@@ -191,7 +194,7 @@ fn inspect_hdt(args: &InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn inspect_json_tensor(args: &InspectArgs) -> Result<(), Box<dyn std::error::Error>> {
-    use hodu_plugin_sdk::json;
+    use hodu_core::format::json;
     let tensor = json::load(&args.file).map_err(|e| format!("Failed to load JSON tensor: {}", e))?;
     print_tensor_info(&tensor, &args.file, args.format == "json")
 }
@@ -330,8 +333,7 @@ fn inspect_with_plugin(args: &InspectArgs, ext: &str) -> Result<(), Box<dyn std:
         let result = client.load_tensor(path_to_str(&args.file)?)?;
 
         // Load tensor data from path
-        let tensor_data = hodu_plugin_sdk::TensorData::load(&result.tensor_path)
-            .map_err(|e| format!("Failed to load tensor: {}", e))?;
+        let tensor_data = load_tensor_data(&result.tensor_path).map_err(|e| format!("Failed to load tensor: {}", e))?;
 
         if args.format == "json" {
             println!(
@@ -492,4 +494,35 @@ fn format_file_size(path: &Path) -> String {
     std::fs::metadata(path)
         .map(|m| format_bytes(m.len() as usize))
         .unwrap_or_default()
+}
+
+fn load_tensor_data(path: &str) -> Result<TensorData, Box<dyn std::error::Error>> {
+    let tensor = hdt::load(path).map_err(|e| format!("Failed to load HDT: {}", e))?;
+    let shape: Vec<usize> = tensor.shape().dims().to_vec();
+    let dtype = core_dtype_to_plugin(tensor.dtype());
+    let data = tensor
+        .to_bytes()
+        .map_err(|e| format!("Failed to get tensor bytes: {}", e))?;
+    Ok(TensorData::new(data, shape, dtype))
+}
+
+fn core_dtype_to_plugin(dtype: hodu_core::types::DType) -> PluginDType {
+    use hodu_core::types::DType;
+    match dtype {
+        DType::BOOL => PluginDType::Bool,
+        DType::F8E4M3 => PluginDType::F8E4M3,
+        DType::F8E5M2 => PluginDType::F8E5M2,
+        DType::BF16 => PluginDType::BF16,
+        DType::F16 => PluginDType::F16,
+        DType::F32 => PluginDType::F32,
+        DType::F64 => PluginDType::F64,
+        DType::U8 => PluginDType::U8,
+        DType::U16 => PluginDType::U16,
+        DType::U32 => PluginDType::U32,
+        DType::U64 => PluginDType::U64,
+        DType::I8 => PluginDType::I8,
+        DType::I16 => PluginDType::I16,
+        DType::I32 => PluginDType::I32,
+        DType::I64 => PluginDType::I64,
+    }
 }

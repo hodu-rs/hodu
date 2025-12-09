@@ -3,7 +3,7 @@
 use super::install::{fetch_official_registry, install_from_git, install_from_path, install_from_registry};
 use crate::output;
 use crate::plugins::{PluginRegistry, PluginSource};
-use hodu_plugin_sdk::SDK_VERSION;
+use hodu_plugin::PLUGIN_VERSION;
 use std::path::PathBuf;
 
 pub fn update_plugins(name: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
@@ -46,18 +46,18 @@ pub fn update_plugins(name: Option<&str>) -> Result<(), Box<dyn std::error::Erro
         // Check if plugin is from official registry and has a newer version
         if let Some(ref reg) = official_registry {
             if let Some(reg_plugin) = reg.plugin.iter().find(|p| p.name == plugin.name) {
-                // Get host SDK version
-                let host_sdk_parts: Vec<&str> = SDK_VERSION.split('.').collect();
-                let host_sdk = if host_sdk_parts.len() >= 2 {
-                    format!("{}.{}", host_sdk_parts[0], host_sdk_parts[1])
+                // Get host plugin version (major.minor)
+                let host_version_parts: Vec<&str> = PLUGIN_VERSION.split('.').collect();
+                let host_major_minor = if host_version_parts.len() >= 2 {
+                    format!("{}.{}", host_version_parts[0], host_version_parts[1])
                 } else {
-                    SDK_VERSION.to_string()
+                    PLUGIN_VERSION.to_string()
                 };
 
                 // Find latest compatible version
-                if let Some(latest) = reg_plugin.versions.iter().find(|v| v.sdk == host_sdk) {
+                if let Some(latest) = reg_plugin.versions.iter().find(|v| v.sdk == host_major_minor) {
                     if latest.version != plugin.version {
-                        println!("  {} -> {} (sdk {})", plugin.version, latest.version, latest.sdk);
+                        println!("  {} -> {} (protocol {})", plugin.version, latest.version, latest.sdk);
                         install_from_registry(&plugin.name, None, false, true)?;
                         continue;
                     } else {

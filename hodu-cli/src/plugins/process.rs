@@ -5,7 +5,7 @@
 
 use super::client::{CancellationHandle, ClientError, PluginClient, DEFAULT_TIMEOUT};
 use super::registry::{PluginEntry, PluginRegistry, RegistryError};
-use hodu_plugin_sdk::rpc::InitializeResult;
+use hodu_plugin::rpc::InitializeResult;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};

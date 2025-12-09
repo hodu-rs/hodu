@@ -3,12 +3,12 @@
 //! This module provides the client-side JSON-RPC implementation for communicating
 //! with plugin processes over stdio.
 
-use hodu_plugin_sdk::rpc::{
+use hodu_plugin::rpc::{
     methods, BuildParams, CancelParams, InitializeParams, InitializeResult, ListTargetsResult, LoadModelParams,
     LoadModelResult, LoadTensorParams, LoadTensorResult, LogParams, Notification, Request, RequestId, Response,
     RpcError, RunParams, RunResult, SaveModelParams, SaveTensorParams, TensorInput, JSONRPC_VERSION, PROTOCOL_VERSION,
 };
-use hodu_plugin_sdk::SDK_VERSION;
+use hodu_plugin::PLUGIN_VERSION;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin};
 use std::sync::atomic::{AtomicI64, Ordering};
@@ -124,7 +124,7 @@ impl PluginClient {
     /// Initialize the plugin and validate version compatibility
     pub fn initialize(&mut self) -> Result<InitializeResult, ClientError> {
         let params = InitializeParams {
-            sdk_version: SDK_VERSION.to_string(),
+            plugin_version: PLUGIN_VERSION.to_string(),
             protocol_version: PROTOCOL_VERSION.to_string(),
         };
 
@@ -140,11 +140,11 @@ impl PluginClient {
             });
         }
 
-        // Warn if SDK versions differ (informational only)
-        if result.sdk_version != SDK_VERSION {
+        // Warn if plugin versions differ (informational only)
+        if result.plugin_version != PLUGIN_VERSION {
             eprintln!(
-                "Warning: Plugin '{}' SDK version ({}) differs from CLI ({})",
-                result.name, result.sdk_version, SDK_VERSION
+                "Warning: Plugin '{}' version ({}) differs from CLI ({})",
+                result.name, result.plugin_version, PLUGIN_VERSION
             );
         }
 

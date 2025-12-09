@@ -1,6 +1,6 @@
 //! Compiled artifact types for AOT compilation output
 
-use crate::SdkDType;
+use crate::PluginDType;
 
 /// Compiled artifact produced by a backend's build function
 #[derive(Debug, Clone)]
@@ -29,7 +29,7 @@ pub struct CompiledArtifact {
 pub struct ArtifactTensorInfo {
     pub name: String,
     pub shape: Vec<usize>,
-    pub dtype: SdkDType,
+    pub dtype: PluginDType,
 }
 
 /// Symbol information for native artifacts
@@ -55,7 +55,7 @@ impl CompiledArtifact {
     }
 
     /// Add input tensor info
-    pub fn with_input(mut self, name: impl Into<String>, shape: Vec<usize>, dtype: SdkDType) -> Self {
+    pub fn with_input(mut self, name: impl Into<String>, shape: Vec<usize>, dtype: PluginDType) -> Self {
         self.inputs.push(ArtifactTensorInfo {
             name: name.into(),
             shape,
@@ -65,7 +65,7 @@ impl CompiledArtifact {
     }
 
     /// Add output tensor info
-    pub fn with_output(mut self, name: impl Into<String>, shape: Vec<usize>, dtype: SdkDType) -> Self {
+    pub fn with_output(mut self, name: impl Into<String>, shape: Vec<usize>, dtype: PluginDType) -> Self {
         self.outputs.push(ArtifactTensorInfo {
             name: name.into(),
             shape,

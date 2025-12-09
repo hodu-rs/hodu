@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// JSON-RPC version string
 pub const JSONRPC_VERSION: &str = "2.0";
 
-/// SDK protocol version for compatibility checking
+/// Plugin protocol version for compatibility checking
 pub const PROTOCOL_VERSION: &str = "1.0.0";
 
 // ============================================================================
@@ -134,7 +134,7 @@ pub mod capabilities {
 /// Initialize request params
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InitializeParams {
-    pub sdk_version: String,
+    pub plugin_version: String,
     pub protocol_version: String,
 }
 
@@ -144,7 +144,7 @@ pub struct InitializeResult {
     pub name: String,
     pub version: String,
     pub protocol_version: String,
-    pub sdk_version: String,
+    pub plugin_version: String,
     pub capabilities: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model_extensions: Option<Vec<String>>,

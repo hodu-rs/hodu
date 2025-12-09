@@ -47,6 +47,10 @@ hodu build model.hdss -o model
 hodu build model.onnx -o model.dylib
 ```
 
+### hodu-script (planned)
+
+Scripting language for Hodu. Define models easily and run scripts directly with hodu-cli.
+
 ### hodu-gui (planned)
 
 Model visualization and editing.

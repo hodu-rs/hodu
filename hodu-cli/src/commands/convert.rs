@@ -134,15 +134,18 @@ fn convert_tensor(
     registry: &PluginRegistry,
     manager: &mut PluginManager,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use hodu_plugin_sdk::{json, TensorData};
+    use hodu_core::format::json;
+    use hodu_core::tensor::Tensor;
+    use hodu_core::types::{Device as CoreDevice, Shape};
+    use hodu_plugin::TensorData;
 
     // Step 1: Load input tensor
     let tensor_data = match input_ext {
-        "hdt" => TensorData::load(&args.input)?,
+        "hdt" => load_tensor_data_from_path(&args.input)?,
         "json" => {
             let tensor = json::load(&args.input).map_err(|e| e.to_string())?;
             let shape = tensor.shape().dims().to_vec();
-            let dtype = tensor.dtype().into();
+            let dtype = core_dtype_to_plugin(tensor.dtype());
             let data = tensor.to_bytes().map_err(|e| e.to_string())?;
             TensorData::new(data, shape, dtype)
         },
@@ -158,19 +161,18 @@ fn convert_tensor(
 
             let client = manager.get_plugin(&plugin.name)?;
             let result = client.load_tensor(path_to_str(&args.input)?)?;
-            TensorData::load(&result.tensor_path)?
+            load_tensor_data_from_path(&result.tensor_path)?
         },
     };
 
     // Step 2: Save to output format
     match output_ext {
         "hdt" => {
-            tensor_data.save(&args.output)?;
+            save_tensor_data(&tensor_data, &args.output)?;
         },
         "json" => {
-            use hodu_plugin_sdk::{CoreDevice, Shape, Tensor};
             let shape = Shape::new(&tensor_data.shape);
-            let dtype = tensor_data.core_dtype();
+            let dtype = plugin_dtype_to_core(tensor_data.dtype);
             let tensor =
                 Tensor::from_bytes(&tensor_data.data, shape, dtype, CoreDevice::CPU).map_err(|e| e.to_string())?;
             json::save(&tensor, &args.output).map_err(|e| e.to_string())?;
@@ -187,7 +189,7 @@ fn convert_tensor(
 
             // Save to temp hdt first
             let temp_path = std::env::temp_dir().join(format!("hodu_convert_{}.hdt", std::process::id()));
-            tensor_data.save(&temp_path)?;
+            save_tensor_data(&tensor_data, &temp_path)?;
 
             let client = manager.get_plugin(&plugin.name)?;
             client.save_tensor(path_to_str(&temp_path)?, path_to_str(&args.output)?)?;
@@ -202,4 +204,77 @@ fn convert_tensor(
         args.output.file_name().unwrap_or_default().to_string_lossy()
     ));
     Ok(())
+}
+
+fn load_tensor_data_from_path(path: impl AsRef<Path>) -> Result<hodu_plugin::TensorData, Box<dyn std::error::Error>> {
+    use hodu_core::format::hdt;
+    use hodu_plugin::TensorData;
+
+    let tensor = hdt::load(path).map_err(|e| format!("Failed to load HDT: {}", e))?;
+    let shape: Vec<usize> = tensor.shape().dims().to_vec();
+    let dtype = core_dtype_to_plugin(tensor.dtype());
+    let data = tensor
+        .to_bytes()
+        .map_err(|e| format!("Failed to get tensor bytes: {}", e))?;
+    Ok(TensorData::new(data, shape, dtype))
+}
+
+fn save_tensor_data(
+    tensor_data: &hodu_plugin::TensorData,
+    path: impl AsRef<Path>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use hodu_core::format::hdt;
+    use hodu_core::tensor::Tensor;
+    use hodu_core::types::{Device as CoreDevice, Shape};
+
+    let shape = Shape::new(&tensor_data.shape);
+    let dtype = plugin_dtype_to_core(tensor_data.dtype);
+    let tensor = Tensor::from_bytes(&tensor_data.data, shape, dtype, CoreDevice::CPU).map_err(|e| e.to_string())?;
+    hdt::save(&tensor, path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn core_dtype_to_plugin(dtype: hodu_core::types::DType) -> hodu_plugin::PluginDType {
+    use hodu_core::types::DType;
+    use hodu_plugin::PluginDType;
+    match dtype {
+        DType::BOOL => PluginDType::Bool,
+        DType::F8E4M3 => PluginDType::F8E4M3,
+        DType::F8E5M2 => PluginDType::F8E5M2,
+        DType::BF16 => PluginDType::BF16,
+        DType::F16 => PluginDType::F16,
+        DType::F32 => PluginDType::F32,
+        DType::F64 => PluginDType::F64,
+        DType::U8 => PluginDType::U8,
+        DType::U16 => PluginDType::U16,
+        DType::U32 => PluginDType::U32,
+        DType::U64 => PluginDType::U64,
+        DType::I8 => PluginDType::I8,
+        DType::I16 => PluginDType::I16,
+        DType::I32 => PluginDType::I32,
+        DType::I64 => PluginDType::I64,
+    }
+}
+
+fn plugin_dtype_to_core(dtype: hodu_plugin::PluginDType) -> hodu_core::types::DType {
+    use hodu_core::types::DType;
+    use hodu_plugin::PluginDType;
+    match dtype {
+        PluginDType::Bool => DType::BOOL,
+        PluginDType::F8E4M3 => DType::F8E4M3,
+        PluginDType::F8E5M2 => DType::F8E5M2,
+        PluginDType::BF16 => DType::BF16,
+        PluginDType::F16 => DType::F16,
+        PluginDType::F32 => DType::F32,
+        PluginDType::F64 => DType::F64,
+        PluginDType::U8 => DType::U8,
+        PluginDType::U16 => DType::U16,
+        PluginDType::U32 => DType::U32,
+        PluginDType::U64 => DType::U64,
+        PluginDType::I8 => DType::I8,
+        PluginDType::I16 => DType::I16,
+        PluginDType::I32 => DType::I32,
+        PluginDType::I64 => DType::I64,
+        _ => DType::F32, // fallback for future dtypes
+    }
 }

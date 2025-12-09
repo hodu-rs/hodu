@@ -2,7 +2,7 @@ use crate::plugins::PluginRegistry;
 
 pub fn execute() -> Result<(), Box<dyn std::error::Error>> {
     println!("hodu {}", env!("CARGO_PKG_VERSION"));
-    println!("hodu-plugin-sdk {}", hodu_plugin_sdk::SDK_VERSION);
+    println!("hodu-plugin {}", hodu_plugin::PLUGIN_VERSION);
 
     #[cfg(target_os = "macos")]
     let platform = format!("{}-apple-darwin", std::env::consts::ARCH);

@@ -44,28 +44,28 @@
 
 mod artifact;
 mod backend;
-mod build;
-mod error;
-pub mod rpc;
 pub mod server;
 mod tensor;
+
+// Re-export rpc module from hodu_plugin
+pub use hodu_plugin::rpc;
+
+// Re-export from hodu_plugin (common types shared with hodu-cli)
+pub use hodu_plugin::{BuildTarget, Device, PluginDType, PluginError, PluginResult, TensorData, PLUGIN_VERSION};
+
+// Re-export backend utilities from hodu_plugin
+pub use hodu_plugin::{current_host_triple, device_type, parse_device_id};
+
+// Re-export tensor types with hodu_core extensions
+pub use tensor::{SdkDType, TensorDataExt};
 
 // Re-export notification helpers for convenience
 pub use server::{log_debug, log_error, log_info, log_warn, notify_log, notify_progress};
 
-// SDK types
+// Plugin SDK specific types (for plugin development only)
 pub use artifact::*;
 pub use backend::{
-    check_build_capability, current_host_triple, device_type, host_matches_pattern, is_tool_available, parse_device_id,
-    BuildCapability, BuildTarget, Device, PluginManifest, SupportedTarget,
-};
-pub use error::{PluginError, PluginResult};
-pub use tensor::*;
-
-// Re-export build templates for hodu CLI
-pub use build::{
-    cargo_toml_template, main_rs_backend_template, main_rs_model_format_template, main_rs_tensor_format_template,
-    manifest_json_backend_template, manifest_json_model_format_template, manifest_json_tensor_format_template,
+    check_build_capability, host_matches_pattern, is_tool_available, BuildCapability, PluginManifest, SupportedTarget,
 };
 
 // Re-export from hodu_core for plugin development
@@ -78,6 +78,3 @@ pub use hodu_core::{
     tensor::Tensor,
     types::{DType, Device as CoreDevice, Layout, Shape},
 };
-
-/// SDK version for compatibility checking (semver string)
-pub const SDK_VERSION: &str = env!("CARGO_PKG_VERSION");

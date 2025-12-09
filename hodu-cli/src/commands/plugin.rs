@@ -364,7 +364,7 @@ fn info_plugin(args: InfoArgs) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(lic) = &plugin.license {
         print_info_row("License", lic, use_color);
     }
-    print_info_row("SDK", &plugin.sdk_version, use_color);
+    print_info_row("Plugin", &plugin.plugin_version, use_color);
 
     let status = if plugin.enabled {
         if use_color {

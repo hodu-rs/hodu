@@ -290,7 +290,7 @@ pub fn detect_plugin_type(path: &std::path::Path) -> Result<DetectedPluginType, 
 
         let name = manifest["name"].as_str().unwrap_or("unknown").to_string();
         let version = manifest["version"].as_str().unwrap_or("0.0.0").to_string();
-        let sdk_version = manifest["sdk_version"].as_str().unwrap_or("0.1.0").to_string();
+        let plugin_version = manifest["plugin_version"].as_str().unwrap_or("0.1.0").to_string();
         let capabilities = manifest["capabilities"].as_array();
 
         // Determine type from capabilities
@@ -314,26 +314,26 @@ pub fn detect_plugin_type(path: &std::path::Path) -> Result<DetectedPluginType, 
             return Ok(DetectedPluginType::Backend {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             });
         } else if has_model_format {
             return Ok(DetectedPluginType::ModelFormat {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             });
         } else if has_tensor_format {
             return Ok(DetectedPluginType::TensorFormat {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             });
         } else {
             // Default to ModelFormat if type cannot be determined
             return Ok(DetectedPluginType::ModelFormat {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             });
         }
     }

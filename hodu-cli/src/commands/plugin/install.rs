@@ -4,11 +4,11 @@ use crate::output;
 use crate::plugins::{
     detect_plugin_type, DetectedPluginType, PluginCapabilities, PluginEntry, PluginRegistry, PluginSource, PluginType,
 };
-use hodu_plugin_sdk::SDK_VERSION;
+use hodu_plugin::PLUGIN_VERSION;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Parsed manifest info: (name, version, sdk_version, plugin_type, capabilities)
+/// Parsed manifest info: (name, version, plugin_version, plugin_type, capabilities)
 type ManifestInfo = (String, String, String, PluginType, PluginCapabilities);
 
 /// Official plugin registry URL
@@ -19,7 +19,7 @@ pub const PLUGIN_REGISTRY_URL: &str = "https://raw.githubusercontent.com/daminst
 pub struct PluginVersionEntry {
     pub version: String,
     pub tag: String,
-    /// SDK version requirement (e.g., "0.1" means compatible with 0.1.x)
+    /// Plugin protocol version requirement (e.g., "0.1" means compatible with 0.1.x)
     pub sdk: String,
 }
 
@@ -77,20 +77,16 @@ pub fn install_from_registry(
         )
     })?;
 
-    // Get host SDK version (major.minor)
-    let host_sdk_parts: Vec<&str> = SDK_VERSION.split('.').collect();
-    let host_sdk_major_minor = if host_sdk_parts.len() >= 2 {
-        format!("{}.{}", host_sdk_parts[0], host_sdk_parts[1])
+    // Get host plugin version (major.minor)
+    let host_version_parts: Vec<&str> = PLUGIN_VERSION.split('.').collect();
+    let host_major_minor = if host_version_parts.len() >= 2 {
+        format!("{}.{}", host_version_parts[0], host_version_parts[1])
     } else {
-        SDK_VERSION.to_string()
+        PLUGIN_VERSION.to_string()
     };
 
     // Filter compatible versions (same major.minor)
-    let compatible_versions: Vec<_> = plugin
-        .versions
-        .iter()
-        .filter(|v| v.sdk == host_sdk_major_minor)
-        .collect();
+    let compatible_versions: Vec<_> = plugin.versions.iter().filter(|v| v.sdk == host_major_minor).collect();
 
     // Determine the tag to use
     let tag = if let Some(t) = tag_override {
@@ -102,12 +98,12 @@ pub fn install_from_registry(
             // Use the first compatible version (latest)
             if compatible_versions.is_empty() {
                 return Err(format!(
-                    "No compatible version found for SDK {}.\n\nAvailable versions:\n  {}",
-                    host_sdk_major_minor,
+                    "No compatible version found for plugin protocol {}.\n\nAvailable versions:\n  {}",
+                    host_major_minor,
                     plugin
                         .versions
                         .iter()
-                        .map(|v| format!("{} (sdk {})", v.version, v.sdk))
+                        .map(|v| format!("{} (protocol {})", v.version, v.sdk))
                         .collect::<Vec<_>>()
                         .join("\n  ")
                 )
@@ -131,12 +127,12 @@ pub fn install_from_registry(
         // No version specified, use latest compatible
         if compatible_versions.is_empty() {
             return Err(format!(
-                "No compatible version found for SDK {}.\n\nAvailable versions:\n  {}",
-                host_sdk_major_minor,
+                "No compatible version found for plugin protocol {}.\n\nAvailable versions:\n  {}",
+                host_major_minor,
                 plugin
                     .versions
                     .iter()
-                    .map(|v| format!("{} (sdk {})", v.version, v.sdk))
+                    .map(|v| format!("{} (protocol {})", v.version, v.sdk))
                     .collect::<Vec<_>>()
                     .join("\n  ")
             )
@@ -297,7 +293,7 @@ pub fn install_from_path(
 
     // Read manifest.json if it exists, or detect from binary
     let manifest_path = path.join("manifest.json");
-    let (name, version, sdk_version, plugin_type, capabilities) = if manifest_path.exists() {
+    let (name, version, plugin_version, plugin_type, capabilities) = if manifest_path.exists() {
         parse_manifest(&manifest_path, &package_name)?
     } else {
         // Try to detect from binary (spawn and initialize)
@@ -306,33 +302,33 @@ pub fn install_from_path(
             DetectedPluginType::Backend {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             } => {
                 let capabilities = PluginCapabilities::backend(true, false, vec![], vec![]);
-                (name, version, sdk_version, PluginType::Backend, capabilities)
+                (name, version, plugin_version, PluginType::Backend, capabilities)
             },
             DetectedPluginType::ModelFormat {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             } => {
                 let capabilities = PluginCapabilities::model_format(true, false, vec![]);
-                (name, version, sdk_version, PluginType::ModelFormat, capabilities)
+                (name, version, plugin_version, PluginType::ModelFormat, capabilities)
             },
             DetectedPluginType::TensorFormat {
                 name,
                 version,
-                sdk_version,
+                plugin_version,
             } => {
                 let capabilities = PluginCapabilities::tensor_format(true, false, vec![]);
-                (name, version, sdk_version, PluginType::TensorFormat, capabilities)
+                (name, version, plugin_version, PluginType::TensorFormat, capabilities)
             },
         }
     };
 
-    // Check SDK version compatibility
-    let host_parts: Vec<u32> = SDK_VERSION.split('.').filter_map(|s| s.parse().ok()).collect();
-    let plugin_parts: Vec<u32> = sdk_version.split('.').filter_map(|s| s.parse().ok()).collect();
+    // Check plugin protocol version compatibility
+    let host_parts: Vec<u32> = PLUGIN_VERSION.split('.').filter_map(|s| s.parse().ok()).collect();
+    let plugin_parts: Vec<u32> = plugin_version.split('.').filter_map(|s| s.parse().ok()).collect();
 
     if host_parts.len() >= 2 && plugin_parts.len() >= 2 {
         let (host_major, host_minor) = (host_parts[0], host_parts[1]);
@@ -340,16 +336,16 @@ pub fn install_from_path(
 
         if host_major != plugin_major {
             return Err(format!(
-                "SDK major version mismatch: host={}, plugin={}",
-                SDK_VERSION, sdk_version
+                "Plugin protocol major version mismatch: host={}, plugin={}",
+                PLUGIN_VERSION, plugin_version
             )
             .into());
         }
 
         if host_minor < plugin_minor {
             return Err(format!(
-                "Plugin requires newer SDK: host={}, plugin={}",
-                SDK_VERSION, sdk_version
+                "Plugin requires newer protocol version: host={}, plugin={}",
+                PLUGIN_VERSION, plugin_version
             )
             .into());
         }
@@ -424,7 +420,7 @@ pub fn install_from_path(
         binary: bin_filename,
         source,
         installed_at: chrono_now(),
-        sdk_version,
+        plugin_version,
         enabled: true,
         dependencies: dependencies.clone(),
     };
@@ -450,7 +446,10 @@ fn parse_manifest(manifest_path: &Path, package_name: &str) -> Result<ManifestIn
 
     let name = manifest["name"].as_str().unwrap_or(package_name).to_string();
     let version = manifest["version"].as_str().unwrap_or("0.1.0").to_string();
-    let sdk_version = manifest["sdk_version"].as_str().unwrap_or(SDK_VERSION).to_string();
+    let plugin_version = manifest["plugin_version"]
+        .as_str()
+        .unwrap_or(PLUGIN_VERSION)
+        .to_string();
 
     let caps = manifest["capabilities"].as_array();
     let is_backend = caps
@@ -530,7 +529,7 @@ fn parse_manifest(manifest_path: &Path, package_name: &str) -> Result<ManifestIn
         )
     };
 
-    Ok((name, version, sdk_version, plugin_type, capabilities))
+    Ok((name, version, plugin_version, plugin_type, capabilities))
 }
 
 pub fn chrono_now() -> String {

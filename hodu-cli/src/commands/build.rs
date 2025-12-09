@@ -5,7 +5,8 @@
 use crate::output;
 use crate::plugins::{PluginManager, PluginRegistry};
 use clap::Args;
-use hodu_plugin_sdk::{BuildTarget, Snapshot};
+use hodu_core::snapshot::Snapshot;
+use hodu_plugin::BuildTarget;
 use std::path::{Path, PathBuf};
 
 /// Convert a path to a string, returning an error if the path is not valid UTF-8

@@ -2,16 +2,18 @@
 //!
 //! These templates are used by `hodu plugin create` command.
 
+/// Plugin protocol version for templates
+pub use hodu_plugin::PLUGIN_VERSION;
+
 /// Template for manifest.json (backend plugin)
 pub fn manifest_json_backend_template(name: &str) -> String {
-    let sdk_version = env!("CARGO_PKG_VERSION");
     format!(
         r#"{{
   "name": "{name}",
   "version": "0.1.0",
   "description": "Backend plugin for Hodu",
   "license": "MIT",
-  "sdk_version": "{sdk_version}",
+  "plugin_version": "{PLUGIN_VERSION}",
   "capabilities": ["backend.run"],
   "devices": ["cpu"],
   "dependencies": []
@@ -22,14 +24,13 @@ pub fn manifest_json_backend_template(name: &str) -> String {
 
 /// Template for manifest.json (model format plugin)
 pub fn manifest_json_model_format_template(name: &str) -> String {
-    let sdk_version = env!("CARGO_PKG_VERSION");
     format!(
         r#"{{
   "name": "{name}",
   "version": "0.1.0",
   "description": "Model format plugin for Hodu",
   "license": "MIT",
-  "sdk_version": "{sdk_version}",
+  "plugin_version": "{PLUGIN_VERSION}",
   "capabilities": ["format.load_model"],
   "extensions": ["ext"],
   "dependencies": []
@@ -40,14 +41,13 @@ pub fn manifest_json_model_format_template(name: &str) -> String {
 
 /// Template for manifest.json (tensor format plugin)
 pub fn manifest_json_tensor_format_template(name: &str) -> String {
-    let sdk_version = env!("CARGO_PKG_VERSION");
     format!(
         r#"{{
   "name": "{name}",
   "version": "0.1.0",
   "description": "Tensor format plugin for Hodu",
   "license": "MIT",
-  "sdk_version": "{sdk_version}",
+  "plugin_version": "{PLUGIN_VERSION}",
   "capabilities": ["format.load_tensor"],
   "extensions": ["ext"],
   "dependencies": []
@@ -58,7 +58,6 @@ pub fn manifest_json_tensor_format_template(name: &str) -> String {
 
 /// Template for Cargo.toml
 pub fn cargo_toml_template(name: &str) -> String {
-    let sdk_version = env!("CARGO_PKG_VERSION");
     format!(
         r#"[package]
 name = "{name}"
@@ -70,7 +69,7 @@ name = "{name}"
 path = "src/main.rs"
 
 [dependencies]
-hodu_plugin_sdk = "{sdk_version}"
+hodu-plugin-sdk = "{PLUGIN_VERSION}"
 
 # For backend plugins that need CPU kernels:
 # hodu_cpu_kernels = "0.2"

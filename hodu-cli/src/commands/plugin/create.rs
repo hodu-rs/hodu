@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 
 pub fn create_plugin(name: &str, plugin_type: &str, output: Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
-    use hodu_plugin_sdk::{
+    use crate::templates::{
         cargo_toml_template, main_rs_backend_template, main_rs_model_format_template, main_rs_tensor_format_template,
         manifest_json_backend_template, manifest_json_model_format_template, manifest_json_tensor_format_template,
     };

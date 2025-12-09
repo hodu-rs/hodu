@@ -176,21 +176,22 @@ Tensor data structure for I/O operations.
 ```rust
 pub struct TensorData {
     pub shape: Vec<usize>,
-    pub dtype: SdkDType,
+    pub dtype: PluginDType,
     pub data: Vec<u8>,
 }
 ```
 
-### SdkDType
+### PluginDType
 
 Supported data types.
 
 ```rust
-pub enum SdkDType {
-    F32, F64, F16, BF16,
-    I8, I16, I32, I64,
-    U8, U16, U32, U64,
+pub enum PluginDType {
     Bool,
+    F8E4M3, F8E5M2,
+    BF16, F16, F32, F64,
+    U8, U16, U32, U64,
+    I8, I16, I32, I64,
 }
 ```
 
@@ -307,9 +308,9 @@ The CLI validates `protocol_version` returned by plugins during initialization.
 | `0.x.y` | major.minor must match | `0.1.0` ↔ `0.1.5` OK, `0.1.0` ↔ `0.2.0` Error |
 | `>= 1.0.0` | major must match | `1.0.0` ↔ `1.9.0` OK, `1.0.0` ↔ `2.0.0` Error |
 
-### SDK Version
+### Plugin Version
 
-SDK version differences only emit a warning and do not block execution. This allows plugins built with slightly different SDK versions to still work together.
+Plugin version differences only emit a warning and do not block execution. This allows plugins built with slightly different SDK versions to still work together.
 
 ## Device Naming Convention
 
