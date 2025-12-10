@@ -5,7 +5,7 @@
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
 <p align="center">
-    <img src="./assets/hodu/sd_1_type_a.png" alt="Hodu Avatar" width="384" />
+    <img src="./assets/hodu/sd_logo.png" alt="Hodu Avatar" width="384" />
 </p>
 
 Tensor ops, model building, inference, deployment. All in one.
