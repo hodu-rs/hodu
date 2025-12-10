@@ -38,11 +38,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 [![hodu-cli](https://img.shields.io/crates/v/hodu.svg?label=hodu/cli)](https://crates.io/crates/hodu-cli)
 
 ```bash
-hodu plugin install aot-cpu
+$ hodu plugin install aot-cpu
 
-hodu run model.onnx --input x=input.npy
-hodu build model.hdss -o model
-hodu build model.onnx -o model.dylib
+$ hodu run model.onnx --input x=input.npy
+$ hodu build model.hdss -o model
+$ hodu build model.onnx -o model.dylib
 ```
 
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
@@ -52,7 +52,7 @@ hodu build model.onnx -o model.dylib
 Build your own format/backend plugins. JSON-RPC over stdio.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/daminstudio/hodu/main/hodu-plugin-sdk/new.sh | sh
+$ curl -fsSL https://raw.githubusercontent.com/daminstudio/hodu/main/hodu-plugin-sdk/new.sh | sh
 ```
 
 Official plugins: [hodu-plugins](https://github.com/daminstudio/hodu-plugins)

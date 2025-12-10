@@ -23,7 +23,7 @@ Plugins communicate with the Hodu CLI via JSON-RPC 2.0 over stdio. Each plugin r
 ### Create a Plugin Project
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/daminstudio/hodu/main/hodu-plugin-sdk/new.sh | sh
+$ curl -fsSL https://raw.githubusercontent.com/daminstudio/hodu/main/hodu-plugin-sdk/new.sh | sh
 ```
 
 This will prompt you for:

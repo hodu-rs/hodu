@@ -8,7 +8,7 @@ Command-line interface for the Hodu ML toolkit.
 ## Installation
 
 ```bash
-cargo install hodu-cli
+$ cargo install hodu-cli
 ```
 
 ### Shell Completions
@@ -26,7 +26,7 @@ eval "$(hodu completions bash)"
 ```
 
 **Fish** (~/.config/fish/config.fish):
-```bash
+```fish
 hodu completions fish | source
 ```
 
@@ -71,68 +71,68 @@ hodu completions power-shell | Out-String | Invoke-Expression
 
 ```bash
 # Run with CPU backend
-hodu run model.onnx -i input=data.hdt -d cpu
+$ hodu run model.onnx -i input=data.hdt -d cpu
 
 # Run with CUDA device
-hodu run model.hdss -i x=input.hdt -d cuda::0
+$ hodu run model.hdss -i x=input.hdt -d cuda::0
 
 # Save outputs to directory
-hodu run model.onnx -i input=data.hdt --save ./outputs
+$ hodu run model.onnx -i input=data.hdt --save ./outputs
 
 # Set timeout for plugin operations (in seconds)
-hodu run model.onnx -i input=data.hdt --timeout 600
+$ hodu run model.onnx -i input=data.hdt --timeout 600
 ```
 
 ### Build Model
 
 ```bash
 # Build shared library
-hodu build model.hdss -o model.so -d cpu
+$ hodu build model.hdss -o model.so -d cpu
 
 # Build Metal library for Apple Silicon
-hodu build model.hdss -o model.metallib -d metal
+$ hodu build model.hdss -o model.metallib -d metal
 
 # Build with specific format
-hodu build model.onnx -o model.a -f staticlib
+$ hodu build model.onnx -o model.a -f staticlib
 
 # Cross-compile for embedded target
-hodu build model.hdss -o model.o -t thumbv7em-none-eabihf -f object
+$ hodu build model.hdss -o model.o -t thumbv7em-none-eabihf -f object
 
 # Set timeout for plugin operations (in seconds)
-hodu build model.hdss -o model.so --timeout 600
+$ hodu build model.hdss -o model.so --timeout 600
 ```
 
 ### Convert Formats
 
 ```bash
 # Convert ONNX to HDSS
-hodu convert model.onnx -o model.hdss
+$ hodu convert model.onnx -o model.hdss
 
 # Convert tensor formats
-hodu convert data.npy -o data.hdt
+$ hodu convert data.npy -o data.hdt
 
 # Verbose output
-hodu convert model.onnx -o model.hdss -v
+$ hodu convert model.onnx -o model.hdss -v
 ```
 
 ### Inspect Files
 
 ```bash
 # Inspect model
-hodu inspect model.hdss
+$ hodu inspect model.hdss
 
 # Inspect with verbose output
-hodu inspect model.onnx -v
+$ hodu inspect model.onnx -v
 
 # Output as JSON
-hodu inspect model.hdss -f json
+$ hodu inspect model.hdss -f json
 ```
 
 ### Check Environment
 
 ```bash
 # Check host system and available devices
-hodu doctor
+$ hodu doctor
 
 # Example output:
 # Host
@@ -150,23 +150,23 @@ hodu doctor
 
 ```bash
 # Install from official registry (recommended)
-hodu plugin install aot-cpu
+$ hodu plugin install aot-cpu
 
 # Install from local development
-hodu plugin install --path ./my-plugin
+$ hodu plugin install --path ./my-plugin
 
 # Install from git repository
-hodu plugin install --git https://github.com/user/hodu-backend-cuda
+$ hodu plugin install --git https://github.com/user/hodu-backend-cuda
 
 # Install from git with subdirectory
-hodu plugin install --git https://github.com/daminstudio/hodu-plugins --subdir hodu-backend-aot-cpu-plugin
+$ hodu plugin install --git https://github.com/daminstudio/hodu-plugins --subdir hodu-backend-aot-cpu-plugin
 
 # Install specific tag/branch
-hodu plugin install --git https://github.com/user/plugin --tag v1.0.0
+$ hodu plugin install --git https://github.com/user/plugin --tag v1.0.0
 
 # Enable/disable plugins
-hodu plugin disable aot-cpu
-hodu plugin enable aot-cpu
+$ hodu plugin disable aot-cpu
+$ hodu plugin enable aot-cpu
 ```
 
 ### Official Plugins
@@ -219,16 +219,16 @@ First run compiles the model (`backend.build`), subsequent runs use the cached l
 
 ```bash
 # Clean all build cache
-hodu clean
+$ hodu clean
 
 # Dry run (show what would be deleted)
-hodu clean --dry-run
+$ hodu clean --dry-run
 
 # Clean specific backend cache
-hodu clean --backend aot-cpu
+$ hodu clean --backend aot-cpu
 
 # Clean everything including plugin registry
-hodu clean --all
+$ hodu clean --all
 ```
 
 ## Device Naming Convention
