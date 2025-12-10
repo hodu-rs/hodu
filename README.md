@@ -1,7 +1,5 @@
 # Hodu, a Rust ML toolkit
 
-[![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu)](https://crates.io/crates/hodu)
-[![hodu-plugin-sdk](https://img.shields.io/crates/v/hodu-plugin-sdk.svg?label=hodu-plugin-sdk)](https://crates.io/crates/hodu-plugin-sdk)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
 
 > **Hodu** (호두) is a Korean word meaning "walnut".
@@ -17,6 +15,8 @@ Tensor ops, model building, inference, deployment. All in one.
 ### hodu
 
 #### [lib](./hodu/lib/README.md) - Core library for tensors and models.
+
+[![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu/lib)](https://crates.io/crates/hodu)
 
 ```rust
 use hodu::prelude::*;
@@ -35,6 +35,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #### [cli](./hodu/cli/README.md) - Run, convert, build models from the command line.
 
+[![hodu-cli](https://img.shields.io/crates/v/hodu.svg?label=hodu/cli)](https://crates.io/crates/hodu-cli)
+
 ```bash
 hodu plugin install aot-cpu
 
@@ -45,10 +47,12 @@ hodu build model.onnx -o model.dylib
 
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
 
+[![hodu-plugin-sdk](https://img.shields.io/crates/v/hodu-plugin-sdk.svg?label=hodu-plugin-sdk)](https://crates.io/crates/hodu-plugin-sdk)
+
 Build your own format/backend plugins. JSON-RPC over stdio.
 
 ```bash
-cargo install cargo-hodu-plugin-sdk
+cargo install hodu-plugin-sdk
 
 cargo hodu-plugin-sdk init my-format -t model_format
 cargo hodu-plugin-sdk init my-backend -t backend

@@ -22,10 +22,10 @@ Plugins communicate with the Hodu CLI via JSON-RPC 2.0 over stdio. Each plugin r
 
 ### Create a Plugin Project
 
-First, install the plugin scaffolding tool:
+First, install the SDK (includes the scaffolding tool):
 
 ```bash
-cargo install cargo-hodu-plugin-sdk
+cargo install hodu-plugin-sdk
 ```
 
 Then create a new plugin project:

@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/*", "hodu/*", "hodu-plugin-sdk", "hodu-plugin-sdk-cargo"]
+members = ["crates/*", "hodu/*", "hodu-plugin-sdk"]
 exclude = ["crates/hodu_cuda_kernels", "crates/hodu_metal_kernels"]
 resolver = "2"
 
