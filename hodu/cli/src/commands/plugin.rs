@@ -2,7 +2,6 @@
 //!
 //! This command manages JSON-RPC based plugins as standalone executables.
 
-mod create;
 mod install;
 mod update;
 
@@ -11,7 +10,6 @@ use crate::plugins::{PluginManager, PluginRegistry, PluginSource};
 use clap::{Args, Subcommand};
 use std::path::PathBuf;
 
-pub use create::create_plugin;
 pub use install::{get_plugins_dir, install_from_git, install_from_path, install_from_registry};
 pub use update::update_plugins;
 
@@ -46,9 +44,6 @@ pub enum PluginCommands {
 
     /// Verify plugin integrity (check binaries exist, dependencies satisfied)
     Verify,
-
-    /// Create a new plugin project
-    Create(CreateArgs),
 }
 
 #[derive(Args)]
@@ -111,20 +106,6 @@ pub struct DisableArgs {
     pub name: String,
 }
 
-#[derive(Args)]
-pub struct CreateArgs {
-    /// Plugin name (e.g., hodu-backend-mybackend)
-    pub name: String,
-
-    /// Plugin type: backend, model_format, or tensor_format
-    #[arg(long = "type", short = 't', default_value = "backend")]
-    pub plugin_type: String,
-
-    /// Output directory (default: current directory)
-    #[arg(long, short = 'o')]
-    pub output: Option<PathBuf>,
-}
-
 pub fn execute(args: PluginArgs) -> Result<(), Box<dyn std::error::Error>> {
     match args.command {
         PluginCommands::List => list_plugins(),
@@ -135,9 +116,6 @@ pub fn execute(args: PluginArgs) -> Result<(), Box<dyn std::error::Error>> {
         PluginCommands::Enable(enable_args) => enable_plugin(enable_args),
         PluginCommands::Disable(disable_args) => disable_plugin(disable_args),
         PluginCommands::Verify => verify_plugins(),
-        PluginCommands::Create(create_args) => {
-            create_plugin(&create_args.name, &create_args.plugin_type, create_args.output)
-        },
     }
 }
 

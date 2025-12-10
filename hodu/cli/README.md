@@ -64,7 +64,6 @@ hodu completions power-shell | Out-String | Invoke-Expression
 | `hodu plugin enable <name>` | Enable a disabled plugin |
 | `hodu plugin disable <name>` | Disable a plugin without removing |
 | `hodu plugin verify` | Verify plugin integrity |
-| `hodu plugin create <name> -t <type>` | Create new plugin project |
 
 ## Usage Examples
 
@@ -164,15 +163,6 @@ hodu plugin install --git https://github.com/daminstudio/hodu-plugins --subdir h
 
 # Install specific tag/branch
 hodu plugin install --git https://github.com/user/plugin --tag v1.0.0
-
-# Create new backend plugin
-hodu plugin create my-backend -t backend
-
-# Create new model format plugin (e.g., ONNX loader)
-hodu plugin create my-format -t model_format
-
-# Create new tensor format plugin (e.g., NPY loader)
-hodu plugin create my-tensor -t tensor_format
 
 # Enable/disable plugins
 hodu plugin disable aot-cpu

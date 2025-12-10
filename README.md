@@ -48,8 +48,10 @@ hodu build model.onnx -o model.dylib
 Build your own format/backend plugins. JSON-RPC over stdio.
 
 ```bash
-hodu plugin create my-format -t model_format
-hodu plugin create my-backend -t backend
+cargo install cargo-hodu-plugin-sdk
+
+cargo hodu-plugin-sdk init my-format -t model_format
+cargo hodu-plugin-sdk init my-backend -t backend
 ```
 
 Official plugins: [hodu-plugins](https://github.com/daminstudio/hodu-plugins)

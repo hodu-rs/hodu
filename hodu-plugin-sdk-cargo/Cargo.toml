@@ -1,0 +1,18 @@
+[package]
+name = "cargo-hodu-plugin-sdk"
+version = "0.1.0"
+description = "Cargo subcommand for creating Hodu plugins"
+license = "BSD-3-Clause"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/daminstudio/hodu"
+keywords = ["cargo", "plugin", "hodu", "machine-learning"]
+categories = ["development-tools::cargo-plugins"]
+
+[[bin]]
+name = "cargo-hodu-plugin-sdk"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true, features = ["derive"] }
