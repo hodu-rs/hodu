@@ -93,9 +93,11 @@ Hodu unifies this pipeline into one ecosystem.
 
 ## Contributing
 
-Contributions are always welcome! Whether it's bug reports, feature requests, documentation improvements, or code contributions - every bit helps make Hodu better.
+> **Note**: The project structure is still being established. For now, please open an issue first before submitting pull requests. This helps us coordinate work and avoid conflicts during this early stage.
 
-Check out [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+Bug reports, feature requests, and feedback are always welcome!
+
+Check out [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ## License
 
