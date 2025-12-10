@@ -22,24 +22,13 @@ Plugins communicate with the Hodu CLI via JSON-RPC 2.0 over stdio. Each plugin r
 
 ### Create a Plugin Project
 
-First, install the SDK (includes the scaffolding tool):
-
 ```bash
-cargo install hodu-plugin-sdk
+curl -fsSL https://raw.githubusercontent.com/daminstudio/hodu/main/hodu-plugin-sdk/new.sh | sh
 ```
 
-Then create a new plugin project:
-
-```bash
-# Backend plugin (e.g., CUDA, Metal)
-cargo hodu-plugin-sdk init my-backend -t backend
-
-# Model format plugin (e.g., ONNX loader)
-cargo hodu-plugin-sdk init my-format -t model_format
-
-# Tensor format plugin (e.g., NPY loader)
-cargo hodu-plugin-sdk init my-tensor -t tensor_format
-```
+This will prompt you for:
+- Plugin name
+- Plugin type (backend, model_format, or tensor_format)
 
 ### Backend Plugin Example
 
