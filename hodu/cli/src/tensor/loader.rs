@@ -112,7 +112,7 @@ pub fn str_to_plugin_dtype(s: &str) -> Result<PluginDType, Box<dyn std::error::E
 fn core_dtype_to_plugin(dtype: hodu_core::types::DType) -> PluginDType {
     use hodu_core::types::DType;
     match dtype {
-        DType::BOOL => PluginDType::Bool,
+        DType::BOOL => PluginDType::BOOL,
         DType::F8E4M3 => PluginDType::F8E4M3,
         DType::F8E5M2 => PluginDType::F8E5M2,
         DType::BF16 => PluginDType::BF16,

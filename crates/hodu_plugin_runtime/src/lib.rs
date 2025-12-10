@@ -26,8 +26,12 @@ mod client;
 #[cfg(feature = "format")]
 pub mod format;
 mod registry;
+#[cfg(all(feature = "format", feature = "backend"))]
+mod runtime;
 mod types;
 
 pub use client::{CancellationHandle, ClientError, PluginClient, DEFAULT_TIMEOUT};
 pub use registry::{detect_plugin_type, PluginDetectError, PluginRegistry, RegistryError};
+#[cfg(all(feature = "format", feature = "backend"))]
+pub use runtime::{Model, Runtime, RuntimeError};
 pub use types::{DetectedPluginType, PluginCapabilities, PluginEntry, PluginSource, PluginType};

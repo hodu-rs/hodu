@@ -499,7 +499,7 @@ fn load_tensor_data(path: &str) -> Result<TensorData, Box<dyn std::error::Error>
 
 fn core_dtype_to_plugin(dtype: DType) -> PluginDType {
     match dtype {
-        DType::BOOL => PluginDType::Bool,
+        DType::BOOL => PluginDType::BOOL,
         DType::F8E4M3 => PluginDType::F8E4M3,
         DType::F8E5M2 => PluginDType::F8E5M2,
         DType::BF16 => PluginDType::BF16,
@@ -519,7 +519,7 @@ fn core_dtype_to_plugin(dtype: DType) -> PluginDType {
 
 fn plugin_dtype_to_core(dtype: PluginDType) -> DType {
     match dtype {
-        PluginDType::Bool => DType::BOOL,
+        PluginDType::BOOL => DType::BOOL,
         PluginDType::F8E4M3 => DType::F8E4M3,
         PluginDType::F8E5M2 => DType::F8E5M2,
         PluginDType::BF16 => DType::BF16,

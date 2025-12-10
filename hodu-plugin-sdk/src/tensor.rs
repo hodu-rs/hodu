@@ -12,7 +12,7 @@ pub type SdkDType = PluginDType;
 pub fn core_dtype_to_plugin(dtype: hodu_core::types::DType) -> PluginDType {
     use hodu_core::types::DType;
     match dtype {
-        DType::BOOL => PluginDType::Bool,
+        DType::BOOL => PluginDType::BOOL,
         DType::F8E4M3 => PluginDType::F8E4M3,
         DType::F8E5M2 => PluginDType::F8E5M2,
         DType::BF16 => PluginDType::BF16,
@@ -34,7 +34,7 @@ pub fn core_dtype_to_plugin(dtype: hodu_core::types::DType) -> PluginDType {
 pub fn plugin_dtype_to_core(dtype: PluginDType) -> hodu_core::types::DType {
     use hodu_core::types::DType;
     match dtype {
-        PluginDType::Bool => DType::BOOL,
+        PluginDType::BOOL => DType::BOOL,
         PluginDType::F8E4M3 => DType::F8E4M3,
         PluginDType::F8E5M2 => DType::F8E5M2,
         PluginDType::BF16 => DType::BF16,

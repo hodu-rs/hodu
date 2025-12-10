@@ -71,11 +71,11 @@ With the `cuda` feature enabled, you can use CUDA with the following setting:
 | Feature | Description | Dependencies |
 |---------|-------------|--------------|
 | `serde` | Serialization/deserialization support | - |
+| `plugin` | Format plugin runtime for loading external model formats (ONNX, etc.) | - |
 
 ### Optional Features
 | Feature | Description | Dependencies |
 |---------|-------------|--------------|
-| `plugin` | Format plugin runtime for loading external model formats (ONNX, etc.) | - |
 | `openblas` | Use OpenBLAS for CPU backend (instead of OS-provided BLAS) | OpenBLAS library |
 | `cuda` | NVIDIA CUDA GPU support | CUDA toolkit |
 | `metal` | Apple Metal GPU support | Metal framework |

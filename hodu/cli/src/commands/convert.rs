@@ -238,7 +238,7 @@ fn core_dtype_to_plugin(dtype: hodu_core::types::DType) -> hodu_plugin::PluginDT
     use hodu_core::types::DType;
     use hodu_plugin::PluginDType;
     match dtype {
-        DType::BOOL => PluginDType::Bool,
+        DType::BOOL => PluginDType::BOOL,
         DType::F8E4M3 => PluginDType::F8E4M3,
         DType::F8E5M2 => PluginDType::F8E5M2,
         DType::BF16 => PluginDType::BF16,
@@ -260,7 +260,7 @@ fn plugin_dtype_to_core(dtype: hodu_plugin::PluginDType) -> hodu_core::types::DT
     use hodu_core::types::DType;
     use hodu_plugin::PluginDType;
     match dtype {
-        PluginDType::Bool => DType::BOOL,
+        PluginDType::BOOL => DType::BOOL,
         PluginDType::F8E4M3 => DType::F8E4M3,
         PluginDType::F8E5M2 => DType::F8E5M2,
         PluginDType::BF16 => DType::BF16,

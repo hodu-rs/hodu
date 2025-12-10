@@ -15,7 +15,7 @@ use std::str::FromStr;
 #[non_exhaustive]
 pub enum PluginDType {
     /// Boolean
-    Bool = 0,
+    BOOL = 0,
     /// 8-bit float (E4M3)
     F8E4M3 = 1,
     /// 8-bit float (E5M2)
@@ -50,7 +50,7 @@ impl PluginDType {
     /// Get size of this data type in bytes
     pub const fn size_in_bytes(&self) -> usize {
         match self {
-            Self::Bool | Self::F8E4M3 | Self::F8E5M2 | Self::U8 | Self::I8 => 1,
+            Self::BOOL | Self::F8E4M3 | Self::F8E5M2 | Self::U8 | Self::I8 => 1,
             Self::BF16 | Self::F16 | Self::U16 | Self::I16 => 2,
             Self::F32 | Self::U32 | Self::I32 => 4,
             Self::F64 | Self::U64 | Self::I64 => 8,
@@ -60,7 +60,7 @@ impl PluginDType {
     /// Get name of this data type
     pub const fn name(&self) -> &'static str {
         match self {
-            Self::Bool => "bool",
+            Self::BOOL => "bool",
             Self::F8E4M3 => "f8e4m3",
             Self::F8E5M2 => "f8e5m2",
             Self::BF16 => "bf16",
@@ -117,7 +117,7 @@ impl FromStr for PluginDType {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "bool" => Ok(Self::Bool),
+            "bool" => Ok(Self::BOOL),
             "f8e4m3" => Ok(Self::F8E4M3),
             "f8e5m2" => Ok(Self::F8E5M2),
             "bf16" => Ok(Self::BF16),

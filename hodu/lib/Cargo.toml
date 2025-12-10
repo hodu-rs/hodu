@@ -13,9 +13,9 @@ keywords = ["tensor", "machine-learning", "hodu"]
 categories = ["science"]
 
 [features]
-default = ["serde"]
+default = ["serde", "plugin"]
 serde = ["hodu_internal/serde"]
-plugin = ["hodu_plugin_runtime/format"]
+plugin = ["hodu_internal/plugin"]
 
 # optional dtype
 f8e5m2 = ["hodu_internal/f8e5m2"]
@@ -34,4 +34,3 @@ metal = ["hodu_internal/metal"]
 
 [dependencies]
 hodu_internal = { workspace = true }
-hodu_plugin_runtime = { workspace = true, optional = true, default-features = false }
