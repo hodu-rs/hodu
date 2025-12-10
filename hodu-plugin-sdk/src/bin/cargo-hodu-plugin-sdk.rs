@@ -71,9 +71,7 @@ fn init_plugin(
     // Interactive name input
     let name = match name {
         Some(n) => n,
-        None => Text::new("Plugin name:")
-            .with_placeholder("my-plugin")
-            .prompt()?,
+        None => Text::new("Plugin name:").with_placeholder("my-plugin").prompt()?,
     };
 
     if name.is_empty() {
@@ -91,7 +89,7 @@ fn init_plugin(
             ];
             let selection = Select::new("Plugin type:", options).prompt()?;
             selection.split_whitespace().next().unwrap().to_string()
-        }
+        },
     };
 
     let valid_types = ["backend", "model_format", "tensor_format"];
