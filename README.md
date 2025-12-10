@@ -12,13 +12,11 @@
 
 Tensor ops, model building, inference, deployment. All in one.
 
-## Components
+## Packages
 
 ### hodu
 
-#### [lib](./hodu/lib/README.md)
-
-Core library for tensors and models.
+#### [lib](./hodu/lib/README.md) - Core library for tensors and models.
 
 ```rust
 use hodu::prelude::*;
@@ -35,9 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-#### [cli](./hodu/cli/README.md)
-
-Run, convert, build models from the command line.
+#### [cli](./hodu/cli/README.md) - Run, convert, build models from the command line.
 
 ```bash
 hodu plugin install aot-cpu
