@@ -12,11 +12,11 @@ Tensor ops, model building, inference, deployment. All in one.
 
 ## Packages
 
-### hodu
-
-#### [cli](./hodu/cli/README.md) - Run, convert, build models from the command line.
+### [hodu/cli](./hodu-cli/README.md)
 
 [![hodu-cli](https://img.shields.io/crates/v/hodu.svg?label=hodu/cli)](https://crates.io/crates/hodu-cli)
+
+Run, convert, build models from the command line.
 
 ```bash
 $ cargo install hodu-cli
@@ -30,9 +30,11 @@ $ hodu build model.hdss -o model
 $ hodu build model.onnx -o model.dylib
 ```
 
-#### [lib](./hodu/lib/README.md) - Core library for tensors and models.
+### [hodu/lib](./hodu-lib/README.md)
 
 [![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu/lib)](https://crates.io/crates/hodu)
+
+Core library for tensors and models.
 
 ```rust
 use hodu::prelude::*;
