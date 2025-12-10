@@ -15,7 +15,9 @@ Tensor ops, model building, inference, deployment. All in one.
 
 ## Components
 
-### [hodu-lib](./hodu-lib/README.md)
+### hodu
+
+#### [lib](./hodu/lib/README.md)
 
 Core library for tensors and models.
 
@@ -30,12 +32,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let c = a.matmul(&b)?;
 
     println!("{}", c);
-    // println!("{:?}", c);
     Ok(())
 }
 ```
 
-### [hodu-cli](./hodu-cli/README.md)
+#### [cli](./hodu/cli/README.md)
 
 Run, convert, build models from the command line.
 
@@ -47,13 +48,11 @@ hodu build model.hdss -o model
 hodu build model.onnx -o model.dylib
 ```
 
-### hodu-script (planned)
+### hoduscript (planned)
 
-Scripting language for Hodu. Define models easily and run scripts directly with hodu-cli.
+#### cli, compiler, lsp, fmt
 
-### hodu-gui (planned)
-
-Model visualization and editing.
+Scripting language for Hodu. Define models easily and run scripts directly.
 
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
 
@@ -76,11 +75,13 @@ Most ML workflows look like this: write a model in Python, export to ONNX, conve
 
 Hodu unifies this pipeline into one ecosystem.
 
-### Three tools, one philosophy
+### One ecosystem, unified
 
-**hodu-lib** gives you a familiar PyTorch-style API for building models. Under the hood, operations can be captured into a computation graph for later optimization and compilation. Every kernel is implemented from scratch—no external ML runtime dependencies.
+**hodu** (lib) gives you a familiar PyTorch-style API for building models. Operations can be captured into a computation graph for optimization and compilation. Every kernel is implemented from scratch—no external ML runtime dependencies.
 
-**hodu-cli** follows a simple principle: one command gets you what you need. `hodu run` for inference, `hodu build` for native binaries, `hodu inspect` to examine models. No config files or build scripts required.
+**hodu** (cli) follows a simple principle: one command gets you what you need. `hodu run` for inference, `hodu build` for native binaries, `hodu inspect` to examine models. No config files or build scripts required.
+
+**hoduscript** (planned) will let you define models in a simple scripting language and run them directly with the CLI.
 
 **hodu-plugin-sdk** keeps Hodu open for extension. Plugins run as separate processes communicating via JSON-RPC, so you can write them in any language. Need a new model format or hardware backend? Build a plugin without touching Hodu's core.
 

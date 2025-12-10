@@ -116,9 +116,9 @@ impl PluginClient {
         }
     }
 
-    /// Use the default notification handler (prints to stderr)
-    pub fn use_default_notification_handler(&mut self) {
-        self.notification_handler = Some(Box::new(default_notification_handler));
+    /// Set a custom notification handler
+    pub fn set_notification_handler(&mut self, handler: NotificationHandler) {
+        self.notification_handler = Some(handler);
     }
 
     /// Initialize the plugin and validate version compatibility
@@ -171,12 +171,14 @@ impl PluginClient {
     // ========================================================================
 
     /// Load a model file using format plugin
+    #[cfg(feature = "format")]
     pub fn load_model(&mut self, path: &str) -> Result<LoadModelResult, ClientError> {
         let params = LoadModelParams { path: path.to_string() };
         self.call(methods::FORMAT_LOAD_MODEL, Some(params))
     }
 
     /// Save a model to file using format plugin
+    #[cfg(feature = "format")]
     pub fn save_model(&mut self, snapshot_path: &str, output_path: &str) -> Result<(), ClientError> {
         let params = SaveModelParams {
             snapshot_path: snapshot_path.to_string(),
@@ -187,12 +189,14 @@ impl PluginClient {
     }
 
     /// Load a tensor file using format plugin
+    #[cfg(feature = "format")]
     pub fn load_tensor(&mut self, path: &str) -> Result<LoadTensorResult, ClientError> {
         let params = LoadTensorParams { path: path.to_string() };
         self.call(methods::FORMAT_LOAD_TENSOR, Some(params))
     }
 
     /// Save a tensor to file using format plugin
+    #[cfg(feature = "format")]
     pub fn save_tensor(&mut self, tensor_path: &str, output_path: &str) -> Result<(), ClientError> {
         let params = SaveTensorParams {
             tensor_path: tensor_path.to_string(),
@@ -207,6 +211,7 @@ impl PluginClient {
     // ========================================================================
 
     /// Run model inference using backend plugin
+    #[cfg(feature = "backend")]
     pub fn run(
         &mut self,
         library_path: &str,
@@ -224,6 +229,7 @@ impl PluginClient {
     }
 
     /// Build (AOT compile) model using backend plugin
+    #[cfg(feature = "backend")]
     pub fn build(
         &mut self,
         snapshot_path: &str,
@@ -244,6 +250,7 @@ impl PluginClient {
     }
 
     /// List supported build targets
+    #[cfg(feature = "backend")]
     pub fn list_targets(&mut self) -> Result<ListTargetsResult, ClientError> {
         self.call(methods::BACKEND_SUPPORTED_TARGETS, Some(serde_json::json!({})))
     }
@@ -335,35 +342,20 @@ impl PluginClient {
     fn handle_notification(&self, notification: &Notification) {
         if let Some(handler) = &self.notification_handler {
             handler(&notification.method, notification.params.as_ref());
-        }
-    }
-}
-
-/// Default notification handler that prints to stderr in Cargo style
-fn default_notification_handler(method: &str, params: Option<&serde_json::Value>) {
-    use crate::output;
-
-    match method {
-        methods::NOTIFY_PROGRESS => {
-            // Progress notifications are now silent - status is shown via output module
-            // Only show log-level messages
-        },
-        methods::NOTIFY_LOG => {
-            if let Some(params) = params {
-                if let Ok(p) = serde_json::from_value::<LogParams>(params.clone()) {
-                    match p.level.to_lowercase().as_str() {
-                        "error" => output::error(&p.message),
-                        "warn" | "warning" => output::warning(&p.message),
-                        _ => {
-                            // Info and debug logs are silent in normal mode
-                        },
+        } else {
+            // Default handling: print log messages
+            if notification.method == methods::NOTIFY_LOG {
+                if let Some(params) = &notification.params {
+                    if let Ok(p) = serde_json::from_value::<LogParams>(params.clone()) {
+                        match p.level.to_lowercase().as_str() {
+                            "error" => eprintln!("error: {}", p.message),
+                            "warn" | "warning" => eprintln!("warning: {}", p.message),
+                            _ => {},
+                        }
                     }
                 }
             }
-        },
-        _ => {
-            // Unknown notification, ignore
-        },
+        }
     }
 }
 

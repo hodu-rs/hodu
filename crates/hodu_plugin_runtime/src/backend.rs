@@ -1,19 +1,19 @@
-//! Plugin process management
+//! Backend plugin runtime
 //!
-//! This module handles spawning, managing, and keeping alive plugin processes.
-//! Plugins are standalone executables that communicate via JSON-RPC over stdio.
+//! This module provides the runtime for loading and executing backend plugins.
+//! Backend plugins handle model inference execution and AOT compilation.
 
-use super::client::{CancellationHandle, ClientError, PluginClient, DEFAULT_TIMEOUT};
-use super::registry::{PluginEntry, PluginRegistry, RegistryError};
+use crate::client::{CancellationHandle, ClientError, PluginClient, DEFAULT_TIMEOUT};
+use crate::registry::{PluginEntry, PluginRegistry, RegistryError};
 use hodu_plugin::rpc::InitializeResult;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-/// Plugin process manager
+/// Backend plugin manager
 ///
-/// Manages plugin processes with keep-alive support for reuse.
+/// Manages backend plugin processes with keep-alive support for reuse.
 pub struct PluginManager {
     /// Running plugin processes (name -> process)
     processes: HashMap<String, ManagedPlugin>,
@@ -33,11 +33,11 @@ struct ManagedPlugin {
 }
 
 impl PluginManager {
-    /// Create a new plugin manager
-    pub fn new() -> Result<Self, ProcessError> {
-        let registry_path = PluginRegistry::default_path().map_err(ProcessError::Registry)?;
-        let registry = PluginRegistry::load(&registry_path).map_err(ProcessError::Registry)?;
-        let plugins_dir = PluginRegistry::plugins_dir().map_err(ProcessError::Registry)?;
+    /// Create a new backend plugin manager
+    pub fn new() -> Result<Self, ManagerError> {
+        let registry_path = PluginRegistry::default_path().map_err(ManagerError::Registry)?;
+        let registry = PluginRegistry::load(&registry_path).map_err(ManagerError::Registry)?;
+        let plugins_dir = PluginRegistry::plugins_dir().map_err(ManagerError::Registry)?;
 
         Ok(Self {
             processes: HashMap::new(),
@@ -48,7 +48,7 @@ impl PluginManager {
     }
 
     /// Create a new plugin manager with a custom timeout
-    pub fn with_timeout(timeout_secs: u64) -> Result<Self, ProcessError> {
+    pub fn with_timeout(timeout_secs: u64) -> Result<Self, ManagerError> {
         let mut manager = Self::new()?;
         manager.timeout = Duration::from_secs(timeout_secs);
         Ok(manager)
@@ -59,11 +59,10 @@ impl PluginManager {
         self.timeout = Duration::from_secs(timeout_secs);
     }
 
-    /// Get or spawn a plugin by name
-    pub fn get_plugin(&mut self, name: &str) -> Result<&mut PluginClient, ProcessError> {
+    /// Get or spawn a backend plugin by name
+    pub fn get_plugin(&mut self, name: &str) -> Result<&mut PluginClient, ManagerError> {
         // Check if already running
         if self.processes.contains_key(name) {
-            // SAFETY: We just checked that the key exists
             return Ok(&mut self
                 .processes
                 .get_mut(name)
@@ -75,11 +74,11 @@ impl PluginManager {
         let entry = self
             .registry
             .find(name)
-            .ok_or_else(|| ProcessError::NotFound(name.to_string()))?;
+            .ok_or_else(|| ManagerError::NotFound(name.to_string()))?;
 
         // Check if plugin is enabled
         if !entry.enabled {
-            return Err(ProcessError::Disabled(name.to_string()));
+            return Err(ManagerError::Disabled(name.to_string()));
         }
 
         let entry = entry.clone();
@@ -88,28 +87,26 @@ impl PluginManager {
         let managed = self.spawn_plugin(&entry)?;
         self.processes.insert(name.to_string(), managed);
 
-        // SAFETY: We just inserted the key
         Ok(&mut self.processes.get_mut(name).expect("key exists after insert").client)
     }
 
-    /// Get a format plugin by extension (tries model format first, then tensor format)
-    pub fn get_format_for_extension(&mut self, ext: &str) -> Result<&mut PluginClient, ProcessError> {
+    /// Get a backend plugin by device
+    pub fn get_for_device(&mut self, device: &str) -> Result<&mut PluginClient, ManagerError> {
         let entry = self
             .registry
-            .find_model_format_by_extension(ext)
-            .or_else(|| self.registry.find_tensor_format_by_extension(ext))
-            .ok_or_else(|| ProcessError::NoFormatForExtension(ext.to_string()))?
+            .find_backend_by_device(device)
+            .ok_or_else(|| ManagerError::NoBackendForDevice(device.to_string()))?
             .clone();
 
         self.get_plugin(&entry.name)
     }
 
     /// Spawn a plugin process
-    fn spawn_plugin(&self, entry: &PluginEntry) -> Result<ManagedPlugin, ProcessError> {
+    fn spawn_plugin(&self, entry: &PluginEntry) -> Result<ManagedPlugin, ManagerError> {
         let binary_path = self.plugins_dir.join(&entry.name).join(&entry.binary);
 
         if !binary_path.exists() {
-            return Err(ProcessError::BinaryNotFound(binary_path.to_string_lossy().to_string()));
+            return Err(ManagerError::BinaryNotFound(binary_path.to_string_lossy().to_string()));
         }
 
         // Spawn process
@@ -118,25 +115,22 @@ impl PluginManager {
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
-            .map_err(|e| ProcessError::Spawn(e.to_string()))?;
+            .map_err(|e| ManagerError::Spawn(e.to_string()))?;
 
         // Create client
-        let mut client = PluginClient::new(&mut child).map_err(ProcessError::Client)?;
+        let mut client = PluginClient::new(&mut child).map_err(ManagerError::Client)?;
 
         // Set timeout
         client.set_timeout(self.timeout);
 
-        // Enable notification handling (progress, logs)
-        client.use_default_notification_handler();
-
         // Initialize
-        let info = client.initialize().map_err(ProcessError::Client)?;
+        let info = client.initialize().map_err(ManagerError::Client)?;
 
         Ok(ManagedPlugin { child, client, info })
     }
 
     /// Shutdown a specific plugin
-    pub fn shutdown_plugin(&mut self, name: &str) -> Result<(), ProcessError> {
+    pub fn shutdown_plugin(&mut self, name: &str) -> Result<(), ManagerError> {
         if let Some(mut managed) = self.processes.remove(name) {
             let _ = managed.client.shutdown();
             let _ = managed.child.wait();
@@ -169,38 +163,38 @@ impl Drop for PluginManager {
     }
 }
 
-/// Process management errors
+/// Backend plugin manager errors
 #[derive(Debug)]
-pub enum ProcessError {
+pub enum ManagerError {
     Registry(RegistryError),
     NotFound(String),
     Disabled(String),
-    NoFormatForExtension(String),
+    NoBackendForDevice(String),
     BinaryNotFound(String),
     Spawn(String),
     Client(ClientError),
 }
 
-impl std::fmt::Display for ProcessError {
+impl std::fmt::Display for ManagerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProcessError::Registry(e) => write!(f, "Registry error: {}", e),
-            ProcessError::NotFound(name) => write!(f, "Plugin not found: {}", name),
-            ProcessError::Disabled(name) => write!(
+            ManagerError::Registry(e) => write!(f, "Registry error: {}", e),
+            ManagerError::NotFound(name) => write!(f, "Plugin not found: {}", name),
+            ManagerError::Disabled(name) => write!(
                 f,
                 "Plugin is disabled: {} (use `hodu plugin enable {}` to enable)",
                 name, name
             ),
-            ProcessError::NoFormatForExtension(ext) => {
-                write!(f, "No format plugin found for extension: {}", ext)
+            ManagerError::NoBackendForDevice(device) => {
+                write!(f, "No backend plugin found for device: {}", device)
             },
-            ProcessError::BinaryNotFound(path) => {
+            ManagerError::BinaryNotFound(path) => {
                 write!(f, "Plugin binary not found: {}", path)
             },
-            ProcessError::Spawn(e) => write!(f, "Failed to spawn plugin: {}", e),
-            ProcessError::Client(e) => write!(f, "Client error: {}", e),
+            ManagerError::Spawn(e) => write!(f, "Failed to spawn plugin: {}", e),
+            ManagerError::Client(e) => write!(f, "Client error: {}", e),
         }
     }
 }
 
-impl std::error::Error for ProcessError {}
+impl std::error::Error for ManagerError {}

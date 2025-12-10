@@ -31,6 +31,7 @@ half = { workspace = true }
 hex = { workspace = true }
 hodu_core = { workspace = true, features = ["serde", "f8e5m2", "f64", "u16", "u64", "i16", "i64"] }
 hodu_plugin = { workspace = true }
+hodu_plugin_runtime = { workspace = true, features = ["format", "backend"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
