@@ -35,7 +35,7 @@ Built on **Rust's foundation of memory safety and zero-cost abstractions**, Hodu
 
 ### Example
 
-This example shows direct tensor operations:
+#### Tensor Operations
 
 ```rust
 use hodu::prelude::*;
@@ -63,6 +63,34 @@ With the `cuda` feature enabled, you can use CUDA with the following setting:
 ```diff
 - set_runtime_device(Device::CPU);
 + set_runtime_device(Device::CUDA(0));
+```
+
+#### Model Inference (with `plugin` feature)
+
+Run models using installed plugins. **Requires [hodu-cli](https://crates.io/crates/hodu-cli)** for plugin management.
+
+```bash
+$ cargo install hodu-cli
+$ hodu plugin install aot-cpu
+```
+
+```rust
+use hodu::prelude::*;
+use hodu::plugin::Runtime;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut runtime = Runtime::new()?;
+    let model = runtime.load("model.onnx")?;
+
+    let input = Tensor::randn(&[1, 3, 224, 224], 0f32, 1.)?;
+    let outputs = runtime.run(&model, &[("input", &input)], "cpu")?;
+
+    for (name, tensor) in outputs {
+        println!("{}: {:?}", name, tensor.shape());
+    }
+
+    Ok(())
+}
 ```
 
 ## Features

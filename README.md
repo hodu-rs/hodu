@@ -14,28 +14,13 @@ Tensor ops, model building, inference, deployment. All in one.
 
 ### hodu
 
-#### [lib](./hodu/lib/README.md) - Core library for tensors and models.
-
-[![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu/lib)](https://crates.io/crates/hodu)
-
-```rust
-use hodu::prelude::*;
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    set_runtime_device(Device::CPU);
-
-    let a = Tensor::randn(&[2, 3], 0f32, 1.)?;
-    let b = Tensor::randn(&[3, 4], 0f32, 1.)?;
-    let c = a.matmul(&b)?;
-
-    println!("{}", c);
-    Ok(())
-}
-```
-
 #### [cli](./hodu/cli/README.md) - Run, convert, build models from the command line.
 
 [![hodu-cli](https://img.shields.io/crates/v/hodu.svg?label=hodu/cli)](https://crates.io/crates/hodu-cli)
+
+```bash
+$ cargo install hodu-cli
+```
 
 ```bash
 $ hodu plugin install aot-cpu
@@ -43,6 +28,30 @@ $ hodu plugin install aot-cpu
 $ hodu run model.onnx --input x=input.npy
 $ hodu build model.hdss -o model
 $ hodu build model.onnx -o model.dylib
+```
+
+#### [lib](./hodu/lib/README.md) - Core library for tensors and models.
+
+[![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu/lib)](https://crates.io/crates/hodu)
+
+```rust
+use hodu::prelude::*;
+use hodu::plugin::Runtime;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Tensor operations
+    set_runtime_device(Device::CPU);
+    let a = Tensor::randn(&[2, 3], 0f32, 1.)?;
+    let b = Tensor::randn(&[3, 4], 0f32, 1.)?;
+    let c = a.matmul(&b)?;
+
+    // Model inference (requires hodu-cli for plugin management)
+    let mut runtime = Runtime::new()?;
+    let model = runtime.load("model.onnx")?;
+    let outputs = runtime.run(&model, &[("input", &a)], "cpu")?;
+
+    Ok(())
+}
 ```
 
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
@@ -69,9 +78,9 @@ Hodu unifies this pipeline into one ecosystem.
 
 ### One ecosystem, unified
 
-**hodu** (lib) gives you a familiar PyTorch-style API for building models. Operations can be captured into a computation graph for optimization and compilation. Every kernel is implemented from scratch—no external ML runtime dependencies.
-
 **hodu** (cli) follows a simple principle: one command gets you what you need. `hodu run` for inference, `hodu build` for native binaries, `hodu inspect` to examine models. No config files or build scripts required.
+
+**hodu** (lib) gives you a familiar PyTorch-style API for building models. Operations can be captured into a computation graph for optimization and compilation. Every kernel is implemented from scratch—no external ML runtime dependencies.
 
 **hodu-plugin-sdk** keeps Hodu open for extension. Plugins run as separate processes communicating via JSON-RPC, so you can write them in any language. Need a new model format or hardware backend? Build a plugin without touching Hodu's core.
 
