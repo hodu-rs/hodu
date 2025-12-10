@@ -4,11 +4,9 @@
 //!   cargo hodu-plugin-sdk init [name] [-t type]
 
 use clap::{Parser, Subcommand};
+use hodu_plugin::PLUGIN_VERSION;
 use inquire::{Select, Text};
 use std::path::PathBuf;
-
-/// Plugin protocol version
-const PLUGIN_VERSION: &str = "0.3.0";
 
 #[derive(Parser)]
 #[command(name = "cargo")]
