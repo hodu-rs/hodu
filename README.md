@@ -1,7 +1,6 @@
 # Hodu, a Rust ML toolkit
 
 [![hodu](https://img.shields.io/crates/v/hodu.svg?label=hodu)](https://crates.io/crates/hodu)
-[![hodu-cli](https://img.shields.io/crates/v/hodu-cli.svg?label=hodu-cli)](https://crates.io/crates/hodu-cli)
 [![hodu-plugin-sdk](https://img.shields.io/crates/v/hodu-plugin-sdk.svg?label=hodu-plugin-sdk)](https://crates.io/crates/hodu-plugin-sdk)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
 
@@ -48,12 +47,6 @@ hodu build model.hdss -o model
 hodu build model.onnx -o model.dylib
 ```
 
-### hoduscript (planned)
-
-#### cli, compiler, lsp, fmt
-
-Scripting language for Hodu. Define models easily and run scripts directly.
-
 ### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
 
 Build your own format/backend plugins. JSON-RPC over stdio.
@@ -80,8 +73,6 @@ Hodu unifies this pipeline into one ecosystem.
 **hodu** (lib) gives you a familiar PyTorch-style API for building models. Operations can be captured into a computation graph for optimization and compilation. Every kernel is implemented from scratch—no external ML runtime dependencies.
 
 **hodu** (cli) follows a simple principle: one command gets you what you need. `hodu run` for inference, `hodu build` for native binaries, `hodu inspect` to examine models. No config files or build scripts required.
-
-**hoduscript** (planned) will let you define models in a simple scripting language and run them directly with the CLI.
 
 **hodu-plugin-sdk** keeps Hodu open for extension. Plugins run as separate processes communicating via JSON-RPC, so you can write them in any language. Need a new model format or hardware backend? Build a plugin without touching Hodu's core.
 

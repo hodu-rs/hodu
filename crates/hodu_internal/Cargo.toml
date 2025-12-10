@@ -1,6 +1,6 @@
 [package]
 name = "hodu_internal"
-version = "0.2.4"
+version = "0.3.0"
 description = "hodu internal"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]

@@ -1,6 +1,6 @@
 [package]
 name = "hodu_plugin_runtime"
-version = "0.1.0"
+version = "0.3.0"
 description = "Hodu plugin runtime - loading and executing plugins"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]

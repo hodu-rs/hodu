@@ -1,6 +1,6 @@
 [package]
 name = "hodu"
-version = "0.2.4"
+version = "0.3.0"
 description = "A machine learning library built with user convenience at its core"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]

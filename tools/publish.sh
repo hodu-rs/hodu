@@ -14,6 +14,9 @@ crates=(
     hodu_datasets
 
     hodu_internal
+
+    hodu_plugin
+    hodu_plugin_runtime
 )
 
 if [ -n "$(git status --porcelain)" ]; then
@@ -36,9 +39,18 @@ done
 
 popd
 
-echo "Publishing hodu-lib"
-cp LICENSE hodu-lib/
-pushd hodu-lib
+echo "Publishing hodu"
+cp LICENSE hodu/lib/
+pushd hodu/lib
+git add LICENSE
+cargo publish --no-verify --allow-dirty
+popd
+
+sleep 20
+
+echo "Publishing hodu-cli"
+cp LICENSE hodu/cli/
+pushd hodu/cli
 git add LICENSE
 cargo publish --no-verify --allow-dirty
 popd
