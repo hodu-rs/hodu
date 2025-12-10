@@ -118,6 +118,11 @@ pub fn warning(message: &str) {
     print_status("Warning", colors::BOLD_YELLOW, message);
 }
 
+/// Print "Info" status (cyan)
+pub fn info(message: &str) {
+    print_status("Info", colors::BOLD_CYAN, message);
+}
+
 /// Print "Error" status (red)
 pub fn error(message: &str) {
     print_status("Error", colors::BOLD_RED, message);

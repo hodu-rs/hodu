@@ -55,9 +55,12 @@ pub fn update_plugins(name: Option<&str>) -> Result<(), Box<dyn std::error::Erro
                 };
 
                 // Find latest compatible version
-                if let Some(latest) = reg_plugin.versions.iter().find(|v| v.sdk == host_major_minor) {
+                if let Some(latest) = reg_plugin.versions.iter().find(|v| v.plugin == host_major_minor) {
                     if latest.version != plugin.version {
-                        println!("  {} -> {} (protocol {})", plugin.version, latest.version, latest.sdk);
+                        println!(
+                            "  {} -> {} (protocol {})",
+                            plugin.version, latest.version, latest.plugin
+                        );
                         install_from_registry(&plugin.name, None, false, true)?;
                         continue;
                     } else {

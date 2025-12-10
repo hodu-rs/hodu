@@ -6,4 +6,5 @@ pub mod doctor;
 pub mod inspect;
 pub mod plugin;
 pub mod run;
+pub mod setup;
 pub mod version;

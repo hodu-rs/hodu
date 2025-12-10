@@ -20,7 +20,7 @@ pub struct PluginVersionEntry {
     pub version: String,
     pub tag: String,
     /// Plugin protocol version requirement (e.g., "0.1" means compatible with 0.1.x)
-    pub sdk: String,
+    pub plugin: String,
 }
 
 /// Plugin entry in the registry
@@ -86,7 +86,11 @@ pub fn install_from_registry(
     };
 
     // Filter compatible versions (same major.minor)
-    let compatible_versions: Vec<_> = plugin.versions.iter().filter(|v| v.sdk == host_major_minor).collect();
+    let compatible_versions: Vec<_> = plugin
+        .versions
+        .iter()
+        .filter(|v| v.plugin == host_major_minor)
+        .collect();
 
     // Determine the tag to use
     let tag = if let Some(t) = tag_override {
@@ -103,7 +107,7 @@ pub fn install_from_registry(
                     plugin
                         .versions
                         .iter()
-                        .map(|v| format!("{} (protocol {})", v.version, v.sdk))
+                        .map(|v| format!("{} (protocol {})", v.version, v.plugin))
                         .collect::<Vec<_>>()
                         .join("\n  ")
                 )
@@ -132,7 +136,7 @@ pub fn install_from_registry(
                 plugin
                     .versions
                     .iter()
-                    .map(|v| format!("{} (protocol {})", v.version, v.sdk))
+                    .map(|v| format!("{} (protocol {})", v.version, v.plugin))
                     .collect::<Vec<_>>()
                     .join("\n  ")
             )
