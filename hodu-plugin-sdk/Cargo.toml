@@ -20,5 +20,6 @@ path = "src/bin/cargo-hodu-plugin-sdk.rs"
 clap = { workspace = true, features = ["derive"] }
 hodu_core = { workspace = true, features = ["serde", "f8e5m2", "f64", "u16", "u64", "i16", "i64"] }
 hodu_plugin = { workspace = true }
+inquire = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

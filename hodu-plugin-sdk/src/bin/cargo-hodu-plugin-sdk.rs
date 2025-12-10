@@ -1,9 +1,10 @@
 //! cargo-hodu-plugin-sdk - Cargo subcommand for creating Hodu plugins
 //!
 //! Usage:
-//!   cargo hodu-plugin-sdk init <name> --type <type>
+//!   cargo hodu-plugin-sdk init [name] [-t type]
 
 use clap::{Parser, Subcommand};
+use inquire::{Select, Text};
 use std::path::PathBuf;
 
 /// Plugin protocol version
@@ -30,12 +31,12 @@ enum CargoCommand {
 enum Command {
     /// Initialize a new plugin project
     Init {
-        /// Plugin name
-        name: String,
+        /// Plugin name (interactive if not provided)
+        name: Option<String>,
 
         /// Plugin type: backend, model_format, or tensor_format
         #[arg(short = 't', long = "type")]
-        plugin_type: String,
+        plugin_type: Option<String>,
 
         /// Output directory (default: current directory)
         #[arg(short, long)]
@@ -53,7 +54,7 @@ fn main() {
             name,
             plugin_type,
             output,
-        } => create_plugin(&name, &plugin_type, output),
+        } => init_plugin(name, plugin_type, output),
     };
 
     if let Err(e) = result {
@@ -62,8 +63,37 @@ fn main() {
     }
 }
 
-fn create_plugin(name: &str, plugin_type: &str, output: Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
-    let plugin_type = plugin_type.to_lowercase();
+fn init_plugin(
+    name: Option<String>,
+    plugin_type: Option<String>,
+    output: Option<PathBuf>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Interactive name input
+    let name = match name {
+        Some(n) => n,
+        None => Text::new("Plugin name:")
+            .with_placeholder("my-plugin")
+            .prompt()?,
+    };
+
+    if name.is_empty() {
+        return Err("Plugin name cannot be empty".into());
+    }
+
+    // Interactive type selection
+    let plugin_type = match plugin_type {
+        Some(t) => t.to_lowercase(),
+        None => {
+            let options = vec![
+                "backend        - Execute/compile models on devices",
+                "model_format   - Load/save model files (e.g., ONNX)",
+                "tensor_format  - Load/save tensor files (e.g., NPY)",
+            ];
+            let selection = Select::new("Plugin type:", options).prompt()?;
+            selection.split_whitespace().next().unwrap().to_string()
+        }
+    };
+
     let valid_types = ["backend", "model_format", "tensor_format"];
     if !valid_types.contains(&plugin_type.as_str()) {
         return Err(format!(
@@ -77,46 +107,48 @@ fn create_plugin(name: &str, plugin_type: &str, output: Option<PathBuf>) -> Resu
         Some(dir) => dir,
         None => std::env::current_dir()?,
     };
-    let project_dir = output_dir.join(name);
+    let project_dir = output_dir.join(&name);
 
     if project_dir.exists() {
         return Err(format!("Directory already exists: {}", project_dir.display()).into());
     }
 
+    println!();
     println!("Creating {} plugin: {}", plugin_type, name);
 
     std::fs::create_dir_all(&project_dir)?;
     std::fs::create_dir_all(project_dir.join("src"))?;
 
     // Cargo.toml
-    let cargo_toml = cargo_toml_template(name);
+    let cargo_toml = cargo_toml_template(&name);
     std::fs::write(project_dir.join("Cargo.toml"), cargo_toml)?;
 
     // manifest.json
     let manifest = match plugin_type.as_str() {
-        "backend" => manifest_json_backend_template(name),
-        "model_format" => manifest_json_model_format_template(name),
-        "tensor_format" => manifest_json_tensor_format_template(name),
+        "backend" => manifest_json_backend_template(&name),
+        "model_format" => manifest_json_model_format_template(&name),
+        "tensor_format" => manifest_json_tensor_format_template(&name),
         _ => unreachable!(),
     };
     std::fs::write(project_dir.join("manifest.json"), manifest)?;
 
     // main.rs
     let main_rs = match plugin_type.as_str() {
-        "backend" => main_rs_backend_template(name),
-        "model_format" => main_rs_model_format_template(name),
-        "tensor_format" => main_rs_tensor_format_template(name),
+        "backend" => main_rs_backend_template(&name),
+        "model_format" => main_rs_model_format_template(&name),
+        "tensor_format" => main_rs_tensor_format_template(&name),
         _ => unreachable!(),
     };
     std::fs::write(project_dir.join("src").join("main.rs"), main_rs)?;
 
-    println!("Created plugin project at: {}", project_dir.display());
+    println!();
+    println!("  Created plugin project at: {}", project_dir.display());
     println!();
     println!("Next steps:");
-    println!("  1. cd {}", name);
-    println!("  2. Edit manifest.json with your plugin details");
-    println!("  3. Implement the plugin in src/main.rs");
-    println!("  4. Install with: hodu plugin install --path .");
+    println!("  cd {}", name);
+    println!("  # Edit manifest.json with your plugin details");
+    println!("  # Implement the plugin in src/main.rs");
+    println!("  hodu plugin install --path .");
 
     Ok(())
 }
