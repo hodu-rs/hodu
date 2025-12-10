@@ -1,8 +1,5 @@
 pub mod prelude;
 
-#[cfg(feature = "plugin")]
-pub mod plugin;
-
 pub use hodu_core as core;
 pub use hodu_datasets as datasets;
 pub use hodu_nn as nn;

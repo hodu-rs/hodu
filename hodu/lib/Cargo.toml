@@ -13,9 +13,8 @@ keywords = ["tensor", "machine-learning", "hodu"]
 categories = ["science"]
 
 [features]
-default = ["serde", "plugin"]
+default = ["serde"]
 serde = ["hodu_internal/serde"]
-plugin = ["hodu_internal/plugin"]
 
 # optional dtype
 f8e5m2 = ["hodu_internal/f8e5m2"]

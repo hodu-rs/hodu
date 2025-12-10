@@ -39,7 +39,7 @@ done
 
 popd
 
-echo "Publishing hodu"
+echo "Publishing hodu/lib"
 cp LICENSE hodu/lib/
 pushd hodu/lib
 git add LICENSE
@@ -48,7 +48,7 @@ popd
 
 sleep 20
 
-echo "Publishing hodu-cli"
+echo "Publishing hodu/cli"
 cp LICENSE hodu/cli/
 pushd hodu/cli
 git add LICENSE

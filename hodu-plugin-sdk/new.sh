@@ -2,7 +2,7 @@
 set -e
 
 SDK_VERSION="0.1.0"
-PLUGIN_VERSION="0.3.0"
+PLUGIN_VERSION="0.1.0"
 TEMPLATE_URL="https://raw.githubusercontent.com/daminstudio/hodu/main/hodu-plugin-sdk/template"
 
 # Colors

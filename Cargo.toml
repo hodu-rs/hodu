@@ -24,8 +24,8 @@ hodu_macro_utils = { path = "crates/hodu_macro_utils", version = "0.3.0" }
 hodu_metal_kernels = { path = "crates/hodu_metal_kernels", version = "0.3.0" }
 hodu_nn = { path = "crates/hodu_nn", version = "0.3.0" }
 hodu_nn_macros = { path = "crates/hodu_nn/macros", version = "0.3.0" }
-hodu_plugin = { path = "crates/hodu_plugin", version = "0.3.0" }
-hodu_plugin_runtime = { path = "crates/hodu_plugin_runtime", version = "0.3.0", default-features = false }
+hodu_plugin = { path = "crates/hodu_plugin", version = "0.1.0" }
+hodu_plugin_runtime = { path = "crates/hodu_plugin_runtime", version = "0.1.0", default-features = false }
 inquire = "0.9.1"
 num-traits = { version = "0.2.19" }
 paste = "1.0.15"

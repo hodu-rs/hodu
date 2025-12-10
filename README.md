@@ -36,19 +36,15 @@ $ hodu build model.onnx -o model.dylib
 
 ```rust
 use hodu::prelude::*;
-use hodu::plugin::Runtime;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Tensor operations
     set_runtime_device(Device::CPU);
+
     let a = Tensor::randn(&[2, 3], 0f32, 1.)?;
     let b = Tensor::randn(&[3, 4], 0f32, 1.)?;
     let c = a.matmul(&b)?;
 
-    // Model inference (requires hodu-cli for plugin management)
-    let mut runtime = Runtime::new()?;
-    let model = runtime.load("model.onnx")?;
-    let outputs = runtime.run(&model, &[("input", &a)], "cpu")?;
+    println!("{}", c);
 
     Ok(())
 }

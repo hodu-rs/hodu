@@ -13,7 +13,7 @@
 //! let model = runtime.load("model.onnx")?;
 //!
 //! let input = Tensor::randn(&[1, 3, 224, 224], 0f32, 1.)?;
-//! let outputs = runtime.run(&model, &[("input", &input)], "cpu")?;
+//! let outputs = runtime.run(&model, &[("input", &input)], "cpu", "")?;
 //! ```
 
 use crate::backend;
@@ -119,6 +119,7 @@ impl Runtime {
     /// * `model` - The loaded model to run
     /// * `inputs` - Named input tensors
     /// * `device` - Device to run on (e.g., "cpu", "cuda::0", "metal")
+    /// * `backend` - Backend plugin name (e.g., "aot-cpu"). If empty or not found, auto-selects based on device.
     ///
     /// # Returns
     ///
@@ -128,12 +129,22 @@ impl Runtime {
         model: &Model,
         inputs: &[(&str, &Tensor)],
         device: &str,
+        backend: &str,
     ) -> Result<Vec<(String, Tensor)>, RuntimeError> {
-        // Get backend for device
-        let client = self
-            .backend_manager
-            .get_for_device(device)
-            .map_err(RuntimeError::Backend)?;
+        // Get backend - try explicit name first, fall back to device-based selection
+        let client = if !backend.is_empty() {
+            match self.backend_manager.get_plugin(backend) {
+                Ok(c) => c,
+                Err(_) => self
+                    .backend_manager
+                    .get_for_device(device)
+                    .map_err(RuntimeError::Backend)?,
+            }
+        } else {
+            self.backend_manager
+                .get_for_device(device)
+                .map_err(RuntimeError::Backend)?
+        };
 
         // Prepare inputs - save to temp files
         let temp_dir = std::env::temp_dir().join("hodu_runtime");

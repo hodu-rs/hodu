@@ -1,6 +1,6 @@
 [package]
 name = "hodu_plugin"
-version = "0.3.0"
+version = "0.1.0"
 description = "Hodu plugin protocol types"
 license = "BSD-3-Clause"
 authors = ["Han Damin <miniex@daminstudio.net>"]

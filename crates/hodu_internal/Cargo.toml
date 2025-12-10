@@ -10,7 +10,6 @@ repository = "https://github.com/daminstudio/hodu"
 
 [features]
 serde = ["hodu_core/serde", "hodu_nn/serde", "hodu_datasets/serde"]
-plugin = ["dep:hodu_plugin_runtime", "hodu_plugin_runtime/format", "hodu_plugin_runtime/backend"]
 
 f8e5m2 = ["hodu_core/f8e5m2"]
 f64 = ["hodu_core/f64"]
@@ -30,4 +29,3 @@ metal = ["hodu_core/metal"]
 hodu_core = { workspace = true }
 hodu_datasets = { workspace = true }
 hodu_nn = { workspace = true }
-hodu_plugin_runtime = { workspace = true, optional = true, default-features = false }
