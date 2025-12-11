@@ -15,6 +15,7 @@ const MATRIX_SRC: &str = include_str!("../kernels/ops_matrix.metal");
 const MEMORY_SRC: &str = include_str!("../kernels/ops_memory.metal");
 const PADDING_SRC: &str = include_str!("../kernels/ops_padding.metal");
 const REDUCE_SRC: &str = include_str!("../kernels/ops_reduce.metal");
+const SCAN_SRC: &str = include_str!("../kernels/ops_scan.metal");
 const SHAPE_MEMORY_SRC: &str = include_str!("../kernels/ops_shape_memory.metal");
 const UNARY_SRC: &str = include_str!("../kernels/ops_unary.metal");
 const WINDOWING_SRC: &str = include_str!("../kernels/ops_windowing.metal");
@@ -41,6 +42,7 @@ static MATRIX: OnceLock<String> = OnceLock::new();
 static MEMORY: OnceLock<String> = OnceLock::new();
 static PADDING: OnceLock<String> = OnceLock::new();
 static REDUCE: OnceLock<String> = OnceLock::new();
+static SCAN: OnceLock<String> = OnceLock::new();
 static SHAPE_MEMORY: OnceLock<String> = OnceLock::new();
 static UNARY: OnceLock<String> = OnceLock::new();
 static WINDOWING: OnceLock<String> = OnceLock::new();
@@ -81,6 +83,10 @@ pub fn get_reduce() -> &'static str {
     REDUCE.get_or_init(|| combine_source(REDUCE_SRC))
 }
 
+pub fn get_scan() -> &'static str {
+    SCAN.get_or_init(|| combine_source(SCAN_SRC))
+}
+
 pub fn get_shape_memory() -> &'static str {
     SHAPE_MEMORY.get_or_init(|| combine_source(SHAPE_MEMORY_SRC))
 }
@@ -104,6 +110,7 @@ pub enum Source {
     Memory,
     Padding,
     Reduce,
+    Scan,
     ShapeMemory,
     Storage,
     Unary,

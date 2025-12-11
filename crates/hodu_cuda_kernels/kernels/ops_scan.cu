@@ -1,0 +1,165 @@
+#include "cuda_fp8.h"
+#include <cuda_bf16.h>
+#include <cuda_fp16.h>
+#include <cuda_runtime.h>
+
+// Cumulative sum operation: computes prefix sum along a dimension
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: shape
+// - metadata[2+num_dims..2+2*num_dims]: strides
+// - metadata[2+2*num_dims]: offset
+// - metadata[3+2*num_dims]: dim (dimension to scan along)
+
+#define CUMSUM_OP(TYPE, TYPE_SUFFIX)                                                               \
+    extern "C" __global__ void hodu_cuda_cumsum_##TYPE_SUFFIX(const TYPE *input, TYPE *output,     \
+                                                              const size_t *metadata) {            \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *shape = metadata + 2;                                                        \
+        const size_t *strides = metadata + 2 + num_dims;                                           \
+        const size_t offset = metadata[2 + 2 * num_dims];                                          \
+        const size_t dim = metadata[3 + 2 * num_dims];                                             \
+                                                                                                   \
+        if (num_dims == 0) {                                                                       \
+            if (blockIdx.x == 0 && threadIdx.x == 0) {                                             \
+                output[0] = input[offset];                                                         \
+            }                                                                                      \
+            return;                                                                                \
+        }                                                                                          \
+                                                                                                   \
+        /* Compute output strides (contiguous row-major) */                                        \
+        size_t out_strides[16];                                                                    \
+        out_strides[num_dims - 1] = 1;                                                             \
+        for (size_t d = num_dims - 1; d > 0; d--) {                                                \
+            out_strides[d - 1] = out_strides[d] * shape[d];                                        \
+        }                                                                                          \
+                                                                                                   \
+        size_t outer_size = 1;                                                                     \
+        for (size_t d = 0; d < dim; d++) {                                                         \
+            outer_size *= shape[d];                                                                \
+        }                                                                                          \
+        size_t inner_size = 1;                                                                     \
+        for (size_t d = dim + 1; d < num_dims; d++) {                                              \
+            inner_size *= shape[d];                                                                \
+        }                                                                                          \
+        const size_t scan_size = shape[dim];                                                       \
+        const size_t scan_stride = strides[dim];                                                   \
+        const size_t num_scans = outer_size * inner_size;                                          \
+                                                                                                   \
+        const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;                                  \
+        if (tid >= num_scans)                                                                      \
+            return;                                                                                \
+                                                                                                   \
+        const size_t outer = tid / inner_size;                                                     \
+        const size_t inner = tid % inner_size;                                                     \
+                                                                                                   \
+        TYPE acc = static_cast<TYPE>(0);                                                           \
+        for (size_t s = 0; s < scan_size; s++) {                                                   \
+            size_t in_idx = offset;                                                                \
+            size_t out_idx = 0;                                                                    \
+            size_t tmp_outer = outer;                                                              \
+            for (size_t d = 0; d < dim; d++) {                                                     \
+                size_t coord = tmp_outer % shape[d];                                               \
+                tmp_outer /= shape[d];                                                             \
+                in_idx += coord * strides[d];                                                      \
+                out_idx += coord * out_strides[d];                                                 \
+            }                                                                                      \
+            in_idx += s * scan_stride;                                                             \
+            out_idx += s * out_strides[dim];                                                       \
+            size_t tmp_inner = inner;                                                              \
+            for (size_t d = num_dims - 1; d > dim; d--) {                                          \
+                size_t coord = tmp_inner % shape[d];                                               \
+                tmp_inner /= shape[d];                                                             \
+                in_idx += coord * strides[d];                                                      \
+                out_idx += coord * out_strides[d];                                                 \
+            }                                                                                      \
+            acc = acc + input[in_idx];                                                             \
+            output[out_idx] = acc;                                                                 \
+        }                                                                                          \
+    }
+
+#define CUMSUM_OP_FLOAT(TYPE, TYPE_SUFFIX, TO_FLOAT, FROM_FLOAT)                                   \
+    extern "C" __global__ void hodu_cuda_cumsum_##TYPE_SUFFIX(const TYPE *input, TYPE *output,     \
+                                                              const size_t *metadata) {            \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *shape = metadata + 2;                                                        \
+        const size_t *strides = metadata + 2 + num_dims;                                           \
+        const size_t offset = metadata[2 + 2 * num_dims];                                          \
+        const size_t dim = metadata[3 + 2 * num_dims];                                             \
+                                                                                                   \
+        if (num_dims == 0) {                                                                       \
+            if (blockIdx.x == 0 && threadIdx.x == 0) {                                             \
+                output[0] = input[offset];                                                         \
+            }                                                                                      \
+            return;                                                                                \
+        }                                                                                          \
+                                                                                                   \
+        /* Compute output strides (contiguous row-major) */                                        \
+        size_t out_strides[16];                                                                    \
+        out_strides[num_dims - 1] = 1;                                                             \
+        for (size_t d = num_dims - 1; d > 0; d--) {                                                \
+            out_strides[d - 1] = out_strides[d] * shape[d];                                        \
+        }                                                                                          \
+                                                                                                   \
+        size_t outer_size = 1;                                                                     \
+        for (size_t d = 0; d < dim; d++) {                                                         \
+            outer_size *= shape[d];                                                                \
+        }                                                                                          \
+        size_t inner_size = 1;                                                                     \
+        for (size_t d = dim + 1; d < num_dims; d++) {                                              \
+            inner_size *= shape[d];                                                                \
+        }                                                                                          \
+        const size_t scan_size = shape[dim];                                                       \
+        const size_t scan_stride = strides[dim];                                                   \
+        const size_t num_scans = outer_size * inner_size;                                          \
+                                                                                                   \
+        const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;                                  \
+        if (tid >= num_scans)                                                                      \
+            return;                                                                                \
+                                                                                                   \
+        const size_t outer = tid / inner_size;                                                     \
+        const size_t inner = tid % inner_size;                                                     \
+                                                                                                   \
+        float acc = 0.0f;                                                                          \
+        for (size_t s = 0; s < scan_size; s++) {                                                   \
+            size_t in_idx = offset;                                                                \
+            size_t out_idx = 0;                                                                    \
+            size_t tmp_outer = outer;                                                              \
+            for (size_t d = 0; d < dim; d++) {                                                     \
+                size_t coord = tmp_outer % shape[d];                                               \
+                tmp_outer /= shape[d];                                                             \
+                in_idx += coord * strides[d];                                                      \
+                out_idx += coord * out_strides[d];                                                 \
+            }                                                                                      \
+            in_idx += s * scan_stride;                                                             \
+            out_idx += s * out_strides[dim];                                                       \
+            size_t tmp_inner = inner;                                                              \
+            for (size_t d = num_dims - 1; d > dim; d--) {                                          \
+                size_t coord = tmp_inner % shape[d];                                               \
+                tmp_inner /= shape[d];                                                             \
+                in_idx += coord * strides[d];                                                      \
+                out_idx += coord * out_strides[d];                                                 \
+            }                                                                                      \
+            acc += TO_FLOAT(input[in_idx]);                                                        \
+            output[out_idx] = FROM_FLOAT(acc);                                                     \
+        }                                                                                          \
+    }
+
+CUMSUM_OP_FLOAT(__nv_fp8_e4m3, f8e4m3, __half2float(__nv_cvt_fp8_to_halfraw),
+                __nv_fp8_e4m3(__half(__nv_cvt_float_to_fp8)))
+CUMSUM_OP_FLOAT(__nv_fp8_e5m2, f8e5m2, __half2float(__nv_cvt_fp8_to_halfraw),
+                __nv_fp8_e5m2(__half(__nv_cvt_float_to_fp8)))
+CUMSUM_OP_FLOAT(__nv_bfloat16, bf16, __bfloat162float, __float2bfloat16)
+CUMSUM_OP_FLOAT(__half, f16, __half2float, __float2half)
+CUMSUM_OP(float, f32)
+CUMSUM_OP(double, f64)
+CUMSUM_OP(uint8_t, u8)
+CUMSUM_OP(uint16_t, u16)
+CUMSUM_OP(uint32_t, u32)
+CUMSUM_OP(uint64_t, u64)
+CUMSUM_OP(int8_t, i8)
+CUMSUM_OP(int16_t, i16)
+CUMSUM_OP(int32_t, i32)
+CUMSUM_OP(int64_t, i64)

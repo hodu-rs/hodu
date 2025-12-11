@@ -85,6 +85,7 @@ impl Kernels {
             Source::Memory => crate::source::get_memory(),
             Source::Padding => crate::source::get_padding(),
             Source::Reduce => crate::source::get_reduce(),
+            Source::Scan => crate::source::get_scan(),
             Source::ShapeMemory => crate::source::get_shape_memory(),
             Source::Storage => crate::source::get_storage(),
             Source::Unary => crate::source::get_unary(),

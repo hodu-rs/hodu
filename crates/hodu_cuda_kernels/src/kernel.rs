@@ -139,6 +139,7 @@ impl Kernels {
             Source::OpsMemory => crate::source::get_ops_memory(),
             Source::OpsPadding => crate::source::get_ops_padding(),
             Source::OpsReduce => crate::source::get_ops_reduce(),
+            Source::OpsScan => crate::source::get_ops_scan(),
             Source::OpsShapeMemory => crate::source::get_ops_shape_memory(),
             Source::OpsUnary => crate::source::get_ops_unary(),
             Source::OpsWindowing => crate::source::get_ops_windowing(),
