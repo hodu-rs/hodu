@@ -174,11 +174,16 @@ impl Tensor {
 
     unary_op!(relu, Relu);
     unary_op!(sigmoid, Sigmoid);
+    unary_op!(hardsigmoid, HardSigmoid);
     unary_op!(gelu, Gelu);
     unary_op!(softplus, Softplus);
     unary_op!(silu, Silu);
     pub fn swish(&self) -> HoduResult<Self> {
         self.silu()
+    }
+    unary_op!(hardsilu, HardSilu);
+    pub fn hardswish(&self) -> HoduResult<Self> {
+        self.hardsilu()
     }
     unary_op!(mish, Mish);
 

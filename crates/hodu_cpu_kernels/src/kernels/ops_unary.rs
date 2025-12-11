@@ -23,9 +23,11 @@ ops!(
     recip,
     relu,
     sigmoid,
+    hardsigmoid,
     gelu,
     softplus,
     silu,
+    hardsilu,
     mish,
     sin,
     cos,
@@ -306,7 +308,7 @@ declare_and_dispatch_unary!(
         neg
     ],
     float_types: [
-        relu, sigmoid, gelu, softplus, silu, mish,
+        relu, sigmoid, hardsigmoid, gelu, softplus, silu, hardsilu, mish,
         sin, cos, tan, asin, acos, atan,
         sinh, cosh, tanh, asinh, acosh, atanh,
         exp, exp2, exp10, ln, log2, log10,

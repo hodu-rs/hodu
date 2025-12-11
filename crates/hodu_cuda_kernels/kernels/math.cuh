@@ -212,6 +212,11 @@ template <typename T> __device__ __forceinline__ T sigmoid(T x) {
     return from_float<T>(1.0f / (1.0f + expf(-fx)));
 }
 
+template <typename T> __device__ __forceinline__ T hardsigmoid(T x) {
+    float fx = to_float(x);
+    return from_float<T>(fmaxf(0.0f, fminf(1.0f, (fx + 3.0f) / 6.0f)));
+}
+
 template <typename T> __device__ __forceinline__ T gelu(T x) {
     float fx = to_float(x);
     float result =
@@ -227,6 +232,11 @@ template <typename T> __device__ __forceinline__ T softplus(T x) {
 template <typename T> __device__ __forceinline__ T silu(T x) {
     float fx = to_float(x);
     return from_float<T>(fx / (1.0f + expf(-fx)));
+}
+
+template <typename T> __device__ __forceinline__ T hardsilu(T x) {
+    float fx = to_float(x);
+    return from_float<T>(fx * fmaxf(0.0f, fminf(1.0f, (fx + 3.0f) / 6.0f)));
 }
 
 template <typename T> __device__ __forceinline__ T mish(T x) {

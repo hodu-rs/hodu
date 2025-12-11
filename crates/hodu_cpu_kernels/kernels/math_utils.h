@@ -185,6 +185,18 @@ static inline float silu_helper_f32(float x) { return x / (1.0f + expf(-x)); }
 
 static inline double silu_helper_f64(double x) { return x / (1.0 + exp(-x)); }
 
+static inline float hardsigmoid_helper_f32(float x) {
+    return fmaxf(0.0f, fminf(1.0f, (x + 3.0f) / 6.0f));
+}
+
+static inline double hardsigmoid_helper_f64(double x) {
+    return fmax(0.0, fmin(1.0, (x + 3.0) / 6.0));
+}
+
+static inline float hardsilu_helper_f32(float x) { return x * hardsigmoid_helper_f32(x); }
+
+static inline double hardsilu_helper_f64(double x) { return x * hardsigmoid_helper_f64(x); }
+
 static inline float mish_helper_f32(float x) { return x * tanhf(softplus_helper_f32(x)); }
 
 static inline double mish_helper_f64(double x) { return x * tanh(softplus_helper_f64(x)); }

@@ -200,6 +200,14 @@ fn sigmoid_f32() {
 }
 
 #[test]
+fn hardsigmoid_f32() {
+    let v = vec![-4.0f32, -3.0, -1.0, 0.0, 1.0, 3.0, 4.0];
+    let results = run(&v, hardsigmoid::F32);
+    let expected: Vec<_> = v.iter().map(|x| ((x + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
 fn tanh_f32() {
     let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
     let results = run(&v, tanh::F32);
@@ -228,6 +236,14 @@ fn silu_f32() {
     let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
     let results = run(&v, silu::F32);
     let expected: Vec<_> = v.iter().map(|v| v / (1.0 + (-v).exp())).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn hardsilu_f32() {
+    let v = vec![-4.0f32, -3.0, -1.0, 0.0, 1.0, 3.0, 4.0];
+    let results = run(&v, hardsilu::F32);
+    let expected: Vec<_> = v.iter().map(|x| x * ((x + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
     assert_eq!(approx(results, 4), approx(expected, 4));
 }
 

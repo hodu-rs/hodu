@@ -95,6 +95,10 @@ float m_erf(float x) {
     return sign * y;
 }
 
+float m_hardsigmoid(float x) { return fmax(0.0f, fmin(1.0f, (x + 3.0f) / 6.0f)); }
+
+float m_hardsilu(float x) { return x * m_hardsigmoid(x); }
+
 // Metadata layout:
 // - metadata[0]: num_els (total number of elements)
 // - metadata[1]: num_dims (number of dimensions)
@@ -221,12 +225,14 @@ UNARY_OP(bfloat, recip_bf16, bfloat(1.0f / float(x)));
 // unary - activation
 UNARY_OP(bfloat, relu_bf16, x > 0.0bf ? x : 0.0bf);
 UNARY_OP(bfloat, sigmoid_bf16, bfloat(1.0f / (1.0f + exp(-float(x)))));
+UNARY_OP(bfloat, hardsigmoid_bf16, bfloat(m_hardsigmoid(float(x))));
 UNARY_OP(bfloat, gelu_bf16,
          bfloat(0.5f * float(x) *
                 (1.0f + tanh(0.7978845608028654f *
                              (float(x) + 0.044715f * float(x) * float(x) * float(x))))));
 UNARY_OP(bfloat, softplus_bf16, bfloat(log(1.0f + exp(float(x)))));
 UNARY_OP(bfloat, silu_bf16, bfloat(float(x) / (1.0f + exp(-float(x)))));
+UNARY_OP(bfloat, hardsilu_bf16, bfloat(m_hardsilu(float(x))));
 UNARY_OP(bfloat, mish_bf16, bfloat(float(x) * tanh(log(1.0f + exp(float(x))))));
 
 // unary - trigonometric
@@ -305,12 +311,14 @@ UNARY_OP(half, recip_f16, half(1.0f / float(x)));
 // unary - activation
 UNARY_OP(half, relu_f16, float(x) > 0.0f ? x : 0.0h);
 UNARY_OP(half, sigmoid_f16, half(1.0f / (1.0f + exp(float(-x)))));
+UNARY_OP(half, hardsigmoid_f16, half(m_hardsigmoid(float(x))));
 UNARY_OP(half, gelu_f16,
          half(0.5f * float(x) *
               (1.0f + tanh(0.7978845608028654f *
                            (float(x) + 0.044715f * float(x) * float(x) * float(x))))));
 UNARY_OP(half, softplus_f16, half(log(1.0f + exp(float(x)))));
 UNARY_OP(half, silu_f16, half(float(x) / (1.0f + exp(-float(x)))));
+UNARY_OP(half, hardsilu_f16, half(m_hardsilu(float(x))));
 UNARY_OP(half, mish_f16, half(float(x) * tanh(log(1.0f + exp(float(x))))));
 
 // unary - trigonometric
@@ -385,10 +393,12 @@ UNARY_OP(float, recip_f32, 1.0f / x);
 // unary - activation
 UNARY_OP(float, relu_f32, x > 0 ? x : 0);
 UNARY_OP(float, sigmoid_f32, 1.0f / (1.0f + exp(-x)));
+UNARY_OP(float, hardsigmoid_f32, m_hardsigmoid(x));
 UNARY_OP(float, gelu_f32,
          0.5f * x * (1.0f + tanh(0.7978845608028654f * (x + 0.044715f * x * x * x))));
 UNARY_OP(float, softplus_f32, log(1.0f + exp(x)));
 UNARY_OP(float, silu_f32, x / (1.0f + exp(-x)));
+UNARY_OP(float, hardsilu_f32, m_hardsilu(x));
 UNARY_OP(float, mish_f32, x *tanh(log(1.0f + exp(x))));
 
 // unary - trigonometric

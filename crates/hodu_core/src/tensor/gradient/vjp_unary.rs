@@ -50,6 +50,25 @@ impl VjpCompute for UnaryOp {
                 let derivative = create_mul_tensor(sigmoid_output, one_minus_sigmoid)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
+            UnaryOp::HardSigmoid => {
+                // hardsigmoid(x) = max(0, min(1, (x + 3) / 6))
+                // d/dx hardsigmoid(x) = 1/6 if -3 <= x <= 3, else 0
+                // We can detect the linear region by checking 0 < output < 1
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one_sixth = Scalar::from_f32(1.0 / 6.0, dtype);
+                let zero = Scalar::zero(dtype);
+                let one = Scalar::one(dtype);
+
+                // indicator = (output > 0) & (output < 1)
+                let gt_zero = create_gt_scalar_tensor(_output, zero)?;
+                let lt_one = create_lt_scalar_tensor(_output, one)?;
+                let indicator = create_mul_tensor(gt_zero, lt_one)?;
+
+                // derivative = indicator * (1/6)
+                let derivative = create_mul_scalar_tensor(indicator, one_sixth)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
             UnaryOp::Gelu => {
                 // GELU(x) = x * Φ(x) where Φ is standard normal CDF
                 // Using tanh approximation: GELU(x) ≈ 0.5 * x * (1 + tanh(√(2/π) * (x + 0.044715 * x³)))
@@ -110,6 +129,33 @@ impl VjpCompute for UnaryOp {
                 let x_times_one_minus_sigmoid = create_mul_tensor(input, one_minus_sigmoid)?;
                 let one_plus_term = create_add_tensor(ones, x_times_one_minus_sigmoid)?;
                 let derivative = create_mul_tensor(sigmoid_x, one_plus_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::HardSilu => {
+                // hardsilu(x) = x * hardsigmoid(x)
+                // d/dx hardsilu(x) = hardsigmoid(x) + x * d/dx hardsigmoid(x)
+                //                  = hardsigmoid(x) + x * (1/6 if -3 <= x <= 3 else 0)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one_sixth = Scalar::from_f32(1.0 / 6.0, dtype);
+                let zero = Scalar::zero(dtype);
+                let one = Scalar::one(dtype);
+
+                // hardsigmoid(x) = output / x (but this has issues when x=0)
+                // Better: compute hardsigmoid directly
+                let hardsigmoid_x = create_hardsigmoid_tensor(input)?;
+
+                // indicator = (hardsigmoid(x) > 0) & (hardsigmoid(x) < 1)
+                let gt_zero = create_gt_scalar_tensor(hardsigmoid_x, zero)?;
+                let lt_one = create_lt_scalar_tensor(hardsigmoid_x, one)?;
+                let indicator = create_mul_tensor(gt_zero, lt_one)?;
+
+                // x * indicator * (1/6)
+                let x_indicator = create_mul_tensor(input, indicator)?;
+                let x_hardsigmoid_deriv = create_mul_scalar_tensor(x_indicator, one_sixth)?;
+
+                // derivative = hardsigmoid(x) + x * hardsigmoid'(x)
+                let derivative = create_add_tensor(hardsigmoid_x, x_hardsigmoid_deriv)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
             UnaryOp::Mish => {

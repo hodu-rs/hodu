@@ -457,3 +457,21 @@ fn unary_prelu_f32() {
     let expected: Vec<f32> = input.iter().map(|x| if *x > 0.0 { *x } else { alpha * x }).collect();
     assert_eq!(approx(results, 6), approx(expected, 6));
 }
+
+#[test]
+fn unary_hardsigmoid_f32() {
+    let input: Vec<f32> = vec![-4.0f32, -3.0, -1.0, 0.0, 1.0, 3.0, 4.0];
+
+    let results = run_unary(hardsigmoid::F32, &input);
+    let expected: Vec<f32> = input.iter().map(|x| ((x + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn unary_hardsilu_f32() {
+    let input: Vec<f32> = vec![-4.0f32, -3.0, -1.0, 0.0, 1.0, 3.0, 4.0];
+
+    let results = run_unary(hardsilu::F32, &input);
+    let expected: Vec<f32> = input.iter().map(|x| x * ((x + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}

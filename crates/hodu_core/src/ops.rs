@@ -134,9 +134,11 @@ pub enum UnaryOp {
     // Activation functions
     Relu,
     Sigmoid,
+    HardSigmoid,
     Gelu,
     Softplus,
     Silu,
+    HardSilu,
     Mish,
 
     // Trigonometric
@@ -183,9 +185,11 @@ impl fmt::Display for UnaryOp {
             Self::Recip => write!(f, "recip"),
             Self::Relu => write!(f, "relu"),
             Self::Sigmoid => write!(f, "sigmoid"),
+            Self::HardSigmoid => write!(f, "hardsigmoid"),
             Self::Gelu => write!(f, "gelu"),
             Self::Softplus => write!(f, "softplus"),
             Self::Silu => write!(f, "silu"),
+            Self::HardSilu => write!(f, "hardsilu"),
             Self::Mish => write!(f, "mish"),
             Self::Sin => write!(f, "sin"),
             Self::Cos => write!(f, "cos"),

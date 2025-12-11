@@ -697,9 +697,11 @@ void hodu_cpu_relu_f32(const void *input, void *output, const size_t *metadata) 
     }
 }
 IMPL_UNARY_OP(f32_t, f32, sigmoid, 1.0f / (1.0f + expf(-x)))
+IMPL_UNARY_OP(f32_t, f32, hardsigmoid, hardsigmoid_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, gelu, gelu_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, softplus, softplus_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, silu, silu_helper_f32(x))
+IMPL_UNARY_OP(f32_t, f32, hardsilu, hardsilu_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, mish, mish_helper_f32(x))
 
 // Trigonometric functions
@@ -1057,9 +1059,11 @@ void hodu_cpu_relu_f64(const void *input, void *output, const size_t *metadata) 
     }
 }
 IMPL_UNARY_OP(f64_t, f64, sigmoid, 1.0 / (1.0 + exp(-x)))
+IMPL_UNARY_OP(f64_t, f64, hardsigmoid, hardsigmoid_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, gelu, gelu_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, softplus, softplus_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, silu, silu_helper_f64(x))
+IMPL_UNARY_OP(f64_t, f64, hardsilu, hardsilu_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, mish, mish_helper_f64(x))
 
 IMPL_UNARY_OP(f64_t, f64, sin, sin(x))
@@ -1161,9 +1165,11 @@ IMPL_UNARY_OP(uint8_t, bool, recip, x)
 
 IMPL_UNARY_OP(uint8_t, bool, relu, x)
 IMPL_UNARY_OP(uint8_t, bool, sigmoid, x)
+IMPL_UNARY_OP(uint8_t, bool, hardsigmoid, x)
 IMPL_UNARY_OP(uint8_t, bool, gelu, x)
 IMPL_UNARY_OP(uint8_t, bool, softplus, x)
 IMPL_UNARY_OP(uint8_t, bool, silu, x)
+IMPL_UNARY_OP(uint8_t, bool, hardsilu, x)
 IMPL_UNARY_OP(uint8_t, bool, mish, x)
 
 IMPL_UNARY_OP(uint8_t, bool, sin, x ? 1 : 0)
@@ -1224,10 +1230,14 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, relu, (x > 0.0f) ? x : 0.0f, f8e4m3_to_f
                       float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sigmoid, 1.0f / (1.0f + expf(-x)), f8e4m3_to_float,
                       float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, hardsigmoid, hardsigmoid_helper_f32(x), f8e4m3_to_float,
+                      float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, gelu, gelu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, softplus, softplus_helper_f32(x), f8e4m3_to_float,
                       float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, silu, silu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, hardsilu, hardsilu_helper_f32(x), f8e4m3_to_float,
+                      float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, mish, mish_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
 
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sin, sinf(x), f8e4m3_to_float, float_to_f8e4m3)
@@ -1295,10 +1305,14 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, relu, (x > 0.0f) ? x : 0.0f, f8e5m2_to_f
                       float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sigmoid, 1.0f / (1.0f + expf(-x)), f8e5m2_to_float,
                       float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, hardsigmoid, hardsigmoid_helper_f32(x), f8e5m2_to_float,
+                      float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, gelu, gelu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, softplus, softplus_helper_f32(x), f8e5m2_to_float,
                       float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, silu, silu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, hardsilu, hardsilu_helper_f32(x), f8e5m2_to_float,
+                      float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, mish, mish_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
 
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sin, sinf(x), f8e5m2_to_float, float_to_f8e5m2)
@@ -1364,9 +1378,12 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, recip, 1.0f / x, bf16_to_float, float_to_bf1
 
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, relu, (x > 0.0f) ? x : 0.0f, bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sigmoid, 1.0f / (1.0f + expf(-x)), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, hardsigmoid, hardsigmoid_helper_f32(x), bf16_to_float,
+                      float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, gelu, gelu_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, softplus, softplus_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, silu, silu_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, hardsilu, hardsilu_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, mish, mish_helper_f32(x), bf16_to_float, float_to_bf16)
 
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sin, sinf(x), bf16_to_float, float_to_bf16)
@@ -1431,9 +1448,12 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, recip, 1.0f / x, f16_to_float, float_to_f16)
 
 IMPL_UNARY_OP_CONVERT(f16_t, f16, relu, (x > 0.0f) ? x : 0.0f, f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sigmoid, 1.0f / (1.0f + expf(-x)), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, hardsigmoid, hardsigmoid_helper_f32(x), f16_to_float,
+                      float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, gelu, gelu_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, softplus, softplus_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, silu, silu_helper_f32(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, hardsilu, hardsilu_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, mish, mish_helper_f32(x), f16_to_float, float_to_f16)
 
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sin, sinf(x), f16_to_float, float_to_f16)

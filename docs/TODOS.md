@@ -31,7 +31,7 @@
 - [x] Implement inverse trigonometric (asin, acos, atan)
 - [x] Implement hyperbolic (sinh, cosh, tanh)
 - [x] Implement inverse hyperbolic (asinh, acosh, atanh)
-- [ ] Implement hardswish, hardsigmoid (ONNX: HardSwish, HardSigmoid)
+- [x] Implement hardswish(hardsilu), hardsigmoid (ONNX: HardSwish, HardSigmoid)
 
 **ONNX Compatibility - Other Operations:** (🟡 Important)
 - [ ] Implement einsum (ONNX: Einsum)
