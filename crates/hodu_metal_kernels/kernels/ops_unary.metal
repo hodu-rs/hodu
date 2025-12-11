@@ -69,6 +69,32 @@ float m_exp10(float x) {
     return exp(x * 2.3025850929940456f); // ln(10) ≈ 2.302585...
 }
 
+// Error function (erf) approximation using Abramowitz and Stegun formula 7.1.26
+// Maximum error: 1.5×10^−7
+float m_erf(float x) {
+    // Constants
+    const float a1 = 0.254829592f;
+    const float a2 = -0.284496736f;
+    const float a3 = 1.421413741f;
+    const float a4 = -1.453152027f;
+    const float a5 = 1.061405429f;
+    const float p = 0.3275911f;
+
+    // Save the sign of x
+    float sign = (x >= 0.0f) ? 1.0f : -1.0f;
+    x = abs(x);
+
+    // A&S formula 7.1.26
+    float t = 1.0f / (1.0f + p * x);
+    float t2 = t * t;
+    float t3 = t2 * t;
+    float t4 = t3 * t;
+    float t5 = t4 * t;
+    float y = 1.0f - (a1 * t + a2 * t2 + a3 * t3 + a4 * t4 + a5 * t5) * exp(-x * x);
+
+    return sign * y;
+}
+
 // Metadata layout:
 // - metadata[0]: num_els (total number of elements)
 // - metadata[1]: num_dims (number of dimensions)
@@ -157,10 +183,11 @@ UNARY_OP(bool, sqrt_bool, x);
 // unary - activation
 UNARY_OP(bool, relu_bool, x);
 UNARY_OP(bool, sigmoid_bool, x);
-UNARY_OP(bool, tanh_bool, x);
 
 // unary logical
 UNARY_OP_OUTPUT(bool, bool, logical_not_bool, !x);
+
+UNARY_OP(bool, tanh_bool, x);
 
 // unary with scalar - arithmetic
 UNARY_OP_WITH_CONSTANT(bool, bool, add_scalar_bool, x || const_val);
@@ -194,7 +221,6 @@ UNARY_OP(bfloat, recip_bf16, bfloat(1.0f / float(x)));
 // unary - activation
 UNARY_OP(bfloat, relu_bf16, x > 0.0bf ? x : 0.0bf);
 UNARY_OP(bfloat, sigmoid_bf16, bfloat(1.0f / (1.0f + exp(-float(x)))));
-UNARY_OP(bfloat, tanh_bf16, bfloat(tanh(float(x))));
 UNARY_OP(bfloat, gelu_bf16,
          bfloat(0.5f * float(x) *
                 (1.0f + tanh(0.7978845608028654f *
@@ -210,8 +236,13 @@ UNARY_OP(bfloat, tan_bf16, bfloat(m_tan(float(x))));
 UNARY_OP(bfloat, asin_bf16, bfloat(asin(float(x))));
 UNARY_OP(bfloat, acos_bf16, bfloat(acos(float(x))));
 UNARY_OP(bfloat, atan_bf16, bfloat(atan(float(x))));
+
+// unary - hyperbolic
 UNARY_OP(bfloat, sinh_bf16, bfloat(sinh(float(x))));
 UNARY_OP(bfloat, cosh_bf16, bfloat(cosh(float(x))));
+UNARY_OP(bfloat, tanh_bf16, bfloat(tanh(float(x))));
+UNARY_OP(bfloat, asinh_bf16, bfloat(asinh(float(x))));
+UNARY_OP(bfloat, acosh_bf16, bfloat(acosh(float(x))));
 UNARY_OP(bfloat, atanh_bf16, bfloat(atanh(float(x))));
 
 // unary - exp
@@ -224,6 +255,8 @@ UNARY_OP(bfloat, log10_bf16, bfloat(log10(float(x))));
 UNARY_OP(bfloat, ceil_bf16, bfloat(ceil(float(x))));
 UNARY_OP(bfloat, floor_bf16, bfloat(floor(float(x))));
 UNARY_OP(bfloat, round_bf16, bfloat(round(float(x))));
+
+UNARY_OP(bfloat, erf_bf16, bfloat(m_erf(float(x))));
 
 // unary logical
 UNARY_OP_OUTPUT(bfloat, bool, logical_not_bf16, float(x) == 0.0f);
@@ -272,7 +305,6 @@ UNARY_OP(half, recip_f16, half(1.0f / float(x)));
 // unary - activation
 UNARY_OP(half, relu_f16, float(x) > 0.0f ? x : 0.0h);
 UNARY_OP(half, sigmoid_f16, half(1.0f / (1.0f + exp(float(-x)))));
-UNARY_OP(half, tanh_f16, half(tanh(float(x))));
 UNARY_OP(half, gelu_f16,
          half(0.5f * float(x) *
               (1.0f + tanh(0.7978845608028654f *
@@ -288,8 +320,13 @@ UNARY_OP(half, tan_f16, half(m_tan(float(x))));
 UNARY_OP(half, asin_f16, half(asin(float(x))));
 UNARY_OP(half, acos_f16, half(acos(float(x))));
 UNARY_OP(half, atan_f16, half(atan(float(x))));
+
+// unary - hyperbolic
 UNARY_OP(half, sinh_f16, half(sinh(float(x))));
 UNARY_OP(half, cosh_f16, half(cosh(float(x))));
+UNARY_OP(half, tanh_f16, half(tanh(float(x))));
+UNARY_OP(half, asinh_f16, half(asinh(float(x))));
+UNARY_OP(half, acosh_f16, half(acosh(float(x))));
 UNARY_OP(half, atanh_f16, half(atanh(float(x))));
 
 // unary - exp
@@ -302,6 +339,8 @@ UNARY_OP(half, log10_f16, half(log10(float(x))));
 UNARY_OP(half, ceil_f16, half(ceil(float(x))));
 UNARY_OP(half, floor_f16, half(floor(float(x))));
 UNARY_OP(half, round_f16, half(round(float(x))));
+
+UNARY_OP(half, erf_f16, half(m_erf(float(x))));
 
 // unary logical
 UNARY_OP_OUTPUT(half, bool, logical_not_f16, float(x) == 0.0f);
@@ -346,7 +385,6 @@ UNARY_OP(float, recip_f32, 1.0f / x);
 // unary - activation
 UNARY_OP(float, relu_f32, x > 0 ? x : 0);
 UNARY_OP(float, sigmoid_f32, 1.0f / (1.0f + exp(-x)));
-UNARY_OP(float, tanh_f32, tanh(x));
 UNARY_OP(float, gelu_f32,
          0.5f * x * (1.0f + tanh(0.7978845608028654f * (x + 0.044715f * x * x * x))));
 UNARY_OP(float, softplus_f32, log(1.0f + exp(x)));
@@ -360,8 +398,13 @@ UNARY_OP(float, tan_f32, m_tan(x));
 UNARY_OP(float, asin_f32, asin(x));
 UNARY_OP(float, acos_f32, acos(x));
 UNARY_OP(float, atan_f32, atan(x));
+
+// unary - hyperbolic
 UNARY_OP(float, sinh_f32, sinh(x));
 UNARY_OP(float, cosh_f32, cosh(x));
+UNARY_OP(float, tanh_f32, tanh(x));
+UNARY_OP(float, asinh_f32, asinh(x));
+UNARY_OP(float, acosh_f32, acosh(x));
 UNARY_OP(float, atanh_f32, atanh(x));
 
 // unary - exp
@@ -374,6 +417,8 @@ UNARY_OP(float, log10_f32, log10(x));
 UNARY_OP(float, ceil_f32, ceil(x));
 UNARY_OP(float, floor_f32, floor(x));
 UNARY_OP(float, round_f32, round(x));
+
+UNARY_OP(float, erf_f32, m_erf(x));
 
 // unary logical
 UNARY_OP_OUTPUT(float, bool, logical_not_f32, x == 0.0f);

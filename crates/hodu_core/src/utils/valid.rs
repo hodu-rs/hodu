@@ -160,12 +160,22 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
-            UnaryOp::Sigmoid | UnaryOp::Tanh | UnaryOp::Gelu | UnaryOp::Softplus | UnaryOp::Silu | UnaryOp::Mish => {
+            UnaryOp::Sigmoid | UnaryOp::Gelu | UnaryOp::Softplus | UnaryOp::Silu | UnaryOp::Mish => {
                 if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
-            UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan | UnaryOp::Asin | UnaryOp::Acos | UnaryOp::Atan | UnaryOp::Sinh | UnaryOp::Cosh | UnaryOp::Atanh => {
+            UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan | UnaryOp::Asin | UnaryOp::Acos | UnaryOp::Atan => {
+                if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
+                    return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+                }
+            },
+            UnaryOp::Sinh | UnaryOp::Cosh | UnaryOp::Tanh | UnaryOp::Asinh | UnaryOp::Acosh | UnaryOp::Atanh => {
+                if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
+                    return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+                }
+            },
+            UnaryOp::Erf => {
                 if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
@@ -317,16 +327,14 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         Op::Unary(inner_op) => match inner_op {
             UnaryOp::Neg | UnaryOp::Square | UnaryOp::Sqrt | UnaryOp::Recip => true,
             UnaryOp::Abs | UnaryOp::Sign => false, // !
-            UnaryOp::Relu
-            | UnaryOp::Sigmoid
-            | UnaryOp::Tanh
-            | UnaryOp::Gelu
-            | UnaryOp::Softplus
-            | UnaryOp::Silu
-            | UnaryOp::Mish => true,
-            UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan | UnaryOp::Asin | UnaryOp::Acos | UnaryOp::Atan | UnaryOp::Sinh | UnaryOp::Cosh | UnaryOp::Atanh => true,
+            UnaryOp::Relu | UnaryOp::Sigmoid | UnaryOp::Gelu | UnaryOp::Softplus | UnaryOp::Silu | UnaryOp::Mish => {
+                true
+            },
+            UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan | UnaryOp::Asin | UnaryOp::Acos | UnaryOp::Atan => true,
+            UnaryOp::Sinh | UnaryOp::Cosh | UnaryOp::Tanh | UnaryOp::Asinh | UnaryOp::Acosh | UnaryOp::Atanh => true,
             UnaryOp::Exp | UnaryOp::Exp2 | UnaryOp::Exp10 | UnaryOp::Ln | UnaryOp::Log2 | UnaryOp::Log10 => true,
             UnaryOp::Ceil | UnaryOp::Floor | UnaryOp::Round => false,
+            UnaryOp::Erf => true,
         },
 
         // Unary logical operations - no backprop

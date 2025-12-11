@@ -131,24 +131,31 @@ pub enum UnaryOp {
     Sqrt,
     Recip,
 
+    // Activation functions
     Relu,
     Sigmoid,
-    Tanh,
     Gelu,
     Softplus,
     Silu,
     Mish,
 
+    // Trigonometric
     Sin,
     Cos,
     Tan,
     Asin,
     Acos,
     Atan,
+
+    // Hyperbolic
     Sinh,
     Cosh,
+    Tanh,
+    Asinh,
+    Acosh,
     Atanh,
 
+    // Exponential & logarithmic
     Exp,
     Exp2,
     Exp10,
@@ -156,9 +163,13 @@ pub enum UnaryOp {
     Log2,
     Log10,
 
+    // Rounding
     Ceil,  // no-backprop
     Floor, // no-backprop
     Round, // no-backprop
+
+    // Error function
+    Erf,
 }
 
 impl fmt::Display for UnaryOp {
@@ -172,7 +183,6 @@ impl fmt::Display for UnaryOp {
             Self::Recip => write!(f, "recip"),
             Self::Relu => write!(f, "relu"),
             Self::Sigmoid => write!(f, "sigmoid"),
-            Self::Tanh => write!(f, "tanh"),
             Self::Gelu => write!(f, "gelu"),
             Self::Softplus => write!(f, "softplus"),
             Self::Silu => write!(f, "silu"),
@@ -185,6 +195,9 @@ impl fmt::Display for UnaryOp {
             Self::Atan => write!(f, "atan"),
             Self::Sinh => write!(f, "sinh"),
             Self::Cosh => write!(f, "cosh"),
+            Self::Tanh => write!(f, "tanh"),
+            Self::Asinh => write!(f, "asinh"),
+            Self::Acosh => write!(f, "acosh"),
             Self::Atanh => write!(f, "atanh"),
             Self::Exp => write!(f, "exp"),
             Self::Exp2 => write!(f, "exp2"),
@@ -195,6 +208,7 @@ impl fmt::Display for UnaryOp {
             Self::Ceil => write!(f, "ceil"),
             Self::Floor => write!(f, "floor"),
             Self::Round => write!(f, "round"),
+            Self::Erf => write!(f, "erf"),
         }
     }
 }

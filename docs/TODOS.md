@@ -27,9 +27,10 @@
 - [x] Implement cumsum operation (ONNX: CumSum)
 
 **ONNX Compatibility - Unary Operations:** (🟡 Important)
-- [ ] Implement erf (ONNX: Erf) - used in accurate GELU
+- [x] Implement erf (ONNX: Erf) - used in accurate GELU
 - [x] Implement inverse trigonometric (asin, acos, atan)
-- [x] Implement hyperbolic (sinh, cosh, atanh)
+- [x] Implement hyperbolic (sinh, cosh, tanh)
+- [x] Implement inverse hyperbolic (asinh, acosh, atanh)
 - [ ] Implement hardswish, hardsigmoid (ONNX: HardSwish, HardSigmoid)
 
 **ONNX Compatibility - Other Operations:** (🟡 Important)

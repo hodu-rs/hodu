@@ -265,6 +265,71 @@ fn tan_f32() {
     assert_eq!(approx(results, 4), approx(expected, 4));
 }
 
+#[test]
+fn asin_f32() {
+    let v = vec![-0.5f32, 0.0, 0.5, 1.0];
+    let results = run(&v, asin::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.asin()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn acos_f32() {
+    let v = vec![-0.5f32, 0.0, 0.5, 1.0];
+    let results = run(&v, acos::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.acos()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn atan_f32() {
+    let v = vec![-1.0f32, 0.0, 1.0, 2.0];
+    let results = run(&v, atan::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.atan()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+// Hyperbolic functions
+#[test]
+fn sinh_f32() {
+    let v = vec![-1.0f32, 0.0, 1.0, 2.0];
+    let results = run(&v, sinh::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.sinh()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn cosh_f32() {
+    let v = vec![-1.0f32, 0.0, 1.0, 2.0];
+    let results = run(&v, cosh::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.cosh()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn asinh_f32() {
+    let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let results = run(&v, asinh::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.asinh()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn acosh_f32() {
+    let v = vec![1.0f32, 2.0, 3.0, 4.0];
+    let results = run(&v, acosh::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.acosh()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn atanh_f32() {
+    let v = vec![-0.5f32, 0.0, 0.5];
+    let results = run(&v, atanh::F32);
+    let expected: Vec<_> = v.iter().map(|v| v.atanh()).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
 // Exponential and logarithmic functions
 #[test]
 fn exp_f32() {
@@ -332,6 +397,15 @@ fn round_f32() {
     let v = vec![1.4f32, 1.5, 2.5, -1.4, -1.5, -2.5];
     let results = run(&v, round::F32);
     assert_eq!(results, vec![1.0, 2.0, 3.0, -1.0, -2.0, -3.0]);
+}
+
+#[test]
+fn erf_f32() {
+    let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let results = run(&v, erf::F32);
+    // erf values calculated from standard math library
+    let expected = vec![-0.9953, -0.8427, 0.0, 0.8427, 0.9953];
+    assert_eq!(approx(results, 4), expected);
 }
 
 // Scalar comparison operations

@@ -23,7 +23,6 @@ ops!(
     recip,
     relu,
     sigmoid,
-    tanh,
     gelu,
     softplus,
     silu,
@@ -36,6 +35,9 @@ ops!(
     atan,
     sinh,
     cosh,
+    tanh,
+    asinh,
+    acosh,
     atanh,
     exp,
     exp2,
@@ -46,6 +48,7 @@ ops!(
     ceil,
     floor,
     round,
+    erf,
     logical_not,
     add_scalar,
     sub_scalar,
@@ -303,10 +306,12 @@ declare_and_dispatch_unary!(
         neg
     ],
     float_types: [
-        relu, sigmoid, tanh, gelu, softplus, silu, mish,
-        sin, cos, tan,
+        relu, sigmoid, gelu, softplus, silu, mish,
+        sin, cos, tan, asin, acos, atan,
+        sinh, cosh, tanh, asinh, acosh, atanh,
         exp, exp2, exp10, ln, log2, log10,
-        ceil, floor, round
+        ceil, floor, round,
+        erf
     ],
     scalar_ops: [
         add_scalar, sub_scalar, mul_scalar, div_scalar, pow_scalar,

@@ -697,7 +697,6 @@ void hodu_cpu_relu_f32(const void *input, void *output, const size_t *metadata) 
     }
 }
 IMPL_UNARY_OP(f32_t, f32, sigmoid, 1.0f / (1.0f + expf(-x)))
-IMPL_UNARY_OP(f32_t, f32, tanh, tanhf(x))
 IMPL_UNARY_OP(f32_t, f32, gelu, gelu_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, softplus, softplus_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, silu, silu_helper_f32(x))
@@ -710,8 +709,13 @@ IMPL_UNARY_OP(f32_t, f32, tan, tanf_opt(x))
 IMPL_UNARY_OP(f32_t, f32, asin, asinf(x))
 IMPL_UNARY_OP(f32_t, f32, acos, acosf(x))
 IMPL_UNARY_OP(f32_t, f32, atan, atanf(x))
+
+// Hyperbolic functions
 IMPL_UNARY_OP(f32_t, f32, sinh, sinhf(x))
 IMPL_UNARY_OP(f32_t, f32, cosh, coshf(x))
+IMPL_UNARY_OP(f32_t, f32, tanh, tanhf(x))
+IMPL_UNARY_OP(f32_t, f32, asinh, asinhf(x))
+IMPL_UNARY_OP(f32_t, f32, acosh, acoshf(x))
 IMPL_UNARY_OP(f32_t, f32, atanh, atanhf(x))
 
 // Exponential and logarithmic functions
@@ -724,6 +728,7 @@ IMPL_UNARY_OP(f32_t, f32, log10, log10f(x))
 IMPL_UNARY_OP(f32_t, f32, ceil, ceilf(x))
 IMPL_UNARY_OP(f32_t, f32, floor, floorf(x))
 IMPL_UNARY_OP(f32_t, f32, round, roundf(x))
+IMPL_UNARY_OP(f32_t, f32, erf, erff(x))
 
 // Logical operations
 IMPL_UNARY_TO_BOOL(f32_t, f32, logical_not, x == 0.0f)
@@ -1052,7 +1057,6 @@ void hodu_cpu_relu_f64(const void *input, void *output, const size_t *metadata) 
     }
 }
 IMPL_UNARY_OP(f64_t, f64, sigmoid, 1.0 / (1.0 + exp(-x)))
-IMPL_UNARY_OP(f64_t, f64, tanh, tanh(x))
 IMPL_UNARY_OP(f64_t, f64, gelu, gelu_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, softplus, softplus_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, silu, silu_helper_f64(x))
@@ -1064,8 +1068,12 @@ IMPL_UNARY_OP(f64_t, f64, tan, tan_opt(x))
 IMPL_UNARY_OP(f64_t, f64, asin, asin(x))
 IMPL_UNARY_OP(f64_t, f64, acos, acos(x))
 IMPL_UNARY_OP(f64_t, f64, atan, atan(x))
+
 IMPL_UNARY_OP(f64_t, f64, sinh, sinh(x))
 IMPL_UNARY_OP(f64_t, f64, cosh, cosh(x))
+IMPL_UNARY_OP(f64_t, f64, tanh, tanh(x))
+IMPL_UNARY_OP(f64_t, f64, asinh, asinh(x))
+IMPL_UNARY_OP(f64_t, f64, acosh, acosh(x))
 IMPL_UNARY_OP(f64_t, f64, atanh, atanh(x))
 
 IMPL_UNARY_OP(f64_t, f64, exp, exp(x))
@@ -1077,6 +1085,7 @@ IMPL_UNARY_OP(f64_t, f64, log10, log10(x))
 IMPL_UNARY_OP(f64_t, f64, ceil, ceil(x))
 IMPL_UNARY_OP(f64_t, f64, floor, floor(x))
 IMPL_UNARY_OP(f64_t, f64, round, round(x))
+IMPL_UNARY_OP(f64_t, f64, erf, erf(x))
 
 IMPL_UNARY_TO_BOOL(f64_t, f64, logical_not, x == 0.0)
 
@@ -1152,7 +1161,6 @@ IMPL_UNARY_OP(uint8_t, bool, recip, x)
 
 IMPL_UNARY_OP(uint8_t, bool, relu, x)
 IMPL_UNARY_OP(uint8_t, bool, sigmoid, x)
-IMPL_UNARY_OP(uint8_t, bool, tanh, x)
 IMPL_UNARY_OP(uint8_t, bool, gelu, x)
 IMPL_UNARY_OP(uint8_t, bool, softplus, x)
 IMPL_UNARY_OP(uint8_t, bool, silu, x)
@@ -1164,8 +1172,12 @@ IMPL_UNARY_OP(uint8_t, bool, tan, x ? 1 : 0)
 IMPL_UNARY_OP(uint8_t, bool, asin, x ? 1 : 0)
 IMPL_UNARY_OP(uint8_t, bool, acos, x ? 0 : 1)
 IMPL_UNARY_OP(uint8_t, bool, atan, x ? 1 : 0)
+
 IMPL_UNARY_OP(uint8_t, bool, sinh, x ? 1 : 0)
 IMPL_UNARY_OP(uint8_t, bool, cosh, 1)
+IMPL_UNARY_OP(uint8_t, bool, tanh, x)
+IMPL_UNARY_OP(uint8_t, bool, asinh, x ? 1 : 0)
+IMPL_UNARY_OP(uint8_t, bool, acosh, x ? 1 : 0)
 IMPL_UNARY_OP(uint8_t, bool, atanh, x ? 1 : 0)
 
 IMPL_UNARY_OP(uint8_t, bool, exp, x ? 1 : 0)
@@ -1177,6 +1189,7 @@ IMPL_UNARY_OP(uint8_t, bool, log10, x ? 0 : 0)
 IMPL_UNARY_OP(uint8_t, bool, ceil, x)
 IMPL_UNARY_OP(uint8_t, bool, floor, x)
 IMPL_UNARY_OP(uint8_t, bool, round, x)
+IMPL_UNARY_OP(uint8_t, bool, erf, x)
 
 IMPL_UNARY_TO_BOOL(uint8_t, bool, logical_not, !x)
 
@@ -1211,7 +1224,6 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, relu, (x > 0.0f) ? x : 0.0f, f8e4m3_to_f
                       float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sigmoid, 1.0f / (1.0f + expf(-x)), f8e4m3_to_float,
                       float_to_f8e4m3)
-IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, tanh, tanhf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, gelu, gelu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, softplus, softplus_helper_f32(x), f8e4m3_to_float,
                       float_to_f8e4m3)
@@ -1224,8 +1236,12 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, tan, tanf(x), f8e4m3_to_float, float_to_
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, asin, asinf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, acos, acosf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, atan, atanf(x), f8e4m3_to_float, float_to_f8e4m3)
+
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sinh, sinhf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, cosh, coshf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, tanh, tanhf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, asinh, asinhf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, acosh, acoshf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, atanh, atanhf(x), f8e4m3_to_float, float_to_f8e4m3)
 
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, exp, expf(x), f8e4m3_to_float, float_to_f8e4m3)
@@ -1237,6 +1253,7 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, log10, log10f(x), f8e4m3_to_float, float
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, ceil, ceilf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, floor, floorf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, round, roundf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, erf, erff(x), f8e4m3_to_float, float_to_f8e4m3)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_not, x == 0.0f, f8e4m3_to_float)
 
@@ -1278,7 +1295,6 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, relu, (x > 0.0f) ? x : 0.0f, f8e5m2_to_f
                       float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sigmoid, 1.0f / (1.0f + expf(-x)), f8e5m2_to_float,
                       float_to_f8e5m2)
-IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, tanh, tanhf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, gelu, gelu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, softplus, softplus_helper_f32(x), f8e5m2_to_float,
                       float_to_f8e5m2)
@@ -1291,8 +1307,12 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, tan, tanf(x), f8e5m2_to_float, float_to_
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, asin, asinf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, acos, acosf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, atan, atanf(x), f8e5m2_to_float, float_to_f8e5m2)
+
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sinh, sinhf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, cosh, coshf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, tanh, tanhf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, asinh, asinhf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, acosh, acoshf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, atanh, atanhf(x), f8e5m2_to_float, float_to_f8e5m2)
 
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, exp, expf(x), f8e5m2_to_float, float_to_f8e5m2)
@@ -1304,6 +1324,7 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, log10, log10f(x), f8e5m2_to_float, float
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, ceil, ceilf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, floor, floorf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, round, roundf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, erf, erff(x), f8e5m2_to_float, float_to_f8e5m2)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_not, x == 0.0f, f8e5m2_to_float)
 
@@ -1343,7 +1364,6 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, recip, 1.0f / x, bf16_to_float, float_to_bf1
 
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, relu, (x > 0.0f) ? x : 0.0f, bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sigmoid, 1.0f / (1.0f + expf(-x)), bf16_to_float, float_to_bf16)
-IMPL_UNARY_OP_CONVERT(bf16_t, bf16, tanh, tanhf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, gelu, gelu_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, softplus, softplus_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, silu, silu_helper_f32(x), bf16_to_float, float_to_bf16)
@@ -1355,8 +1375,12 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, tan, tanf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, asin, asinf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, acos, acosf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, atan, atanf(x), bf16_to_float, float_to_bf16)
+
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sinh, sinhf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, cosh, coshf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, tanh, tanhf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, asinh, asinhf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, acosh, acoshf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, atanh, atanhf(x), bf16_to_float, float_to_bf16)
 
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, exp, expf(x), bf16_to_float, float_to_bf16)
@@ -1368,6 +1392,7 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, log10, log10f(x), bf16_to_float, float_to_bf
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, ceil, ceilf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, floor, floorf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, round, roundf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, erf, erff(x), bf16_to_float, float_to_bf16)
 
 IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_not, x == 0.0f, bf16_to_float)
 
@@ -1406,7 +1431,6 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, recip, 1.0f / x, f16_to_float, float_to_f16)
 
 IMPL_UNARY_OP_CONVERT(f16_t, f16, relu, (x > 0.0f) ? x : 0.0f, f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sigmoid, 1.0f / (1.0f + expf(-x)), f16_to_float, float_to_f16)
-IMPL_UNARY_OP_CONVERT(f16_t, f16, tanh, tanhf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, gelu, gelu_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, softplus, softplus_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, silu, silu_helper_f32(x), f16_to_float, float_to_f16)
@@ -1418,8 +1442,12 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, tan, tanf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, asin, asinf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, acos, acosf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, atan, atanf(x), f16_to_float, float_to_f16)
+
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sinh, sinhf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, cosh, coshf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, tanh, tanhf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, asinh, asinhf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, acosh, acoshf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, atanh, atanhf(x), f16_to_float, float_to_f16)
 
 IMPL_UNARY_OP_CONVERT(f16_t, f16, exp, expf(x), f16_to_float, float_to_f16)
@@ -1431,6 +1459,7 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, log10, log10f(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, ceil, ceilf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, floor, floorf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, round, roundf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, erf, erff(x), f16_to_float, float_to_f16)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, logical_not, x == 0.0f, f16_to_float)
 

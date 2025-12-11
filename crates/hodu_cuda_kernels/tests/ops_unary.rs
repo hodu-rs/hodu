@@ -258,6 +258,56 @@ fn unary_trig_f32() {
     assert_eq!(approx(tan_results, 6), approx(expected_tan, 6));
 }
 
+#[test]
+fn unary_inverse_trig_f32() {
+    let input: Vec<f32> = vec![-0.5f32, 0.0, 0.5, 1.0];
+
+    let asin_results = run_unary(asin::F32, &input);
+    let expected_asin: Vec<f32> = input.iter().map(|x| x.asin()).collect();
+    assert_eq!(approx(asin_results, 4), approx(expected_asin, 4));
+
+    let acos_results = run_unary(acos::F32, &input);
+    let expected_acos: Vec<f32> = input.iter().map(|x| x.acos()).collect();
+    assert_eq!(approx(acos_results, 4), approx(expected_acos, 4));
+
+    let atan_input: Vec<f32> = vec![-1.0f32, 0.0, 1.0, 2.0];
+    let atan_results = run_unary(atan::F32, &atan_input);
+    let expected_atan: Vec<f32> = atan_input.iter().map(|x| x.atan()).collect();
+    assert_eq!(approx(atan_results, 4), approx(expected_atan, 4));
+}
+
+// Hyperbolic functions
+#[test]
+fn unary_hyperbolic_f32() {
+    let input: Vec<f32> = vec![-1.0f32, 0.0, 1.0, 2.0];
+
+    let sinh_results = run_unary(sinh::F32, &input);
+    let expected_sinh: Vec<f32> = input.iter().map(|x| x.sinh()).collect();
+    assert_eq!(approx(sinh_results, 4), approx(expected_sinh, 4));
+
+    let cosh_results = run_unary(cosh::F32, &input);
+    let expected_cosh: Vec<f32> = input.iter().map(|x| x.cosh()).collect();
+    assert_eq!(approx(cosh_results, 4), approx(expected_cosh, 4));
+}
+
+#[test]
+fn unary_inverse_hyperbolic_f32() {
+    let asinh_input: Vec<f32> = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let asinh_results = run_unary(asinh::F32, &asinh_input);
+    let expected_asinh: Vec<f32> = asinh_input.iter().map(|x| x.asinh()).collect();
+    assert_eq!(approx(asinh_results, 4), approx(expected_asinh, 4));
+
+    let acosh_input: Vec<f32> = vec![1.0f32, 2.0, 3.0, 4.0];
+    let acosh_results = run_unary(acosh::F32, &acosh_input);
+    let expected_acosh: Vec<f32> = acosh_input.iter().map(|x| x.acosh()).collect();
+    assert_eq!(approx(acosh_results, 4), approx(expected_acosh, 4));
+
+    let atanh_input: Vec<f32> = vec![-0.5f32, 0.0, 0.5];
+    let atanh_results = run_unary(atanh::F32, &atanh_input);
+    let expected_atanh: Vec<f32> = atanh_input.iter().map(|x| x.atanh()).collect();
+    assert_eq!(approx(atanh_results, 4), approx(expected_atanh, 4));
+}
+
 // Exponential and logarithmic functions
 #[test]
 fn unary_exp_f32() {
@@ -312,6 +362,15 @@ fn unary_round_f32() {
     let input: Vec<f32> = vec![1.4f32, 1.5, 2.5, -1.4, -1.5, -2.5];
     let results = run_unary(round::F32, &input);
     assert_eq!(results, vec![1.0, 2.0, 3.0, -1.0, -2.0, -3.0]);
+}
+
+#[test]
+fn unary_erf_f32() {
+    let input: Vec<f32> = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let results = run_unary(erf::F32, &input);
+    // erf values calculated from standard math library
+    let expected = vec![-0.9953, -0.8427, 0.0, 0.8427, 0.9953];
+    assert_eq!(approx(results, 4), expected);
 }
 
 // Logical operations

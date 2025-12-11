@@ -174,7 +174,6 @@ impl Tensor {
 
     unary_op!(relu, Relu);
     unary_op!(sigmoid, Sigmoid);
-    unary_op!(tanh, Tanh);
     unary_op!(gelu, Gelu);
     unary_op!(softplus, Softplus);
     unary_op!(silu, Silu);
@@ -189,8 +188,12 @@ impl Tensor {
     unary_op!(asin, Asin);
     unary_op!(acos, Acos);
     unary_op!(atan, Atan);
+
     unary_op!(sinh, Sinh);
     unary_op!(cosh, Cosh);
+    unary_op!(tanh, Tanh);
+    unary_op!(asinh, Asinh);
+    unary_op!(acosh, Acosh);
     unary_op!(atanh, Atanh);
 
     unary_op!(exp, Exp);
@@ -199,9 +202,12 @@ impl Tensor {
     unary_op!(ln, Ln);
     unary_op!(log2, Log2);
     unary_op!(log10, Log10);
+
     unary_op!(ceil, Ceil);
     unary_op!(floor, Floor);
     unary_op!(round, Round);
+
+    unary_op!(erf, Erf);
 
     // unary logical operations
     unary_logical_op!(logical_not, LogicalNot);

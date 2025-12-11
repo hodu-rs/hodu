@@ -50,13 +50,6 @@ impl VjpCompute for UnaryOp {
                 let derivative = create_mul_tensor(sigmoid_output, one_minus_sigmoid)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
-            UnaryOp::Tanh => {
-                // d/dx tanh(x) = 1 - tanh^2(x)
-                let tanh_squared = create_mul_tensor(_output, _output)?;
-                let ones = create_ones_like_tensor(input)?;
-                let derivative = create_sub_tensor(ones, tanh_squared)?;
-                Ok(vec![create_mul_tensor(grad_output, derivative)?])
-            },
             UnaryOp::Gelu => {
                 // GELU(x) = x * Φ(x) where Φ is standard normal CDF
                 // Using tanh approximation: GELU(x) ≈ 0.5 * x * (1 + tanh(√(2/π) * (x + 0.044715 * x³)))
@@ -212,6 +205,35 @@ impl VjpCompute for UnaryOp {
                 let sinh_input = create_sinh_tensor(input)?;
                 Ok(vec![create_mul_tensor(grad_output, sinh_input)?])
             },
+            UnaryOp::Tanh => {
+                // d/dx tanh(x) = 1 - tanh^2(x)
+                let tanh_squared = create_mul_tensor(_output, _output)?;
+                let ones = create_ones_like_tensor(input)?;
+                let derivative = create_sub_tensor(ones, tanh_squared)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Asinh => {
+                // d/dx asinh(x) = 1 / sqrt(x^2 + 1)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one = Scalar::one(dtype);
+                let x_squared = create_mul_tensor(input, input)?;
+                let x_squared_plus_one = create_add_scalar_tensor(x_squared, one)?;
+                let sqrt_term = create_sqrt_tensor(x_squared_plus_one)?;
+                let derivative = create_recip_tensor(sqrt_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Acosh => {
+                // d/dx acosh(x) = 1 / sqrt(x^2 - 1)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one = Scalar::one(dtype);
+                let x_squared = create_mul_tensor(input, input)?;
+                let x_squared_minus_one = create_sub_scalar_tensor(x_squared, one)?;
+                let sqrt_term = create_sqrt_tensor(x_squared_minus_one)?;
+                let derivative = create_recip_tensor(sqrt_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
             UnaryOp::Atanh => {
                 // d/dx atanh(x) = 1 / (1 - x^2)
                 let input_tensor = tensor_from_id(input);
@@ -290,6 +312,19 @@ impl VjpCompute for UnaryOp {
             UnaryOp::Ceil | UnaryOp::Floor | UnaryOp::Round => {
                 // d/dx ceil(x) = 0 (gradient is zero almost everywhere)
                 Ok(vec![create_zeros_like_tensor(input)?])
+            },
+            UnaryOp::Erf => {
+                // d/dx erf(x) = (2/√π) * e^(-x²)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let two_over_sqrt_pi = Scalar::from_f32(1.1283791670955126, dtype);
+
+                let x_squared = create_mul_tensor(input, input)?;
+                let neg_x_squared = create_neg_tensor(x_squared)?;
+                let exp_neg_x_squared = create_exp_tensor(neg_x_squared)?;
+                let derivative = create_mul_scalar_tensor(exp_neg_x_squared, two_over_sqrt_pi)?;
+
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
         }
     }
