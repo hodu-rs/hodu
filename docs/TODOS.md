@@ -1,13 +1,7 @@
 # TODOS.md
-This document outlines goals for **Release**, not Pre-Release.
-Items may be added at any time.
 
-## hodu_core
 **Serialization:** (🟡 Important)
 - To be determined
-
-**Embedded System Stabilization:** (🟢 Nice-to-have)
-- [ ] Stabilize embedded platform support
 
 **Backend:** (🔴 Critical)
 - [x] CPU SIMD support
@@ -19,9 +13,6 @@ Items may be added at any time.
   - [ ] x86_64-apple-darwin (Accelerate framework)
   - [ ] x86_64-unknown-linux-gnu (system BLAS)
   - [ ] aarch64-unknown-linux-gnu (system BLAS)
-
-**Scripting:** (🟢 Nice-to-have)
-- [ ] XLA optimization
 
 **Tensor Creation & Initialization:** (🔴 Critical)
 - [ ] Implement initialization functions (xavier_uniform, xavier_normal, kaiming_uniform, kaiming_normal)
@@ -49,7 +40,6 @@ Items may be added at any time.
 - [ ] Implement onehot (ONNX: OneHot)
 - [ ] Implement mod/fmod (ONNX: Mod)
 
-## hodu_nn
 **Recurrent Layers:** (🔴 Critical)
 - [ ] Implement RNN
 - [ ] Implement LSTM
@@ -82,5 +72,5 @@ Items may be added at any time.
 - [ ] Implement RMSprop
 - [ ] Implement Adagrad
 
-## hodu_datasets (🟡 Important)
+**DataSet**
 - [x] Implement Dataset
