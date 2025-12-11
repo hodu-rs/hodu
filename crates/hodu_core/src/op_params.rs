@@ -305,6 +305,15 @@ pub struct ReduceWindowParams {
     pub aux_tensors: Vec<TensorId>,   // for storing indices from max/min pooling
 }
 
+// Padding Operations
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct PaddingParams {
+    pub padding: Vec<(usize, usize)>, // per-dimension: [(before, after), ...]
+    pub pad_value: Scalar,
+}
+
 // Shape Operations
 
 #[derive(Debug, Clone)]
@@ -334,6 +343,14 @@ pub struct TransposeParams;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct PermuteParams;
+
+// Shape Memory Operations
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct FlipParams {
+    pub dims: Vec<usize>,
+}
 
 // Shape Scalar Operations
 
@@ -425,6 +442,9 @@ pub enum OpParams {
     // Windowing
     ReduceWindow(ReduceWindowParams),
 
+    // Padding
+    Padding(PaddingParams),
+
     // Shape
     Reshape(ReshapeParams),
     Flatten(FlattenParams),
@@ -433,6 +453,9 @@ pub enum OpParams {
     Broadcast(BroadcastParams),
     Transpose(TransposeParams),
     Permute(PermuteParams),
+
+    // Shape Memory
+    Flip(FlipParams),
 
     // Shape Scalar
     Slice(SliceParams),

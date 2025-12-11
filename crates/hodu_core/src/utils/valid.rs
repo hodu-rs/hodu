@@ -273,8 +273,13 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             },
         },
 
-        // Shape, ShapeScalars, Cast, Memory operations - all types supported
-        Op::Shape(_) | Op::ShapeScalars(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
+        // Padding operations - all types supported
+        Op::Padding(_) => {
+            // All types supported
+        },
+
+        // Shape, ShapeScalars, ShapeMemory, Cast, Memory operations - all types supported
+        Op::Shape(_) | Op::ShapeScalars(_) | Op::ShapeMemory(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
             // All types supported
         },
     }
@@ -340,8 +345,11 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         // Windowing operations
         Op::Windowing(_) => true,
 
+        // Padding operations
+        Op::Padding(_) => true,
+
         // Shape operations
-        Op::Shape(_) | Op::ShapeScalars(_) => true,
+        Op::Shape(_) | Op::ShapeScalars(_) | Op::ShapeMemory(_) => true,
 
         // Cast operations - no backprop
         Op::Cast(_) => false, // !

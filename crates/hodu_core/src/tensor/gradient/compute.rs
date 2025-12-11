@@ -176,8 +176,10 @@ fn compute_vjp_for_op(
         Op::Indexing(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Conv(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Windowing(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Padding(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Shape(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::ShapeScalars(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::ShapeMemory(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         _ => Err(HoduError::VjpFunctionNotFound(format!("compute_vjp for {:?}", op))),
     }
 }

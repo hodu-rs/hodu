@@ -984,6 +984,80 @@ pub fn reduce_window_metadata(
 }
 
 // ============================================================================
+// Padding Operations
+// ============================================================================
+
+/// Generate metadata for padding operations
+///
+/// Format:
+/// - metadata[0]: num_els (total number of output elements)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: input_shape
+/// - metadata[2+num_dims..2+2*num_dims]: output_shape
+/// - metadata[2+2*num_dims..2+3*num_dims]: pad_before (per dimension)
+pub fn padding_metadata(layout: &Layout, pad_before: &[usize], output_shape: &[usize]) -> Vec<usize> {
+    let input_shape = layout.shape();
+    let num_dims = input_shape.ndim();
+    let output_size: usize = output_shape.iter().product();
+
+    let mut metadata = Vec::with_capacity(2 + 3 * num_dims);
+
+    metadata.push(output_size);
+    metadata.push(num_dims);
+
+    // input shape
+    for &dim in input_shape.dims() {
+        metadata.push(dim);
+    }
+
+    // output shape
+    for &dim in output_shape {
+        metadata.push(dim);
+    }
+
+    // pad_before
+    for &p in pad_before {
+        metadata.push(p);
+    }
+
+    metadata
+}
+
+// ============================================================================
+// Flip Operations
+// ============================================================================
+
+/// Generate metadata for flip operations
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: shape
+/// - metadata[2+num_dims..2+2*num_dims]: flip_mask (1 = flip this dim, 0 = don't flip)
+pub fn flip_metadata(layout: &Layout, flip_dims: &[usize]) -> Vec<usize> {
+    let shape = layout.shape();
+    let num_dims = shape.ndim();
+    let num_els = shape.size();
+
+    let mut metadata = Vec::with_capacity(2 + 2 * num_dims);
+
+    metadata.push(num_els);
+    metadata.push(num_dims);
+
+    // shape
+    for &dim in shape.dims() {
+        metadata.push(dim);
+    }
+
+    // flip_mask
+    for d in 0..num_dims {
+        metadata.push(if flip_dims.contains(&d) { 1 } else { 0 });
+    }
+
+    metadata
+}
+
+// ============================================================================
 // Cast Operations
 // ============================================================================
 

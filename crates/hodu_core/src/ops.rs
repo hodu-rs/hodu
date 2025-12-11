@@ -451,6 +451,32 @@ impl fmt::Debug for WindowingOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum PaddingOp {
+    PadConstant,
+    PadReflect,
+    PadReplicate,
+    PadCircular,
+}
+
+impl fmt::Display for PaddingOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::PadConstant => write!(f, "pad_constant"),
+            Self::PadReflect => write!(f, "pad_reflect"),
+            Self::PadReplicate => write!(f, "pad_replicate"),
+            Self::PadCircular => write!(f, "pad_circular"),
+        }
+    }
+}
+
+impl fmt::Debug for PaddingOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ShapeOp {
     Reshape,
     Flatten,
@@ -541,6 +567,26 @@ impl fmt::Debug for MemoryOp {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ShapeMemoryOp {
+    Flip,
+}
+
+impl fmt::Display for ShapeMemoryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Flip => write!(f, "flip"),
+        }
+    }
+}
+
+impl fmt::Debug for ShapeMemoryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Op {
@@ -558,8 +604,10 @@ pub enum Op {
     Indexing(IndexingOp),
     Conv(ConvOp),
     Windowing(WindowingOp),
+    Padding(PaddingOp),
     Shape(ShapeOp),
     ShapeScalars(ShapeScalarsOp),
+    ShapeMemory(ShapeMemoryOp),
     Cast(CastOp),
     Memory(MemoryOp),
     Dummy,
@@ -582,8 +630,10 @@ impl fmt::Display for Op {
             Self::Indexing(op) => write!(f, "{}", op),
             Self::Conv(op) => write!(f, "{}", op),
             Self::Windowing(op) => write!(f, "{}", op),
+            Self::Padding(op) => write!(f, "{}", op),
             Self::Shape(op) => write!(f, "{}", op),
             Self::ShapeScalars(op) => write!(f, "{}", op),
+            Self::ShapeMemory(op) => write!(f, "{}", op),
             Self::Cast(op) => write!(f, "{}", op),
             Self::Memory(op) => write!(f, "{}", op),
             Self::Dummy => write!(f, "dummy"),
@@ -608,8 +658,10 @@ impl fmt::Debug for Op {
             Self::Indexing(op) => write!(f, "Indexing[{}]", op),
             Self::Conv(op) => write!(f, "Conv[{}]", op),
             Self::Windowing(op) => write!(f, "Windowing[{}]", op),
+            Self::Padding(op) => write!(f, "Padding[{}]", op),
             Self::Shape(op) => write!(f, "Shape[{}]", op),
             Self::ShapeScalars(op) => write!(f, "ShapeScalars[{}]", op),
+            Self::ShapeMemory(op) => write!(f, "ShapeMemory[{}]", op),
             Self::Cast(op) => write!(f, "Cast[{}]", op),
             Self::Memory(op) => write!(f, "Memory[{}]", op),
             Self::Dummy => write!(f, "Dummy"),

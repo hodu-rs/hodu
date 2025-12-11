@@ -5,7 +5,9 @@ mod ops_concat_split;
 mod ops_conv;
 mod ops_indexing;
 mod ops_matrix;
+mod ops_padding;
 mod ops_reduce;
+mod ops_shape_memory;
 mod ops_unary;
 mod ops_windowing;
 
@@ -570,6 +572,21 @@ impl BackendStorageT for CpuStorage {
         op: Op,
     ) -> HoduResult<Self> {
         ops_windowing::call_ops_reduce_window(self, layout, window_shape, strides, padding, op)
+    }
+
+    fn call_ops_pad(
+        &self,
+        layout: &Layout,
+        pad_before: &[usize],
+        pad_after: &[usize],
+        pad_value: Scalar,
+        op: Op,
+    ) -> HoduResult<Self> {
+        ops_padding::call_ops_pad(self, layout, pad_before, pad_after, pad_value, op)
+    }
+
+    fn call_ops_flip(&self, layout: &Layout, dims: &[usize]) -> HoduResult<Self> {
+        ops_shape_memory::call_ops_flip(self, layout, dims)
     }
 
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {
