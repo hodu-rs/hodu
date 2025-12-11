@@ -165,6 +165,65 @@ impl VjpCompute for UnaryOp {
                 let derivative = create_add_scalar_tensor(tan_squared, one)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
+            UnaryOp::Asin => {
+                // d/dx asin(x) = 1 / sqrt(1 - x^2)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one = Scalar::one(dtype);
+                let x_squared = create_mul_tensor(input, input)?;
+                // 1 - x^2 = -(x^2 - 1)
+                let x_squared_minus_one = create_sub_scalar_tensor(x_squared, one)?;
+                let one_minus_x_squared = create_neg_tensor(x_squared_minus_one)?;
+                let sqrt_term = create_sqrt_tensor(one_minus_x_squared)?;
+                let derivative = create_recip_tensor(sqrt_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Acos => {
+                // d/dx acos(x) = -1 / sqrt(1 - x^2)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one = Scalar::one(dtype);
+                let x_squared = create_mul_tensor(input, input)?;
+                // 1 - x^2 = -(x^2 - 1)
+                let x_squared_minus_one = create_sub_scalar_tensor(x_squared, one)?;
+                let one_minus_x_squared = create_neg_tensor(x_squared_minus_one)?;
+                let sqrt_term = create_sqrt_tensor(one_minus_x_squared)?;
+                let recip_sqrt = create_recip_tensor(sqrt_term)?;
+                let derivative = create_neg_tensor(recip_sqrt)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Atan => {
+                // d/dx atan(x) = 1 / (1 + x^2)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one = Scalar::one(dtype);
+                let x_squared = create_mul_tensor(input, input)?;
+                let one_plus_x_squared = create_add_scalar_tensor(x_squared, one)?;
+                let derivative = create_recip_tensor(one_plus_x_squared)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Sinh => {
+                // d/dx sinh(x) = cosh(x)
+                let cosh_input = create_cosh_tensor(input)?;
+                Ok(vec![create_mul_tensor(grad_output, cosh_input)?])
+            },
+            UnaryOp::Cosh => {
+                // d/dx cosh(x) = sinh(x)
+                let sinh_input = create_sinh_tensor(input)?;
+                Ok(vec![create_mul_tensor(grad_output, sinh_input)?])
+            },
+            UnaryOp::Atanh => {
+                // d/dx atanh(x) = 1 / (1 - x^2)
+                let input_tensor = tensor_from_id(input);
+                let dtype = input_tensor.dtype();
+                let one = Scalar::one(dtype);
+                let x_squared = create_mul_tensor(input, input)?;
+                // 1 - x^2 = -(x^2 - 1)
+                let x_squared_minus_one = create_sub_scalar_tensor(x_squared, one)?;
+                let one_minus_x_squared = create_neg_tensor(x_squared_minus_one)?;
+                let derivative = create_recip_tensor(one_minus_x_squared)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
             UnaryOp::Ln => {
                 // d/dx ln(x) = 1/x
                 let derivative = create_recip_tensor(input)?;

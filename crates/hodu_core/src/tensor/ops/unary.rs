@@ -186,6 +186,12 @@ impl Tensor {
     unary_op!(sin, Sin);
     unary_op!(cos, Cos);
     unary_op!(tan, Tan);
+    unary_op!(asin, Asin);
+    unary_op!(acos, Acos);
+    unary_op!(atan, Atan);
+    unary_op!(sinh, Sinh);
+    unary_op!(cosh, Cosh);
+    unary_op!(atanh, Atanh);
 
     unary_op!(exp, Exp);
     unary_op!(exp2, Exp2);

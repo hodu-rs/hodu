@@ -28,8 +28,8 @@
 
 **ONNX Compatibility - Unary Operations:** (🟡 Important)
 - [ ] Implement erf (ONNX: Erf) - used in accurate GELU
-- [ ] Implement inverse trigonometric (asin, acos, atan)
-- [ ] Implement hyperbolic (sinh, cosh, atanh)
+- [x] Implement inverse trigonometric (asin, acos, atan)
+- [x] Implement hyperbolic (sinh, cosh, atanh)
 - [ ] Implement hardswish, hardsigmoid (ONNX: HardSwish, HardSigmoid)
 
 **ONNX Compatibility - Other Operations:** (🟡 Important)

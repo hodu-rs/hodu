@@ -207,6 +207,12 @@ UNARY_OP(bfloat, mish_bf16, bfloat(float(x) * tanh(log(1.0f + exp(float(x))))));
 UNARY_OP(bfloat, sin_bf16, bfloat(sin(float(x))));
 UNARY_OP(bfloat, cos_bf16, bfloat(cos(float(x))));
 UNARY_OP(bfloat, tan_bf16, bfloat(m_tan(float(x))));
+UNARY_OP(bfloat, asin_bf16, bfloat(asin(float(x))));
+UNARY_OP(bfloat, acos_bf16, bfloat(acos(float(x))));
+UNARY_OP(bfloat, atan_bf16, bfloat(atan(float(x))));
+UNARY_OP(bfloat, sinh_bf16, bfloat(sinh(float(x))));
+UNARY_OP(bfloat, cosh_bf16, bfloat(cosh(float(x))));
+UNARY_OP(bfloat, atanh_bf16, bfloat(atanh(float(x))));
 
 // unary - exp
 UNARY_OP(bfloat, exp_bf16, bfloat(exp(float(x))));
@@ -279,6 +285,12 @@ UNARY_OP(half, mish_f16, half(float(x) * tanh(log(1.0f + exp(float(x))))));
 UNARY_OP(half, sin_f16, half(sin(float(x))));
 UNARY_OP(half, cos_f16, half(cos(float(x))));
 UNARY_OP(half, tan_f16, half(m_tan(float(x))));
+UNARY_OP(half, asin_f16, half(asin(float(x))));
+UNARY_OP(half, acos_f16, half(acos(float(x))));
+UNARY_OP(half, atan_f16, half(atan(float(x))));
+UNARY_OP(half, sinh_f16, half(sinh(float(x))));
+UNARY_OP(half, cosh_f16, half(cosh(float(x))));
+UNARY_OP(half, atanh_f16, half(atanh(float(x))));
 
 // unary - exp
 UNARY_OP(half, exp_f16, half(exp(float(x))));
@@ -345,6 +357,12 @@ UNARY_OP(float, mish_f32, x *tanh(log(1.0f + exp(x))));
 UNARY_OP(float, sin_f32, sin(x));
 UNARY_OP(float, cos_f32, cos(x));
 UNARY_OP(float, tan_f32, m_tan(x));
+UNARY_OP(float, asin_f32, asin(x));
+UNARY_OP(float, acos_f32, acos(x));
+UNARY_OP(float, atan_f32, atan(x));
+UNARY_OP(float, sinh_f32, sinh(x));
+UNARY_OP(float, cosh_f32, cosh(x));
+UNARY_OP(float, atanh_f32, atanh(x));
 
 // unary - exp
 UNARY_OP(float, exp_f32, exp(x));

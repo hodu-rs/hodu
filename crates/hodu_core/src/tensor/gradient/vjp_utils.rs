@@ -113,6 +113,16 @@ pub fn create_cos_tensor(a: TensorId) -> HoduResult<TensorId> {
     tensor_a.cos().map(|t| t.id())
 }
 
+pub fn create_sinh_tensor(a: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.sinh().map(|t| t.id())
+}
+
+pub fn create_cosh_tensor(a: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.cosh().map(|t| t.id())
+}
+
 pub fn create_ln_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     tensor_a.ln().map(|t| t.id())
@@ -123,10 +133,10 @@ pub fn create_exp_tensor(a: TensorId) -> HoduResult<TensorId> {
     tensor_a.exp().map(|t| t.id())
 }
 
-// pub fn create_sqrt_tensor(a: TensorId) -> HoduResult<TensorId> {
-//     let tensor_a = tensor_from_id(a);
-//     tensor_a.sqrt().map(|t| t.id())
-// }
+pub fn create_sqrt_tensor(a: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.sqrt().map(|t| t.id())
+}
 
 // Unary Scalar operations
 pub fn create_add_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
