@@ -129,7 +129,10 @@ extern "C" {
     void hodu_cpu_exp10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);    \
     void hodu_cpu_ln_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);       \
     void hodu_cpu_log2_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
-    void hodu_cpu_log10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_log10_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);    \
+    void hodu_cpu_ceil_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_floor_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);    \
+    void hodu_cpu_round_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Macro to declare logical operations

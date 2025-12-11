@@ -715,6 +715,9 @@ IMPL_UNARY_OP(f32_t, f32, exp10, exp10f_opt(x))
 IMPL_UNARY_OP(f32_t, f32, ln, logf(x))
 IMPL_UNARY_OP(f32_t, f32, log2, log2f(x))
 IMPL_UNARY_OP(f32_t, f32, log10, log10f(x))
+IMPL_UNARY_OP(f32_t, f32, ceil, ceilf(x))
+IMPL_UNARY_OP(f32_t, f32, floor, floorf(x))
+IMPL_UNARY_OP(f32_t, f32, round, roundf(x))
 
 // Logical operations
 IMPL_UNARY_TO_BOOL(f32_t, f32, logical_not, x == 0.0f)
@@ -1059,6 +1062,9 @@ IMPL_UNARY_OP(f64_t, f64, exp10, exp10_opt(x))
 IMPL_UNARY_OP(f64_t, f64, ln, log(x))
 IMPL_UNARY_OP(f64_t, f64, log2, log2(x))
 IMPL_UNARY_OP(f64_t, f64, log10, log10(x))
+IMPL_UNARY_OP(f64_t, f64, ceil, ceil(x))
+IMPL_UNARY_OP(f64_t, f64, floor, floor(x))
+IMPL_UNARY_OP(f64_t, f64, round, round(x))
 
 IMPL_UNARY_TO_BOOL(f64_t, f64, logical_not, x == 0.0)
 
@@ -1150,6 +1156,9 @@ IMPL_UNARY_OP(uint8_t, bool, exp10, x ? 1 : 0)
 IMPL_UNARY_OP(uint8_t, bool, ln, x ? 0 : 0)
 IMPL_UNARY_OP(uint8_t, bool, log2, x ? 0 : 0)
 IMPL_UNARY_OP(uint8_t, bool, log10, x ? 0 : 0)
+IMPL_UNARY_OP(uint8_t, bool, ceil, x)
+IMPL_UNARY_OP(uint8_t, bool, floor, x)
+IMPL_UNARY_OP(uint8_t, bool, round, x)
 
 IMPL_UNARY_TO_BOOL(uint8_t, bool, logical_not, !x)
 
@@ -1201,6 +1210,9 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, exp10, exp10f(x), f8e4m3_to_float, float
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, ln, logf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, log2, log2f(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, log10, log10f(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, ceil, ceilf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, floor, floorf(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, round, roundf(x), f8e4m3_to_float, float_to_f8e4m3)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_not, x == 0.0f, f8e4m3_to_float)
 
@@ -1259,6 +1271,9 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, exp10, exp10f(x), f8e5m2_to_float, float
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, ln, logf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, log2, log2f(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, log10, log10f(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, ceil, ceilf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, floor, floorf(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, round, roundf(x), f8e5m2_to_float, float_to_f8e5m2)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_not, x == 0.0f, f8e5m2_to_float)
 
@@ -1314,6 +1329,9 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, exp10, exp10f(x), bf16_to_float, float_to_bf
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, ln, logf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, log2, log2f(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, log10, log10f(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, ceil, ceilf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, floor, floorf(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, round, roundf(x), bf16_to_float, float_to_bf16)
 
 IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_not, x == 0.0f, bf16_to_float)
 
@@ -1368,6 +1386,9 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, exp10, exp10f(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, ln, logf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, log2, log2f(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, log10, log10f(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, ceil, ceilf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, floor, floorf(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, round, roundf(x), f16_to_float, float_to_f16)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, logical_not, x == 0.0f, f16_to_float)
 

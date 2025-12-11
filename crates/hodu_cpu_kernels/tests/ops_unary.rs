@@ -292,6 +292,27 @@ fn test_log10_f32() {
     assert_eq!(approx(output, 2), approx(expected, 2));
 }
 
+#[test]
+fn test_ceil_f32() {
+    let input = vec![1.1f32, 2.5, -1.1, -2.9, 3.0];
+    let output = run_unary(&input, ceil::F32);
+    assert_eq!(output, vec![2.0, 3.0, -1.0, -2.0, 3.0]);
+}
+
+#[test]
+fn test_floor_f32() {
+    let input = vec![1.1f32, 2.5, -1.1, -2.9, 3.0];
+    let output = run_unary(&input, floor::F32);
+    assert_eq!(output, vec![1.0, 2.0, -2.0, -3.0, 3.0]);
+}
+
+#[test]
+fn test_round_f32() {
+    let input = vec![1.4f32, 1.5, 2.5, -1.4, -1.5, -2.5];
+    let output = run_unary(&input, round::F32);
+    assert_eq!(output, vec![1.0, 2.0, 3.0, -1.0, -2.0, -3.0]);
+}
+
 // unary logical
 #[test]
 fn test_logical_not_f32() {

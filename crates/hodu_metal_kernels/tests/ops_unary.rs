@@ -313,6 +313,27 @@ fn log10_f32() {
     assert_eq!(approx(results, 4), approx(expected, 4));
 }
 
+#[test]
+fn ceil_f32() {
+    let v = vec![1.1f32, 2.5, -1.1, -2.9, 3.0];
+    let results = run(&v, ceil::F32);
+    assert_eq!(results, vec![2.0, 3.0, -1.0, -2.0, 3.0]);
+}
+
+#[test]
+fn floor_f32() {
+    let v = vec![1.1f32, 2.5, -1.1, -2.9, 3.0];
+    let results = run(&v, floor::F32);
+    assert_eq!(results, vec![1.0, 2.0, -2.0, -3.0, 3.0]);
+}
+
+#[test]
+fn round_f32() {
+    let v = vec![1.4f32, 1.5, 2.5, -1.4, -1.5, -2.5];
+    let results = run(&v, round::F32);
+    assert_eq!(results, vec![1.0, 2.0, 3.0, -1.0, -2.0, -3.0]);
+}
+
 // Scalar comparison operations
 #[test]
 fn unary_scalar_cmp_f32() {

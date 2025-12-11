@@ -215,6 +215,9 @@ UNARY_OP(bfloat, exp10_bf16, bfloat(m_exp10(float(x))));
 UNARY_OP(bfloat, ln_bf16, bfloat(log(float(x))));
 UNARY_OP(bfloat, log2_bf16, bfloat(log2(float(x))));
 UNARY_OP(bfloat, log10_bf16, bfloat(log10(float(x))));
+UNARY_OP(bfloat, ceil_bf16, bfloat(ceil(float(x))));
+UNARY_OP(bfloat, floor_bf16, bfloat(floor(float(x))));
+UNARY_OP(bfloat, round_bf16, bfloat(round(float(x))));
 
 // unary logical
 UNARY_OP_OUTPUT(bfloat, bool, logical_not_bf16, float(x) == 0.0f);
@@ -284,6 +287,9 @@ UNARY_OP(half, exp10_f16, half(m_exp10(float(x))));
 UNARY_OP(half, ln_f16, half(log(float(x))));
 UNARY_OP(half, log2_f16, half(log2(float(x))));
 UNARY_OP(half, log10_f16, half(log10(float(x))));
+UNARY_OP(half, ceil_f16, half(ceil(float(x))));
+UNARY_OP(half, floor_f16, half(floor(float(x))));
+UNARY_OP(half, round_f16, half(round(float(x))));
 
 // unary logical
 UNARY_OP_OUTPUT(half, bool, logical_not_f16, float(x) == 0.0f);
@@ -347,6 +353,9 @@ UNARY_OP(float, exp10_f32, m_exp10(x));
 UNARY_OP(float, ln_f32, log(x));
 UNARY_OP(float, log2_f32, log2(x));
 UNARY_OP(float, log10_f32, log10(x));
+UNARY_OP(float, ceil_f32, ceil(x));
+UNARY_OP(float, floor_f32, floor(x));
+UNARY_OP(float, round_f32, round(x));
 
 // unary logical
 UNARY_OP_OUTPUT(float, bool, logical_not_f32, x == 0.0f);

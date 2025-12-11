@@ -37,6 +37,9 @@ ops!(
     ln,
     log2,
     log10,
+    ceil,
+    floor,
+    round,
     logical_not,
     add_scalar,
     sub_scalar,
@@ -296,7 +299,8 @@ declare_and_dispatch_unary!(
     float_types: [
         relu, sigmoid, tanh, gelu, softplus, silu, mish,
         sin, cos, tan,
-        exp, exp2, exp10, ln, log2, log10
+        exp, exp2, exp10, ln, log2, log10,
+        ceil, floor, round
     ],
     scalar_ops: [
         add_scalar, sub_scalar, mul_scalar, div_scalar, pow_scalar,
