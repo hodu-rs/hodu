@@ -21,8 +21,8 @@
 **ONNX Compatibility - Tensor Operations:** (🔴 Critical)
 - [x] Implement padding operations (pad_constant, pad_reflect, pad_replicate, pad_circular)
 - [x] Implement flip operation
-- [ ] Implement tile/repeat operation (ONNX: Tile)
-- [ ] Implement expand operation (ONNX: Expand)
+- [x] Implement repeat operation (ONNX: Tile)
+- [x] Implement expand operation (broadcast)
 - [ ] Implement ceil, floor, round operations (ONNX: Ceil, Floor, Round)
 - [ ] Implement cumsum operation (ONNX: CumSum)
 
