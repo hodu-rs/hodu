@@ -7,6 +7,7 @@ mod ops_indexing;
 mod ops_matrix;
 mod ops_padding;
 mod ops_reduce;
+mod ops_scan;
 mod ops_shape_memory;
 mod ops_unary;
 mod ops_windowing;
@@ -583,6 +584,10 @@ impl BackendStorageT for CpuStorage {
         op: Op,
     ) -> HoduResult<Self> {
         ops_padding::call_ops_pad(self, layout, pad_before, pad_after, pad_value, op)
+    }
+
+    fn call_ops_cumsum(&self, layout: &Layout, dim: usize) -> HoduResult<Self> {
+        ops_scan::call_ops_cumsum(self, layout, dim)
     }
 
     fn call_ops_flip(&self, layout: &Layout, dims: &[usize]) -> HoduResult<Self> {

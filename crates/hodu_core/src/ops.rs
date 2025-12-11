@@ -484,6 +484,26 @@ impl fmt::Debug for PaddingOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ScanOp {
+    CumSum,
+}
+
+impl fmt::Display for ScanOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::CumSum => write!(f, "cumsum"),
+        }
+    }
+}
+
+impl fmt::Debug for ScanOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ShapeOp {
     Reshape,
     Flatten,
@@ -536,6 +556,26 @@ impl fmt::Debug for ShapeScalarsOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ShapeMemoryOp {
+    Flip,
+}
+
+impl fmt::Display for ShapeMemoryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Flip => write!(f, "flip"),
+        }
+    }
+}
+
+impl fmt::Debug for ShapeMemoryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CastOp {
     ToDType, // no-backprop
 }
@@ -574,26 +614,6 @@ impl fmt::Debug for MemoryOp {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum ShapeMemoryOp {
-    Flip,
-}
-
-impl fmt::Display for ShapeMemoryOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Flip => write!(f, "flip"),
-        }
-    }
-}
-
-impl fmt::Debug for ShapeMemoryOp {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, f)
-    }
-}
-
 #[derive(Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Op {
@@ -612,6 +632,7 @@ pub enum Op {
     Conv(ConvOp),
     Windowing(WindowingOp),
     Padding(PaddingOp),
+    Scan(ScanOp),
     Shape(ShapeOp),
     ShapeScalars(ShapeScalarsOp),
     ShapeMemory(ShapeMemoryOp),
@@ -638,6 +659,7 @@ impl fmt::Display for Op {
             Self::Conv(op) => write!(f, "{}", op),
             Self::Windowing(op) => write!(f, "{}", op),
             Self::Padding(op) => write!(f, "{}", op),
+            Self::Scan(op) => write!(f, "{}", op),
             Self::Shape(op) => write!(f, "{}", op),
             Self::ShapeScalars(op) => write!(f, "{}", op),
             Self::ShapeMemory(op) => write!(f, "{}", op),
@@ -660,6 +682,7 @@ impl fmt::Debug for Op {
             Self::UnaryScalar(op) => write!(f, "UnaryScalar[{}]", op),
             Self::Matrix(op) => write!(f, "Matrix[{}]", op),
             Self::Reduce(op) => write!(f, "Reduce[{}]", op),
+            Self::Scan(op) => write!(f, "Scan[{}]", op),
             Self::Concat(op) => write!(f, "Concat[{}]", op),
             Self::Split(op) => write!(f, "Split[{}]", op),
             Self::Indexing(op) => write!(f, "Indexing[{}]", op),

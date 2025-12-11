@@ -101,6 +101,8 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_pad(&self, _: &Layout, _: &[usize], _: &[usize], _: Scalar, _: Op) -> HoduResult<Self>;
 
+    fn call_ops_cumsum(&self, _: &Layout, _: usize) -> HoduResult<Self>;
+
     fn call_ops_flip(&self, _: &Layout, _: &[usize]) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
@@ -925,6 +927,16 @@ impl BackendStorage {
             Self::Metal(storage) => Ok(Self::Metal(
                 storage.call_ops_pad(layout, pad_before, pad_after, pad_value, op)?,
             )),
+        }
+    }
+
+    pub(crate) fn call_ops_cumsum(&self, layout: &Layout, dim: usize) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_cumsum(layout, dim)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_cumsum(layout, dim)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_cumsum(layout, dim)?)),
         }
     }
 

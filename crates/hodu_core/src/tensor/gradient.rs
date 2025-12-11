@@ -24,6 +24,7 @@ mod vjp_indexing;
 mod vjp_matrix;
 mod vjp_padding;
 mod vjp_reduce;
+mod vjp_scan;
 mod vjp_shape;
 mod vjp_shape_memory;
 mod vjp_unary;

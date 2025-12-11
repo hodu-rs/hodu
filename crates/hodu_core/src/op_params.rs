@@ -314,6 +314,14 @@ pub struct PaddingParams {
     pub pad_value: Scalar,
 }
 
+// Scan Operations
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ScanParams {
+    pub dim: usize,
+}
+
 // Shape Operations
 
 #[derive(Debug, Clone)]
@@ -444,6 +452,9 @@ pub enum OpParams {
 
     // Padding
     Padding(PaddingParams),
+
+    // Scan
+    Scan(ScanParams),
 
     // Shape
     Reshape(ReshapeParams),

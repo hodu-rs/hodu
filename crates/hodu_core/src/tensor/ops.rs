@@ -8,6 +8,7 @@ mod matrix;
 mod normalization;
 mod padding;
 mod reduce;
+mod scan;
 mod selection;
 mod shape;
 mod shape_memory;

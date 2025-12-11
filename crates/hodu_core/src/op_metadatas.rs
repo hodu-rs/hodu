@@ -1024,7 +1024,46 @@ pub fn padding_metadata(layout: &Layout, pad_before: &[usize], output_shape: &[u
 }
 
 // ============================================================================
-// Flip Operations
+// Scan Operations
+// ============================================================================
+
+/// Generate metadata for scan operations (cumsum, etc.)
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: shape
+/// - metadata[2+num_dims..2+2*num_dims]: strides
+/// - metadata[2+2*num_dims]: offset
+/// - metadata[3+2*num_dims]: dim (dimension to scan along)
+pub fn scan_metadata(layout: &Layout, dim: usize) -> Vec<usize> {
+    let shape = layout.shape();
+    let strides = layout.strides();
+    let offset = layout.offset();
+    let num_dims = shape.ndim();
+    let num_els = shape.size();
+
+    let mut metadata = Vec::with_capacity(4 + 2 * num_dims);
+
+    metadata.push(num_els);
+    metadata.push(num_dims);
+
+    for &dim_size in shape.dims() {
+        metadata.push(dim_size);
+    }
+
+    for &stride in strides.iter() {
+        metadata.push(stride);
+    }
+
+    metadata.push(offset);
+    metadata.push(dim);
+
+    metadata
+}
+
+// ============================================================================
+// Shape Memory Operations
 // ============================================================================
 
 /// Generate metadata for flip operations

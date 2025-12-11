@@ -24,7 +24,7 @@
 - [x] Implement repeat operation (ONNX: Tile)
 - [x] Implement expand operation (broadcast)
 - [x] Implement ceil, floor, round operations (ONNX: Ceil, Floor, Round)
-- [ ] Implement cumsum operation (ONNX: CumSum)
+- [x] Implement cumsum operation (ONNX: CumSum)
 
 **ONNX Compatibility - Unary Operations:** (🟡 Important)
 - [ ] Implement erf (ONNX: Erf) - used in accurate GELU
