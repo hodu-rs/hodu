@@ -76,17 +76,18 @@ impl Kernels {
 
     fn get_library_source(&self, source: Source) -> &'static str {
         match source {
-            Source::Storage => crate::source::get_storage(),
             Source::Binary => crate::source::get_binary(),
             Source::Cast => crate::source::get_cast(),
             Source::ConcatSplit => crate::source::get_concat_split(),
             Source::Conv => crate::source::get_conv(),
-            Source::Matrix => crate::source::get_matrix(),
             Source::Indexing => crate::source::get_indexing(),
-            Source::Reduce => crate::source::get_reduce(),
-            Source::Unary => crate::source::get_unary(),
+            Source::Matrix => crate::source::get_matrix(),
             Source::Memory => crate::source::get_memory(),
             Source::Padding => crate::source::get_padding(),
+            Source::Reduce => crate::source::get_reduce(),
+            Source::ShapeMemory => crate::source::get_shape_memory(),
+            Source::Storage => crate::source::get_storage(),
+            Source::Unary => crate::source::get_unary(),
             Source::Windowing => crate::source::get_windowing(),
         }
     }

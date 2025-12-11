@@ -22,6 +22,7 @@ fn main() {
         "ops_memory.cu",
         "ops_padding.cu",
         "ops_reduce.cu",
+        "ops_shape_memory.cu",
         "ops_unary.cu",
         "ops_windowing.cu",
         "storage.cu",
