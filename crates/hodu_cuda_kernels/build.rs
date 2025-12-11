@@ -20,6 +20,7 @@ fn main() {
         "ops_indexing.cu",
         "ops_matrix.cu",
         "ops_memory.cu",
+        "ops_padding.cu",
         "ops_reduce.cu",
         "ops_unary.cu",
         "ops_windowing.cu",

@@ -13,6 +13,7 @@ const CONV_SRC: &str = include_str!("../kernels/ops_conv.metal");
 const INDEXING_SRC: &str = include_str!("../kernels/ops_indexing.metal");
 const MATRIX_SRC: &str = include_str!("../kernels/ops_matrix.metal");
 const MEMORY_SRC: &str = include_str!("../kernels/ops_memory.metal");
+const PADDING_SRC: &str = include_str!("../kernels/ops_padding.metal");
 const REDUCE_SRC: &str = include_str!("../kernels/ops_reduce.metal");
 const UNARY_SRC: &str = include_str!("../kernels/ops_unary.metal");
 const WINDOWING_SRC: &str = include_str!("../kernels/ops_windowing.metal");
@@ -37,6 +38,7 @@ static CONV: OnceLock<String> = OnceLock::new();
 static INDEXING: OnceLock<String> = OnceLock::new();
 static MATRIX: OnceLock<String> = OnceLock::new();
 static MEMORY: OnceLock<String> = OnceLock::new();
+static PADDING: OnceLock<String> = OnceLock::new();
 static REDUCE: OnceLock<String> = OnceLock::new();
 static UNARY: OnceLock<String> = OnceLock::new();
 static WINDOWING: OnceLock<String> = OnceLock::new();
@@ -69,6 +71,10 @@ pub fn get_memory() -> &'static str {
     MEMORY.get_or_init(|| combine_source(MEMORY_SRC))
 }
 
+pub fn get_padding() -> &'static str {
+    PADDING.get_or_init(|| combine_source(PADDING_SRC))
+}
+
 pub fn get_reduce() -> &'static str {
     REDUCE.get_or_init(|| combine_source(REDUCE_SRC))
 }
@@ -91,6 +97,7 @@ pub enum Source {
     Indexing,
     Matrix,
     Memory,
+    Padding,
     Reduce,
     Unary,
     Windowing,

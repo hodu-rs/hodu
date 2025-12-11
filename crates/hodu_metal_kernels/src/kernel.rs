@@ -86,6 +86,7 @@ impl Kernels {
             Source::Reduce => crate::source::get_reduce(),
             Source::Unary => crate::source::get_unary(),
             Source::Memory => crate::source::get_memory(),
+            Source::Padding => crate::source::get_padding(),
             Source::Windowing => crate::source::get_windowing(),
         }
     }

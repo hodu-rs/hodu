@@ -12,6 +12,7 @@ pub enum Source {
     OpsIndexing,
     OpsMatrix,
     OpsMemory,
+    OpsPadding,
     OpsReduce,
     OpsUnary,
     OpsWindowing,

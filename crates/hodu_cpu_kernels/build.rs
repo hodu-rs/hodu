@@ -13,6 +13,7 @@ fn main() {
         .file("kernels/ops_indexing.c")
         .file("kernels/ops_matrix.c")
         .file("kernels/ops_memory.c")
+        .file("kernels/ops_padding.c")
         .file("kernels/ops_reduce.c")
         .file("kernels/ops_unary.c")
         .file("kernels/ops_windowing.c")
@@ -99,6 +100,8 @@ fn main() {
         "ops_unary_blas_aarch64_apple_darwin.c",
         "ops_memory.h",
         "ops_memory.c",
+        "ops_padding.h",
+        "ops_padding.c",
         "ops_reduce.h",
         "ops_reduce.c",
         "ops_unary.h",
