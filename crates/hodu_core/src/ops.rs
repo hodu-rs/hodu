@@ -149,6 +149,10 @@ pub enum UnaryOp {
     Ln,
     Log2,
     Log10,
+
+    Ceil,  // no-backprop
+    Floor, // no-backprop
+    Round, // no-backprop
 }
 
 impl fmt::Display for UnaryOp {
@@ -176,6 +180,9 @@ impl fmt::Display for UnaryOp {
             Self::Ln => write!(f, "ln"),
             Self::Log2 => write!(f, "log2"),
             Self::Log10 => write!(f, "log10"),
+            Self::Ceil => write!(f, "ceil"),
+            Self::Floor => write!(f, "floor"),
+            Self::Round => write!(f, "round"),
         }
     }
 }

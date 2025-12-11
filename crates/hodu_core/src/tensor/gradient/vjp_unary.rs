@@ -228,6 +228,10 @@ impl VjpCompute for UnaryOp {
                 let derivative = create_mul_scalar_tensor(recip_sqrt, half)?; // 0.5/sqrt(x)
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
+            UnaryOp::Ceil | UnaryOp::Floor | UnaryOp::Round => {
+                // d/dx ceil(x) = 0 (gradient is zero almost everywhere)
+                Ok(vec![create_zeros_like_tensor(input)?])
+            },
         }
     }
 }

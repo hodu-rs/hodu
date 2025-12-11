@@ -175,6 +175,11 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
+            UnaryOp::Ceil | UnaryOp::Floor | UnaryOp::Round => {
+                if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
+                    return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+                }
+            },
         },
 
         // Unary logical operations - all types supported
@@ -314,6 +319,7 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
             | UnaryOp::Mish => true,
             UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan => true,
             UnaryOp::Exp | UnaryOp::Exp2 | UnaryOp::Exp10 | UnaryOp::Ln | UnaryOp::Log2 | UnaryOp::Log10 => true,
+            UnaryOp::Ceil | UnaryOp::Floor | UnaryOp::Round => false,
         },
 
         // Unary logical operations - no backprop

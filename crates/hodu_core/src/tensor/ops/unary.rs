@@ -193,6 +193,9 @@ impl Tensor {
     unary_op!(ln, Ln);
     unary_op!(log2, Log2);
     unary_op!(log10, Log10);
+    unary_op!(ceil, Ceil);
+    unary_op!(floor, Floor);
+    unary_op!(round, Round);
 
     // unary logical operations
     unary_logical_op!(logical_not, LogicalNot);

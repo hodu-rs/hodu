@@ -23,7 +23,7 @@
 - [x] Implement flip operation
 - [x] Implement repeat operation (ONNX: Tile)
 - [x] Implement expand operation (broadcast)
-- [ ] Implement ceil, floor, round operations (ONNX: Ceil, Floor, Round)
+- [x] Implement ceil, floor, round operations (ONNX: Ceil, Floor, Round)
 - [ ] Implement cumsum operation (ONNX: CumSum)
 
 **ONNX Compatibility - Unary Operations:** (🟡 Important)
