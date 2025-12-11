@@ -27,6 +27,28 @@ Items may be added at any time.
 - [ ] Implement initialization functions (xavier_uniform, xavier_normal, kaiming_uniform, kaiming_normal)
 - [ ] Implement basic creation ops (eye, arange, linspace, uniform, normal)
 
+**ONNX Compatibility - Tensor Operations:** (🔴 Critical)
+- [x] Implement padding operations (pad_constant, pad_reflect, pad_replicate, pad_circular)
+- [x] Implement flip operation
+- [ ] Implement tile/repeat operation (ONNX: Tile)
+- [ ] Implement expand operation (ONNX: Expand)
+- [ ] Implement ceil, floor, round operations (ONNX: Ceil, Floor, Round)
+- [ ] Implement cumsum operation (ONNX: CumSum)
+
+**ONNX Compatibility - Unary Operations:** (🟡 Important)
+- [ ] Implement erf (ONNX: Erf) - used in accurate GELU
+- [ ] Implement inverse trigonometric (asin, acos, atan)
+- [ ] Implement hyperbolic (sinh, cosh, atanh)
+- [ ] Implement hardswish, hardsigmoid (ONNX: HardSwish, HardSigmoid)
+
+**ONNX Compatibility - Other Operations:** (🟡 Important)
+- [ ] Implement einsum (ONNX: Einsum)
+- [ ] Implement resize/upsample (ONNX: Resize)
+- [ ] Implement topk (ONNX: TopK)
+- [ ] Implement nonzero (ONNX: NonZero)
+- [ ] Implement onehot (ONNX: OneHot)
+- [ ] Implement mod/fmod (ONNX: Mod)
+
 ## hodu_nn
 **Recurrent Layers:** (🔴 Critical)
 - [ ] Implement RNN
@@ -59,11 +81,6 @@ Items may be added at any time.
 **Optimizers:** (🟡 Important)
 - [ ] Implement RMSprop
 - [ ] Implement Adagrad
-
-**Tensor Operations:** (🟡 Important)
-- [ ] Implement padding operations (pad, pad_constant, pad_reflect)
-- [ ] Implement repeat, tile, expand operations (🟢 Nice-to-have)
-- [ ] Implement one_hot, topk, sort, argsort (🟢 Nice-to-have)
 
 ## hodu_datasets (🟡 Important)
 - [x] Implement Dataset
