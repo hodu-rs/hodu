@@ -363,7 +363,7 @@ impl VjpCompute for UnaryOp {
                 // d/dx erf(x) = (2/√π) * e^(-x²)
                 let input_tensor = tensor_from_id(input);
                 let dtype = input_tensor.dtype();
-                let two_over_sqrt_pi = Scalar::from_f32(1.1283791670955126, dtype);
+                let two_over_sqrt_pi = Scalar::from_f32(std::f32::consts::FRAC_2_SQRT_PI, dtype);
 
                 let x_squared = create_mul_tensor(input, input)?;
                 let neg_x_squared = create_neg_tensor(x_squared)?;
