@@ -492,6 +492,26 @@ impl fmt::Debug for WindowingOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ResizeOp {
+    Resize,
+}
+
+impl fmt::Display for ResizeOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Resize => write!(f, "resize"),
+        }
+    }
+}
+
+impl fmt::Debug for ResizeOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PaddingOp {
     PadConstant,
     PadReflect,
@@ -685,6 +705,7 @@ pub enum Op {
     Indexing(IndexingOp),
     Conv(ConvOp),
     Windowing(WindowingOp),
+    Resize(ResizeOp),
     Padding(PaddingOp),
     Scan(ScanOp),
     Einsum(EinsumOp),
@@ -713,6 +734,7 @@ impl fmt::Display for Op {
             Self::Indexing(op) => write!(f, "{}", op),
             Self::Conv(op) => write!(f, "{}", op),
             Self::Windowing(op) => write!(f, "{}", op),
+            Self::Resize(op) => write!(f, "{}", op),
             Self::Padding(op) => write!(f, "{}", op),
             Self::Scan(op) => write!(f, "{}", op),
             Self::Einsum(op) => write!(f, "{}", op),
@@ -745,6 +767,7 @@ impl fmt::Debug for Op {
             Self::Indexing(op) => write!(f, "Indexing[{}]", op),
             Self::Conv(op) => write!(f, "Conv[{}]", op),
             Self::Windowing(op) => write!(f, "Windowing[{}]", op),
+            Self::Resize(op) => write!(f, "Resize[{}]", op),
             Self::Padding(op) => write!(f, "Padding[{}]", op),
             Self::Shape(op) => write!(f, "Shape[{}]", op),
             Self::ShapeScalars(op) => write!(f, "ShapeScalars[{}]", op),

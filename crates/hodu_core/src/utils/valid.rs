@@ -316,6 +316,13 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             }
         },
 
+        // Resize operations - float types only
+        Op::Resize(_) => {
+            if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
+                return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+            }
+        },
+
         // Shape, ShapeScalars, ShapeMemory, Cast, Memory operations - all types supported
         Op::Shape(_) | Op::ShapeScalars(_) | Op::ShapeMemory(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
             // All types supported
@@ -395,6 +402,9 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
 
         // Einsum operations
         Op::Einsum(_) => true,
+
+        // Resize operations (linear/cubic support backprop, nearest doesn't but we handle at runtime)
+        Op::Resize(_) => true,
 
         // Shape operations
         Op::Shape(_) | Op::ShapeScalars(_) | Op::ShapeMemory(_) => true,

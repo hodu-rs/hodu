@@ -9,6 +9,7 @@ mod matrix;
 mod normalization;
 mod padding;
 mod reduce;
+mod resize;
 mod scan;
 mod selection;
 mod shape;

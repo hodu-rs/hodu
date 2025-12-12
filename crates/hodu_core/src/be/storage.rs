@@ -101,6 +101,15 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_pad(&self, _: &Layout, _: &[usize], _: &[usize], _: Scalar, _: Op) -> HoduResult<Self>;
 
+    fn call_ops_resize(
+        &self,
+        _: &Layout,
+        _: &[usize],
+        _: crate::op_params::ResizeMode,
+        _: crate::op_params::ResizeCoordTransform,
+        _: crate::op_params::ResizeNearestMode,
+    ) -> HoduResult<Self>;
+
     fn call_ops_cumsum(&self, _: &Layout, _: usize) -> HoduResult<Self>;
 
     fn call_ops_einsum(
@@ -934,6 +943,41 @@ impl BackendStorage {
             Self::Metal(storage) => Ok(Self::Metal(
                 storage.call_ops_pad(layout, pad_before, pad_after, pad_value, op)?,
             )),
+        }
+    }
+
+    pub(crate) fn call_ops_resize(
+        &self,
+        layout: &Layout,
+        output_shape: &[usize],
+        mode: crate::op_params::ResizeMode,
+        coord_transform: crate::op_params::ResizeCoordTransform,
+        nearest_mode: crate::op_params::ResizeNearestMode,
+    ) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_resize(
+                layout,
+                output_shape,
+                mode,
+                coord_transform,
+                nearest_mode,
+            )?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_resize(
+                layout,
+                output_shape,
+                mode,
+                coord_transform,
+                nearest_mode,
+            )?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_resize(
+                layout,
+                output_shape,
+                mode,
+                coord_transform,
+                nearest_mode,
+            )?)),
         }
     }
 

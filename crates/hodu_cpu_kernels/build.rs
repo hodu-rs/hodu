@@ -16,6 +16,7 @@ fn main() {
         .file("kernels/ops_memory.c")
         .file("kernels/ops_padding.c")
         .file("kernels/ops_reduce.c")
+        .file("kernels/ops_resize.c")
         .file("kernels/ops_scan.c")
         .file("kernels/ops_shape_memory.c")
         .file("kernels/ops_unary.c")
@@ -109,6 +110,8 @@ fn main() {
         "ops_padding.c",
         "ops_reduce.h",
         "ops_reduce.c",
+        "ops_resize.h",
+        "ops_resize.c",
         "ops_scan.h",
         "ops_scan.c",
         "ops_shape_memory.h",

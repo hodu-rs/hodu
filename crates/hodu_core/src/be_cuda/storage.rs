@@ -8,6 +8,7 @@ mod ops_indexing;
 mod ops_matrix;
 mod ops_padding;
 mod ops_reduce;
+mod ops_resize;
 mod ops_scan;
 mod ops_shape_memory;
 mod ops_unary;
@@ -489,6 +490,17 @@ impl BackendStorageT for CudaStorage {
         op: Op,
     ) -> HoduResult<Self> {
         ops_padding::call_ops_pad(self, layout, pad_before, pad_after, pad_value, op)
+    }
+
+    fn call_ops_resize(
+        &self,
+        layout: &Layout,
+        output_shape: &[usize],
+        mode: crate::op_params::ResizeMode,
+        coord_transform: crate::op_params::ResizeCoordTransform,
+        nearest_mode: crate::op_params::ResizeNearestMode,
+    ) -> HoduResult<Self> {
+        ops_resize::call_ops_resize(self, layout, output_shape, mode, coord_transform, nearest_mode)
     }
 
     fn call_ops_cumsum(&self, layout: &Layout, dim: usize) -> HoduResult<Self> {

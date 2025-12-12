@@ -1244,3 +1244,62 @@ pub fn cast_metadata(layout: &Layout) -> Vec<usize> {
 pub fn contiguous_metadata(layout: &Layout) -> Vec<usize> {
     cast_metadata(layout)
 }
+
+// ============================================================================
+// Resize Operations
+// ============================================================================
+
+/// Generate metadata for resize operations (spatial interpolation)
+///
+/// Format:
+/// - metadata[0]: output_size (total number of elements in output)
+/// - metadata[1]: num_dims (number of dimensions, typically 4 for NCHW or 5 for NCDHW)
+/// - metadata[2..2+num_dims]: input_shape
+/// - metadata[2+num_dims..2+2*num_dims]: input_strides
+/// - metadata[2+2*num_dims]: offset
+/// - metadata[3+2*num_dims..3+3*num_dims]: output_shape
+/// - metadata[3+3*num_dims]: mode (0=nearest, 1=linear, 2=cubic)
+/// - metadata[4+3*num_dims]: coord_transform (0=half_pixel, 1=asymmetric, 2=align_corners, 3=pytorch_half_pixel)
+/// - metadata[5+3*num_dims]: nearest_mode (0=floor, 1=ceil, 2=round_prefer_floor, 3=round_prefer_ceil)
+pub fn resize_metadata(
+    layout: &Layout,
+    output_shape: &[usize],
+    mode: usize,
+    coord_transform: usize,
+    nearest_mode: usize,
+) -> Vec<usize> {
+    let input_shape = layout.shape();
+    let num_dims = input_shape.ndim();
+    let output_size: usize = output_shape.iter().product();
+
+    let mut metadata = Vec::with_capacity(6 + 3 * num_dims);
+
+    // output_size, num_dims
+    metadata.push(output_size);
+    metadata.push(num_dims);
+
+    // input_shape
+    for &dim in input_shape.dims() {
+        metadata.push(dim);
+    }
+
+    // input_strides
+    for &stride in layout.strides() {
+        metadata.push(stride);
+    }
+
+    // offset
+    metadata.push(layout.offset());
+
+    // output_shape
+    for &dim in output_shape {
+        metadata.push(dim);
+    }
+
+    // mode, coord_transform, nearest_mode
+    metadata.push(mode);
+    metadata.push(coord_transform);
+    metadata.push(nearest_mode);
+
+    metadata
+}

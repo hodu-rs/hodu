@@ -333,6 +333,49 @@ pub struct EinsumParams {
     pub contraction_indices: Vec<char>,
 }
 
+// Resize Operations
+
+/// Interpolation mode for resize operation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ResizeMode {
+    #[default]
+    Nearest,
+    Linear, // bilinear (2D) / trilinear (3D)
+    Cubic,  // bicubic (2D only)
+}
+
+/// Coordinate transformation mode (ONNX spec)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ResizeCoordTransform {
+    #[default]
+    HalfPixel,
+    Asymmetric,
+    AlignCorners,
+    PytorchHalfPixel,
+}
+
+/// Rounding mode for nearest neighbor interpolation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ResizeNearestMode {
+    #[default]
+    Floor,
+    Ceil,
+    RoundPreferFloor,
+    RoundPreferCeil,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ResizeParams {
+    pub output_size: Vec<usize>,
+    pub mode: ResizeMode,
+    pub coord_transform: ResizeCoordTransform,
+    pub nearest_mode: ResizeNearestMode,
+}
+
 // Shape Operations
 
 #[derive(Debug, Clone)]
@@ -469,6 +512,9 @@ pub enum OpParams {
 
     // Einsum
     Einsum(EinsumParams),
+
+    // Resize
+    Resize(ResizeParams),
 
     // Shape
     Reshape(ReshapeParams),

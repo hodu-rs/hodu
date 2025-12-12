@@ -454,6 +454,7 @@ fn get_op_category(op: &Op) -> &'static str {
         Op::Indexing(_) => "Indexing",
         Op::Conv(_) => "Conv",
         Op::Windowing(_) => "Windowing",
+        Op::Resize(_) => "Resize",
         Op::Padding(_) => "Padding",
         Op::Scan(_) => "Scan",
         Op::Einsum(_) => "Einsum",
