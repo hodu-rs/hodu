@@ -222,6 +222,7 @@ impl Tensor {
     unary_scalar_op!(sub_scalar, SubScalar);
     unary_scalar_op!(mul_scalar, MulScalar);
     unary_scalar_op!(div_scalar, DivScalar);
+    unary_scalar_op!(rem_scalar, RemScalar);
     unary_scalar_op!(pow_scalar, PowScalar);
     unary_scalar_op!(maximum_scalar, MaximumScalar);
     unary_scalar_op!(minimum_scalar, MinimumScalar);

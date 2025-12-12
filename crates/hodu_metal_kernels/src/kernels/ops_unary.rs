@@ -57,6 +57,7 @@ ops!(
     sub_scalar,
     mul_scalar,
     div_scalar,
+    rem_scalar,
     pow_scalar,
     maximum_scalar,
     minimum_scalar,

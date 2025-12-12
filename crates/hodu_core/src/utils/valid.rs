@@ -92,7 +92,7 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
     match op {
         // Binary operations
         Op::Binary(inner_op) => match inner_op {
-            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul => {
+            BinaryOp::Add | BinaryOp::Sub | BinaryOp::Mul | BinaryOp::Rem => {
                 if dtype == DType::BOOL {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
@@ -205,7 +205,10 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
 
         // Unary with scalar
         Op::UnaryScalar(inner_op) => match inner_op {
-            UnaryScalarOp::AddScalar | UnaryScalarOp::SubScalar | UnaryScalarOp::MulScalar => {
+            UnaryScalarOp::AddScalar
+            | UnaryScalarOp::SubScalar
+            | UnaryScalarOp::MulScalar
+            | UnaryScalarOp::RemScalar => {
                 if dtype == DType::BOOL {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }

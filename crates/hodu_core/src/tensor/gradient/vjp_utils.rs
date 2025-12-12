@@ -152,6 +152,11 @@ pub fn create_ln_tensor(a: TensorId) -> HoduResult<TensorId> {
     tensor_a.ln().map(|t| t.id())
 }
 
+pub fn create_floor_tensor(a: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.floor().map(|t| t.id())
+}
+
 // Unary Scalar operations
 pub fn create_add_scalar_tensor(a: TensorId, scalar: Scalar) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);

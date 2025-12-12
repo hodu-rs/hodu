@@ -39,7 +39,7 @@
 - [ ] Implement topk (ONNX: TopK)
 - [ ] Implement nonzero (ONNX: NonZero)
 - [ ] Implement onehot (ONNX: OneHot)
-- [ ] Implement mod/fmod (ONNX: Mod)
+- [x] Implement rem (ONNX: Mod)
 
 **Recurrent Layers:** (🔴 Critical)
 - [ ] Implement RNN

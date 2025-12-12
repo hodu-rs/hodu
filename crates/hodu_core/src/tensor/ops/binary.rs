@@ -137,6 +137,7 @@ impl Tensor {
     binary_op!(sub, Sub);
     binary_op!(mul, Mul);
     binary_op!(div, Div);
+    binary_op!(rem, Rem);
     binary_op!(pow, Pow);
     binary_op!(maximum, Maximum);
     binary_op!(minimum, Minimum);

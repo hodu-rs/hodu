@@ -129,6 +129,25 @@ BINARY_OP(int16_t, int16_t, div_i16, (y != 0) ? (x / y) : 0)
 BINARY_OP(int32_t, int32_t, div_i32, (y != 0) ? (x / y) : 0)
 BINARY_OP(int64_t, int64_t, div_i64, (y != 0) ? (x / y) : 0)
 
+BINARY_OP(bool, bool, rem_bool, x && !y)
+BINARY_OP(__nv_fp8_e4m3, __nv_fp8_e4m3, rem_f8e4m3,
+          from_float<__nv_fp8_e4m3>(fmodf(to_float(x), to_float(y))))
+BINARY_OP(__nv_fp8_e5m2, __nv_fp8_e5m2, rem_f8e5m2,
+          from_float<__nv_fp8_e5m2>(fmodf(to_float(x), to_float(y))))
+BINARY_OP(__nv_bfloat16, __nv_bfloat16, rem_bf16,
+          from_float<__nv_bfloat16>(fmodf(to_float(x), to_float(y))))
+BINARY_OP(__half, __half, rem_f16, from_float<__half>(fmodf(to_float(x), to_float(y))))
+BINARY_OP(float, float, rem_f32, fmodf(x, y))
+BINARY_OP(double, double, rem_f64, fmod(x, y))
+BINARY_OP(uint8_t, uint8_t, rem_u8, (y != 0) ? (x % y) : 0)
+BINARY_OP(uint16_t, uint16_t, rem_u16, (y != 0) ? (x % y) : 0)
+BINARY_OP(uint32_t, uint32_t, rem_u32, (y != 0) ? (x % y) : 0)
+BINARY_OP(uint64_t, uint64_t, rem_u64, (y != 0) ? (x % y) : 0)
+BINARY_OP(int8_t, int8_t, rem_i8, (y != 0) ? (x % y) : 0)
+BINARY_OP(int16_t, int16_t, rem_i16, (y != 0) ? (x % y) : 0)
+BINARY_OP(int32_t, int32_t, rem_i32, (y != 0) ? (x % y) : 0)
+BINARY_OP(int64_t, int64_t, rem_i64, (y != 0) ? (x % y) : 0)
+
 BINARY_OP(bool, bool, pow_bool, x || !y)
 BINARY_OP(__nv_fp8_e4m3, __nv_fp8_e4m3, pow_f8e4m3,
           from_float<__nv_fp8_e4m3>(m_pow_float(to_float(x), to_float(y))))

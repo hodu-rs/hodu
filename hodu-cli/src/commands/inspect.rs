@@ -456,6 +456,7 @@ fn get_op_category(op: &Op) -> &'static str {
         Op::Windowing(_) => "Windowing",
         Op::Padding(_) => "Padding",
         Op::Scan(_) => "Scan",
+        Op::Einsum(_) => "Einsum",
         Op::Shape(_) => "Shape",
         Op::ShapeScalars(_) => "ShapeScalars",
         Op::ShapeMemory(_) => "ShapeMemory",

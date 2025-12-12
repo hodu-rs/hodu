@@ -44,6 +44,18 @@ impl VjpCompute for BinaryOp {
                     create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,
                 ])
             },
+            BinaryOp::Rem => {
+                // z = x % y = x - floor(x/y) * y
+                // dz/dx = 1
+                // dz/dy = -floor(x/y)
+                let x_div_y = create_div_tensor(inputs[0], inputs[1])?;
+                let floor_x_div_y = create_floor_tensor(x_div_y)?;
+                let grad_b_raw = create_neg_tensor(create_mul_tensor(grad_output, floor_x_div_y)?)?;
+                Ok(vec![
+                    create_sum_to_shape_tensor(grad_output, &input_a_shape)?,
+                    create_sum_to_shape_tensor(grad_b_raw, &input_b_shape)?,
+                ])
+            },
             BinaryOp::Pow => {
                 // d/dx (x^y) = y * x^(y-1)
                 // d/dy (x^y) = x^y * ln(x)

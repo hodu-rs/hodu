@@ -198,6 +198,7 @@ UNARY_OP_WITH_CONSTANT(bool, bool, add_scalar_bool, x || const_val);
 UNARY_OP_WITH_CONSTANT(bool, bool, sub_scalar_bool, x ^ const_val);
 UNARY_OP_WITH_CONSTANT(bool, bool, mul_scalar_bool, x &&const_val);
 UNARY_OP_WITH_CONSTANT(bool, bool, div_scalar_bool, x &&const_val);
+UNARY_OP_WITH_CONSTANT(bool, bool, rem_scalar_bool, x && !const_val);
 UNARY_OP_WITH_CONSTANT(bool, bool, pow_scalar_bool, x && (const_val != 0));
 UNARY_OP_WITH_CONSTANT(bool, bool, maximum_scalar_bool, x || const_val);
 UNARY_OP_WITH_CONSTANT(bool, bool, minimum_scalar_bool, x &&const_val);
@@ -272,6 +273,7 @@ UNARY_OP_WITH_CONSTANT(bfloat, bfloat, add_scalar_bf16, x + const_val);
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, sub_scalar_bf16, x - const_val);
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, mul_scalar_bf16, x *const_val);
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, div_scalar_bf16, x / const_val);
+UNARY_OP_WITH_CONSTANT(bfloat, bfloat, rem_scalar_bf16, bfloat(fmod(float(x), float(const_val))));
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, pow_scalar_bf16,
                        bfloat(m_pow_float(float(x), float(const_val))));
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, maximum_scalar_bf16,
@@ -358,6 +360,7 @@ UNARY_OP_WITH_CONSTANT(half, half, add_scalar_f16, x + const_val);
 UNARY_OP_WITH_CONSTANT(half, half, sub_scalar_f16, x - const_val);
 UNARY_OP_WITH_CONSTANT(half, half, mul_scalar_f16, x *const_val);
 UNARY_OP_WITH_CONSTANT(half, half, div_scalar_f16, x / const_val);
+UNARY_OP_WITH_CONSTANT(half, half, rem_scalar_f16, half(fmod(float(x), float(const_val))));
 UNARY_OP_WITH_CONSTANT(half, half, pow_scalar_f16, half(m_pow_float(float(x), float(const_val))));
 UNARY_OP_WITH_CONSTANT(half, half, maximum_scalar_f16, half(maximum(float(x), float(const_val))));
 UNARY_OP_WITH_CONSTANT(half, half, minimum_scalar_f16, half(minimum(float(x), float(const_val))));
@@ -438,6 +441,7 @@ UNARY_OP_WITH_CONSTANT(float, float, add_scalar_f32, x + const_val);
 UNARY_OP_WITH_CONSTANT(float, float, sub_scalar_f32, x - const_val);
 UNARY_OP_WITH_CONSTANT(float, float, mul_scalar_f32, x *const_val);
 UNARY_OP_WITH_CONSTANT(float, float, div_scalar_f32, x / const_val);
+UNARY_OP_WITH_CONSTANT(float, float, rem_scalar_f32, fmod(x, const_val));
 UNARY_OP_WITH_CONSTANT(float, float, pow_scalar_f32, m_pow_float(x, const_val));
 UNARY_OP_WITH_CONSTANT(float, float, maximum_scalar_f32, maximum(x, const_val));
 UNARY_OP_WITH_CONSTANT(float, float, minimum_scalar_f32, minimum(x, const_val));
@@ -475,6 +479,7 @@ UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, add_scalar_u8, x + const_val);
 UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, sub_scalar_u8, (x > const_val) ? x - const_val : 0);
 UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, mul_scalar_u8, x *const_val);
 UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, div_scalar_u8, x / const_val);
+UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, rem_scalar_u8, x % const_val);
 UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, pow_scalar_u8,
                        (uint8_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(uint8_t, uint8_t, maximum_scalar_u8, maximum(x, const_val));
@@ -508,6 +513,7 @@ UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, add_scalar_u16, x + const_val);
 UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, sub_scalar_u16, (x > const_val) ? x - const_val : 0);
 UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, mul_scalar_u16, x *const_val);
 UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, div_scalar_u16, x / const_val);
+UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, rem_scalar_u16, x % const_val);
 UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, pow_scalar_u16,
                        (uint16_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(uint16_t, uint16_t, maximum_scalar_u16, maximum(x, const_val));
@@ -541,6 +547,7 @@ UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, add_scalar_u32, x + const_val);
 UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, sub_scalar_u32, (x > const_val) ? x - const_val : 0);
 UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, mul_scalar_u32, x *const_val);
 UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, div_scalar_u32, x / const_val);
+UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, rem_scalar_u32, x % const_val);
 UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, pow_scalar_u32,
                        (uint32_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(uint32_t, uint32_t, maximum_scalar_u32, maximum(x, const_val));
@@ -574,6 +581,7 @@ UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, add_scalar_u64, x + const_val);
 UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, sub_scalar_u64, (x > const_val) ? x - const_val : 0);
 UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, mul_scalar_u64, x *const_val);
 UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, div_scalar_u64, x / const_val);
+UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, rem_scalar_u64, x % const_val);
 UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, pow_scalar_u64,
                        (uint64_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(uint64_t, uint64_t, maximum_scalar_u64, maximum(x, const_val));
@@ -609,6 +617,7 @@ UNARY_OP_WITH_CONSTANT(int8_t, int8_t, add_scalar_i8, x + const_val);
 UNARY_OP_WITH_CONSTANT(int8_t, int8_t, sub_scalar_i8, x - const_val);
 UNARY_OP_WITH_CONSTANT(int8_t, int8_t, mul_scalar_i8, x *const_val);
 UNARY_OP_WITH_CONSTANT(int8_t, int8_t, div_scalar_i8, x / const_val);
+UNARY_OP_WITH_CONSTANT(int8_t, int8_t, rem_scalar_i8, x % const_val);
 UNARY_OP_WITH_CONSTANT(int8_t, int8_t, pow_scalar_i8,
                        (int8_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(int8_t, int8_t, maximum_scalar_i8, maximum(x, const_val));
@@ -644,6 +653,7 @@ UNARY_OP_WITH_CONSTANT(int16_t, int16_t, add_scalar_i16, x + const_val);
 UNARY_OP_WITH_CONSTANT(int16_t, int16_t, sub_scalar_i16, x - const_val);
 UNARY_OP_WITH_CONSTANT(int16_t, int16_t, mul_scalar_i16, x *const_val);
 UNARY_OP_WITH_CONSTANT(int16_t, int16_t, div_scalar_i16, x / const_val);
+UNARY_OP_WITH_CONSTANT(int16_t, int16_t, rem_scalar_i16, x % const_val);
 UNARY_OP_WITH_CONSTANT(int16_t, int16_t, pow_scalar_i16,
                        (int16_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(int16_t, int16_t, maximum_scalar_i16, maximum(x, const_val));
@@ -679,6 +689,7 @@ UNARY_OP_WITH_CONSTANT(int32_t, int32_t, add_scalar_i32, x + const_val);
 UNARY_OP_WITH_CONSTANT(int32_t, int32_t, sub_scalar_i32, x - const_val);
 UNARY_OP_WITH_CONSTANT(int32_t, int32_t, mul_scalar_i32, x *const_val);
 UNARY_OP_WITH_CONSTANT(int32_t, int32_t, div_scalar_i32, x / const_val);
+UNARY_OP_WITH_CONSTANT(int32_t, int32_t, rem_scalar_i32, x % const_val);
 UNARY_OP_WITH_CONSTANT(int32_t, int32_t, pow_scalar_i32,
                        (int32_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(int32_t, int32_t, maximum_scalar_i32, maximum(x, const_val));
@@ -714,6 +725,7 @@ UNARY_OP_WITH_CONSTANT(int64_t, int64_t, add_scalar_i64, x + const_val);
 UNARY_OP_WITH_CONSTANT(int64_t, int64_t, sub_scalar_i64, x - const_val);
 UNARY_OP_WITH_CONSTANT(int64_t, int64_t, mul_scalar_i64, x *const_val);
 UNARY_OP_WITH_CONSTANT(int64_t, int64_t, div_scalar_i64, x / const_val);
+UNARY_OP_WITH_CONSTANT(int64_t, int64_t, rem_scalar_i64, x % const_val);
 UNARY_OP_WITH_CONSTANT(int64_t, int64_t, pow_scalar_i64,
                        (int64_t)m_pow_float((float)x, (float)const_val));
 UNARY_OP_WITH_CONSTANT(int64_t, int64_t, maximum_scalar_i64, maximum(x, const_val));

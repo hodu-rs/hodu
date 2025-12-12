@@ -140,6 +140,7 @@ fn binary_ops_f32() {
     binary_op!(sub, |x, y| x - y);
     binary_op!(mul, |x, y| x * y);
     binary_op!(div, |x, y| x / y);
+    binary_op!(rem, |x: f32, y| x % y);
     binary_op!(minimum, |x: f32, y| x.min(y));
     binary_op!(maximum, |x: f32, y| x.max(y));
 }

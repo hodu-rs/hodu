@@ -470,6 +470,10 @@ impl VjpCompute for UnaryScalarOp {
                 };
                 Ok(vec![create_mul_scalar_tensor(grad_output, scalar_value)?])
             },
+            UnaryScalarOp::RemScalar => {
+                // d/dx (x % c) = 1
+                Ok(vec![grad_output])
+            },
             UnaryScalarOp::PowScalar => {
                 // d/dx (x^c) = c * x^(c-1)
                 let input_tensor = tensor_from_id(input);

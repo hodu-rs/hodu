@@ -784,6 +784,7 @@ void hodu_cpu_mul_scalar_f32(const void *input, void *output, const size_t *meta
 #endif
 
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, div_scalar, x / const_val)
+IMPL_UNARY_WITH_SCALAR(f32_t, f32, rem_scalar, fmodf(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, pow_scalar, powf_opt(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, minimum_scalar, MINIMUM(x, const_val))
@@ -1141,6 +1142,7 @@ void hodu_cpu_mul_scalar_f64(const void *input, void *output, const size_t *meta
 #endif
 
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, div_scalar, x / const_val)
+IMPL_UNARY_WITH_SCALAR(f64_t, f64, rem_scalar, fmod(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, pow_scalar, pow_opt(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, minimum_scalar, MINIMUM(x, const_val))
@@ -1183,6 +1185,7 @@ IMPL_UNARY_WITH_SCALAR(uint8_t, bool, add_scalar, x || const_val)
 IMPL_UNARY_WITH_SCALAR(uint8_t, bool, sub_scalar, x ^ const_val)
 IMPL_UNARY_WITH_SCALAR(uint8_t, bool, mul_scalar, x &&const_val)
 IMPL_UNARY_WITH_SCALAR(uint8_t, bool, div_scalar, x &&const_val)
+IMPL_UNARY_WITH_SCALAR(uint8_t, bool, rem_scalar, x && !const_val)
 IMPL_UNARY_WITH_SCALAR(uint8_t, bool, pow_scalar, x && (const_val != 0))
 IMPL_UNARY_WITH_SCALAR(uint8_t, bool, maximum_scalar, x || const_val)
 IMPL_UNARY_WITH_SCALAR(uint8_t, bool, minimum_scalar, x &&const_val)
@@ -1254,6 +1257,8 @@ IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, sub_scalar, x - const_val, f8e4
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, mul_scalar, x *const_val, f8e4m3_to_float,
                                float_to_f8e4m3)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, div_scalar, x / const_val, f8e4m3_to_float,
+                               float_to_f8e4m3)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, rem_scalar, fmodf(x, const_val), f8e4m3_to_float,
                                float_to_f8e4m3)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, pow_scalar, powf(x, const_val), f8e4m3_to_float,
                                float_to_f8e4m3)
@@ -1330,6 +1335,8 @@ IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, mul_scalar, x *const_val, f8e5m
                                float_to_f8e5m2)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, div_scalar, x / const_val, f8e5m2_to_float,
                                float_to_f8e5m2)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, rem_scalar, fmodf(x, const_val), f8e5m2_to_float,
+                               float_to_f8e5m2)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, pow_scalar, powf(x, const_val), f8e5m2_to_float,
                                float_to_f8e5m2)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, maximum_scalar, MAXIMUM(x, const_val),
@@ -1400,6 +1407,8 @@ IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, sub_scalar, x - const_val, bf16_to_
 IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, mul_scalar, x *const_val, bf16_to_float, float_to_bf16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, div_scalar, x / const_val, bf16_to_float,
                                float_to_bf16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, rem_scalar, fmodf(x, const_val), bf16_to_float,
+                               float_to_bf16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, pow_scalar, powf(x, const_val), bf16_to_float,
                                float_to_bf16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, maximum_scalar, MAXIMUM(x, const_val), bf16_to_float,
@@ -1467,6 +1476,8 @@ IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, add_scalar, x + const_val, f16_to_flo
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, sub_scalar, x - const_val, f16_to_float, float_to_f16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, mul_scalar, x *const_val, f16_to_float, float_to_f16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, div_scalar, x / const_val, f16_to_float, float_to_f16)
+IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, rem_scalar, fmodf(x, const_val), f16_to_float,
+                               float_to_f16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, pow_scalar, powf(x, const_val), f16_to_float,
                                float_to_f16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, maximum_scalar, MAXIMUM(x, const_val), f16_to_float,
@@ -1496,6 +1507,7 @@ IMPL_UNARY_WITH_SCALAR(u8_t, u8, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(u8_t, u8, sub_scalar, (x > const_val) ? (x - const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u8_t, u8, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(u8_t, u8, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(u8_t, u8, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u8_t, u8, pow_scalar, (u8_t)powf_opt((float)x, (float)const_val))
 IMPL_UNARY_WITH_SCALAR(u8_t, u8, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(u8_t, u8, minimum_scalar, MINIMUM(x, const_val))
@@ -1517,6 +1529,7 @@ IMPL_UNARY_WITH_SCALAR(u16_t, u16, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(u16_t, u16, sub_scalar, (x > const_val) ? (x - const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u16_t, u16, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(u16_t, u16, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(u16_t, u16, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u16_t, u16, pow_scalar, (u16_t)powf_opt((float)x, (float)const_val))
 IMPL_UNARY_WITH_SCALAR(u16_t, u16, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(u16_t, u16, minimum_scalar, MINIMUM(x, const_val))
@@ -1538,6 +1551,7 @@ IMPL_UNARY_WITH_SCALAR(u32_t, u32, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(u32_t, u32, sub_scalar, (x > const_val) ? (x - const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u32_t, u32, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(u32_t, u32, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(u32_t, u32, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u32_t, u32, pow_scalar, (u32_t)powf_opt((float)x, (float)const_val))
 IMPL_UNARY_WITH_SCALAR(u32_t, u32, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(u32_t, u32, minimum_scalar, MINIMUM(x, const_val))
@@ -1559,6 +1573,7 @@ IMPL_UNARY_WITH_SCALAR(u64_t, u64, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(u64_t, u64, sub_scalar, (x > const_val) ? (x - const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u64_t, u64, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(u64_t, u64, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(u64_t, u64, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(u64_t, u64, pow_scalar, (u64_t)pow_opt((double)x, (double)const_val))
 IMPL_UNARY_WITH_SCALAR(u64_t, u64, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(u64_t, u64, minimum_scalar, MINIMUM(x, const_val))
@@ -1585,6 +1600,7 @@ IMPL_UNARY_WITH_SCALAR(i8_t, i8, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(i8_t, i8, sub_scalar, x - const_val)
 IMPL_UNARY_WITH_SCALAR(i8_t, i8, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(i8_t, i8, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(i8_t, i8, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(i8_t, i8, pow_scalar, (i8_t)powf_opt((float)x, (float)const_val))
 IMPL_UNARY_WITH_SCALAR(i8_t, i8, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(i8_t, i8, minimum_scalar, MINIMUM(x, const_val))
@@ -1607,6 +1623,7 @@ IMPL_UNARY_WITH_SCALAR(i16_t, i16, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(i16_t, i16, sub_scalar, x - const_val)
 IMPL_UNARY_WITH_SCALAR(i16_t, i16, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(i16_t, i16, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(i16_t, i16, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(i16_t, i16, pow_scalar, (i16_t)powf_opt((float)x, (float)const_val))
 IMPL_UNARY_WITH_SCALAR(i16_t, i16, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(i16_t, i16, minimum_scalar, MINIMUM(x, const_val))
@@ -1629,6 +1646,7 @@ IMPL_UNARY_WITH_SCALAR(i32_t, i32, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(i32_t, i32, sub_scalar, x - const_val)
 IMPL_UNARY_WITH_SCALAR(i32_t, i32, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(i32_t, i32, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(i32_t, i32, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(i32_t, i32, pow_scalar, (i32_t)powf_opt((float)x, (float)const_val))
 IMPL_UNARY_WITH_SCALAR(i32_t, i32, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(i32_t, i32, minimum_scalar, MINIMUM(x, const_val))
@@ -1651,6 +1669,7 @@ IMPL_UNARY_WITH_SCALAR(i64_t, i64, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(i64_t, i64, sub_scalar, x - const_val)
 IMPL_UNARY_WITH_SCALAR(i64_t, i64, mul_scalar, x *const_val)
 IMPL_UNARY_WITH_SCALAR(i64_t, i64, div_scalar, (const_val != 0) ? (x / const_val) : 0)
+IMPL_UNARY_WITH_SCALAR(i64_t, i64, rem_scalar, (const_val != 0) ? (x % const_val) : 0)
 IMPL_UNARY_WITH_SCALAR(i64_t, i64, pow_scalar, (i64_t)pow_opt((double)x, (double)const_val))
 IMPL_UNARY_WITH_SCALAR(i64_t, i64, maximum_scalar, MAXIMUM(x, const_val))
 IMPL_UNARY_WITH_SCALAR(i64_t, i64, minimum_scalar, MINIMUM(x, const_val))
