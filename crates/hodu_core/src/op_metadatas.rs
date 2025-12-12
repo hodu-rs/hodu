@@ -1063,6 +1063,41 @@ pub fn scan_metadata(layout: &Layout, dim: usize) -> Vec<usize> {
 }
 
 // ============================================================================
+// Sort Operations
+// ============================================================================
+
+/// Generate metadata for topk operations
+///
+/// Format:
+/// - metadata[0]: output_size (k * outer_size)
+/// - metadata[1]: k (number of top elements to return)
+/// - metadata[2]: last_dim_size (size of the dimension to search along)
+/// - metadata[3]: outer_size (product of all dimensions except last)
+/// - metadata[4]: largest (1 = largest, 0 = smallest)
+/// - metadata[5]: sorted (1 = sorted, 0 = unsorted)
+/// - metadata[6]: offset
+pub fn topk_metadata(
+    layout: &Layout,
+    k: usize,
+    last_dim_size: usize,
+    outer_size: usize,
+    largest: bool,
+    sorted: bool,
+) -> Vec<usize> {
+    let output_size = k * outer_size;
+
+    vec![
+        output_size,
+        k,
+        last_dim_size,
+        outer_size,
+        if largest { 1 } else { 0 },
+        if sorted { 1 } else { 0 },
+        layout.offset(),
+    ]
+}
+
+// ============================================================================
 // Einsum Operations
 // ============================================================================
 
@@ -1099,14 +1134,13 @@ pub fn einsum_metadata(
     let output_ndim = output_layout.ndim();
     let num_output_els = output_layout.size().max(1);
 
-    let mut metadata = Vec::new();
-
-    // Header
-    metadata.push(num_output_els);
-    metadata.push(num_inputs);
-    metadata.push(num_total_indices);
-    metadata.push(num_contraction_indices);
-    metadata.push(output_ndim);
+    let mut metadata = vec![
+        num_output_els,
+        num_inputs,
+        num_total_indices,
+        num_contraction_indices,
+        output_ndim,
+    ];
 
     // Output shape
     for &dim in output_layout.shape().dims() {

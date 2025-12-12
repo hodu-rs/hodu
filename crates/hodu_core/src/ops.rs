@@ -560,6 +560,26 @@ impl fmt::Debug for ScanOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum SortOp {
+    TopK,
+}
+
+impl fmt::Display for SortOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TopK => write!(f, "topk"),
+        }
+    }
+}
+
+impl fmt::Debug for SortOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum EinsumOp {
     Einsum,
 }
@@ -710,6 +730,7 @@ pub enum Op {
     Resize(ResizeOp),
     Padding(PaddingOp),
     Scan(ScanOp),
+    Sort(SortOp),
     Einsum(EinsumOp),
     Shape(ShapeOp),
     ShapeScalars(ShapeScalarsOp),
@@ -739,6 +760,7 @@ impl fmt::Display for Op {
             Self::Resize(op) => write!(f, "{}", op),
             Self::Padding(op) => write!(f, "{}", op),
             Self::Scan(op) => write!(f, "{}", op),
+            Self::Sort(op) => write!(f, "{}", op),
             Self::Einsum(op) => write!(f, "{}", op),
             Self::Shape(op) => write!(f, "{}", op),
             Self::ShapeScalars(op) => write!(f, "{}", op),
@@ -763,6 +785,7 @@ impl fmt::Debug for Op {
             Self::Matrix(op) => write!(f, "Matrix[{}]", op),
             Self::Reduce(op) => write!(f, "Reduce[{}]", op),
             Self::Scan(op) => write!(f, "Scan[{}]", op),
+            Self::Sort(op) => write!(f, "Sort[{}]", op),
             Self::Einsum(op) => write!(f, "Einsum[{}]", op),
             Self::Concat(op) => write!(f, "Concat[{}]", op),
             Self::Split(op) => write!(f, "Split[{}]", op),

@@ -29,6 +29,7 @@ mod vjp_resize;
 mod vjp_scan;
 mod vjp_shape;
 mod vjp_shape_memory;
+mod vjp_sort;
 mod vjp_unary;
 mod vjp_utils;
 mod vjp_windowing;

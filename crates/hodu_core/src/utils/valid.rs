@@ -315,6 +315,13 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             }
         },
 
+        // Sort operations - numeric types only (no bool)
+        Op::Sort(_) => {
+            if dtype == DType::BOOL {
+                return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+            }
+        },
+
         // Einsum operations - numeric types only (no bool)
         Op::Einsum(_) => {
             if dtype == DType::BOOL {
@@ -405,6 +412,9 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
 
         // Scan operations
         Op::Scan(_) => true,
+
+        // Sort operations - topk doesn't support backprop (indices are discrete)
+        Op::Sort(_) => false,
 
         // Einsum operations
         Op::Einsum(_) => true,

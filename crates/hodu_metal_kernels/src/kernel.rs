@@ -89,6 +89,7 @@ impl Kernels {
             Source::Resize => crate::source::get_resize(),
             Source::Scan => crate::source::get_scan(),
             Source::ShapeMemory => crate::source::get_shape_memory(),
+            Source::Sort => crate::source::get_sort(),
             Source::Storage => crate::source::get_storage(),
             Source::Unary => crate::source::get_unary(),
             Source::Windowing => crate::source::get_windowing(),

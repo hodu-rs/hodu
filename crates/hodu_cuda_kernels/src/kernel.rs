@@ -143,6 +143,7 @@ impl Kernels {
             Source::OpsResize => crate::source::get_ops_resize(),
             Source::OpsScan => crate::source::get_ops_scan(),
             Source::OpsShapeMemory => crate::source::get_ops_shape_memory(),
+            Source::OpsSort => crate::source::get_ops_sort(),
             Source::OpsUnary => crate::source::get_ops_unary(),
             Source::OpsWindowing => crate::source::get_ops_windowing(),
             Source::Storage => crate::source::get_storage(),

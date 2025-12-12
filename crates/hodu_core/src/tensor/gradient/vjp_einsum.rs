@@ -62,7 +62,7 @@ impl VjpCompute for EinsumOp {
                     let grad_equation = format!("{}->{}", grad_operand_subs.join(","), result_subs);
 
                     // Compute the gradient
-                    let grad_tensor_refs: Vec<&crate::tensor::Tensor> = grad_operand_tensors.iter().copied().collect();
+                    let grad_tensor_refs: Vec<&crate::tensor::Tensor> = grad_operand_tensors.to_vec();
                     let grad_input = crate::tensor::Tensor::einsum(&grad_equation, &grad_tensor_refs)?;
 
                     grad_inputs.push(grad_input.id());

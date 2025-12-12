@@ -330,6 +330,18 @@ pub struct ScanParams {
     pub dim: usize,
 }
 
+// Sort Operations
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct TopKParams {
+    pub k: usize,
+    pub dim: i32,
+    pub largest: bool,
+    pub sorted: bool,
+    pub indices_id: TensorId,
+}
+
 // Einsum Operations
 
 #[derive(Debug, Clone)]
@@ -518,6 +530,9 @@ pub enum OpParams {
 
     // Scan
     Scan(ScanParams),
+
+    // Sort
+    TopK(TopKParams),
 
     // Einsum
     Einsum(EinsumParams),

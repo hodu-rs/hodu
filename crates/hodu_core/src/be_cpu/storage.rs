@@ -11,6 +11,7 @@ mod ops_reduce;
 mod ops_resize;
 mod ops_scan;
 mod ops_shape_memory;
+mod ops_sort;
 mod ops_unary;
 mod ops_windowing;
 
@@ -625,6 +626,18 @@ impl BackendStorageT for CpuStorage {
 
     fn call_ops_flip(&self, layout: &Layout, dims: &[usize]) -> HoduResult<Self> {
         ops_shape_memory::call_ops_flip(self, layout, dims)
+    }
+
+    fn call_topk(
+        &self,
+        layout: &Layout,
+        k: usize,
+        last_dim_size: usize,
+        outer_size: usize,
+        largest: bool,
+        sorted: bool,
+    ) -> HoduResult<(Self, Self)> {
+        ops_sort::call_topk(self, layout, k, last_dim_size, outer_size, largest, sorted)
     }
 
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {

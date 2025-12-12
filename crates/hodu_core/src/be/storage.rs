@@ -123,6 +123,16 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_flip(&self, _: &Layout, _: &[usize]) -> HoduResult<Self>;
 
+    fn call_topk(
+        &self,
+        _: &Layout,
+        _: usize, // k
+        _: usize, // last_dim_size
+        _: usize, // outer_size
+        _: bool,  // largest
+        _: bool,  // sorted
+    ) -> HoduResult<(Self, Self)>; // (values, indices)
+
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
     // only implemented in BackendStorage
@@ -1099,6 +1109,33 @@ impl BackendStorage {
             Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_flip(layout, dims)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_flip(layout, dims)?)),
+        }
+    }
+
+    pub(crate) fn call_topk(
+        &self,
+        layout: &Layout,
+        k: usize,
+        last_dim_size: usize,
+        outer_size: usize,
+        largest: bool,
+        sorted: bool,
+    ) -> HoduResult<(Self, Self)> {
+        match self {
+            Self::CPU(storage) => {
+                let (values, indices) = storage.call_topk(layout, k, last_dim_size, outer_size, largest, sorted)?;
+                Ok((Self::CPU(values), Self::CPU(indices)))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let (values, indices) = storage.call_topk(layout, k, last_dim_size, outer_size, largest, sorted)?;
+                Ok((Self::CUDA(values), Self::CUDA(indices)))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let (values, indices) = storage.call_topk(layout, k, last_dim_size, outer_size, largest, sorted)?;
+                Ok((Self::Metal(values), Self::Metal(indices)))
+            },
         }
     }
 

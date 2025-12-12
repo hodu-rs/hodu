@@ -14,5 +14,6 @@ mod scan;
 mod selection;
 mod shape;
 mod shape_memory;
+mod sort;
 mod unary;
 mod windowing;

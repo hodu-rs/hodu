@@ -26,6 +26,7 @@ fn main() {
         "ops_resize.cu",
         "ops_scan.cu",
         "ops_shape_memory.cu",
+        "ops_sort.cu",
         "ops_unary.cu",
         "ops_windowing.cu",
         "storage.cu",

@@ -601,7 +601,7 @@ impl GroupNorm {
         dtype: DType,
     ) -> HoduResult<Self> {
         assert!(
-            num_channels % num_groups == 0,
+            num_channels.is_multiple_of(num_groups),
             "num_channels ({}) must be divisible by num_groups ({})",
             num_channels,
             num_groups

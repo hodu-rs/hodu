@@ -36,7 +36,7 @@
 **ONNX Compatibility - Other Operations:** (🟡 Important)
 - [x] Implement einsum (ONNX: Einsum)
 - [x] Implement resize/upsample (ONNX: Resize)
-- [ ] Implement topk (ONNX: TopK)
+- [x] Implement topk (ONNX: TopK)
 - [ ] Implement nonzero (ONNX: NonZero)
 - [x] Implement onehot (ONNX: OneHot)
 - [x] Implement rem (ONNX: Mod)

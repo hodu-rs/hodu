@@ -19,6 +19,7 @@ fn main() {
         .file("kernels/ops_resize.c")
         .file("kernels/ops_scan.c")
         .file("kernels/ops_shape_memory.c")
+        .file("kernels/ops_sort.c")
         .file("kernels/ops_unary.c")
         .file("kernels/ops_windowing.c")
         .file("kernels/storage.c")
@@ -116,6 +117,8 @@ fn main() {
         "ops_scan.c",
         "ops_shape_memory.h",
         "ops_shape_memory.c",
+        "ops_sort.h",
+        "ops_sort.c",
         "ops_unary.h",
         "ops_unary.c",
         "ops_windowing.h",

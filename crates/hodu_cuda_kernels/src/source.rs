@@ -18,6 +18,7 @@ pub enum Source {
     OpsResize,
     OpsScan,
     OpsShapeMemory,
+    OpsSort,
     OpsUnary,
     OpsWindowing,
     Storage,

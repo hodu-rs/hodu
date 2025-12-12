@@ -14,16 +14,10 @@ use hodu_core::{error::HoduResult, tensor::Tensor};
 /// loss(input, target) = target * (log(target) - input)
 ///
 /// To avoid numerical issues, target values close to 0 are handled specially.
-#[derive(Module, Clone)]
+#[derive(Module, Clone, Default)]
 #[module(inputs = 2)]
 pub struct KLDivLoss {
     log_target: bool,
-}
-
-impl Default for KLDivLoss {
-    fn default() -> Self {
-        Self { log_target: false }
-    }
 }
 
 impl KLDivLoss {
