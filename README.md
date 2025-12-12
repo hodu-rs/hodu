@@ -1,6 +1,7 @@
 # Hodu, a Rust ML toolkit
 
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](./LICENSE)
+[![Discord](https://img.shields.io/discord/1440598688861917196?logo=discord&logoColor=white&label=Discord)](https://discord.gg/eyuKxPw9As)
 
 > **Hodu** (호두) is a Korean word meaning "walnut".
 
