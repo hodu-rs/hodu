@@ -1,12 +1,12 @@
 use crate::{
     error::HoduResult,
     ops::{
-        GatherParams, IndexPutParams, IndexSelectParams, IndexingOp, Op, OpParams, ScatterAddParams, ScatterMaxParams,
-        ScatterMinParams, ScatterParams,
+        GatherParams, IndexPutParams, IndexSelectParams, IndexingOp, OnehotoParams, Op, OpParams, ScatterAddParams,
+        ScatterMaxParams, ScatterMinParams, ScatterParams,
     },
     scalar::Scalar,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
-    types::Layout,
+    types::{DType, Layout, Shape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_requires_grad_for_op,
         validate_same_device, validate_same_dtype,
@@ -560,6 +560,100 @@ impl Tensor {
                     OpParams::ScatterMin(ScatterMinParams { dim: dim_scalar }),
                 )?;
             }
+
+            Ok(result)
+        }
+    }
+
+    /// Convert integer indices to one-hot encoded vectors.
+    ///
+    /// # Arguments
+    /// * `num_classes` - Number of classes (depth of one-hot dimension)
+    /// * `axis` - Dimension to insert the one-hot encoding (default: -1, last dimension)
+    /// * `dtype` - Output data type (default: F32)
+    ///
+    /// # Returns
+    /// A new tensor with one-hot encoded vectors. The output shape is the input shape
+    /// with `num_classes` inserted at the specified axis.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let indices = Tensor::from_slice(&[0i32, 1, 2, 0], &[4])?;
+    /// let onehot = indices.onehot(3, -1, DType::F32)?;
+    /// // onehot shape: [4, 3]
+    /// // onehot values: [[1,0,0], [0,1,0], [0,0,1], [1,0,0]]
+    /// ```
+    pub fn onehot<N: Into<Scalar>, A: Into<Scalar>>(&self, num_classes: N, axis: A, dtype: DType) -> HoduResult<Self> {
+        let num_classes_scalar = num_classes.into();
+        let axis_scalar = axis.into();
+        let num_classes_usize = num_classes_scalar.to_usize();
+        let axis_i32 = axis_scalar.to_i32();
+
+        // Normalize axis
+        let ndim = self.ndim() as i32;
+        let output_ndim = ndim + 1;
+        let axis_usize = if axis_i32 < 0 {
+            (output_ndim + axis_i32) as usize
+        } else {
+            axis_i32 as usize
+        };
+
+        // Validate
+        validate_dtype_for_device(dtype, self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Onehot))?;
+        validate_indices_dtype(self, Op::Indexing(IndexingOp::Onehot))?;
+
+        // Compute output shape: insert num_classes at axis position
+        let input_shape = self.shape();
+        let mut output_dims = Vec::with_capacity(output_ndim as usize);
+        for (i, &dim) in input_shape.dims().iter().enumerate() {
+            if i == axis_usize {
+                output_dims.push(num_classes_usize);
+            }
+            output_dims.push(dim);
+        }
+        // If axis == output_ndim - 1 (last position)
+        if axis_usize == output_ndim as usize - 1 {
+            output_dims.push(num_classes_usize);
+        }
+
+        let result_layout = Layout::from_shape(&Shape::from(output_dims));
+        let self_layout = self.layout();
+
+        if crate::snapshot::capture::is_active() {
+            // Onehot is non-differentiable
+            let requires_grad = false;
+            let (result_id, result_tensor) = create_builder_tensor(result_layout.clone(), dtype, requires_grad);
+
+            let op_params = OpParams::Onehoto(OnehotoParams {
+                num_classes: num_classes_scalar,
+                axis: axis_scalar,
+                dtype,
+            });
+
+            crate::snapshot::capture::capture_operation(
+                Op::Indexing(IndexingOp::Onehot),
+                Some(op_params),
+                vec![self.id()],
+                result_id,
+                vec![self_layout],
+                result_layout,
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let storage = self.with_storage(|storage| {
+                storage.call_ops_onehot(
+                    &self_layout,
+                    num_classes_usize,
+                    axis_usize,
+                    dtype,
+                    Op::Indexing(IndexingOp::Onehot),
+                )
+            })?;
+
+            // Onehot is non-differentiable
+            let result = from_storage_with_context(storage, result_layout, true, false);
 
             Ok(result)
         }

@@ -127,6 +127,14 @@ pub struct ScatterMinParams {
     pub dim: Scalar,
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct OnehotoParams {
+    pub num_classes: Scalar,
+    pub axis: Scalar,
+    pub dtype: DType,
+}
+
 // Conv Operations
 
 #[derive(Debug, Clone)]
@@ -486,6 +494,7 @@ pub enum OpParams {
     ScatterAdd(ScatterAddParams),
     ScatterMax(ScatterMaxParams),
     ScatterMin(ScatterMinParams),
+    Onehoto(OnehotoParams),
 
     // Conv
     Conv1d(Conv1dParams),

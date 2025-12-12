@@ -214,6 +214,13 @@ impl VjpCompute for IndexingOp {
 
                 Ok(vec![grad_self_final.id(), grad_src.id()])
             },
+
+            IndexingOp::Onehot => {
+                // Onehot is non-differentiable
+                Err(HoduError::VjpFunctionNotFound(
+                    "Onehot operation does not support gradients".to_string(),
+                ))
+            },
         }
     }
 }

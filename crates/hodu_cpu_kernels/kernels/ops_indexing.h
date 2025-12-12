@@ -364,6 +364,44 @@ void hodu_cpu_scatter_min_u32(const void *input, const int32_t *indices, const v
 void hodu_cpu_scatter_min_u64(const void *input, const int32_t *indices, const void *src,
                               void *output, const size_t *metadata);
 
+// ============================================================================
+// ONEHOT OPERATIONS
+// ============================================================================
+//
+// Convert integer indices to one-hot encoded vectors.
+//
+// All onehot operations follow this signature:
+//   void hodu_cpu_onehot_type(const int32_t *indices, void *output, const size_t *metadata)
+//
+// Parameters:
+//   indices  - Pointer to int32 indices array (class indices)
+//   output   - Pointer to output buffer (pre-allocated, initialized to zero)
+//   metadata - Array describing operation (see below)
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_input_els (total number of input indices)
+// - metadata[2]: num_classes (depth of one-hot dimension)
+// - metadata[3]: axis (dimension for one-hot encoding, normalized to positive)
+// - metadata[4]: num_dims_out (number of output dimensions)
+// - metadata[5..5+num_dims_out]: output_shape
+
+void hodu_cpu_onehot_bool(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_f8e4m3(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_f8e5m2(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_bf16(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_f16(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_f32(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_f64(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_i8(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_i16(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_i32(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_i64(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_u8(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_u16(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_u32(const int32_t *indices, void *output, const size_t *metadata);
+void hodu_cpu_onehot_u64(const int32_t *indices, void *output, const size_t *metadata);
+
 #ifdef __cplusplus
 }
 #endif

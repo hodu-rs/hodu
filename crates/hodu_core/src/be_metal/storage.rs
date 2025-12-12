@@ -355,6 +355,17 @@ impl BackendStorageT for MetalStorage {
         )
     }
 
+    fn call_ops_onehot(
+        &self,
+        layout: &Layout,
+        num_classes: usize,
+        axis: usize,
+        output_dtype: DType,
+        op: Op,
+    ) -> HoduResult<Self> {
+        ops_indexing::call_ops_onehot(self, layout, num_classes, axis, output_dtype, op)
+    }
+
     fn call_ops_conv(
         &self,
         layout: &Layout,

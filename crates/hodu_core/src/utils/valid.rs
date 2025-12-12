@@ -274,6 +274,12 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
+            IndexingOp::Onehot => {
+                // Onehot input must be i32 (indices)
+                if dtype != DType::I32 {
+                    return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+                }
+            },
         },
 
         // Convolution operations

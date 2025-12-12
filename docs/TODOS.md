@@ -38,7 +38,7 @@
 - [x] Implement resize/upsample (ONNX: Resize)
 - [ ] Implement topk (ONNX: TopK)
 - [ ] Implement nonzero (ONNX: NonZero)
-- [ ] Implement onehot (ONNX: OneHot)
+- [x] Implement onehot (ONNX: OneHot)
 - [x] Implement rem (ONNX: Mod)
 
 **Recurrent Layers:** (🔴 Critical)

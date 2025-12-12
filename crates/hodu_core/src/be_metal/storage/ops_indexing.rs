@@ -2,8 +2,8 @@ use crate::{
     be::storage::BackendStorageT,
     be_metal::storage::MetalStorage,
     error::{HoduError, HoduResult},
-    ops::Op,
-    types::{Layout, Shape},
+    ops::{IndexingOp, Op},
+    types::{DType, Layout, Shape},
 };
 use hodu_metal_kernels::{kernels, utils::BufferOffset};
 
@@ -273,4 +273,82 @@ pub fn call_ops_scatter(
     )?;
 
     Ok(MetalStorage::new(output_buffer, device.clone(), num_els, dtype))
+}
+
+pub fn call_ops_onehot(
+    indices_storage: &MetalStorage,
+    indices_layout: &Layout,
+    num_classes: usize,
+    axis: usize,
+    output_dtype: DType,
+    op: Op,
+) -> HoduResult<MetalStorage> {
+    // Validate op
+    match op {
+        Op::Indexing(IndexingOp::Onehot) => (),
+        _ => return Err(HoduError::BackendError("call_ops_onehot expects Onehot op".to_string())),
+    }
+
+    let input_shape = indices_layout.shape();
+    let num_dims_in = input_shape.ndim();
+    let num_input_els = input_shape.size();
+
+    // Compute output shape: insert num_classes at axis position
+    let mut output_shape_vec = Vec::with_capacity(num_dims_in + 1);
+    for (i, &dim) in input_shape.dims().iter().enumerate() {
+        if i == axis {
+            output_shape_vec.push(num_classes);
+        }
+        output_shape_vec.push(dim);
+    }
+    // If axis == num_dims_in (last position)
+    if axis == num_dims_in {
+        output_shape_vec.push(num_classes);
+    }
+
+    let output_shape = Shape::new(&output_shape_vec);
+    let num_els = output_shape.size();
+    let num_dims_out = output_shape.ndim();
+
+    let device = indices_storage.backend_device();
+
+    // Create output buffer
+    let output_buffer = device.new_buffer(num_els, output_dtype, "onehot_output")?;
+
+    // Get kernel name
+    let kernel_name = format!("hodu_metal_onehot_{}", output_dtype);
+    let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
+    let kernel = kernels::Kernel(kernel_name_static);
+
+    // Generate metadata
+    // - metadata[0]: num_els (total number of output elements)
+    // - metadata[1]: num_input_els (total number of input indices)
+    // - metadata[2]: num_classes (depth of one-hot dimension)
+    // - metadata[3]: axis (dimension for one-hot encoding)
+    // - metadata[4]: num_dims_out (number of output dimensions)
+    // - metadata[5..5+num_dims_out]: output_shape
+    let mut metadata = Vec::with_capacity(5 + num_dims_out);
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend_from_slice(output_shape.dims());
+
+    // Create buffer offsets
+    let indices_offset_buf = BufferOffset::zero_offset(indices_storage.buffer());
+
+    // Get command buffer and call kernel
+    let command_buffer = device.command_buffer()?;
+    kernels::call_ops_onehot(
+        kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        indices_offset_buf,
+        &output_buffer,
+        &metadata,
+    )?;
+
+    Ok(MetalStorage::new(output_buffer, device.clone(), num_els, output_dtype))
 }

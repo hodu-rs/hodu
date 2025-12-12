@@ -6,6 +6,7 @@ use crate::{
     types::{DType, Layout, Shape},
 };
 use hodu_cuda_kernels::kernels;
+use std::sync::Arc;
 
 pub fn call_ops_index_select(
     input_storage: &CudaStorage,
@@ -443,5 +444,124 @@ pub fn call_ops_scatter(
         _ => Err(HoduError::BackendError(
             "mismatched storage types in scatter".to_string(),
         )),
+    }
+}
+
+pub fn call_ops_onehot(
+    indices_storage: &CudaStorage,
+    indices_layout: &Layout,
+    num_classes: usize,
+    axis: usize,
+    output_dtype: DType,
+    op: Op,
+) -> HoduResult<CudaStorage> {
+    // Validate indices dtype
+    if indices_storage.dtype() != DType::I32 {
+        return Err(HoduError::DTypeMismatch {
+            expected: DType::I32,
+            got: indices_storage.dtype(),
+        });
+    }
+
+    // Validate op
+    match op {
+        Op::Indexing(IndexingOp::Onehot) => (),
+        _ => return Err(HoduError::BackendError("call_ops_onehot expects Onehot op".to_string())),
+    }
+
+    let input_shape = indices_layout.shape();
+    let num_dims_in = input_shape.ndim();
+    let num_input_els = input_shape.size();
+
+    // Compute output shape: insert num_classes at axis position
+    let mut output_shape_vec = Vec::with_capacity(num_dims_in + 1);
+    for (i, &dim) in input_shape.dims().iter().enumerate() {
+        if i == axis {
+            output_shape_vec.push(num_classes);
+        }
+        output_shape_vec.push(dim);
+    }
+    // If axis == num_dims_in (last position)
+    if axis == num_dims_in {
+        output_shape_vec.push(num_classes);
+    }
+
+    let output_shape = Shape::new(&output_shape_vec);
+    let num_els = output_shape.size();
+    let num_dims_out = output_shape.ndim();
+
+    let device = indices_storage.get_device();
+    let device_id = indices_storage.device_id();
+    let device_arc = Arc::clone(&indices_storage.device);
+
+    // Get kernel name
+    let kernel_name = format!("hodu_cuda_onehot_{}", output_dtype);
+    let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
+    let kernel = kernels::Kernel(kernel_name_static);
+
+    // Generate metadata
+    // - metadata[0]: num_els (total number of output elements)
+    // - metadata[1]: num_input_els (total number of input indices)
+    // - metadata[2]: num_classes (depth of one-hot dimension)
+    // - metadata[3]: axis (dimension for one-hot encoding)
+    // - metadata[4]: num_dims_out (number of output dimensions)
+    // - metadata[5..5+num_dims_out]: output_shape
+    let mut metadata = Vec::with_capacity(5 + num_dims_out);
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend_from_slice(output_shape.dims());
+
+    // Extract indices
+    let indices = match &indices_storage.data {
+        CudaStorageData::I32(data) => data,
+        _ => unreachable!(),
+    };
+
+    macro_rules! call_kernel {
+        ($ty:ty, $variant:ident) => {{
+            let mut output = device.new_buffer::<$ty>(num_els as usize)?;
+            kernels::call_ops_onehot(
+                kernel,
+                device.kernels(),
+                device.context(),
+                indices,
+                &mut output,
+                &metadata,
+            )?;
+            Ok(CudaStorage::new(
+                device_id,
+                Arc::clone(&device_arc),
+                CudaStorageData::$variant(output),
+            ))
+        }};
+    }
+
+    match output_dtype {
+        DType::BOOL => call_kernel!(bool, BOOL),
+        DType::F8E4M3 => call_kernel!(float8::F8E4M3, F8E4M3),
+        #[cfg(feature = "f8e5m2")]
+        DType::F8E5M2 => call_kernel!(float8::F8E5M2, F8E5M2),
+        DType::BF16 => call_kernel!(half::bf16, BF16),
+        DType::F16 => call_kernel!(half::f16, F16),
+        DType::F32 => call_kernel!(f32, F32),
+        #[cfg(feature = "f64")]
+        DType::F64 => call_kernel!(f64, F64),
+        DType::U8 => call_kernel!(u8, U8),
+        #[cfg(feature = "u16")]
+        DType::U16 => call_kernel!(u16, U16),
+        DType::U32 => call_kernel!(u32, U32),
+        #[cfg(feature = "u64")]
+        DType::U64 => call_kernel!(u64, U64),
+        DType::I8 => call_kernel!(i8, I8),
+        #[cfg(feature = "i16")]
+        DType::I16 => call_kernel!(i16, I16),
+        DType::I32 => call_kernel!(i32, I32),
+        #[cfg(feature = "i64")]
+        DType::I64 => call_kernel!(i64, I64),
+        #[allow(unreachable_patterns)]
+        _ => Err(HoduError::UnsupportedDType(output_dtype)),
     }
 }

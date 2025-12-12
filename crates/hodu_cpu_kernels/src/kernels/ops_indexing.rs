@@ -21,7 +21,8 @@ ops!(
     scatter,
     scatter_add,
     scatter_max,
-    scatter_min
+    scatter_min,
+    onehot
 );
 
 macro_rules! declare_and_dispatch_index_select {
@@ -494,6 +495,101 @@ pub fn call_ops_scatter(
         } else {
             dispatch_scatter(name, input, indices, src, output, metadata.as_ptr());
         }
+    }
+
+    Ok(())
+}
+
+macro_rules! declare_and_dispatch_onehot {
+    ($($op:ident),* $(,)?) => {
+        paste::paste! {
+            extern "C" {
+                $(
+                    fn [<hodu_cpu_ $op _bool>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](indices: *const i32, output: *mut c_void, metadata: *const usize);
+                )*
+            }
+
+            unsafe fn dispatch_onehot(
+                name: &str,
+                indices: *const i32,
+                output: *mut c_void,
+                metadata: *const usize,
+            ) {
+                match name {
+                    $(
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](indices, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](indices, output, metadata),
+                    )*
+                    _ => panic!("Unknown onehot operation: {}", name),
+                }
+            }
+        }
+    };
+}
+
+declare_and_dispatch_onehot!(onehot);
+
+/// Execute a onehot operation
+///
+/// Converts integer indices to one-hot encoded vectors.
+///
+/// # Arguments
+/// * `kernel_name` - The onehot kernel to execute (e.g., onehot::F32)
+/// * `indices` - Pointer to int32 indices array (class indices)
+/// * `output` - Pointer to output tensor buffer (will be initialized)
+/// * `metadata` - Tensor metadata array (see layout below)
+///
+/// # Metadata layout
+/// - metadata[0]: num_els (total number of output elements)
+/// - metadata[1]: num_input_els (total number of input indices)
+/// - metadata[2]: num_classes (depth of one-hot dimension)
+/// - metadata[3]: axis (dimension for one-hot encoding, normalized to positive)
+/// - metadata[4]: num_dims_out (number of output dimensions)
+/// - metadata[5..5+num_dims_out]: output_shape
+///
+/// # Safety
+/// This function uses unsafe FFI calls to C kernels. Caller must ensure:
+/// - All pointers are valid and properly aligned
+/// - Metadata accurately describes tensor layout
+/// - Output buffer has sufficient capacity
+///
+/// # Returns
+/// Returns `Ok(())` on success.
+pub fn call_ops_onehot(
+    kernel_name: crate::kernels::macros::Kernel,
+    indices: *const i32,
+    output: *mut c_void,
+    metadata: &[usize],
+) -> Result<()> {
+    unsafe {
+        dispatch_onehot(kernel_name.0, indices, output, metadata.as_ptr());
     }
 
     Ok(())

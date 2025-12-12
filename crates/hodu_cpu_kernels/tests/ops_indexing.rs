@@ -826,3 +826,170 @@ fn test_scatter_min_i32() {
 
     assert_eq!(output, vec![50, 5, 30, 15, 10]); // min(40,5,60)=5, min(20,15)=15
 }
+
+#[test]
+fn test_onehot_f32_1d() {
+    // Input indices: [0, 1, 2]
+    // num_classes: 4
+    // axis: 1 (append at end)
+    // Output: [[1,0,0,0], [0,1,0,0], [0,0,1,0]] (3x4)
+    let indices = [0i32, 1, 2];
+    let mut output = vec![0.0f32; 12];
+
+    let num_els = 12;
+    let num_input_els = 3;
+    let num_classes = 4;
+    let axis = 1;
+    let num_dims_out = 2;
+    let output_shape = vec![3, 4];
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend(&output_shape);
+
+    call_ops_onehot(
+        onehot::F32,
+        indices.as_ptr(),
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(
+        output,
+        vec![
+            1.0, 0.0, 0.0, 0.0, // index 0
+            0.0, 1.0, 0.0, 0.0, // index 1
+            0.0, 0.0, 1.0, 0.0 // index 2
+        ]
+    );
+}
+
+#[test]
+fn test_onehot_f32_axis0() {
+    // Input indices: [0, 2]
+    // num_classes: 3
+    // axis: 0 (prepend at start)
+    // Output shape: (3, 2) - num_classes first, then input size
+    // Output: [[1,0], [0,0], [0,1]]
+    let indices = [0i32, 2];
+    let mut output = vec![0.0f32; 6];
+
+    let num_els = 6;
+    let num_input_els = 2;
+    let num_classes = 3;
+    let axis = 0;
+    let num_dims_out = 2;
+    let output_shape = vec![3, 2];
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend(&output_shape);
+
+    call_ops_onehot(
+        onehot::F32,
+        indices.as_ptr(),
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(
+        output,
+        vec![
+            1.0, 0.0, // class 0: index 0 is 1, index 2 is 0
+            0.0, 0.0, // class 1: both are 0
+            0.0, 1.0 // class 2: index 0 is 0, index 2 is 1
+        ]
+    );
+}
+
+#[test]
+fn test_onehot_i32() {
+    // Test with integer output type
+    let indices = [1i32, 0, 2];
+    let mut output = vec![0i32; 9];
+
+    let num_els = 9;
+    let num_input_els = 3;
+    let num_classes = 3;
+    let axis = 1;
+    let num_dims_out = 2;
+    let output_shape = vec![3, 3];
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend(&output_shape);
+
+    call_ops_onehot(
+        onehot::I32,
+        indices.as_ptr(),
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(
+        output,
+        vec![
+            0, 1, 0, // index 1
+            1, 0, 0, // index 0
+            0, 0, 1 // index 2
+        ]
+    );
+}
+
+#[test]
+fn test_onehot_f32_2d_input() {
+    // Input indices: [[0, 1], [2, 0]] (2x2)
+    // num_classes: 3
+    // axis: 2 (append at last dim)
+    // Output shape: (2, 2, 3)
+    let indices = [0i32, 1, 2, 0];
+    let mut output = vec![0.0f32; 12];
+
+    let num_els = 12;
+    let num_input_els = 4;
+    let num_classes = 3;
+    let axis = 2;
+    let num_dims_out = 3;
+    let output_shape = vec![2, 2, 3];
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend(&output_shape);
+
+    call_ops_onehot(
+        onehot::F32,
+        indices.as_ptr(),
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(
+        output,
+        vec![
+            1.0, 0.0, 0.0, // [0,0] = 0
+            0.0, 1.0, 0.0, // [0,1] = 1
+            0.0, 0.0, 1.0, // [1,0] = 2
+            1.0, 0.0, 0.0 // [1,1] = 0
+        ]
+    );
+}

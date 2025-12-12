@@ -74,6 +74,8 @@ pub trait BackendStorageT: Sized {
         _: Op,
     ) -> HoduResult<Self>;
 
+    fn call_ops_onehot(&self, _: &Layout, _: usize, _: usize, _: DType, _: Op) -> HoduResult<Self>;
+
     fn call_ops_conv(
         &self,
         _: &Layout,
@@ -765,6 +767,41 @@ impl BackendStorage {
                     })
                 }
             },
+        }
+    }
+
+    pub(crate) fn call_ops_onehot(
+        &self,
+        layout: &Layout,
+        num_classes: usize,
+        axis: usize,
+        output_dtype: DType,
+        op: Op,
+    ) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_onehot(
+                layout,
+                num_classes,
+                axis,
+                output_dtype,
+                op,
+            )?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_onehot(
+                layout,
+                num_classes,
+                axis,
+                output_dtype,
+                op,
+            )?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_onehot(
+                layout,
+                num_classes,
+                axis,
+                output_dtype,
+                op,
+            )?)),
         }
     }
 

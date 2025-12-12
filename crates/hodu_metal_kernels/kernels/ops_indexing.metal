@@ -657,3 +657,109 @@ SCATTER_MIN_OP(uint8_t, scatter_min_u8)
 SCATTER_MIN_OP(uint16_t, scatter_min_u16)
 SCATTER_MIN_OP(uint32_t, scatter_min_u32)
 SCATTER_MIN_OP(uint64_t, scatter_min_u64)
+
+// ============================================================================
+// ONEHOT OPERATION
+// ============================================================================
+
+// Convert integer indices to one-hot encoded vectors.
+// Input: indices tensor (integer type)
+// Output: one-hot encoded tensor
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of output elements)
+// - metadata[1]: num_input_els (total number of input indices)
+// - metadata[2]: num_classes (depth of one-hot dimension)
+// - metadata[3]: axis (dimension for one-hot encoding, normalized to positive)
+// - metadata[4]: num_dims_out (number of output dimensions)
+// - metadata[5..5+num_dims_out]: output_shape
+//
+// Buffer Layout:
+// - buffer(0): indices (const device int32_t*)
+// - buffer(1): output tensor (device T*)
+// - buffer(2): metadata (constant size_t*)
+
+#define ONEHOT_OP(TYPENAME, FN_NAME, ONE_VALUE, ZERO_VALUE)                                        \
+    kernel void hodu_metal_##FN_NAME(                                                              \
+        const device int32_t *indices [[buffer(0)]], device TYPENAME *output [[buffer(1)]],        \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
+        uint threads_per_grid [[threads_per_grid]]) {                                              \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_input_els = metadata[1];                                                  \
+        const size_t num_classes = metadata[2];                                                    \
+        const size_t axis = metadata[3];                                                           \
+        const size_t num_dims_out = metadata[4];                                                   \
+        const constant size_t *output_shape = metadata + 5;                                        \
+                                                                                                   \
+        /* Grid-stride loop: each thread handles multiple output elements */                       \
+        for (uint id = thread_index; id < num_els; id += threads_per_grid) {                       \
+                                                                                                   \
+            /* Calculate output strides (row-major) */                                             \
+            size_t output_strides[16];                                                             \
+            output_strides[num_dims_out - 1] = 1;                                                  \
+            for (int d = (int)num_dims_out - 2; d >= 0; d--) {                                     \
+                output_strides[d] = output_strides[d + 1] * output_shape[d + 1];                   \
+            }                                                                                      \
+                                                                                                   \
+            /* Calculate multi-dimensional output indices from flat id */                          \
+            size_t output_indices[16];                                                             \
+            size_t temp = id;                                                                      \
+            for (int d = (int)num_dims_out - 1; d >= 0; d--) {                                     \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            /* Get the class index at this position */                                             \
+            size_t class_idx = output_indices[axis];                                               \
+                                                                                                   \
+            /* Calculate input shape (output shape without axis dimension) */                      \
+            size_t input_shape[16];                                                                \
+            size_t num_dims_in = num_dims_out - 1;                                                 \
+            for (size_t d = 0, id_in = 0; d < num_dims_out; d++) {                                 \
+                if (d != axis) {                                                                   \
+                    input_shape[id_in++] = output_shape[d];                                        \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            /* Calculate flat input index (skip axis dimension) */                                 \
+            size_t input_flat_idx = 0;                                                             \
+            size_t input_stride = 1;                                                               \
+            for (int d = (int)num_dims_in - 1; d >= 0; d--) {                                      \
+                /* Map output dimension to input dimension */                                      \
+                size_t out_d = (size_t)d >= axis ? d + 1 : d;                                      \
+                input_flat_idx += output_indices[out_d] * input_stride;                            \
+                input_stride *= input_shape[d];                                                    \
+            }                                                                                      \
+                                                                                                   \
+            /* Get the target class from indices */                                                \
+            int32_t target_class = indices[input_flat_idx];                                        \
+                                                                                                   \
+            /* Handle negative indices */                                                          \
+            if (target_class < 0) {                                                                \
+                target_class += (int32_t)num_classes;                                              \
+            }                                                                                      \
+                                                                                                   \
+            /* Set output value */                                                                 \
+            if (target_class >= 0 && (size_t)target_class < num_classes &&                         \
+                class_idx == (size_t)target_class) {                                               \
+                output[id] = ONE_VALUE;                                                            \
+            } else {                                                                               \
+                output[id] = ZERO_VALUE;                                                           \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+// Define onehot operations for all output types
+ONEHOT_OP(bool, onehot_bool, true, false)
+ONEHOT_OP(bfloat, onehot_bf16, bfloat(1.0f), bfloat(0.0f))
+ONEHOT_OP(half, onehot_f16, half(1.0f), half(0.0f))
+ONEHOT_OP(float, onehot_f32, 1.0f, 0.0f)
+ONEHOT_OP(int8_t, onehot_i8, 1, 0)
+ONEHOT_OP(int16_t, onehot_i16, 1, 0)
+ONEHOT_OP(int32_t, onehot_i32, 1, 0)
+ONEHOT_OP(int64_t, onehot_i64, 1, 0)
+ONEHOT_OP(uint8_t, onehot_u8, 1, 0)
+ONEHOT_OP(uint16_t, onehot_u16, 1, 0)
+ONEHOT_OP(uint32_t, onehot_u32, 1, 0)
+ONEHOT_OP(uint64_t, onehot_u64, 1, 0)

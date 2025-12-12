@@ -16,7 +16,8 @@ ops!(
     scatter,
     scatter_add,
     scatter_max,
-    scatter_min
+    scatter_min,
+    onehot
 );
 
 /// Executes an index_select operation to extract elements along a dimension using indices.
@@ -278,6 +279,62 @@ pub fn call_ops_scatter(
     encoder.use_resource(input.buffer, MTLResourceUsage::Read);
     encoder.use_resource(indices.buffer, MTLResourceUsage::Read);
     encoder.use_resource(src.buffer, MTLResourceUsage::Read);
+    encoder.use_resource(output, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes a onehot operation to convert integer indices to one-hot encoded vectors.
+///
+/// # Arguments
+/// * `kernel` - Onehot kernel (e.g., onehot::F32)
+/// * `kernels` - Kernel cache
+/// * `device` - Metal device to execute on
+/// * `ep` - Encoder provider (command buffer)
+/// * `indices` - Index tensor buffer (int32 indices)
+/// * `output` - Output buffer (will contain one-hot encoded values)
+/// * `metadata` - Metadata describing tensor layout and operation parameters
+///
+/// # Metadata Layout
+/// Total metadata length: `5 + num_dims_out`
+///
+/// - `metadata[0]`: num_els (total output elements)
+/// - `metadata[1]`: num_input_els (total input elements)
+/// - `metadata[2]`: num_classes (depth of one-hot dimension)
+/// - `metadata[3]`: axis (dimension for one-hot encoding)
+/// - `metadata[4]`: num_dims_out (number of output dimensions)
+/// - `metadata[5..5+num_dims_out]`: output_shape
+///
+/// # Kernel signature
+/// `(indices, output, metadata)`
+#[allow(clippy::too_many_arguments)]
+pub fn call_ops_onehot(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    indices: BufferOffset,
+    output: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    let num_els = metadata[0];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    // Metal kernel signature:
+    // buffer(0): indices
+    // buffer(1): output
+    // buffer(2): metadata
+    set_params!(encoder, (&indices, output, metadata));
+
+    encoder.use_resource(indices.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);
 
     let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
