@@ -5,3 +5,4 @@ pub mod embedding;
 pub mod linear;
 pub mod norm;
 pub mod pooling;
+pub mod rnn;

@@ -42,9 +42,9 @@
 - [x] Implement rem (ONNX: Mod)
 
 **Recurrent Layers:** (🔴 Critical)
-- [ ] Implement RNN
-- [ ] Implement LSTM
-- [ ] Implement GRU
+- [x] Implement RNN
+- [x] Implement LSTM
+- [x] Implement GRU
 
 **Attention Layers:** (🔴 Critical)
 - [ ] Implement MultiheadAttention

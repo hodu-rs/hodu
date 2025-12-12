@@ -23,6 +23,7 @@ pub use modules::{
         AdaptiveAvgPool1D, AdaptiveAvgPool2D, AdaptiveAvgPool3D, AdaptiveMaxPool1D, AdaptiveMaxPool2D,
         AdaptiveMaxPool3D, AvgPool1D, AvgPool2D, AvgPool3D, MaxPool1D, MaxPool2D, MaxPool3D,
     },
+    rnn::{GRUCell, LSTMCell, Nonlinearity, RNNCell, GRU, LSTM, RNN},
 };
 pub use optimizers::{
     adam::{Adam, AdamW},
