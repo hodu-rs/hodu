@@ -322,6 +322,17 @@ pub struct ScanParams {
     pub dim: usize,
 }
 
+// Einsum Operations
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct EinsumParams {
+    pub equation: String,
+    pub input_subscripts: Vec<Vec<char>>,
+    pub output_subscripts: Vec<char>,
+    pub contraction_indices: Vec<char>,
+}
+
 // Shape Operations
 
 #[derive(Debug, Clone)]
@@ -455,6 +466,9 @@ pub enum OpParams {
 
     // Scan
     Scan(ScanParams),
+
+    // Einsum
+    Einsum(EinsumParams),
 
     // Shape
     Reshape(ReshapeParams),

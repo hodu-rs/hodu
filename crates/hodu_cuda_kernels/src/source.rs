@@ -9,6 +9,7 @@ pub enum Source {
     OpsCast,
     OpsConcatSplit,
     OpsConv,
+    OpsEinsum,
     OpsIndexing,
     OpsMatrix,
     OpsMemory,

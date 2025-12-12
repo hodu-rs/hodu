@@ -80,6 +80,7 @@ impl Kernels {
             Source::Cast => crate::source::get_cast(),
             Source::ConcatSplit => crate::source::get_concat_split(),
             Source::Conv => crate::source::get_conv(),
+            Source::Einsum => crate::source::get_einsum(),
             Source::Indexing => crate::source::get_indexing(),
             Source::Matrix => crate::source::get_matrix(),
             Source::Memory => crate::source::get_memory(),

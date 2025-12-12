@@ -177,9 +177,8 @@ macro_rules! declare_and_dispatch_unary {
                     fn [<hodu_cpu_ $signed_op _i64>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                 )*
 
-                // Operations supporting only float types
+                // Operations supporting only float types (no bool)
                 $(
-                    fn [<hodu_cpu_ $float_op _bool>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                     fn [<hodu_cpu_ $float_op _f8e4m3>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                     fn [<hodu_cpu_ $float_op _f8e5m2>](input: *const c_void, output: *mut c_void, metadata: *const usize);
                     fn [<hodu_cpu_ $float_op _bf16>](input: *const c_void, output: *mut c_void, metadata: *const usize);
@@ -250,9 +249,8 @@ macro_rules! declare_and_dispatch_unary {
                         concat!("hodu_cpu_", stringify!($signed_op), "_i64") => [<hodu_cpu_ $signed_op _i64>](input, output, metadata),
                     )*
 
-                    // Float-only operations
+                    // Float-only operations (no bool - blocked by valid.rs)
                     $(
-                        concat!("hodu_cpu_", stringify!($float_op), "_bool") => [<hodu_cpu_ $float_op _bool>](input, output, metadata),
                         concat!("hodu_cpu_", stringify!($float_op), "_f8e4m3") => [<hodu_cpu_ $float_op _f8e4m3>](input, output, metadata),
                         concat!("hodu_cpu_", stringify!($float_op), "_f8e5m2") => [<hodu_cpu_ $float_op _f8e5m2>](input, output, metadata),
                         concat!("hodu_cpu_", stringify!($float_op), "_bf16") => [<hodu_cpu_ $float_op _bf16>](input, output, metadata),

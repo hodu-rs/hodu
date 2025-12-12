@@ -103,6 +103,13 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_cumsum(&self, _: &Layout, _: usize) -> HoduResult<Self>;
 
+    fn call_ops_einsum(
+        &self,
+        inputs: &[&Self],
+        input_layouts: &[&Layout],
+        parsed: &crate::einsum::ParsedEinsum,
+    ) -> HoduResult<Self>;
+
     fn call_ops_flip(&self, _: &Layout, _: &[usize]) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
@@ -937,6 +944,70 @@ impl BackendStorage {
             Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_cumsum(layout, dim)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_cumsum(layout, dim)?)),
+        }
+    }
+
+    pub(crate) fn call_ops_einsum(
+        &self,
+        inputs: &[&Self],
+        input_layouts: &[&Layout],
+        parsed: &crate::einsum::ParsedEinsum,
+    ) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => {
+                let cpu_inputs: Vec<&CpuStorage> = inputs
+                    .iter()
+                    .map(|s| match s {
+                        Self::CPU(cpu_storage) => Ok(cpu_storage),
+                        #[cfg(any(feature = "cuda", feature = "metal"))]
+                        _ => Err(HoduError::DeviceMismatch {
+                            expected: Device::CPU,
+                            got: s.device(),
+                        }),
+                    })
+                    .collect::<HoduResult<Vec<_>>>()?;
+                Ok(Self::CPU(storage.call_ops_einsum(
+                    &cpu_inputs,
+                    input_layouts,
+                    parsed,
+                )?))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let cuda_inputs: Vec<&crate::be_cuda::storage::CudaStorage> = inputs
+                    .iter()
+                    .map(|s| match s {
+                        Self::CUDA(cuda_storage) => Ok(cuda_storage),
+                        _ => Err(HoduError::DeviceMismatch {
+                            expected: Device::CUDA(0),
+                            got: s.device(),
+                        }),
+                    })
+                    .collect::<HoduResult<Vec<_>>>()?;
+                Ok(Self::CUDA(storage.call_ops_einsum(
+                    &cuda_inputs,
+                    input_layouts,
+                    parsed,
+                )?))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let metal_inputs: Vec<&crate::be_metal::storage::MetalStorage> = inputs
+                    .iter()
+                    .map(|s| match s {
+                        Self::Metal(metal_storage) => Ok(metal_storage),
+                        _ => Err(HoduError::DeviceMismatch {
+                            expected: Device::Metal,
+                            got: s.device(),
+                        }),
+                    })
+                    .collect::<HoduResult<Vec<_>>>()?;
+                Ok(Self::Metal(storage.call_ops_einsum(
+                    &metal_inputs,
+                    input_layouts,
+                    parsed,
+                )?))
+            },
         }
     }
 

@@ -178,6 +178,7 @@ fn compute_vjp_for_op(
         Op::Windowing(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Padding(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Scan(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Einsum(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Shape(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::ShapeScalars(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::ShapeMemory(op) => op.compute_vjp(inputs, output, grad_output, op_params),

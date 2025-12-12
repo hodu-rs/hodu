@@ -1063,6 +1063,100 @@ pub fn scan_metadata(layout: &Layout, dim: usize) -> Vec<usize> {
 }
 
 // ============================================================================
+// Einsum Operations
+// ============================================================================
+
+/// Generate metadata for einsum operations
+///
+/// Format:
+/// Header:
+/// - metadata[0]: num_output_els
+/// - metadata[1]: num_inputs
+/// - metadata[2]: num_total_indices
+/// - metadata[3]: num_contraction_indices
+/// - metadata[4]: output_ndim
+/// - metadata[5..5+output_ndim]: output_shape
+///
+/// Per-input section (repeated num_inputs times):
+/// - input_ndim
+/// - input_shape[input_ndim]
+/// - input_strides[input_ndim]
+/// - input_offset
+/// - dim_to_index_map[input_ndim]  (each dim -> which index id)
+///
+/// Index info:
+/// - contraction_index_ids[num_contraction_indices]
+/// - index_sizes[num_total_indices]
+/// - output_index_ids[output_ndim]
+pub fn einsum_metadata(
+    parsed: &crate::einsum::ParsedEinsum,
+    input_layouts: &[&Layout],
+    output_layout: &Layout,
+) -> Vec<usize> {
+    let num_inputs = input_layouts.len();
+    let num_total_indices = parsed.all_indices.len();
+    let num_contraction_indices = parsed.contraction_indices.len();
+    let output_ndim = output_layout.ndim();
+    let num_output_els = output_layout.size().max(1);
+
+    let mut metadata = Vec::new();
+
+    // Header
+    metadata.push(num_output_els);
+    metadata.push(num_inputs);
+    metadata.push(num_total_indices);
+    metadata.push(num_contraction_indices);
+    metadata.push(output_ndim);
+
+    // Output shape
+    for &dim in output_layout.shape().dims() {
+        metadata.push(dim);
+    }
+
+    // Per-input sections
+    for (i, layout) in input_layouts.iter().enumerate() {
+        let input_ndim = layout.ndim();
+        metadata.push(input_ndim);
+
+        // Input shape
+        for &dim in layout.shape().dims() {
+            metadata.push(dim);
+        }
+
+        // Input strides
+        for &stride in layout.strides() {
+            metadata.push(stride);
+        }
+
+        // Input offset
+        metadata.push(layout.offset());
+
+        // Dim to index map: for each dimension, which index id
+        let dim_to_index = parsed.get_dim_to_index_map(i);
+        for idx in dim_to_index {
+            metadata.push(idx);
+        }
+    }
+
+    // Contraction index IDs
+    for id in parsed.get_contraction_index_ids() {
+        metadata.push(id);
+    }
+
+    // Index sizes
+    for size in parsed.get_index_sizes_vec() {
+        metadata.push(size);
+    }
+
+    // Output index IDs
+    for id in parsed.get_output_index_ids() {
+        metadata.push(id);
+    }
+
+    metadata
+}
+
+// ============================================================================
 // Shape Memory Operations
 // ============================================================================
 

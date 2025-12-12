@@ -34,7 +34,7 @@
 - [x] Implement hardswish(hardsilu), hardsigmoid (ONNX: HardSwish, HardSigmoid)
 
 **ONNX Compatibility - Other Operations:** (🟡 Important)
-- [ ] Implement einsum (ONNX: Einsum)
+- [x] Implement einsum (ONNX: Einsum)
 - [ ] Implement resize/upsample (ONNX: Resize)
 - [ ] Implement topk (ONNX: TopK)
 - [ ] Implement nonzero (ONNX: NonZero)

@@ -10,6 +10,7 @@ const BINARY_SRC: &str = include_str!("../kernels/ops_binary.metal");
 const CAST_SRC: &str = include_str!("../kernels/ops_cast.metal");
 const CONCAT_SPLIT_SRC: &str = include_str!("../kernels/ops_concat_split.metal");
 const CONV_SRC: &str = include_str!("../kernels/ops_conv.metal");
+const EINSUM_SRC: &str = include_str!("../kernels/ops_einsum.metal");
 const INDEXING_SRC: &str = include_str!("../kernels/ops_indexing.metal");
 const MATRIX_SRC: &str = include_str!("../kernels/ops_matrix.metal");
 const MEMORY_SRC: &str = include_str!("../kernels/ops_memory.metal");
@@ -37,6 +38,7 @@ static BINARY: OnceLock<String> = OnceLock::new();
 static CAST: OnceLock<String> = OnceLock::new();
 static CONCAT_SPLIT: OnceLock<String> = OnceLock::new();
 static CONV: OnceLock<String> = OnceLock::new();
+static EINSUM: OnceLock<String> = OnceLock::new();
 static INDEXING: OnceLock<String> = OnceLock::new();
 static MATRIX: OnceLock<String> = OnceLock::new();
 static MEMORY: OnceLock<String> = OnceLock::new();
@@ -61,6 +63,10 @@ pub fn get_concat_split() -> &'static str {
 
 pub fn get_conv() -> &'static str {
     CONV.get_or_init(|| combine_source(CONV_SRC))
+}
+
+pub fn get_einsum() -> &'static str {
+    EINSUM.get_or_init(|| combine_source(EINSUM_SRC))
 }
 
 pub fn get_indexing() -> &'static str {
@@ -105,6 +111,7 @@ pub enum Source {
     Cast,
     ConcatSplit,
     Conv,
+    Einsum,
     Indexing,
     Matrix,
     Memory,

@@ -5,6 +5,7 @@ pub(crate) mod be_cuda;
 #[cfg(feature = "metal")]
 pub(crate) mod be_metal;
 pub(crate) mod cache;
+pub mod einsum;
 pub mod error;
 pub mod format;
 pub(crate) mod into;

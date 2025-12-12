@@ -10,6 +10,7 @@ fn main() {
         .file("kernels/ops_cast.c")
         .file("kernels/ops_concat_split.c")
         .file("kernels/ops_conv.c")
+        .file("kernels/ops_einsum.c")
         .file("kernels/ops_indexing.c")
         .file("kernels/ops_matrix.c")
         .file("kernels/ops_memory.c")
@@ -90,6 +91,8 @@ fn main() {
         "ops_concat_split.c",
         "ops_conv.h",
         "ops_conv.c",
+        "ops_einsum.h",
+        "ops_einsum.c",
         "ops_indexing.h",
         "ops_indexing.c",
         "ops_matrix.h",

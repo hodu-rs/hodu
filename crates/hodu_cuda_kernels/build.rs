@@ -17,6 +17,7 @@ fn main() {
         "ops_cast.cu",
         "ops_concat_split.cu",
         "ops_conv.cu",
+        "ops_einsum.cu",
         "ops_indexing.cu",
         "ops_matrix.cu",
         "ops_memory.cu",

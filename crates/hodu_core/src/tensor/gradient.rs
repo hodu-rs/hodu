@@ -20,6 +20,7 @@ mod vjp_binary;
 mod vjp_cmp;
 mod vjp_concat_split;
 mod vjp_conv;
+mod vjp_einsum;
 mod vjp_indexing;
 mod vjp_matrix;
 mod vjp_padding;

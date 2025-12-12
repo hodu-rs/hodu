@@ -306,6 +306,13 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             }
         },
 
+        // Einsum operations - numeric types only (no bool)
+        Op::Einsum(_) => {
+            if dtype == DType::BOOL {
+                return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+            }
+        },
+
         // Shape, ShapeScalars, ShapeMemory, Cast, Memory operations - all types supported
         Op::Shape(_) | Op::ShapeScalars(_) | Op::ShapeMemory(_) | Op::Cast(_) | Op::Memory(_) | Op::Dummy => {
             // All types supported
@@ -382,6 +389,9 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
 
         // Scan operations
         Op::Scan(_) => true,
+
+        // Einsum operations
+        Op::Einsum(_) => true,
 
         // Shape operations
         Op::Shape(_) | Op::ShapeScalars(_) | Op::ShapeMemory(_) => true,

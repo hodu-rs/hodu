@@ -1,6 +1,7 @@
 mod ops_binary;
 mod ops_concat_split;
 mod ops_conv;
+mod ops_einsum;
 mod ops_indexing;
 mod ops_matrix;
 mod ops_padding;
@@ -423,6 +424,15 @@ impl BackendStorageT for MetalStorage {
 
     fn call_ops_cumsum(&self, layout: &Layout, dim: usize) -> HoduResult<Self> {
         ops_scan::call_ops_cumsum(self, layout, dim)
+    }
+
+    fn call_ops_einsum(
+        &self,
+        inputs: &[&Self],
+        input_layouts: &[&Layout],
+        parsed: &crate::einsum::ParsedEinsum,
+    ) -> HoduResult<Self> {
+        ops_einsum::call_ops_einsum(self, inputs, input_layouts, parsed)
     }
 
     fn call_ops_flip(&self, layout: &Layout, dims: &[usize]) -> HoduResult<Self> {

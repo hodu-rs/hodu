@@ -3,6 +3,7 @@ mod cast_memory;
 mod cmp;
 mod concat_split;
 mod conv;
+mod einsum;
 mod indexing;
 mod matrix;
 mod normalization;

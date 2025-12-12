@@ -5,7 +5,7 @@ use crate::{
     tensor::{internal::from_storage_with_context, Tensor},
     types::{DType, Device, Layout, Shape},
 };
-
+#[cfg(feature = "serde")]
 use std::path::Path;
 
 impl Tensor {
