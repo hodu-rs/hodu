@@ -15,7 +15,7 @@ pub use crate::modules::{
     dropout::Dropout,
     embedding::Embedding,
     linear::Linear,
-    norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, LayerNorm},
+    norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, GroupNorm, InstanceNorm2D, LayerNorm, RMSNorm},
     pooling::{AdaptiveAvgPool2D, AdaptiveMaxPool2D, AvgPool2D, MaxPool2D},
     rnn::{Nonlinearity, GRU, LSTM, RNN},
 };

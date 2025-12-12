@@ -57,8 +57,8 @@
 
 **Normalization Layers:**
 - [x] Implement normalization layers
-- [ ] Implement GroupNorm, InstanceNorm (🟡 Important)
-- [ ] Implement RMSNorm (🟡 Important)
+- [x] Implement GroupNorm, InstanceNorm (🟡 Important)
+- [x] Implement RMSNorm (🟡 Important)
 
 **Activation Functions:** (🟡 Important)
 - [x] Implement Swish/SiLU, Mish

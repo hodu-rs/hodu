@@ -19,7 +19,10 @@ pub use modules::{
     dropout::Dropout,
     embedding::Embedding,
     linear::Linear,
-    norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, LayerNorm},
+    norm::{
+        BatchNorm1D, BatchNorm2D, BatchNorm3D, GroupNorm, InstanceNorm1D, InstanceNorm2D, InstanceNorm3D, LayerNorm,
+        RMSNorm,
+    },
     pooling::{
         AdaptiveAvgPool1D, AdaptiveAvgPool2D, AdaptiveAvgPool3D, AdaptiveMaxPool1D, AdaptiveMaxPool2D,
         AdaptiveMaxPool3D, AvgPool1D, AvgPool2D, AvgPool3D, MaxPool1D, MaxPool2D, MaxPool3D,
