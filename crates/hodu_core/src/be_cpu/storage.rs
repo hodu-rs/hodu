@@ -640,6 +640,10 @@ impl BackendStorageT for CpuStorage {
         ops_sort::call_topk(self, layout, k, last_dim_size, outer_size, largest, sorted)
     }
 
+    fn call_nonzero(&self, layout: &Layout) -> HoduResult<(Self, usize)> {
+        ops_indexing::call_nonzero(self, layout)
+    }
+
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {
         if self.dtype() == target_dtype {
             return self.contiguous(layout);

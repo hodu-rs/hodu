@@ -763,3 +763,112 @@ ONEHOT_OP(uint8_t, onehot_u8, 1, 0)
 ONEHOT_OP(uint16_t, onehot_u16, 1, 0)
 ONEHOT_OP(uint32_t, onehot_u32, 1, 0)
 ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
+
+// ============================================================================
+// NONZERO OPERATIONS
+// ============================================================================
+//
+// Returns indices of non-zero elements in the input tensor.
+// This is a two-pass operation:
+//   1. nonzero_count - counts non-zero elements using atomic add
+//   2. nonzero_fill - fills output with indices (sequential, since order matters)
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in input)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset
+
+// Count kernel - uses atomic to count nonzero elements
+#define NONZERO_COUNT_OP(TYPE, FN_SUFFIX, IS_NONZERO)                                              \
+    kernel void hodu_metal_nonzero_count_##FN_SUFFIX(                                              \
+        device const TYPE *input [[buffer(0)]], device atomic_uint *count [[buffer(1)]],           \
+        constant size_t *metadata [[buffer(2)]], uint id [[thread_position_in_grid]]) {            \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        if (id >= num_els)                                                                         \
+            return;                                                                                \
+                                                                                                   \
+        const size_t num_dims = metadata[1];                                                       \
+        constant size_t *input_shape = metadata + 2;                                               \
+        constant size_t *input_strides = metadata + 2 + num_dims;                                  \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+                                                                                                   \
+        /* Compute flat index from strided layout */                                               \
+        size_t flat_idx = input_offset;                                                            \
+        size_t temp = id;                                                                          \
+        for (int d = (int)num_dims - 1; d >= 0; d--) {                                             \
+            size_t idx = temp % input_shape[d];                                                    \
+            temp /= input_shape[d];                                                                \
+            flat_idx += idx * input_strides[d];                                                    \
+        }                                                                                          \
+                                                                                                   \
+        TYPE val = input[flat_idx];                                                                \
+        if (IS_NONZERO) {                                                                          \
+            atomic_fetch_add_explicit(count, 1, memory_order_relaxed);                             \
+        }                                                                                          \
+    }
+
+// Fill kernel - sequential fill to maintain order
+#define NONZERO_FILL_OP(TYPE, FN_SUFFIX, IS_NONZERO)                                               \
+    kernel void hodu_metal_nonzero_fill_##FN_SUFFIX(                                               \
+        device const TYPE *input [[buffer(0)]], device int64_t *output [[buffer(1)]],              \
+        device atomic_uint *counter [[buffer(2)]], constant size_t *metadata [[buffer(3)]],        \
+        uint id [[thread_position_in_grid]]) {                                                     \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        if (id >= num_els)                                                                         \
+            return;                                                                                \
+                                                                                                   \
+        const size_t num_dims = metadata[1];                                                       \
+        constant size_t *input_shape = metadata + 2;                                               \
+        constant size_t *input_strides = metadata + 2 + num_dims;                                  \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+                                                                                                   \
+        /* Compute flat index and multi-dimensional indices */                                     \
+        size_t flat_idx = input_offset;                                                            \
+        size_t temp = id;                                                                          \
+        size_t multi_idx[16];                                                                      \
+        for (int d = (int)num_dims - 1; d >= 0; d--) {                                             \
+            multi_idx[d] = temp % input_shape[d];                                                  \
+            temp /= input_shape[d];                                                                \
+            flat_idx += multi_idx[d] * input_strides[d];                                           \
+        }                                                                                          \
+                                                                                                   \
+        TYPE val = input[flat_idx];                                                                \
+        if (IS_NONZERO) {                                                                          \
+            uint out_idx = atomic_fetch_add_explicit(counter, 1, memory_order_relaxed);            \
+            for (size_t d = 0; d < num_dims; d++) {                                                \
+                output[out_idx * num_dims + d] = (int64_t)multi_idx[d];                            \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+// Count operations
+NONZERO_COUNT_OP(bool, bool, val)
+NONZERO_COUNT_OP(bfloat, bf16, float(val) != 0.0f)
+NONZERO_COUNT_OP(half, f16, float(val) != 0.0f)
+NONZERO_COUNT_OP(float, f32, val != 0.0f)
+NONZERO_COUNT_OP(int8_t, i8, val != 0)
+NONZERO_COUNT_OP(int16_t, i16, val != 0)
+NONZERO_COUNT_OP(int32_t, i32, val != 0)
+NONZERO_COUNT_OP(int64_t, i64, val != 0)
+NONZERO_COUNT_OP(uint8_t, u8, val != 0)
+NONZERO_COUNT_OP(uint16_t, u16, val != 0)
+NONZERO_COUNT_OP(uint32_t, u32, val != 0)
+NONZERO_COUNT_OP(uint64_t, u64, val != 0)
+
+// Fill operations
+NONZERO_FILL_OP(bool, bool, val)
+NONZERO_FILL_OP(bfloat, bf16, float(val) != 0.0f)
+NONZERO_FILL_OP(half, f16, float(val) != 0.0f)
+NONZERO_FILL_OP(float, f32, val != 0.0f)
+NONZERO_FILL_OP(int8_t, i8, val != 0)
+NONZERO_FILL_OP(int16_t, i16, val != 0)
+NONZERO_FILL_OP(int32_t, i32, val != 0)
+NONZERO_FILL_OP(int64_t, i64, val != 0)
+NONZERO_FILL_OP(uint8_t, u8, val != 0)
+NONZERO_FILL_OP(uint16_t, u16, val != 0)
+NONZERO_FILL_OP(uint32_t, u32, val != 0)
+NONZERO_FILL_OP(uint64_t, u64, val != 0)

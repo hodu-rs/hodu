@@ -17,7 +17,9 @@ ops!(
     scatter_add,
     scatter_max,
     scatter_min,
-    onehot
+    onehot,
+    nonzero_count,
+    nonzero_fill
 );
 
 /// Executes an index_select operation to extract elements along a dimension using indices.
@@ -336,6 +338,68 @@ pub fn call_ops_onehot(
 
     encoder.use_resource(indices.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes nonzero count operation to count non-zero elements.
+#[allow(clippy::too_many_arguments)]
+pub fn call_nonzero_count(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    input: BufferOffset,
+    count_buffer: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    let num_els = metadata[0];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (&input, count_buffer, metadata));
+
+    encoder.use_resource(input.buffer, MTLResourceUsage::Read);
+    encoder.use_resource(count_buffer, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes nonzero fill operation to fill indices of non-zero elements.
+#[allow(clippy::too_many_arguments)]
+pub fn call_nonzero_fill(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    input: BufferOffset,
+    output: &Buffer,
+    counter_buffer: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    let num_els = metadata[0];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (&input, output, counter_buffer, metadata));
+
+    encoder.use_resource(input.buffer, MTLResourceUsage::Read);
+    encoder.use_resource(output, MTLResourceUsage::Write);
+    encoder.use_resource(counter_buffer, MTLResourceUsage::Write);
 
     let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
     encoder.dispatch_thread_groups(thread_group_count, thread_group_size);

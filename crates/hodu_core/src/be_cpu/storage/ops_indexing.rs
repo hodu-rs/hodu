@@ -662,3 +662,65 @@ pub fn call_ops_onehot(
 
     Ok(output)
 }
+
+/// Execute nonzero operation to find indices of non-zero elements
+///
+/// # Arguments
+/// * `storage` - Input tensor storage
+/// * `layout` - Input tensor layout
+///
+/// # Returns
+/// A tuple of (output storage, count) where output is shape [N, ndim] containing
+/// the indices of non-zero elements, and count is the number of non-zero elements
+pub fn call_nonzero(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuStorage, usize)> {
+    let dtype = storage.dtype();
+    let shape = layout.shape();
+    let ndim = shape.ndim();
+    let num_els = shape.size();
+
+    // Build metadata:
+    // - metadata[0]: num_els (total number of elements in input)
+    // - metadata[1]: num_dims (number of dimensions)
+    // - metadata[2..2+num_dims]: input_shape
+    // - metadata[2+num_dims..2+2*num_dims]: input_strides
+    // - metadata[2+2*num_dims]: input_offset
+    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
+    metadata.push(num_els);
+    metadata.push(ndim);
+    metadata.extend_from_slice(shape.dims());
+    metadata.extend_from_slice(layout.strides());
+    metadata.push(layout.offset());
+
+    // Generate kernel names
+    let count_kernel_name = format!("hodu_cpu_nonzero_count_{}", dtype);
+    let count_kernel_name_static = crate::cache::kernel::get_kernel_name(count_kernel_name);
+    let count_kernel = hodu_cpu_kernels::macros::Kernel(count_kernel_name_static);
+
+    let fill_kernel_name = format!("hodu_cpu_nonzero_fill_{}", dtype);
+    let fill_kernel_name_static = crate::cache::kernel::get_kernel_name(fill_kernel_name);
+    let fill_kernel = hodu_cpu_kernels::macros::Kernel(fill_kernel_name_static);
+
+    // First pass: count non-zero elements
+    let input_ptr = storage.as_ptr() as *const c_void;
+    let count = hodu_cpu_kernels::call_nonzero_count(count_kernel, input_ptr, &metadata);
+
+    // Handle empty case
+    if count == 0 {
+        let output = CpuDevice::allocate(0, DType::I64)?;
+        return Ok((output, 0));
+    }
+
+    // Allocate output buffer for [count, ndim] indices
+    let output_size = count * ndim;
+    let mut output = CpuDevice::allocate(output_size, DType::I64)?;
+
+    // Second pass: fill indices
+    let output_ptr = match &mut output {
+        CpuStorage::I64(data) => data.as_mut_ptr(),
+        _ => unreachable!("output should be I64"),
+    };
+
+    hodu_cpu_kernels::call_nonzero_fill(fill_kernel, input_ptr, output_ptr, &metadata)?;
+
+    Ok((output, count))
+}

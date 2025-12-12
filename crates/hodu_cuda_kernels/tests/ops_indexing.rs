@@ -1,4 +1,4 @@
-use hodu_cuda_kernels::{kernel::Kernels, kernels::*};
+use hodu_cuda_kernels::{cuda::CudaSlice, kernel::Kernels, kernels::*};
 
 fn device() -> std::sync::Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()
@@ -631,4 +631,124 @@ fn test_onehot_f32_2d_input() {
             1.0, 0.0, 0.0 // [1,1] = 0
         ]
     );
+}
+
+fn run_nonzero<T>(input: &[T], shape: &[usize], count_kernel: Kernel, fill_kernel: Kernel) -> (usize, Vec<i64>)
+where
+    T: cudarc::driver::DeviceRepr + Clone,
+{
+    let kernels = kernels();
+    let device = device();
+    let stream = device.default_stream();
+
+    let input_dev = stream.memcpy_stod(input).unwrap();
+
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+
+    // Calculate strides
+    let mut strides = vec![1usize; num_dims];
+    for i in (0..num_dims.saturating_sub(1)).rev() {
+        strides[i] = strides[i + 1] * shape[i + 1];
+    }
+
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend_from_slice(shape);
+    metadata.extend_from_slice(&strides);
+    metadata.push(0); // offset
+
+    // Count pass
+    let mut count_dev: CudaSlice<u32> = stream.memcpy_stod(&[0u32]).unwrap();
+
+    call_nonzero_count(count_kernel, &kernels, &device, &input_dev, &mut count_dev, &metadata).unwrap();
+
+    let mut count_host = [0u32];
+    stream.memcpy_dtoh(&count_dev, &mut count_host).unwrap();
+    let count = count_host[0] as usize;
+
+    if count == 0 {
+        return (0, vec![]);
+    }
+
+    // Fill pass
+    let mut output_dev: CudaSlice<i64> = unsafe { stream.alloc(count * num_dims).unwrap() };
+    let mut counter_dev: CudaSlice<u32> = stream.memcpy_stod(&[0u32]).unwrap();
+
+    call_nonzero_fill(
+        fill_kernel,
+        &kernels,
+        &device,
+        &input_dev,
+        &mut output_dev,
+        &mut counter_dev,
+        &metadata,
+    )
+    .unwrap();
+
+    let mut results = vec![0i64; count * num_dims];
+    stream.memcpy_dtoh(&output_dev, &mut results).unwrap();
+    (count, results)
+}
+
+#[test]
+fn test_nonzero_f32_1d() {
+    // Input: [0, 1, 0, 2, 0, 3]
+    // Non-zero indices: [1, 3, 5]
+    let input: Vec<f32> = vec![0.0, 1.0, 0.0, 2.0, 0.0, 3.0];
+    let shape = vec![6];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 3);
+    assert_eq!(indices, vec![1i64, 3, 5]);
+}
+
+#[test]
+fn test_nonzero_f32_2d() {
+    // Input: [[0, 1, 0], [2, 0, 3]]
+    // Non-zero indices: [[0, 1], [1, 0], [1, 2]]
+    let input: Vec<f32> = vec![0.0, 1.0, 0.0, 2.0, 0.0, 3.0];
+    let shape = vec![2, 3];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 3);
+    // Output shape is [3, 2]: 3 non-zero elements, 2 dimensions
+    assert_eq!(indices, vec![0i64, 1, 1, 0, 1, 2]);
+}
+
+#[test]
+fn test_nonzero_i32() {
+    let input: Vec<i32> = vec![0, 5, 0, 0, 10, 15];
+    let shape = vec![6];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::I32, nonzero_fill::I32);
+
+    assert_eq!(count, 3);
+    assert_eq!(indices, vec![1i64, 4, 5]);
+}
+
+#[test]
+fn test_nonzero_all_zeros() {
+    let input: Vec<f32> = vec![0.0, 0.0, 0.0];
+    let shape = vec![3];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 0);
+    assert!(indices.is_empty());
+}
+
+#[test]
+fn test_nonzero_all_nonzero() {
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0];
+    let shape = vec![3];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 3);
+    assert_eq!(indices, vec![0i64, 1, 2]);
 }

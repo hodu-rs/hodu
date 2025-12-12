@@ -977,3 +977,125 @@ ONEHOT_OP(uint8_t, onehot_u8, 1, 0)
 ONEHOT_OP(uint16_t, onehot_u16, 1, 0)
 ONEHOT_OP(uint32_t, onehot_u32, 1, 0)
 ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
+
+// ============================================================================
+// NONZERO OPERATIONS
+// ============================================================================
+//
+// Returns indices of non-zero elements in the input tensor.
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in input)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset
+//
+// Output: [N, ndim] tensor where N is the count of non-zero elements.
+// Each row contains the multi-dimensional indices of a non-zero element.
+
+/// Macro to implement nonzero count operation (first pass)
+/// Returns the count of non-zero elements
+///
+/// @param TYPENAME C type for the operation
+/// @param FN_NAME Function name
+/// @param IS_NONZERO Expression to check if value is non-zero
+#define NONZERO_COUNT_OP(TYPENAME, FN_NAME, IS_NONZERO)                                            \
+    size_t hodu_cpu_##FN_NAME(const void *input_ptr, const size_t *metadata) {                     \
+        const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+                                                                                                   \
+        size_t count = 0;                                                                          \
+        for (size_t id = 0; id < num_els; id++) {                                                  \
+            /* Compute flat index from strided layout */                                           \
+            size_t flat_idx = input_offset;                                                        \
+            size_t temp = id;                                                                      \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t idx = temp % input_shape[d];                                                \
+                temp /= input_shape[d];                                                            \
+                flat_idx += idx * input_strides[d];                                                \
+            }                                                                                      \
+            TYPENAME val = input[flat_idx];                                                        \
+            if (IS_NONZERO) {                                                                      \
+                count++;                                                                           \
+            }                                                                                      \
+        }                                                                                          \
+        return count;                                                                              \
+    }
+
+/// Macro to implement nonzero fill operation (second pass)
+/// Fills the output buffer with indices of non-zero elements
+///
+/// @param TYPENAME C type for the operation
+/// @param FN_NAME Function name
+/// @param IS_NONZERO Expression to check if value is non-zero
+#define NONZERO_FILL_OP(TYPENAME, FN_NAME, IS_NONZERO)                                             \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, int64_t *output, const size_t *metadata) {      \
+        const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+                                                                                                   \
+        size_t out_idx = 0;                                                                        \
+        for (size_t id = 0; id < num_els; id++) {                                                  \
+            /* Compute flat index from strided layout */                                           \
+            size_t flat_idx = input_offset;                                                        \
+            size_t temp = id;                                                                      \
+            size_t multi_idx[32];                                                                  \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                multi_idx[d] = temp % input_shape[d];                                              \
+                temp /= input_shape[d];                                                            \
+                flat_idx += multi_idx[d] * input_strides[d];                                       \
+            }                                                                                      \
+            TYPENAME val = input[flat_idx];                                                        \
+            if (IS_NONZERO) {                                                                      \
+                /* Write multi-dimensional indices to output */                                    \
+                for (size_t d = 0; d < num_dims; d++) {                                            \
+                    output[out_idx * num_dims + d] = (int64_t)multi_idx[d];                        \
+                }                                                                                  \
+                out_idx++;                                                                         \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+// Count operations
+NONZERO_COUNT_OP(bool, nonzero_count_bool, val)
+NONZERO_COUNT_OP(f8e4m3_t, nonzero_count_f8e4m3, f8e4m3_to_float(val) != 0.0f)
+NONZERO_COUNT_OP(f8e5m2_t, nonzero_count_f8e5m2, f8e5m2_to_float(val) != 0.0f)
+NONZERO_COUNT_OP(bf16_t, nonzero_count_bf16, bf16_to_float(val) != 0.0f)
+NONZERO_COUNT_OP(f16_t, nonzero_count_f16, f16_to_float(val) != 0.0f)
+NONZERO_COUNT_OP(float, nonzero_count_f32, val != 0.0f)
+NONZERO_COUNT_OP(double, nonzero_count_f64, val != 0.0)
+NONZERO_COUNT_OP(int8_t, nonzero_count_i8, val != 0)
+NONZERO_COUNT_OP(int16_t, nonzero_count_i16, val != 0)
+NONZERO_COUNT_OP(int32_t, nonzero_count_i32, val != 0)
+NONZERO_COUNT_OP(int64_t, nonzero_count_i64, val != 0)
+NONZERO_COUNT_OP(uint8_t, nonzero_count_u8, val != 0)
+NONZERO_COUNT_OP(uint16_t, nonzero_count_u16, val != 0)
+NONZERO_COUNT_OP(uint32_t, nonzero_count_u32, val != 0)
+NONZERO_COUNT_OP(uint64_t, nonzero_count_u64, val != 0)
+
+// Fill operations
+NONZERO_FILL_OP(bool, nonzero_fill_bool, val)
+NONZERO_FILL_OP(f8e4m3_t, nonzero_fill_f8e4m3, f8e4m3_to_float(val) != 0.0f)
+NONZERO_FILL_OP(f8e5m2_t, nonzero_fill_f8e5m2, f8e5m2_to_float(val) != 0.0f)
+NONZERO_FILL_OP(bf16_t, nonzero_fill_bf16, bf16_to_float(val) != 0.0f)
+NONZERO_FILL_OP(f16_t, nonzero_fill_f16, f16_to_float(val) != 0.0f)
+NONZERO_FILL_OP(float, nonzero_fill_f32, val != 0.0f)
+NONZERO_FILL_OP(double, nonzero_fill_f64, val != 0.0)
+NONZERO_FILL_OP(int8_t, nonzero_fill_i8, val != 0)
+NONZERO_FILL_OP(int16_t, nonzero_fill_i16, val != 0)
+NONZERO_FILL_OP(int32_t, nonzero_fill_i32, val != 0)
+NONZERO_FILL_OP(int64_t, nonzero_fill_i64, val != 0)
+NONZERO_FILL_OP(uint8_t, nonzero_fill_u8, val != 0)
+NONZERO_FILL_OP(uint16_t, nonzero_fill_u16, val != 0)
+NONZERO_FILL_OP(uint32_t, nonzero_fill_u32, val != 0)
+NONZERO_FILL_OP(uint64_t, nonzero_fill_u64, val != 0)

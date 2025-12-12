@@ -402,6 +402,67 @@ void hodu_cpu_onehot_u16(const int32_t *indices, void *output, const size_t *met
 void hodu_cpu_onehot_u32(const int32_t *indices, void *output, const size_t *metadata);
 void hodu_cpu_onehot_u64(const int32_t *indices, void *output, const size_t *metadata);
 
+// ============================================================================
+// NONZERO OPERATIONS
+// ============================================================================
+//
+// Returns indices of non-zero elements in the input tensor.
+// This is a two-pass operation:
+//   1. nonzero_count_* - counts non-zero elements
+//   2. nonzero_fill_* - fills output with indices
+//
+// All nonzero_count operations follow this signature:
+//   size_t hodu_cpu_nonzero_count_type(const void *input, const size_t *metadata)
+//
+// All nonzero_fill operations follow this signature:
+//   void hodu_cpu_nonzero_fill_type(const void *input, int64_t *output, const size_t *metadata)
+//
+// Parameters:
+//   input    - Pointer to input tensor data
+//   output   - Pointer to output buffer (pre-allocated, shape [N, ndim])
+//   metadata - Array describing operation (see below)
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in input)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset
+
+// Count operations - return number of non-zero elements
+size_t hodu_cpu_nonzero_count_bool(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_f8e4m3(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_f8e5m2(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_bf16(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_f16(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_f32(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_f64(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_i8(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_i16(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_i32(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_i64(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_u8(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_u16(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_u32(const void *input, const size_t *metadata);
+size_t hodu_cpu_nonzero_count_u64(const void *input, const size_t *metadata);
+
+// Fill operations - write indices of non-zero elements to output
+void hodu_cpu_nonzero_fill_bool(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f8e4m3(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f8e5m2(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_bf16(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f16(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f32(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f64(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i8(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i16(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i32(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i64(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u8(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u16(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u32(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u64(const void *input, int64_t *output, const size_t *metadata);
+
 #ifdef __cplusplus
 }
 #endif

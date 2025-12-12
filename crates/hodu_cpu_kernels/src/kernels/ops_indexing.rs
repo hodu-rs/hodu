@@ -22,7 +22,9 @@ ops!(
     scatter_add,
     scatter_max,
     scatter_min,
-    onehot
+    onehot,
+    nonzero_count,
+    nonzero_fill
 );
 
 macro_rules! declare_and_dispatch_index_select {
@@ -592,5 +594,165 @@ pub fn call_ops_onehot(
         dispatch_onehot(kernel_name.0, indices, output, metadata.as_ptr());
     }
 
+    Ok(())
+}
+
+// ============================================================================
+// NONZERO OPERATIONS
+// ============================================================================
+
+macro_rules! declare_and_dispatch_nonzero_count {
+    ($($op:ident),* $(,)?) => {
+        paste::paste! {
+            extern "C" {
+                $(
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, metadata: *const usize) -> usize;
+                )*
+            }
+
+            unsafe fn dispatch_nonzero_count(
+                name: &str,
+                input: *const c_void,
+                metadata: *const usize,
+            ) -> usize {
+                match name {
+                    $(
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](input, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](input, metadata),
+                    )*
+                    _ => panic!("Unknown nonzero_count operation: {}", name),
+                }
+            }
+        }
+    };
+}
+
+macro_rules! declare_and_dispatch_nonzero_fill {
+    ($($op:ident),* $(,)?) => {
+        paste::paste! {
+            extern "C" {
+                $(
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                )*
+            }
+
+            unsafe fn dispatch_nonzero_fill(
+                name: &str,
+                input: *const c_void,
+                output: *mut i64,
+                metadata: *const usize,
+            ) {
+                match name {
+                    $(
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](input, output, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](input, output, metadata),
+                    )*
+                    _ => panic!("Unknown nonzero_fill operation: {}", name),
+                }
+            }
+        }
+    };
+}
+
+declare_and_dispatch_nonzero_count!(nonzero_count);
+declare_and_dispatch_nonzero_fill!(nonzero_fill);
+
+/// Count non-zero elements in a tensor
+///
+/// # Arguments
+/// * `kernel_name` - The nonzero_count kernel to execute (e.g., nonzero_count::F32)
+/// * `input` - Pointer to input tensor data
+/// * `metadata` - Tensor metadata array (see layout below)
+///
+/// # Metadata layout
+/// - metadata[0]: num_els (total number of elements in input)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: input_shape
+/// - metadata[2+num_dims..2+2*num_dims]: input_strides
+/// - metadata[2+2*num_dims]: input_offset
+///
+/// # Returns
+/// Returns the count of non-zero elements.
+pub fn call_nonzero_count(
+    kernel_name: crate::kernels::macros::Kernel,
+    input: *const c_void,
+    metadata: &[usize],
+) -> usize {
+    unsafe { dispatch_nonzero_count(kernel_name.0, input, metadata.as_ptr()) }
+}
+
+/// Fill output with indices of non-zero elements
+///
+/// # Arguments
+/// * `kernel_name` - The nonzero_fill kernel to execute (e.g., nonzero_fill::F32)
+/// * `input` - Pointer to input tensor data
+/// * `output` - Pointer to output buffer (shape [N, ndim], i64 type)
+/// * `metadata` - Tensor metadata array (same as nonzero_count)
+///
+/// # Safety
+/// Caller must ensure output buffer has capacity for count * ndim i64 values.
+pub fn call_nonzero_fill(
+    kernel_name: crate::kernels::macros::Kernel,
+    input: *const c_void,
+    output: *mut i64,
+    metadata: &[usize],
+) -> Result<()> {
+    unsafe {
+        dispatch_nonzero_fill(kernel_name.0, input, output, metadata.as_ptr());
+    }
     Ok(())
 }

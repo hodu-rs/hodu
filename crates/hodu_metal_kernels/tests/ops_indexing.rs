@@ -1,6 +1,6 @@
 use hodu_metal_kernels::{
     kernel::Kernels,
-    kernels::{call_ops_onehot, onehot, Kernel},
+    kernels::{call_nonzero_count, call_nonzero_fill, call_ops_onehot, nonzero_count, nonzero_fill, onehot, Kernel},
     metal::{create_command_buffer, Buffer, Device},
     utils::BufferOffset,
     RESOURCE_OPTIONS,
@@ -165,4 +165,147 @@ fn test_onehot_f32_2d_input() {
             1.0, 0.0, 0.0 // [1,1] = 0
         ]
     );
+}
+
+fn run_nonzero<T: Clone>(input: &[T], shape: &[usize], count_kernel: Kernel, fill_kernel: Kernel) -> (usize, Vec<i64>) {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let options = RESOURCE_OPTIONS;
+
+    let input_buffer = new_buffer(&device, input);
+
+    let num_els: usize = shape.iter().product();
+    let num_dims = shape.len();
+
+    // Calculate strides
+    let mut strides = vec![1usize; num_dims];
+    for i in (0..num_dims.saturating_sub(1)).rev() {
+        strides[i] = strides[i + 1] * shape[i + 1];
+    }
+
+    // Build metadata
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend_from_slice(shape);
+    metadata.extend_from_slice(&strides);
+    metadata.push(0); // offset
+
+    // Count pass
+    let count_buffer = device.new_buffer(std::mem::size_of::<u32>(), options).unwrap();
+    // Initialize count to 0
+    unsafe {
+        let ptr = count_buffer.contents() as *mut u32;
+        *ptr = 0;
+    }
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_nonzero_count(
+        count_kernel,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &count_buffer,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let count = unsafe { *(count_buffer.contents() as *const u32) } as usize;
+
+    if count == 0 {
+        return (0, vec![]);
+    }
+
+    // Fill pass
+    let output_buffer = device
+        .new_buffer(count * num_dims * std::mem::size_of::<i64>(), options)
+        .unwrap();
+    let counter_buffer = device.new_buffer(std::mem::size_of::<u32>(), options).unwrap();
+    // Initialize counter to 0
+    unsafe {
+        let ptr = counter_buffer.contents() as *mut u32;
+        *ptr = 0;
+    }
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_nonzero_fill(
+        fill_kernel,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &output_buffer,
+        &counter_buffer,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let output = read_to_vec(&output_buffer, count * num_dims);
+    (count, output)
+}
+
+#[test]
+fn test_nonzero_f32_1d() {
+    // Input: [0, 1, 0, 2, 0, 3]
+    // Non-zero indices: [1, 3, 5]
+    let input = vec![0.0f32, 1.0, 0.0, 2.0, 0.0, 3.0];
+    let shape = vec![6];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 3);
+    assert_eq!(indices, vec![1i64, 3, 5]);
+}
+
+#[test]
+fn test_nonzero_f32_2d() {
+    // Input: [[0, 1, 0], [2, 0, 3]]
+    // Non-zero indices: [[0, 1], [1, 0], [1, 2]]
+    let input = vec![0.0f32, 1.0, 0.0, 2.0, 0.0, 3.0];
+    let shape = vec![2, 3];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 3);
+    // Output shape is [3, 2]: 3 non-zero elements, 2 dimensions
+    assert_eq!(indices, vec![0i64, 1, 1, 0, 1, 2]);
+}
+
+#[test]
+fn test_nonzero_i32() {
+    let input = vec![0i32, 5, 0, 0, 10, 15];
+    let shape = vec![6];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::I32, nonzero_fill::I32);
+
+    assert_eq!(count, 3);
+    assert_eq!(indices, vec![1i64, 4, 5]);
+}
+
+#[test]
+fn test_nonzero_all_zeros() {
+    let input = vec![0.0f32, 0.0, 0.0];
+    let shape = vec![3];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 0);
+    assert!(indices.is_empty());
+}
+
+#[test]
+fn test_nonzero_all_nonzero() {
+    let input = vec![1.0f32, 2.0, 3.0];
+    let shape = vec![3];
+
+    let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
+
+    assert_eq!(count, 3);
+    assert_eq!(indices, vec![0i64, 1, 2]);
 }

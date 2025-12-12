@@ -352,3 +352,88 @@ pub fn call_ops_onehot(
 
     Ok(MetalStorage::new(output_buffer, device.clone(), num_els, output_dtype))
 }
+
+pub fn call_nonzero(input_storage: &MetalStorage, input_layout: &Layout) -> HoduResult<(MetalStorage, usize)> {
+    let dtype = input_storage.dtype();
+    let shape = input_layout.shape();
+    let ndim = shape.ndim();
+    let num_els = shape.size();
+
+    let device = input_storage.backend_device();
+
+    // Build metadata
+    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
+    metadata.push(num_els);
+    metadata.push(ndim);
+    metadata.extend_from_slice(shape.dims());
+    metadata.extend_from_slice(input_layout.strides());
+    metadata.push(input_layout.offset());
+
+    // Create atomic counter buffer (single u32)
+    let count_buffer = device.new_buffer(1, DType::U32, "nonzero_count")?;
+
+    // First pass: count non-zero elements
+    let count_kernel_name = format!("hodu_metal_nonzero_count_{}", dtype);
+    let count_kernel_name_static = crate::cache::kernel::get_kernel_name(count_kernel_name);
+    let count_kernel = kernels::Kernel(count_kernel_name_static);
+
+    let input_offset = BufferOffset::zero_offset(input_storage.buffer());
+    let command_buffer = device.command_buffer()?;
+
+    kernels::call_nonzero_count(
+        count_kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        input_offset,
+        &count_buffer,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Read count from buffer
+    let count_ptr = count_buffer.contents() as *const u32;
+    let count = unsafe { *count_ptr } as usize;
+
+    // Handle empty case
+    if count == 0 {
+        let output_buffer = device.new_buffer(0, DType::I64, "nonzero_output")?;
+        return Ok((MetalStorage::new(output_buffer, device.clone(), 0, DType::I64), 0));
+    }
+
+    // Allocate output buffer for [count, ndim] indices
+    let output_size = count * ndim;
+    let output_buffer = device.new_buffer(output_size, DType::I64, "nonzero_output")?;
+
+    // Create a new counter buffer for fill (reset to 0)
+    let counter_buffer = device.new_buffer(1, DType::U32, "nonzero_counter")?;
+
+    // Second pass: fill indices
+    let fill_kernel_name = format!("hodu_metal_nonzero_fill_{}", dtype);
+    let fill_kernel_name_static = crate::cache::kernel::get_kernel_name(fill_kernel_name);
+    let fill_kernel = kernels::Kernel(fill_kernel_name_static);
+
+    let input_offset = BufferOffset::zero_offset(input_storage.buffer());
+    let command_buffer = device.command_buffer()?;
+
+    kernels::call_nonzero_fill(
+        fill_kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        input_offset,
+        &output_buffer,
+        &counter_buffer,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    Ok((
+        MetalStorage::new(output_buffer, device.clone(), output_size, DType::I64),
+        count,
+    ))
+}

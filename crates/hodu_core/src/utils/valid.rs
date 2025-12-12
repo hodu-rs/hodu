@@ -280,6 +280,9 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
+            IndexingOp::Nonzero => {
+                // All types supported for nonzero
+            },
         },
 
         // Convolution operations

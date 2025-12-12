@@ -133,6 +133,10 @@ pub trait BackendStorageT: Sized {
         _: bool,  // sorted
     ) -> HoduResult<(Self, Self)>; // (values, indices)
 
+    /// Returns indices of non-zero elements.
+    /// Output shape is [N, ndim] where N is the count of non-zero elements.
+    fn call_nonzero(&self, _: &Layout) -> HoduResult<(Self, usize)>; // (indices, count)
+
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
     // only implemented in BackendStorage
@@ -1135,6 +1139,25 @@ impl BackendStorage {
             Self::Metal(storage) => {
                 let (values, indices) = storage.call_topk(layout, k, last_dim_size, outer_size, largest, sorted)?;
                 Ok((Self::Metal(values), Self::Metal(indices)))
+            },
+        }
+    }
+
+    pub(crate) fn call_nonzero(&self, layout: &Layout) -> HoduResult<(Self, usize)> {
+        match self {
+            Self::CPU(storage) => {
+                let (indices, count) = storage.call_nonzero(layout)?;
+                Ok((Self::CPU(indices), count))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let (indices, count) = storage.call_nonzero(layout)?;
+                Ok((Self::CUDA(indices), count))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let (indices, count) = storage.call_nonzero(layout)?;
+                Ok((Self::Metal(indices), count))
             },
         }
     }

@@ -105,7 +105,7 @@ fn test_topk_1d_largest_f32() {
 #[test]
 fn test_topk_1d_smallest_f32() {
     let input = vec![3.0f32, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0];
-    let (values, indices) = run_topk(&input, 3, 8, 1, false, true, topk::F32);
+    let (values, _indices) = run_topk(&input, 3, 8, 1, false, true, topk::F32);
 
     // Top 3 smallest: 1.0 (idx 1 or 3), 1.0, 2.0 (idx 6)
     assert_eq!(values, vec![1.0, 1.0, 2.0]);
@@ -192,7 +192,7 @@ fn test_topk_bf16() {
 #[test]
 fn test_topk_negative_f32() {
     let input = vec![-3.0f32, -1.0, -4.0, -1.0, -5.0];
-    let (values, indices) = run_topk(&input, 2, 5, 1, true, true, topk::F32);
+    let (values, _indices) = run_topk(&input, 2, 5, 1, true, true, topk::F32);
 
     // Top 2 largest: -1.0, -1.0
     assert_eq!(values, vec![-1.0, -1.0]);

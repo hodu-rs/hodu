@@ -658,4 +658,45 @@ impl Tensor {
             Ok(result)
         }
     }
+
+    /// Returns the indices of non-zero elements in the tensor.
+    ///
+    /// # Returns
+    /// A tensor of shape `[N, ndim]` where N is the number of non-zero elements
+    /// and ndim is the number of dimensions in the input tensor. Each row contains
+    /// the multi-dimensional index of a non-zero element.
+    ///
+    /// Note: The output size is data-dependent and cannot be determined at compile time.
+    /// This operation does not support gradients.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let x = Tensor::from_slice(&[0.0f32, 1.0, 0.0, 2.0, 0.0, 3.0], &[2, 3])?;
+    /// let indices = x.nonzero()?;
+    /// // indices shape: [3, 2] (3 non-zero elements, 2 dimensions)
+    /// // indices values: [[0, 1], [1, 0], [1, 2]]
+    /// ```
+    pub fn nonzero(&self) -> HoduResult<Self> {
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Nonzero))?;
+
+        let self_layout = self.layout();
+
+        if crate::snapshot::capture::is_active() {
+            // Nonzero has dynamic output shape, cannot be captured in snapshot mode
+            return Err(crate::error::HoduError::UnsupportedOperation(
+                "Nonzero operation has dynamic output shape and cannot be captured in snapshot mode".to_string(),
+            ));
+        }
+
+        let (storage, count) = self.with_storage(|storage| storage.call_nonzero(&self_layout))?;
+
+        let ndim = self.ndim();
+        let result_layout = Layout::from_shape(&Shape::from(vec![count, ndim]));
+
+        // Nonzero is non-differentiable
+        let result = from_storage_with_context(storage, result_layout, true, false);
+
+        Ok(result)
+    }
 }

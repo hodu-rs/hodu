@@ -221,6 +221,13 @@ impl VjpCompute for IndexingOp {
                     "Onehot operation does not support gradients".to_string(),
                 ))
             },
+
+            IndexingOp::Nonzero => {
+                // Nonzero returns indices, which are not differentiable
+                Err(HoduError::VjpFunctionNotFound(
+                    "Nonzero operation does not support gradients".to_string(),
+                ))
+            },
         }
     }
 }

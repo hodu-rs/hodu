@@ -565,3 +565,165 @@ pub fn call_ops_onehot(
         _ => Err(HoduError::UnsupportedDType(output_dtype)),
     }
 }
+
+pub fn call_nonzero(input_storage: &CudaStorage, input_layout: &Layout) -> HoduResult<(CudaStorage, usize)> {
+    let dtype = input_storage.dtype();
+    let shape = input_layout.shape();
+    let ndim = shape.ndim();
+    let num_els = shape.size();
+
+    let device = input_storage.get_device();
+    let device_id = input_storage.device_id();
+    let device_arc = Arc::clone(&input_storage.device);
+
+    // Build metadata
+    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
+    metadata.push(num_els);
+    metadata.push(ndim);
+    metadata.extend_from_slice(shape.dims());
+    metadata.extend_from_slice(input_layout.strides());
+    metadata.push(input_layout.offset());
+
+    // Create count buffer (single u32, initialized to 0)
+    let mut count_buffer = device.new_buffer::<u32>(1)?;
+    device
+        .context()
+        .default_stream()
+        .memcpy_stod(&[0u32])
+        .and_then(|zeroed| {
+            device
+                .context()
+                .default_stream()
+                .memcpy_dtod(&zeroed, &mut count_buffer)
+        })
+        .map_err(|e| HoduError::BackendError(format!("Failed to initialize count buffer: {:?}", e)))?;
+
+    // First pass: count non-zero elements
+    let count_kernel_name = format!("hodu_cuda_nonzero_count_{}", dtype);
+    let count_kernel_name_static = crate::cache::kernel::get_kernel_name(count_kernel_name);
+    let count_kernel = kernels::Kernel(count_kernel_name_static);
+
+    macro_rules! call_count_kernel {
+        ($input:expr) => {{
+            kernels::call_nonzero_count(
+                count_kernel,
+                device.kernels(),
+                device.context(),
+                $input,
+                &mut count_buffer,
+                &metadata,
+            )?;
+        }};
+    }
+
+    match &input_storage.data {
+        CudaStorageData::BOOL(input) => call_count_kernel!(input),
+        CudaStorageData::F8E4M3(input) => call_count_kernel!(input),
+        #[cfg(feature = "f8e5m2")]
+        CudaStorageData::F8E5M2(input) => call_count_kernel!(input),
+        CudaStorageData::BF16(input) => call_count_kernel!(input),
+        CudaStorageData::F16(input) => call_count_kernel!(input),
+        CudaStorageData::F32(input) => call_count_kernel!(input),
+        #[cfg(feature = "f64")]
+        CudaStorageData::F64(input) => call_count_kernel!(input),
+        CudaStorageData::U8(input) => call_count_kernel!(input),
+        #[cfg(feature = "u16")]
+        CudaStorageData::U16(input) => call_count_kernel!(input),
+        CudaStorageData::U32(input) => call_count_kernel!(input),
+        #[cfg(feature = "u64")]
+        CudaStorageData::U64(input) => call_count_kernel!(input),
+        CudaStorageData::I8(input) => call_count_kernel!(input),
+        #[cfg(feature = "i16")]
+        CudaStorageData::I16(input) => call_count_kernel!(input),
+        CudaStorageData::I32(input) => call_count_kernel!(input),
+        #[cfg(feature = "i64")]
+        CudaStorageData::I64(input) => call_count_kernel!(input),
+    }
+
+    // Synchronize and read count
+    device
+        .context()
+        .default_stream()
+        .synchronize()
+        .map_err(|e| HoduError::BackendError(format!("CUDA synchronize failed: {:?}", e)))?;
+
+    let mut count_host = [0u32];
+    device
+        .context()
+        .default_stream()
+        .memcpy_dtoh(&count_buffer, &mut count_host)
+        .map_err(|e| HoduError::BackendError(format!("Failed to read count: {:?}", e)))?;
+    let count = count_host[0] as usize;
+
+    // Handle empty case
+    if count == 0 {
+        let output = device.new_buffer::<i64>(0)?;
+        return Ok((CudaStorage::new(device_id, device_arc, CudaStorageData::I64(output)), 0));
+    }
+
+    // Allocate output buffer for [count, ndim] indices
+    let output_size = count * ndim;
+    let mut output = device.new_buffer::<i64>(output_size)?;
+
+    // Create counter buffer for fill (initialized to 0)
+    let mut counter_buffer = device.new_buffer::<u32>(1)?;
+    device
+        .context()
+        .default_stream()
+        .memcpy_stod(&[0u32])
+        .and_then(|zeroed| {
+            device
+                .context()
+                .default_stream()
+                .memcpy_dtod(&zeroed, &mut counter_buffer)
+        })
+        .map_err(|e| HoduError::BackendError(format!("Failed to initialize counter buffer: {:?}", e)))?;
+
+    // Second pass: fill indices
+    let fill_kernel_name = format!("hodu_cuda_nonzero_fill_{}", dtype);
+    let fill_kernel_name_static = crate::cache::kernel::get_kernel_name(fill_kernel_name);
+    let fill_kernel = kernels::Kernel(fill_kernel_name_static);
+
+    macro_rules! call_fill_kernel {
+        ($input:expr) => {{
+            kernels::call_nonzero_fill(
+                fill_kernel,
+                device.kernels(),
+                device.context(),
+                $input,
+                &mut output,
+                &mut counter_buffer,
+                &metadata,
+            )?;
+        }};
+    }
+
+    match &input_storage.data {
+        CudaStorageData::BOOL(input) => call_fill_kernel!(input),
+        CudaStorageData::F8E4M3(input) => call_fill_kernel!(input),
+        #[cfg(feature = "f8e5m2")]
+        CudaStorageData::F8E5M2(input) => call_fill_kernel!(input),
+        CudaStorageData::BF16(input) => call_fill_kernel!(input),
+        CudaStorageData::F16(input) => call_fill_kernel!(input),
+        CudaStorageData::F32(input) => call_fill_kernel!(input),
+        #[cfg(feature = "f64")]
+        CudaStorageData::F64(input) => call_fill_kernel!(input),
+        CudaStorageData::U8(input) => call_fill_kernel!(input),
+        #[cfg(feature = "u16")]
+        CudaStorageData::U16(input) => call_fill_kernel!(input),
+        CudaStorageData::U32(input) => call_fill_kernel!(input),
+        #[cfg(feature = "u64")]
+        CudaStorageData::U64(input) => call_fill_kernel!(input),
+        CudaStorageData::I8(input) => call_fill_kernel!(input),
+        #[cfg(feature = "i16")]
+        CudaStorageData::I16(input) => call_fill_kernel!(input),
+        CudaStorageData::I32(input) => call_fill_kernel!(input),
+        #[cfg(feature = "i64")]
+        CudaStorageData::I64(input) => call_fill_kernel!(input),
+    }
+
+    Ok((
+        CudaStorage::new(device_id, device_arc, CudaStorageData::I64(output)),
+        count,
+    ))
+}

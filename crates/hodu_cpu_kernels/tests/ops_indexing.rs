@@ -993,3 +993,190 @@ fn test_onehot_f32_2d_input() {
         ]
     );
 }
+
+#[test]
+fn test_nonzero_f32_1d() {
+    // Input: [0, 1, 0, 2, 0, 3]
+    // Non-zero indices: [[1], [3], [5]]
+    let input = [0.0f32, 1.0, 0.0, 2.0, 0.0, 3.0];
+
+    let num_els = 6;
+    let num_dims = 1;
+    let shape = vec![6];
+    let strides = vec![1];
+    let offset = 0;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(offset);
+
+    // Count nonzero
+    let count = call_nonzero_count(
+        nonzero_count::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        &metadata,
+    );
+
+    assert_eq!(count, 3);
+
+    // Fill indices
+    let mut output = vec![0i64; count * num_dims];
+    call_nonzero_fill(
+        nonzero_fill::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr(),
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(output, vec![1, 3, 5]);
+}
+
+#[test]
+fn test_nonzero_f32_2d() {
+    // Input: [[0, 1, 0], [2, 0, 3]]
+    // Non-zero indices: [[0, 1], [1, 0], [1, 2]]
+    let input = [0.0f32, 1.0, 0.0, 2.0, 0.0, 3.0];
+
+    let num_els = 6;
+    let num_dims = 2;
+    let shape = vec![2, 3];
+    let strides = vec![3, 1];
+    let offset = 0;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(offset);
+
+    // Count nonzero
+    let count = call_nonzero_count(
+        nonzero_count::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        &metadata,
+    );
+
+    assert_eq!(count, 3);
+
+    // Fill indices
+    let mut output = vec![0i64; count * num_dims];
+    call_nonzero_fill(
+        nonzero_fill::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr(),
+        &metadata,
+    )
+    .unwrap();
+
+    // Output shape is [3, 2]: 3 non-zero elements, 2 dimensions
+    // Indices: [0,1], [1,0], [1,2]
+    assert_eq!(output, vec![0, 1, 1, 0, 1, 2]);
+}
+
+#[test]
+fn test_nonzero_i32() {
+    // Test with integer type
+    let input = [0i32, 5, 0, 0, 10, 15];
+
+    let num_els = 6;
+    let num_dims = 1;
+    let shape = vec![6];
+    let strides = vec![1];
+    let offset = 0;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(offset);
+
+    let count = call_nonzero_count(
+        nonzero_count::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        &metadata,
+    );
+
+    assert_eq!(count, 3);
+
+    let mut output = vec![0i64; count * num_dims];
+    call_nonzero_fill(
+        nonzero_fill::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr(),
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(output, vec![1, 4, 5]);
+}
+
+#[test]
+fn test_nonzero_all_zeros() {
+    // Input: [0, 0, 0]
+    let input = [0.0f32, 0.0, 0.0];
+
+    let num_els = 3;
+    let num_dims = 1;
+    let shape = vec![3];
+    let strides = vec![1];
+    let offset = 0;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(offset);
+
+    let count = call_nonzero_count(
+        nonzero_count::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        &metadata,
+    );
+
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn test_nonzero_all_nonzero() {
+    // Input: [1, 2, 3]
+    let input = [1.0f32, 2.0, 3.0];
+
+    let num_els = 3;
+    let num_dims = 1;
+    let shape = vec![3];
+    let strides = vec![1];
+    let offset = 0;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(offset);
+
+    let count = call_nonzero_count(
+        nonzero_count::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        &metadata,
+    );
+
+    assert_eq!(count, 3);
+
+    let mut output = vec![0i64; count * num_dims];
+    call_nonzero_fill(
+        nonzero_fill::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr(),
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(output, vec![0, 1, 2]);
+}

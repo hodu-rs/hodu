@@ -401,6 +401,7 @@ pub enum IndexingOp {
     ScatterMax,
     ScatterMin,
     Onehot,
+    Nonzero,
 }
 
 impl fmt::Display for IndexingOp {
@@ -414,6 +415,7 @@ impl fmt::Display for IndexingOp {
             Self::ScatterMax => write!(f, "scatter_max"),
             Self::ScatterMin => write!(f, "scatter_min"),
             Self::Onehot => write!(f, "onehot"),
+            Self::Nonzero => write!(f, "nonzero"),
         }
     }
 }

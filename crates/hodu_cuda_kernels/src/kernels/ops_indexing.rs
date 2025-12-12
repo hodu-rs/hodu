@@ -14,7 +14,9 @@ ops!(
     scatter_add,
     scatter_max,
     scatter_min,
-    onehot
+    onehot,
+    nonzero_count,
+    nonzero_fill
 );
 
 /// Execute an index_select operation
@@ -303,6 +305,104 @@ where
     unsafe {
         func.launch(&stream, cfg, |args| {
             args.arg(indices).arg(output).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Count non-zero elements in a tensor.
+///
+/// # Arguments
+/// * `kernel` - The nonzero_count kernel to execute
+/// * `kernels` - Kernel cache
+/// * `context` - CUDA context
+/// * `input` - Input data slice
+/// * `count` - Output count (single u32)
+/// * `metadata` - Metadata describing tensor layout
+pub fn call_nonzero_count<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    input: &CudaSlice<T>,
+    count: &mut CudaSlice<u32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    let num_els = metadata[0];
+    let block_size = 256u32;
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    // Kernel signature: (input, count, metadata)
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(input).arg(count).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Fill indices of non-zero elements.
+///
+/// # Arguments
+/// * `kernel` - The nonzero_fill kernel to execute
+/// * `kernels` - Kernel cache
+/// * `context` - CUDA context
+/// * `input` - Input data slice
+/// * `output` - Output indices (i64, shape [N, ndim])
+/// * `counter` - Atomic counter (single u32, should be initialized to 0)
+/// * `metadata` - Metadata describing tensor layout
+pub fn call_nonzero_fill<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    input: &CudaSlice<T>,
+    output: &mut CudaSlice<i64>,
+    counter: &mut CudaSlice<u32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    let num_els = metadata[0];
+    let block_size = 256u32;
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    // Kernel signature: (input, output, counter, metadata)
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(input).arg(output).arg(counter).arg(&metadata_dev);
         })
         .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
     }
