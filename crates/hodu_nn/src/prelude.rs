@@ -16,7 +16,7 @@ pub use crate::modules::{
     embedding::Embedding,
     linear::Linear,
     norm::{BatchNorm1D, BatchNorm2D, BatchNorm3D, GroupNorm, InstanceNorm2D, LayerNorm, RMSNorm},
-    pooling::{AdaptiveAvgPool2D, AdaptiveMaxPool2D, AvgPool2D, MaxPool2D},
+    pooling::{AdaptiveAvgPool2D, AdaptiveMaxPool2D, AvgPool2D, GlobalAvgPool2D, GlobalMaxPool2D, MaxPool2D},
     rnn::{Nonlinearity, GRU, LSTM, RNN},
 };
 pub use crate::optimizer::Optimizer;

@@ -52,8 +52,8 @@
 
 **Pooling Layers:**
 - [x] Implement pooling layers
-- [ ] Implement GlobalAvgPool, GlobalMaxPool (🟡 Important)
-- [ ] Implement FractionalMaxPool (🟢 Nice-to-have)
+- [x] Implement GlobalAvgPool, GlobalMaxPool (🟡 Important)
+- [x] Implement FractionalMaxPool (🟢 Nice-to-have)
 
 **Normalization Layers:**
 - [x] Implement normalization layers

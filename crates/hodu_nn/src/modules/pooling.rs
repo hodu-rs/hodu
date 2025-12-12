@@ -516,3 +516,436 @@ impl MaxPool3D {
         vec![]
     }
 }
+
+// ============================================================================
+// GlobalAvgPool
+// ============================================================================
+
+/// Global Average Pooling for 1D inputs.
+///
+/// Pools over the entire spatial dimension to produce [N, C, 1].
+#[derive(Module, Clone)]
+pub struct GlobalAvgPool1D;
+
+impl GlobalAvgPool1D {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 3 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "GlobalAvgPool1D expects 3D input [N, C, L], got {}D",
+                input_shape.ndim()
+            )));
+        }
+        // Mean over L dimension
+        input.mean(&[2], true)
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+impl Default for GlobalAvgPool1D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Global Average Pooling for 2D inputs.
+///
+/// Pools over the entire spatial dimensions to produce [N, C, 1, 1].
+#[derive(Module, Clone)]
+pub struct GlobalAvgPool2D;
+
+impl GlobalAvgPool2D {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 4 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "GlobalAvgPool2D expects 4D input [N, C, H, W], got {}D",
+                input_shape.ndim()
+            )));
+        }
+        // Mean over H, W dimensions
+        input.mean(&[2, 3], true)
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+impl Default for GlobalAvgPool2D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Global Average Pooling for 3D inputs.
+///
+/// Pools over the entire spatial dimensions to produce [N, C, 1, 1, 1].
+#[derive(Module, Clone)]
+pub struct GlobalAvgPool3D;
+
+impl GlobalAvgPool3D {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 5 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "GlobalAvgPool3D expects 5D input [N, C, D, H, W], got {}D",
+                input_shape.ndim()
+            )));
+        }
+        // Mean over D, H, W dimensions
+        input.mean(&[2, 3, 4], true)
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+impl Default for GlobalAvgPool3D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// GlobalMaxPool
+// ============================================================================
+
+/// Global Max Pooling for 1D inputs.
+///
+/// Pools over the entire spatial dimension to produce [N, C, 1].
+#[derive(Module, Clone)]
+pub struct GlobalMaxPool1D;
+
+impl GlobalMaxPool1D {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 3 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "GlobalMaxPool1D expects 3D input [N, C, L], got {}D",
+                input_shape.ndim()
+            )));
+        }
+        // Max over L dimension
+        input.max(&[2], true)
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+impl Default for GlobalMaxPool1D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Global Max Pooling for 2D inputs.
+///
+/// Pools over the entire spatial dimensions to produce [N, C, 1, 1].
+#[derive(Module, Clone)]
+pub struct GlobalMaxPool2D;
+
+impl GlobalMaxPool2D {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 4 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "GlobalMaxPool2D expects 4D input [N, C, H, W], got {}D",
+                input_shape.ndim()
+            )));
+        }
+        // Max over H, W dimensions
+        input.max(&[2, 3], true)
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+impl Default for GlobalMaxPool2D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Global Max Pooling for 3D inputs.
+///
+/// Pools over the entire spatial dimensions to produce [N, C, 1, 1, 1].
+#[derive(Module, Clone)]
+pub struct GlobalMaxPool3D;
+
+impl GlobalMaxPool3D {
+    pub fn new() -> Self {
+        Self
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 5 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "GlobalMaxPool3D expects 5D input [N, C, D, H, W], got {}D",
+                input_shape.ndim()
+            )));
+        }
+        // Max over D, H, W dimensions
+        input.max(&[2, 3, 4], true)
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+impl Default for GlobalMaxPool3D {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ============================================================================
+// FractionalMaxPool
+// ============================================================================
+
+/// Fractional Max Pooling for 2D inputs.
+///
+/// Applies max pooling with fractional output sizes, using random or
+/// pseudo-random pooling regions.
+///
+/// Reference: "Fractional Max-Pooling" by Benjamin Graham (2014)
+#[derive(Module, Clone)]
+pub struct FractionalMaxPool2D {
+    output_size: Option<(usize, usize)>,
+    output_ratio: Option<(f64, f64)>,
+}
+
+impl FractionalMaxPool2D {
+    /// Creates FractionalMaxPool2D with a target output size.
+    pub fn with_output_size(output_size: (usize, usize)) -> Self {
+        Self {
+            output_size: Some(output_size),
+            output_ratio: None,
+        }
+    }
+
+    /// Creates FractionalMaxPool2D with a target output ratio.
+    ///
+    /// Output size will be input_size * output_ratio.
+    pub fn with_output_ratio(output_ratio: (f64, f64)) -> Self {
+        Self {
+            output_size: None,
+            output_ratio: Some(output_ratio),
+        }
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 4 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "FractionalMaxPool2D expects 4D input [N, C, H, W], got {}D",
+                input_shape.ndim()
+            )));
+        }
+
+        let n = input_shape[0];
+        let c = input_shape[1];
+        let h = input_shape[2];
+        let w = input_shape[3];
+
+        let (out_h, out_w) = if let Some((oh, ow)) = self.output_size {
+            (oh, ow)
+        } else if let Some((rh, rw)) = self.output_ratio {
+            ((h as f64 * rh) as usize, (w as f64 * rw) as usize)
+        } else {
+            return Err(hodu_core::error::HoduError::InternalError(
+                "FractionalMaxPool2D requires output_size or output_ratio".to_string(),
+            ));
+        };
+
+        // Generate fractional pooling sequence
+        let h_sequence = generate_fractional_sequence(h, out_h);
+        let w_sequence = generate_fractional_sequence(w, out_w);
+
+        // Collect pooled results
+        let mut results = Vec::with_capacity(n * c * out_h * out_w);
+
+        for batch in 0..n {
+            for channel in 0..c {
+                for i in 0..out_h {
+                    let h_start = h_sequence[i];
+                    let h_end = h_sequence[i + 1];
+
+                    for j in 0..out_w {
+                        let w_start = w_sequence[j];
+                        let w_end = w_sequence[j + 1];
+
+                        // Extract region and compute max
+                        let region = input
+                            .slice(0, batch, Some(batch + 1), 1)?
+                            .slice(1, channel, Some(channel + 1), 1)?
+                            .slice(2, h_start, Some(h_end), 1)?
+                            .slice(3, w_start, Some(w_end), 1)?;
+
+                        let max_val = region.max(&[0, 1, 2, 3], false)?;
+                        results.push(max_val);
+                    }
+                }
+            }
+        }
+
+        // Stack and reshape results
+        let result_refs: Vec<&Tensor> = results.iter().collect();
+        let stacked = Tensor::stack(&result_refs, 0)?;
+        stacked.reshape([n, c, out_h, out_w])
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+/// Fractional Max Pooling for 3D inputs.
+#[derive(Module, Clone)]
+pub struct FractionalMaxPool3D {
+    output_size: Option<(usize, usize, usize)>,
+    output_ratio: Option<(f64, f64, f64)>,
+}
+
+impl FractionalMaxPool3D {
+    /// Creates FractionalMaxPool3D with a target output size.
+    pub fn with_output_size(output_size: (usize, usize, usize)) -> Self {
+        Self {
+            output_size: Some(output_size),
+            output_ratio: None,
+        }
+    }
+
+    /// Creates FractionalMaxPool3D with a target output ratio.
+    pub fn with_output_ratio(output_ratio: (f64, f64, f64)) -> Self {
+        Self {
+            output_size: None,
+            output_ratio: Some(output_ratio),
+        }
+    }
+
+    fn forward(&self, input: &Tensor) -> HoduResult<Tensor> {
+        let input_shape = input.shape();
+        if input_shape.ndim() != 5 {
+            return Err(hodu_core::error::HoduError::InternalError(format!(
+                "FractionalMaxPool3D expects 5D input [N, C, D, H, W], got {}D",
+                input_shape.ndim()
+            )));
+        }
+
+        let n = input_shape[0];
+        let c = input_shape[1];
+        let d = input_shape[2];
+        let h = input_shape[3];
+        let w = input_shape[4];
+
+        let (out_d, out_h, out_w) = if let Some((od, oh, ow)) = self.output_size {
+            (od, oh, ow)
+        } else if let Some((rd, rh, rw)) = self.output_ratio {
+            (
+                (d as f64 * rd) as usize,
+                (h as f64 * rh) as usize,
+                (w as f64 * rw) as usize,
+            )
+        } else {
+            return Err(hodu_core::error::HoduError::InternalError(
+                "FractionalMaxPool3D requires output_size or output_ratio".to_string(),
+            ));
+        };
+
+        // Generate fractional pooling sequences
+        let d_sequence = generate_fractional_sequence(d, out_d);
+        let h_sequence = generate_fractional_sequence(h, out_h);
+        let w_sequence = generate_fractional_sequence(w, out_w);
+
+        // Collect pooled results
+        let mut results = Vec::with_capacity(n * c * out_d * out_h * out_w);
+
+        for batch in 0..n {
+            for channel in 0..c {
+                for di in 0..out_d {
+                    let d_start = d_sequence[di];
+                    let d_end = d_sequence[di + 1];
+
+                    for hi in 0..out_h {
+                        let h_start = h_sequence[hi];
+                        let h_end = h_sequence[hi + 1];
+
+                        for wi in 0..out_w {
+                            let w_start = w_sequence[wi];
+                            let w_end = w_sequence[wi + 1];
+
+                            let region = input
+                                .slice(0, batch, Some(batch + 1), 1)?
+                                .slice(1, channel, Some(channel + 1), 1)?
+                                .slice(2, d_start, Some(d_end), 1)?
+                                .slice(3, h_start, Some(h_end), 1)?
+                                .slice(4, w_start, Some(w_end), 1)?;
+
+                            let max_val = region.max(&[0, 1, 2, 3, 4], false)?;
+                            results.push(max_val);
+                        }
+                    }
+                }
+            }
+        }
+
+        let result_refs: Vec<&Tensor> = results.iter().collect();
+        let stacked = Tensor::stack(&result_refs, 0)?;
+        stacked.reshape([n, c, out_d, out_h, out_w])
+    }
+
+    fn parameters(&self) -> Vec<&Tensor> {
+        vec![]
+    }
+}
+
+/// Generates a fractional pooling sequence.
+///
+/// Creates a sequence of indices that divides input_size into output_size regions.
+fn generate_fractional_sequence(input_size: usize, output_size: usize) -> Vec<usize> {
+    let mut sequence = Vec::with_capacity(output_size + 1);
+    let alpha = input_size as f64 / output_size as f64;
+
+    for i in 0..=output_size {
+        let idx = (alpha * i as f64).round() as usize;
+        sequence.push(idx.min(input_size));
+    }
+
+    // Ensure last element is input_size
+    if let Some(last) = sequence.last_mut() {
+        *last = input_size;
+    }
+
+    sequence
+}
