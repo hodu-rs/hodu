@@ -70,8 +70,8 @@
 - [x] Implement CosineEmbeddingLoss
 
 **Optimizers:** (🟡 Important)
-- [ ] Implement RMSprop
-- [ ] Implement Adagrad
+- [x] Implement RMSprop
+- [x] Implement Adagrad
 
 **DataSet**
 - [x] Implement Dataset

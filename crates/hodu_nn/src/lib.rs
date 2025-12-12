@@ -27,7 +27,9 @@ pub use modules::{
     rnn::{GRUCell, LSTMCell, Nonlinearity, RNNCell, GRU, LSTM, RNN},
 };
 pub use optimizers::{
+    adagrad::Adagrad,
     adam::{Adam, AdamW},
+    rmsprop::RMSprop,
     sgd::SGD,
 };
 

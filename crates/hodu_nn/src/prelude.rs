@@ -20,5 +20,10 @@ pub use crate::modules::{
     rnn::{Nonlinearity, GRU, LSTM, RNN},
 };
 pub use crate::optimizer::Optimizer;
-pub use crate::optimizers::adam::{Adam, AdamW};
+pub use crate::optimizers::{
+    adagrad::Adagrad,
+    adam::{Adam, AdamW},
+    rmsprop::RMSprop,
+    sgd::SGD,
+};
 pub use crate::{eval, train};
