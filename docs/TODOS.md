@@ -16,7 +16,7 @@
 
 **Tensor Creation & Initialization:** (🔴 Critical)
 - [ ] Implement initialization functions (xavier_uniform, xavier_normal, kaiming_uniform, kaiming_normal)
-- [ ] Implement basic creation ops (eye, arange, linspace, uniform, normal)
+- [x] Implement basic creation ops (eye, arange, linspace, uniform, normal)
 
 **ONNX Compatibility - Tensor Operations:** (🔴 Critical)
 - [x] Implement padding operations (pad_constant, pad_reflect, pad_replicate, pad_circular)

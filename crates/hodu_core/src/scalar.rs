@@ -307,6 +307,58 @@ impl Scalar {
         }
     }
 
+    pub fn from_usize(value: usize, dtype: DType) -> Self {
+        match dtype {
+            DType::BOOL => Self::BOOL(value != 0),
+            DType::F8E4M3 => Self::F8E4M3(F8E4M3::from_f32(value as f32)),
+            #[cfg(feature = "f8e5m2")]
+            DType::F8E5M2 => Self::F8E5M2(F8E5M2::from_f32(value as f32)),
+            DType::BF16 => Self::BF16(bf16::from_f32(value as f32)),
+            DType::F16 => Self::F16(f16::from_f32(value as f32)),
+            DType::F32 => Self::F32(value as f32),
+            #[cfg(feature = "f64")]
+            DType::F64 => Self::F64(value as f64),
+            DType::U8 => Self::U8(value as u8),
+            #[cfg(feature = "u16")]
+            DType::U16 => Self::U16(value as u16),
+            DType::U32 => Self::U32(value as u32),
+            #[cfg(feature = "u64")]
+            DType::U64 => Self::U64(value as u64),
+            DType::I8 => Self::I8(value as i8),
+            #[cfg(feature = "i16")]
+            DType::I16 => Self::I16(value as i16),
+            DType::I32 => Self::I32(value as i32),
+            #[cfg(feature = "i64")]
+            DType::I64 => Self::I64(value as i64),
+        }
+    }
+
+    pub fn from_isize(value: isize, dtype: DType) -> Self {
+        match dtype {
+            DType::BOOL => Self::BOOL(value != 0),
+            DType::F8E4M3 => Self::F8E4M3(F8E4M3::from_f32(value as f32)),
+            #[cfg(feature = "f8e5m2")]
+            DType::F8E5M2 => Self::F8E5M2(F8E5M2::from_f32(value as f32)),
+            DType::BF16 => Self::BF16(bf16::from_f32(value as f32)),
+            DType::F16 => Self::F16(f16::from_f32(value as f32)),
+            DType::F32 => Self::F32(value as f32),
+            #[cfg(feature = "f64")]
+            DType::F64 => Self::F64(value as f64),
+            DType::U8 => Self::U8(value as u8),
+            #[cfg(feature = "u16")]
+            DType::U16 => Self::U16(value as u16),
+            DType::U32 => Self::U32(value as u32),
+            #[cfg(feature = "u64")]
+            DType::U64 => Self::U64(value as u64),
+            DType::I8 => Self::I8(value as i8),
+            #[cfg(feature = "i16")]
+            DType::I16 => Self::I16(value as i16),
+            DType::I32 => Self::I32(value as i32),
+            #[cfg(feature = "i64")]
+            DType::I64 => Self::I64(value as i64),
+        }
+    }
+
     #[inline]
     pub fn dtype(&self) -> DType {
         match self {
