@@ -47,8 +47,8 @@
 - [x] Implement GRU
 
 **Attention Layers:** (🔴 Critical)
-- [ ] Implement MultiheadAttention
-- [ ] Implement ScaledDotProductAttention
+- [x] Implement MultiheadAttention
+- [x] Implement ScaledDotProductAttention
 
 **Pooling Layers:**
 - [x] Implement pooling layers

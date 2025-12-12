@@ -9,6 +9,7 @@ pub use crate::losses::{
 pub use crate::module::Module;
 pub use crate::modules::{
     activation::*,
+    attention::{scaled_dot_product_attention, MultiheadAttention},
     conv::Conv2D,
     dropout::Dropout,
     embedding::Embedding,

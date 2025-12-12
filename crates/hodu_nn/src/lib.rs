@@ -14,6 +14,7 @@ pub use losses::{
 };
 pub use modules::{
     activation::*,
+    attention::{scaled_dot_product_attention, MultiheadAttention},
     conv::{Conv1D, Conv2D, Conv3D, ConvTranspose1D, ConvTranspose2D, ConvTranspose3D},
     dropout::Dropout,
     embedding::Embedding,

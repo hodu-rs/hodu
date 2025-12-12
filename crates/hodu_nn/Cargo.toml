@@ -11,6 +11,14 @@ repository = "https://github.com/daminstudio/hodu"
 [features]
 serde = ["hodu_core/serde"]
 
+# optional dtype
+f8e5m2 = ["hodu_core/f8e5m2"]
+f64 = ["hodu_core/f64"]
+u16 = ["hodu_core/u16"]
+u64 = ["hodu_core/u64"]
+i16 = ["hodu_core/i16"]
+i64 = ["hodu_core/i64"]
+
 [dependencies]
 hodu_core = { workspace = true }
 hodu_nn_macros = { workspace = true }
