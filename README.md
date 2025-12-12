@@ -53,9 +53,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### [hodu-plugin-sdk](./hodu-plugin-sdk/README.md)
+### [hodu/plugin-sdk](./hodu-plugin-sdk/README.md)
 
-[![hodu-plugin-sdk](https://img.shields.io/crates/v/hodu-plugin-sdk.svg?label=hodu-plugin-sdk)](https://crates.io/crates/hodu-plugin-sdk)
+[![hodu-plugin-sdk](https://img.shields.io/crates/v/hodu-plugin-sdk.svg?label=hodu/plugin-sdk)](https://crates.io/crates/hodu-plugin-sdk)
 
 Build your own format/backend plugins. JSON-RPC over stdio.
 
