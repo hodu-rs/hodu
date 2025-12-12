@@ -4,7 +4,8 @@
 
 // Re-export
 pub use crate::losses::{
-    binary_cross_entropy::BCEWithLogitsLoss, cross_entropy::CrossEntropyLoss, mae::MAELoss, mse::MSELoss,
+    binary_cross_entropy::BCEWithLogitsLoss, cosine_embedding::CosineEmbeddingLoss, cross_entropy::CrossEntropyLoss,
+    kl_div::KLDivLoss, mae::MAELoss, mse::MSELoss, smooth_l1::SmoothL1Loss,
 };
 pub use crate::module::Module;
 pub use crate::modules::{

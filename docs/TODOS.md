@@ -65,9 +65,9 @@
 - [x] Implement PReLU, RReLU
 
 **Loss Functions:** (🟡 Important)
-- [ ] Implement SmoothL1Loss
-- [ ] Implement KLDivLoss
-- [ ] Implement CosineEmbeddingLoss
+- [x] Implement SmoothL1Loss
+- [x] Implement KLDivLoss
+- [x] Implement CosineEmbeddingLoss
 
 **Optimizers:** (🟡 Important)
 - [ ] Implement RMSprop

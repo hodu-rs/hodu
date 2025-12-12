@@ -1,6 +1,9 @@
 pub mod binary_cross_entropy;
+pub mod cosine_embedding;
 pub mod cross_entropy;
 pub mod huber;
+pub mod kl_div;
 pub mod mae;
 pub mod mse;
 pub mod nll;
+pub mod smooth_l1;
