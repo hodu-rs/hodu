@@ -69,6 +69,34 @@ fn run_unary_scalar<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input
     result
 }
 
+fn run_unary_to_bool<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T]) -> Vec<bool> {
+    let kernels = kernels();
+
+    let device = device();
+    let stream = device.default_stream();
+
+    let input_dev = stream.memcpy_stod(input).unwrap();
+    let mut output = unsafe { stream.alloc::<bool>(input.len()).unwrap() };
+
+    let shape = vec![input.len()];
+    let strides = vec![1];
+    let num_els = input.len();
+    let num_dims = 1;
+
+    let mut metadata = Vec::new();
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
+
+    call_ops_unary::<T, bool>(kernel, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
+
+    let mut result = vec![false; input.len()];
+    stream.memcpy_dtoh(&output, &mut result).unwrap();
+    result
+}
+
 fn run_unary_logical<T: cudarc::driver::DeviceRepr + Clone>(kernel: Kernel, input: &[T], scalar: T) -> Vec<bool> {
     let kernels = kernels();
 
@@ -515,4 +543,35 @@ fn unary_hardsilu_f32() {
     let results = run_unary(hardsilu::F32, &input);
     let expected: Vec<f32> = input.iter().map(|x| x * ((x + 3.0) / 6.0).clamp(0.0, 1.0)).collect();
     assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+// Float check operations
+#[test]
+fn unary_isnan_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, nan];
+    let results = run_unary_to_bool(isnan::F32, &input);
+    assert_eq!(results, vec![false, false, true, false, false, true]);
+}
+
+#[test]
+fn unary_isinf_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, 100.0];
+    let results = run_unary_to_bool(isinf::F32, &input);
+    assert_eq!(results, vec![false, false, false, true, true, false]);
+}
+
+#[test]
+fn unary_isfinite_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, -100.0];
+    let results = run_unary_to_bool(isfinite::F32, &input);
+    assert_eq!(results, vec![true, true, false, false, false, true]);
 }

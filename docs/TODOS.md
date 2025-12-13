@@ -43,8 +43,8 @@
 - [x] Implement nonzero (ONNX: NonZero)
 - [x] Implement onehot (ONNX: OneHot)
 - [x] Implement rem (ONNX: Mod)
-- [ ] Implement isnan (ONNX: IsNaN) - check for NaN values
-- [ ] Implement isinf (ONNX: IsInf) - check for Inf values
+- [x] Implement isnan (ONNX: IsNaN) - check for NaN values
+- [x] Implement isinf (ONNX: IsInf) - check for Inf values
 - [ ] Implement unique (ONNX: Unique) - find unique elements
 - [x] Implement reduce_logsumexp (ONNX: ReduceLogSumExp) - numerically stable log(sum(exp(x)))
 

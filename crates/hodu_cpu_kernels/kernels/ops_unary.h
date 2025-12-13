@@ -7,7 +7,7 @@
  * - Activation functions: relu, sigmoid, tanh, gelu, softplus, silu, mish
  * - Trigonometric: sin, cos, tan
  * - Exponential/logarithmic: exp, exp2, exp10, ln, log2, log10
- * - Logical: logical_not
+ * - Logical: logical_not, isnan, isinf, isfinite
  * - Scalar operations: arithmetic (add, sub, mul, div, pow, max, min) and comparison (eq, ne, lt,
  * le, gt, ge)
  *
@@ -154,6 +154,22 @@ extern "C" {
                                             const size_t *metadata);
 
 /**
+ * @brief Macro to declare float check operations
+ *
+ * Declares functions for checking special float values:
+ * - isnan: Check if value is NaN (returns 1 if NaN, else 0)
+ * - isinf: Check if value is infinite (returns 1 if ±inf, else 0)
+ * - isfinite: Check if value is finite (returns 1 if not NaN and not inf, else 0)
+ *
+ * Output type is always bool (uint8_t), regardless of input type.
+ * Available for float types only (f8e4m3, f8e5m2, bf16, f16, f32, f64).
+ */
+#define DECLARE_UNARY_FLOAT_CHECK(TYPE_SUFFIX)                                                     \
+    void hodu_cpu_isnan_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);    \
+    void hodu_cpu_isinf_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);    \
+    void hodu_cpu_isfinite_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+
+/**
  * @brief Macro to declare scalar arithmetic operations
  *
  * Declares functions that combine each tensor element with a scalar value:
@@ -228,6 +244,7 @@ DECLARE_UNARY_ACTIVATION(f8e4m3)
 DECLARE_UNARY_TRIG(f8e4m3)
 DECLARE_UNARY_EXP(f8e4m3)
 DECLARE_UNARY_LOGICAL(f8e4m3)
+DECLARE_UNARY_FLOAT_CHECK(f8e4m3)
 DECLARE_UNARY_WITH_SCALAR(f8e4m3)
 DECLARE_UNARY_CMP_SCALAR(f8e4m3)
 
@@ -236,6 +253,7 @@ DECLARE_UNARY_ACTIVATION(f8e5m2)
 DECLARE_UNARY_TRIG(f8e5m2)
 DECLARE_UNARY_EXP(f8e5m2)
 DECLARE_UNARY_LOGICAL(f8e5m2)
+DECLARE_UNARY_FLOAT_CHECK(f8e5m2)
 DECLARE_UNARY_WITH_SCALAR(f8e5m2)
 DECLARE_UNARY_CMP_SCALAR(f8e5m2)
 
@@ -244,6 +262,7 @@ DECLARE_UNARY_ACTIVATION(bf16)
 DECLARE_UNARY_TRIG(bf16)
 DECLARE_UNARY_EXP(bf16)
 DECLARE_UNARY_LOGICAL(bf16)
+DECLARE_UNARY_FLOAT_CHECK(bf16)
 DECLARE_UNARY_WITH_SCALAR(bf16)
 DECLARE_UNARY_CMP_SCALAR(bf16)
 
@@ -252,6 +271,7 @@ DECLARE_UNARY_ACTIVATION(f16)
 DECLARE_UNARY_TRIG(f16)
 DECLARE_UNARY_EXP(f16)
 DECLARE_UNARY_LOGICAL(f16)
+DECLARE_UNARY_FLOAT_CHECK(f16)
 DECLARE_UNARY_WITH_SCALAR(f16)
 DECLARE_UNARY_CMP_SCALAR(f16)
 
@@ -260,6 +280,7 @@ DECLARE_UNARY_ACTIVATION(f32)
 DECLARE_UNARY_TRIG(f32)
 DECLARE_UNARY_EXP(f32)
 DECLARE_UNARY_LOGICAL(f32)
+DECLARE_UNARY_FLOAT_CHECK(f32)
 DECLARE_UNARY_WITH_SCALAR(f32)
 DECLARE_UNARY_CMP_SCALAR(f32)
 
@@ -268,6 +289,7 @@ DECLARE_UNARY_ACTIVATION(f64)
 DECLARE_UNARY_TRIG(f64)
 DECLARE_UNARY_EXP(f64)
 DECLARE_UNARY_LOGICAL(f64)
+DECLARE_UNARY_FLOAT_CHECK(f64)
 DECLARE_UNARY_WITH_SCALAR(f64)
 DECLARE_UNARY_CMP_SCALAR(f64)
 

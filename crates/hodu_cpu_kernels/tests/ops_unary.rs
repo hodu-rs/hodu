@@ -453,6 +453,37 @@ fn test_logical_not_f32() {
     assert_eq!(output, vec![1, 0, 0, 1]);
 }
 
+// float check operations
+#[test]
+fn test_isnan_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, nan];
+    let output = run_unary_to_bool(&input, isnan::F32);
+    assert_eq!(output, vec![0, 0, 1, 0, 0, 1]);
+}
+
+#[test]
+fn test_isinf_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, 100.0];
+    let output = run_unary_to_bool(&input, isinf::F32);
+    assert_eq!(output, vec![0, 0, 0, 1, 1, 0]);
+}
+
+#[test]
+fn test_isfinite_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, -100.0];
+    let output = run_unary_to_bool(&input, isfinite::F32);
+    assert_eq!(output, vec![1, 1, 0, 0, 0, 1]);
+}
+
 // unary with scalar - arithmetic
 #[test]
 fn test_add_scalar_f32() {

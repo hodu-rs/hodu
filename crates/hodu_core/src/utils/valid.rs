@@ -200,9 +200,19 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             },
         },
 
-        // Unary logical operations - all types supported
-        Op::UnaryLogical(_) => {
-            // All types supported
+        // Unary logical operations
+        Op::UnaryLogical(inner_op) => match inner_op {
+            crate::ops::UnaryLogicalOp::LogicalNot => {
+                // All types supported
+            },
+            crate::ops::UnaryLogicalOp::IsNan
+            | crate::ops::UnaryLogicalOp::IsInf
+            | crate::ops::UnaryLogicalOp::IsFinite => {
+                // Float types only
+                if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
+                    return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+                }
+            },
         },
 
         // Unary with scalar

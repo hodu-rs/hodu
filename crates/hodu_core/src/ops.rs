@@ -235,12 +235,18 @@ impl fmt::Debug for UnaryOp {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UnaryLogicalOp {
     LogicalNot, // no-backprop
+    IsNan,      // no-backprop
+    IsInf,      // no-backprop
+    IsFinite,   // no-backprop
 }
 
 impl fmt::Display for UnaryLogicalOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::LogicalNot => write!(f, "logical_not"),
+            Self::IsNan => write!(f, "isnan"),
+            Self::IsInf => write!(f, "isinf"),
+            Self::IsFinite => write!(f, "isfinite"),
         }
     }
 }

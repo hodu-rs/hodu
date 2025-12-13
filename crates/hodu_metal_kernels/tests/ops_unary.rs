@@ -101,6 +101,44 @@ fn run_scalar<T: Clone + EncoderParam>(v: &[T], kernel: Kernel, scalar: T) -> Ve
     read_to_vec(&output, v.len())
 }
 
+fn run_to_bool<T: Clone>(v: &[T], kernel: Kernel) -> Vec<bool> {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    let options = RESOURCE_OPTIONS;
+    let input = new_buffer(&device, v);
+    let output = device
+        .new_buffer(v.len() * std::mem::size_of::<bool>(), options)
+        .unwrap();
+
+    let shape = vec![v.len()];
+    let strides = vec![1];
+    let num_els = v.len();
+    let num_dims = shape.len();
+
+    let mut metadata = Vec::with_capacity(2 + num_dims * 2 + 1);
+    metadata.push(num_els);
+    metadata.push(num_dims);
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0); // offset
+
+    call_ops_unary(
+        kernel,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input),
+        &output,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+    read_to_vec(&output, v.len())
+}
+
 fn run_scalar_logical<T: Clone + EncoderParam>(v: &[T], kernel: Kernel, scalar: T) -> Vec<bool> {
     let device = device();
     let kernels = Kernels::new();
@@ -556,4 +594,35 @@ fn unary_prelu_f32() {
     let results = run_scalar(&input, prelu::F32, alpha);
     let expected: Vec<f32> = input.iter().map(|x| if *x > 0.0 { *x } else { alpha * x }).collect();
     assert_eq!(approx(results, 6), approx(expected, 6));
+}
+
+// Float check operations
+#[test]
+fn unary_isnan_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, nan];
+    let results = run_to_bool(&input, isnan::F32);
+    assert_eq!(results, vec![false, false, true, false, false, true]);
+}
+
+#[test]
+fn unary_isinf_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, 100.0];
+    let results = run_to_bool(&input, isinf::F32);
+    assert_eq!(results, vec![false, false, false, true, true, false]);
+}
+
+#[test]
+fn unary_isfinite_f32() {
+    let nan = f32::NAN;
+    let inf = f32::INFINITY;
+    let neg_inf = f32::NEG_INFINITY;
+    let input = vec![0.0f32, 1.0, nan, inf, neg_inf, -100.0];
+    let results = run_to_bool(&input, isfinite::F32);
+    assert_eq!(results, vec![true, true, false, false, false, true]);
 }

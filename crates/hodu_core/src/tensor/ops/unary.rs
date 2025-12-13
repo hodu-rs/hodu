@@ -219,6 +219,9 @@ impl Tensor {
 
     // unary logical operations
     unary_logical_op!(logical_not, LogicalNot);
+    unary_logical_op!(isnan, IsNan);
+    unary_logical_op!(isinf, IsInf);
+    unary_logical_op!(isfinite, IsFinite);
 
     // unary scalar operations
     unary_scalar_op!(add_scalar, AddScalar);

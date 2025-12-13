@@ -5,7 +5,7 @@
 //! - Activation functions: relu, sigmoid, tanh, gelu, softplus, silu, mish
 //! - Trigonometric: sin, cos, tan
 //! - Exponential/logarithmic: exp, exp2, exp10, ln, log2, log10
-//! - Logical: logical_not
+//! - Logical: logical_not, isnan, isinf, isfinite
 //! - Scalar operations: arithmetic and comparison operations with a scalar value
 //!
 //! All operations support strided tensor access and multiple data types.
@@ -55,6 +55,9 @@ ops!(
     round,
     erf,
     logical_not,
+    isnan,
+    isinf,
+    isfinite,
     add_scalar,
     sub_scalar,
     mul_scalar,
@@ -314,7 +317,8 @@ declare_and_dispatch_unary!(
         sinh, cosh, tanh, asinh, acosh, atanh,
         exp, exp2, exp10, ln, log2, log10,
         ceil, floor, round,
-        erf
+        erf,
+        isnan, isinf, isfinite
     ],
     scalar_ops: [
         add_scalar, sub_scalar, mul_scalar, div_scalar, pow_scalar,

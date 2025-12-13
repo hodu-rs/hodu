@@ -738,6 +738,11 @@ IMPL_UNARY_OP(f32_t, f32, erf, erff(x))
 // Logical operations
 IMPL_UNARY_TO_BOOL(f32_t, f32, logical_not, x == 0.0f)
 
+// Float check operations
+IMPL_UNARY_TO_BOOL(f32_t, f32, isnan, isnan(x))
+IMPL_UNARY_TO_BOOL(f32_t, f32, isinf, isinf(x))
+IMPL_UNARY_TO_BOOL(f32_t, f32, isfinite, isfinite(x))
+
 // Scalar arithmetic operations
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f32_t, f32, sub_scalar, x - const_val)
@@ -1100,6 +1105,11 @@ IMPL_UNARY_OP(f64_t, f64, erf, erf(x))
 
 IMPL_UNARY_TO_BOOL(f64_t, f64, logical_not, x == 0.0)
 
+// Float check operations
+IMPL_UNARY_TO_BOOL(f64_t, f64, isnan, isnan(x))
+IMPL_UNARY_TO_BOOL(f64_t, f64, isinf, isinf(x))
+IMPL_UNARY_TO_BOOL(f64_t, f64, isfinite, isfinite(x))
+
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, add_scalar, x + const_val)
 IMPL_UNARY_WITH_SCALAR(f64_t, f64, sub_scalar, x - const_val)
 
@@ -1263,6 +1273,11 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, erf, erff(x), f8e4m3_to_float, float_to_
 
 IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, logical_not, x == 0.0f, f8e4m3_to_float)
 
+// Float check operations
+IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, isnan, isnan(x), f8e4m3_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, isinf, isinf(x), f8e4m3_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f8e4m3_t, f8e4m3, isfinite, isfinite(x), f8e4m3_to_float)
+
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, add_scalar, x + const_val, f8e4m3_to_float,
                                float_to_f8e4m3)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e4m3_t, f8e4m3, sub_scalar, x - const_val, f8e4m3_to_float,
@@ -1344,6 +1359,11 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, erf, erff(x), f8e5m2_to_float, float_to_
 
 IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, logical_not, x == 0.0f, f8e5m2_to_float)
 
+// Float check operations
+IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, isnan, isnan(x), f8e5m2_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, isinf, isinf(x), f8e5m2_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f8e5m2_t, f8e5m2, isfinite, isfinite(x), f8e5m2_to_float)
+
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, add_scalar, x + const_val, f8e5m2_to_float,
                                float_to_f8e5m2)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f8e5m2_t, f8e5m2, sub_scalar, x - const_val, f8e5m2_to_float,
@@ -1420,6 +1440,11 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, erf, erff(x), bf16_to_float, float_to_bf16)
 
 IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, logical_not, x == 0.0f, bf16_to_float)
 
+// Float check operations
+IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, isnan, isnan(x), bf16_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, isinf, isinf(x), bf16_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(bf16_t, bf16, isfinite, isfinite(x), bf16_to_float)
+
 IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, add_scalar, x + const_val, bf16_to_float,
                                float_to_bf16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(bf16_t, bf16, sub_scalar, x - const_val, bf16_to_float,
@@ -1494,6 +1519,11 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, round, roundf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, erf, erff(x), f16_to_float, float_to_f16)
 
 IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, logical_not, x == 0.0f, f16_to_float)
+
+// Float check operations
+IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, isnan, isnan(x), f16_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, isinf, isinf(x), f16_to_float)
+IMPL_UNARY_TO_BOOL_CONVERT(f16_t, f16, isfinite, isfinite(x), f16_to_float)
 
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, add_scalar, x + const_val, f16_to_float, float_to_f16)
 IMPL_UNARY_WITH_SCALAR_CONVERT(f16_t, f16, sub_scalar, x - const_val, f16_to_float, float_to_f16)

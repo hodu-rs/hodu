@@ -287,6 +287,11 @@ UNARY_OP(bfloat, erf_bf16, bfloat(m_erf(float(x))));
 // unary logical
 UNARY_OP_OUTPUT(bfloat, bool, logical_not_bf16, float(x) == 0.0f);
 
+// float check operations
+UNARY_OP_OUTPUT(bfloat, bool, isnan_bf16, isnan(float(x)));
+UNARY_OP_OUTPUT(bfloat, bool, isinf_bf16, isinf(float(x)));
+UNARY_OP_OUTPUT(bfloat, bool, isfinite_bf16, isfinite(float(x)));
+
 // unary with scalar - arithmetic
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, add_scalar_bf16, x + const_val);
 UNARY_OP_WITH_CONSTANT(bfloat, bfloat, sub_scalar_bf16, x - const_val);
@@ -377,6 +382,11 @@ UNARY_OP(half, erf_f16, half(m_erf(float(x))));
 // unary logical
 UNARY_OP_OUTPUT(half, bool, logical_not_f16, float(x) == 0.0f);
 
+// float check operations
+UNARY_OP_OUTPUT(half, bool, isnan_f16, isnan(float(x)));
+UNARY_OP_OUTPUT(half, bool, isinf_f16, isinf(float(x)));
+UNARY_OP_OUTPUT(half, bool, isfinite_f16, isfinite(float(x)));
+
 // unary with scalar - arithmetic
 UNARY_OP_WITH_CONSTANT(half, half, add_scalar_f16, x + const_val);
 UNARY_OP_WITH_CONSTANT(half, half, sub_scalar_f16, x - const_val);
@@ -460,6 +470,11 @@ UNARY_OP(float, erf_f32, m_erf(x));
 
 // unary logical
 UNARY_OP_OUTPUT(float, bool, logical_not_f32, x == 0.0f);
+
+// float check operations
+UNARY_OP_OUTPUT(float, bool, isnan_f32, isnan(x));
+UNARY_OP_OUTPUT(float, bool, isinf_f32, isinf(x));
+UNARY_OP_OUTPUT(float, bool, isfinite_f32, isfinite(x));
 
 // unary with scalar - arithmetic
 UNARY_OP_WITH_CONSTANT(float, float, add_scalar_f32, x + const_val);

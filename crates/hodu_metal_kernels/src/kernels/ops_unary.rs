@@ -56,6 +56,9 @@ ops!(
     round,
     erf,
     logical_not,
+    isnan,
+    isinf,
+    isfinite,
     add_scalar,
     sub_scalar,
     mul_scalar,
@@ -129,6 +132,9 @@ ops!(
 ///
 /// ## Logical
 /// - `logical_not`: Logical NOT
+/// - `isnan`: Check if NaN
+/// - `isinf`: Check if infinite
+/// - `isfinite`: Check if finite
 ///
 /// # Example
 /// ```ignore
