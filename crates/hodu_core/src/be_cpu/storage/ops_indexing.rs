@@ -582,41 +582,10 @@ pub fn call_ops_onehot(
         },
     };
 
-    let input_shape = indices_layout.shape();
-    let num_dims_in = input_shape.ndim();
-    let num_input_els = input_shape.size();
-
-    // Compute output shape: insert num_classes at axis position
-    let mut output_shape_vec = Vec::with_capacity(num_dims_in + 1);
-    for (i, &dim) in input_shape.dims().iter().enumerate() {
-        if i == axis {
-            output_shape_vec.push(num_classes);
-        }
-        output_shape_vec.push(dim);
-    }
-    // If axis == num_dims_in (last position)
-    if axis == num_dims_in {
-        output_shape_vec.push(num_classes);
-    }
-
+    // Generate metadata and output shape using common function
+    let (metadata, output_shape_vec) = crate::op_metadatas::onehot_metadata(indices_layout, num_classes, axis);
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
-    let num_dims_out = output_shape.ndim();
-
-    // Generate metadata
-    // - metadata[0]: num_els (total number of output elements)
-    // - metadata[1]: num_input_els (total number of input indices)
-    // - metadata[2]: num_classes (depth of one-hot dimension)
-    // - metadata[3]: axis (dimension for one-hot encoding)
-    // - metadata[4]: num_dims_out (number of output dimensions)
-    // - metadata[5..5+num_dims_out]: output_shape
-    let mut metadata = Vec::with_capacity(5 + num_dims_out);
-    metadata.push(num_els);
-    metadata.push(num_input_els);
-    metadata.push(num_classes);
-    metadata.push(axis);
-    metadata.push(num_dims_out);
-    metadata.extend_from_slice(output_shape.dims());
 
     // Generate kernel name
     let kernel_name = format!("hodu_cpu_onehot_{}", output_dtype);
@@ -674,22 +643,10 @@ pub fn call_ops_onehot(
 /// the indices of non-zero elements, and count is the number of non-zero elements
 pub fn call_nonzero(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuStorage, usize)> {
     let dtype = storage.dtype();
-    let shape = layout.shape();
-    let ndim = shape.ndim();
-    let num_els = shape.size();
+    let ndim = layout.ndim();
 
-    // Build metadata:
-    // - metadata[0]: num_els (total number of elements in input)
-    // - metadata[1]: num_dims (number of dimensions)
-    // - metadata[2..2+num_dims]: input_shape
-    // - metadata[2+num_dims..2+2*num_dims]: input_strides
-    // - metadata[2+2*num_dims]: input_offset
-    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
-    metadata.push(num_els);
-    metadata.push(ndim);
-    metadata.extend_from_slice(shape.dims());
-    metadata.extend_from_slice(layout.strides());
-    metadata.push(layout.offset());
+    // Generate metadata using common function
+    let metadata = crate::op_metadatas::nonzero_metadata(layout);
 
     // Generate kernel names
     let count_kernel_name = format!("hodu_cpu_nonzero_count_{}", dtype);
@@ -735,7 +692,6 @@ pub fn call_unique(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuStor
 
     let dtype = storage.dtype();
     let num_els = layout.size();
-    let ndim = layout.ndim();
 
     if num_els == 0 {
         let values = CpuDevice::allocate(0, dtype)?;
@@ -744,17 +700,8 @@ pub fn call_unique(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuStor
         return Ok((values, inverse, counts, 0));
     }
 
-    // Build metadata
-    let shape = layout.shape();
-    let strides = layout.strides();
-    let offset = layout.offset();
-
-    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
-    metadata.push(num_els);
-    metadata.push(ndim);
-    metadata.extend(shape.dims());
-    metadata.extend(strides);
-    metadata.push(offset);
+    // Generate metadata using common function
+    let metadata = crate::op_metadatas::unique_metadata(layout);
 
     // Get kernel name based on dtype
     let kernel = match dtype {

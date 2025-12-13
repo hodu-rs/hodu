@@ -1,4 +1,5 @@
 // Define Kernel type once, shared across all modules
+#[derive(Clone, Copy)]
 pub struct Kernel(pub &'static str);
 
 macro_rules! ops{

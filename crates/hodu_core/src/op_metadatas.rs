@@ -7,6 +7,11 @@
 //! - JIT compilation
 //!
 //! Each operation type has a specific metadata format that matches the kernel expectations.
+//!
+//! Order follows ops.rs enum definitions:
+//! Binary -> BinaryLogical -> Cmp -> CmpScalar -> Unary -> UnaryLogical -> UnaryScalar
+//! -> Matrix -> Reduce -> Concat -> Split -> Indexing -> Conv -> Windowing -> Resize
+//! -> Padding -> Scan -> Sort -> Einsum -> ShapeMemory -> Cast -> Memory
 
 use crate::{
     error::{HoduError, HoduResult},
@@ -712,6 +717,121 @@ pub fn scatter_metadata(layout: &Layout, indices_layout: &Layout, src_layout: &L
     metadata
 }
 
+/// Generate metadata for onehot operations
+///
+/// Format:
+/// - metadata[0]: num_els (total number of output elements)
+/// - metadata[1]: num_input_els (total number of input indices)
+/// - metadata[2]: num_classes (depth of one-hot dimension)
+/// - metadata[3]: axis (dimension for one-hot encoding)
+/// - metadata[4]: num_dims_out (number of output dimensions)
+/// - metadata[5..5+num_dims_out]: output_shape
+pub fn onehot_metadata(indices_layout: &Layout, num_classes: usize, axis: usize) -> (Vec<usize>, Vec<usize>) {
+    let input_shape = indices_layout.shape();
+    let num_dims_in = input_shape.ndim();
+    let num_input_els = input_shape.size();
+
+    // Compute output shape: insert num_classes at axis position
+    let mut output_shape_vec = Vec::with_capacity(num_dims_in + 1);
+    for (i, &dim) in input_shape.dims().iter().enumerate() {
+        if i == axis {
+            output_shape_vec.push(num_classes);
+        }
+        output_shape_vec.push(dim);
+    }
+    // If axis == num_dims_in (last position)
+    if axis == num_dims_in {
+        output_shape_vec.push(num_classes);
+    }
+
+    let num_els: usize = output_shape_vec.iter().product();
+    let num_dims_out = output_shape_vec.len();
+
+    let mut metadata = Vec::with_capacity(5 + num_dims_out);
+    metadata.push(num_els);
+    metadata.push(num_input_els);
+    metadata.push(num_classes);
+    metadata.push(axis);
+    metadata.push(num_dims_out);
+    metadata.extend_from_slice(&output_shape_vec);
+
+    (metadata, output_shape_vec)
+}
+
+/// Generate metadata for nonzero operations
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements in input)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: input_shape
+/// - metadata[2+num_dims..2+2*num_dims]: input_strides
+/// - metadata[2+2*num_dims]: input_offset
+pub fn nonzero_metadata(layout: &Layout) -> Vec<usize> {
+    let shape = layout.shape();
+    let ndim = shape.ndim();
+    let num_els = shape.size();
+
+    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
+    metadata.push(num_els);
+    metadata.push(ndim);
+    metadata.extend_from_slice(shape.dims());
+    metadata.extend_from_slice(layout.strides());
+    metadata.push(layout.offset());
+
+    metadata
+}
+
+/// Generate metadata for unique operations (CPU version with strided access)
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: shape
+/// - metadata[2+num_dims..2+2*num_dims]: strides
+/// - metadata[2+2*num_dims]: offset
+pub fn unique_metadata(layout: &Layout) -> Vec<usize> {
+    let shape = layout.shape();
+    let ndim = shape.ndim();
+    let num_els = shape.size();
+
+    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
+    metadata.push(num_els);
+    metadata.push(ndim);
+    metadata.extend_from_slice(shape.dims());
+    metadata.extend_from_slice(layout.strides());
+    metadata.push(layout.offset());
+
+    metadata
+}
+
+/// Generate metadata for unique operations (GPU version with bitonic sort)
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: offset (input offset)
+/// - metadata[2]: padded_size (next power of 2 for bitonic sort)
+pub fn unique_sort_metadata(layout: &Layout) -> Vec<usize> {
+    let num_els = layout.size();
+    let padded_size = num_els.next_power_of_two();
+
+    vec![num_els, layout.offset(), padded_size]
+}
+
+/// Generate metadata for unique bitonic sort step (GPU only)
+///
+/// Format:
+/// - metadata[0]: num_els (total number of elements)
+/// - metadata[1]: offset (input offset)
+/// - metadata[2]: padded_size (next power of 2 for bitonic sort)
+/// - metadata[3]: k (bitonic parameter)
+/// - metadata[4]: j (bitonic parameter)
+pub fn unique_bitonic_step_metadata(layout: &Layout, k: usize, j: usize) -> Vec<usize> {
+    let num_els = layout.size();
+    let padded_size = num_els.next_power_of_two();
+
+    vec![num_els, layout.offset(), padded_size, k, j]
+}
+
 // ============================================================================
 // Conv Operations
 // ============================================================================
@@ -979,6 +1099,65 @@ pub fn reduce_window_metadata(
     for &dim in output_shape {
         metadata.push(dim);
     }
+
+    metadata
+}
+
+// ============================================================================
+// Resize Operations
+// ============================================================================
+
+/// Generate metadata for resize operations (spatial interpolation)
+///
+/// Format:
+/// - metadata[0]: output_size (total number of elements in output)
+/// - metadata[1]: num_dims (number of dimensions, typically 4 for NCHW or 5 for NCDHW)
+/// - metadata[2..2+num_dims]: input_shape
+/// - metadata[2+num_dims..2+2*num_dims]: input_strides
+/// - metadata[2+2*num_dims]: offset
+/// - metadata[3+2*num_dims..3+3*num_dims]: output_shape
+/// - metadata[3+3*num_dims]: mode (0=nearest, 1=linear, 2=cubic)
+/// - metadata[4+3*num_dims]: coord_transform (0=half_pixel, 1=asymmetric, 2=align_corners, 3=pytorch_half_pixel)
+/// - metadata[5+3*num_dims]: nearest_mode (0=floor, 1=ceil, 2=round_prefer_floor, 3=round_prefer_ceil)
+pub fn resize_metadata(
+    layout: &Layout,
+    output_shape: &[usize],
+    mode: usize,
+    coord_transform: usize,
+    nearest_mode: usize,
+) -> Vec<usize> {
+    let input_shape = layout.shape();
+    let num_dims = input_shape.ndim();
+    let output_size: usize = output_shape.iter().product();
+
+    let mut metadata = Vec::with_capacity(6 + 3 * num_dims);
+
+    // output_size, num_dims
+    metadata.push(output_size);
+    metadata.push(num_dims);
+
+    // input_shape
+    for &dim in input_shape.dims() {
+        metadata.push(dim);
+    }
+
+    // input_strides
+    for &stride in layout.strides() {
+        metadata.push(stride);
+    }
+
+    // offset
+    metadata.push(layout.offset());
+
+    // output_shape
+    for &dim in output_shape {
+        metadata.push(dim);
+    }
+
+    // mode, coord_transform, nearest_mode
+    metadata.push(mode);
+    metadata.push(coord_transform);
+    metadata.push(nearest_mode);
 
     metadata
 }
@@ -1277,63 +1456,4 @@ pub fn cast_metadata(layout: &Layout) -> Vec<usize> {
 /// - metadata[2+2*num_dims]: offset
 pub fn contiguous_metadata(layout: &Layout) -> Vec<usize> {
     cast_metadata(layout)
-}
-
-// ============================================================================
-// Resize Operations
-// ============================================================================
-
-/// Generate metadata for resize operations (spatial interpolation)
-///
-/// Format:
-/// - metadata[0]: output_size (total number of elements in output)
-/// - metadata[1]: num_dims (number of dimensions, typically 4 for NCHW or 5 for NCDHW)
-/// - metadata[2..2+num_dims]: input_shape
-/// - metadata[2+num_dims..2+2*num_dims]: input_strides
-/// - metadata[2+2*num_dims]: offset
-/// - metadata[3+2*num_dims..3+3*num_dims]: output_shape
-/// - metadata[3+3*num_dims]: mode (0=nearest, 1=linear, 2=cubic)
-/// - metadata[4+3*num_dims]: coord_transform (0=half_pixel, 1=asymmetric, 2=align_corners, 3=pytorch_half_pixel)
-/// - metadata[5+3*num_dims]: nearest_mode (0=floor, 1=ceil, 2=round_prefer_floor, 3=round_prefer_ceil)
-pub fn resize_metadata(
-    layout: &Layout,
-    output_shape: &[usize],
-    mode: usize,
-    coord_transform: usize,
-    nearest_mode: usize,
-) -> Vec<usize> {
-    let input_shape = layout.shape();
-    let num_dims = input_shape.ndim();
-    let output_size: usize = output_shape.iter().product();
-
-    let mut metadata = Vec::with_capacity(6 + 3 * num_dims);
-
-    // output_size, num_dims
-    metadata.push(output_size);
-    metadata.push(num_dims);
-
-    // input_shape
-    for &dim in input_shape.dims() {
-        metadata.push(dim);
-    }
-
-    // input_strides
-    for &stride in layout.strides() {
-        metadata.push(stride);
-    }
-
-    // offset
-    metadata.push(layout.offset());
-
-    // output_shape
-    for &dim in output_shape {
-        metadata.push(dim);
-    }
-
-    // mode, coord_transform, nearest_mode
-    metadata.push(mode);
-    metadata.push(coord_transform);
-    metadata.push(nearest_mode);
-
-    metadata
 }

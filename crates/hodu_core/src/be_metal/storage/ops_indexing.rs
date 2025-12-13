@@ -289,26 +289,10 @@ pub fn call_ops_onehot(
         _ => return Err(HoduError::BackendError("call_ops_onehot expects Onehot op".to_string())),
     }
 
-    let input_shape = indices_layout.shape();
-    let num_dims_in = input_shape.ndim();
-    let num_input_els = input_shape.size();
-
-    // Compute output shape: insert num_classes at axis position
-    let mut output_shape_vec = Vec::with_capacity(num_dims_in + 1);
-    for (i, &dim) in input_shape.dims().iter().enumerate() {
-        if i == axis {
-            output_shape_vec.push(num_classes);
-        }
-        output_shape_vec.push(dim);
-    }
-    // If axis == num_dims_in (last position)
-    if axis == num_dims_in {
-        output_shape_vec.push(num_classes);
-    }
-
+    // Generate metadata and output shape using common function
+    let (metadata, output_shape_vec) = crate::op_metadatas::onehot_metadata(indices_layout, num_classes, axis);
     let output_shape = Shape::new(&output_shape_vec);
     let num_els = output_shape.size();
-    let num_dims_out = output_shape.ndim();
 
     let device = indices_storage.backend_device();
 
@@ -319,21 +303,6 @@ pub fn call_ops_onehot(
     let kernel_name = format!("hodu_metal_onehot_{}", output_dtype);
     let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
     let kernel = kernels::Kernel(kernel_name_static);
-
-    // Generate metadata
-    // - metadata[0]: num_els (total number of output elements)
-    // - metadata[1]: num_input_els (total number of input indices)
-    // - metadata[2]: num_classes (depth of one-hot dimension)
-    // - metadata[3]: axis (dimension for one-hot encoding)
-    // - metadata[4]: num_dims_out (number of output dimensions)
-    // - metadata[5..5+num_dims_out]: output_shape
-    let mut metadata = Vec::with_capacity(5 + num_dims_out);
-    metadata.push(num_els);
-    metadata.push(num_input_els);
-    metadata.push(num_classes);
-    metadata.push(axis);
-    metadata.push(num_dims_out);
-    metadata.extend_from_slice(output_shape.dims());
 
     // Create buffer offsets
     let indices_offset_buf = BufferOffset::zero_offset(indices_storage.buffer());
@@ -355,19 +324,12 @@ pub fn call_ops_onehot(
 
 pub fn call_nonzero(input_storage: &MetalStorage, input_layout: &Layout) -> HoduResult<(MetalStorage, usize)> {
     let dtype = input_storage.dtype();
-    let shape = input_layout.shape();
-    let ndim = shape.ndim();
-    let num_els = shape.size();
+    let ndim = input_layout.ndim();
 
     let device = input_storage.backend_device();
 
-    // Build metadata
-    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
-    metadata.push(num_els);
-    metadata.push(ndim);
-    metadata.extend_from_slice(shape.dims());
-    metadata.extend_from_slice(input_layout.strides());
-    metadata.push(input_layout.offset());
+    // Generate metadata using common function
+    let metadata = crate::op_metadatas::nonzero_metadata(input_layout);
 
     // Create atomic counter buffer (single u32)
     let count_buffer = device.new_buffer(1, DType::U32, "nonzero_count")?;
@@ -462,11 +424,9 @@ pub fn call_unique(
 
     let device = input_storage.backend_device();
 
-    // Compute next power of 2 for bitonic sort
-    let padded_size = num_els.next_power_of_two();
-
-    // Metadata: [num_els, offset, padded_size]
-    let metadata = vec![num_els, input_layout.offset(), padded_size];
+    // Generate metadata using common function
+    let metadata = crate::op_metadatas::unique_sort_metadata(input_layout);
+    let padded_size = metadata[2];
 
     // Step 1: Copy input to sorted_values and initialize sorted_indices (with padding)
     let sorted_values = device.new_buffer(padded_size, dtype, "unique_sorted_values")?;
@@ -502,8 +462,8 @@ pub fn call_unique(
     while k <= padded_size {
         let mut j = k / 2;
         while j >= 1 {
-            // Bitonic metadata: [num_els, offset, padded_size, k, j]
-            let bitonic_metadata = vec![num_els, input_layout.offset(), padded_size, k, j];
+            // Generate bitonic step metadata using common function
+            let bitonic_metadata = crate::op_metadatas::unique_bitonic_step_metadata(input_layout, k, j);
             let command_buffer = device.command_buffer()?;
 
             kernels::call_unique_bitonic_step(
