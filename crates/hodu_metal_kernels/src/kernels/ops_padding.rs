@@ -39,6 +39,7 @@ ops!(pad_constant, pad_reflect, pad_replicate, pad_circular);
 /// - `metadata[2..2+num_dims]`: input_shape
 /// - `metadata[2+num_dims..2+2*num_dims]`: output_shape
 /// - `metadata[2+2*num_dims..2+3*num_dims]`: pad_before (padding before each dim)
+#[allow(clippy::too_many_arguments)]
 pub fn call_ops_pad_constant(
     kernel: Kernel,
     kernels: &Kernels,

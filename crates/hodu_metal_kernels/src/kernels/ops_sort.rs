@@ -38,6 +38,7 @@ ops!(topk);
 /// - `metadata[4]`: largest (1 = largest, 0 = smallest)
 /// - `metadata[5]`: sorted (1 = sorted, 0 = unsorted)
 /// - `metadata[6]`: offset
+#[allow(clippy::too_many_arguments)]
 pub fn call_topk(
     kernel: Kernel,
     kernels: &Kernels,
