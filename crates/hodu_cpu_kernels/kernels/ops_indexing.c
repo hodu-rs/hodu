@@ -1,6 +1,7 @@
 #include "ops_indexing.h"
 #include "types.h"
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 // ============================================================================
@@ -1099,3 +1100,216 @@ NONZERO_FILL_OP(uint8_t, nonzero_fill_u8, val != 0)
 NONZERO_FILL_OP(uint16_t, nonzero_fill_u16, val != 0)
 NONZERO_FILL_OP(uint32_t, nonzero_fill_u32, val != 0)
 NONZERO_FILL_OP(uint64_t, nonzero_fill_u64, val != 0)
+
+// ============================================================================
+// UNIQUE OPERATIONS
+// ============================================================================
+//
+// Returns unique elements, inverse indices, and counts.
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in input)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset
+//
+// Output:
+// - values: sorted unique values [unique_count]
+// - inverse: index into values for each input element [num_els]
+// - counts: count of each unique value [unique_count]
+// Returns: unique_count
+
+// Helper struct for sorting with original index
+typedef struct {
+    size_t orig_idx;
+    size_t sort_key; // Used for integer comparison
+} IndexPair;
+
+// Comparison function for qsort (by sort_key)
+static int compare_index_pairs(const void *a, const void *b) {
+    const IndexPair *pa = (const IndexPair *)a;
+    const IndexPair *pb = (const IndexPair *)b;
+    if (pa->sort_key < pb->sort_key)
+        return -1;
+    if (pa->sort_key > pb->sort_key)
+        return 1;
+    return 0;
+}
+
+// For float types, we need a different comparison
+typedef struct {
+    size_t orig_idx;
+    double sort_key;
+} IndexPairFloat;
+
+static int compare_index_pairs_float(const void *a, const void *b) {
+    const IndexPairFloat *pa = (const IndexPairFloat *)a;
+    const IndexPairFloat *pb = (const IndexPairFloat *)b;
+    if (pa->sort_key < pb->sort_key)
+        return -1;
+    if (pa->sort_key > pb->sort_key)
+        return 1;
+    return 0;
+}
+
+/// Macro to implement unique operation for integer types
+#define UNIQUE_OP_INT(TYPENAME, FN_NAME)                                                           \
+    size_t hodu_cpu_##FN_NAME(const void *input_ptr, void *values_ptr, int32_t *inverse,           \
+                              int32_t *counts, const size_t *metadata) {                           \
+        const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
+        TYPENAME *values = (TYPENAME *)values_ptr;                                                 \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+                                                                                                   \
+        if (num_els == 0)                                                                          \
+            return 0;                                                                              \
+                                                                                                   \
+        /* Allocate temp array for sorting */                                                      \
+        IndexPair *pairs = (IndexPair *)malloc(num_els * sizeof(IndexPair));                       \
+        TYPENAME *input_values = (TYPENAME *)malloc(num_els * sizeof(TYPENAME));                   \
+                                                                                                   \
+        /* Read input values */                                                                    \
+        for (size_t id = 0; id < num_els; id++) {                                                  \
+            size_t flat_idx = input_offset;                                                        \
+            size_t temp = id;                                                                      \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t idx = temp % input_shape[d];                                                \
+                temp /= input_shape[d];                                                            \
+                flat_idx += idx * input_strides[d];                                                \
+            }                                                                                      \
+            input_values[id] = input[flat_idx];                                                    \
+            pairs[id].orig_idx = id;                                                               \
+            pairs[id].sort_key = (size_t)input[flat_idx];                                          \
+        }                                                                                          \
+                                                                                                   \
+        /* Sort by value */                                                                        \
+        qsort(pairs, num_els, sizeof(IndexPair), compare_index_pairs);                             \
+                                                                                                   \
+        /* Build outputs */                                                                        \
+        size_t unique_count = 0;                                                                   \
+        int32_t current_count = 0;                                                                 \
+                                                                                                   \
+        for (size_t i = 0; i < num_els; i++) {                                                     \
+            size_t orig_idx = pairs[i].orig_idx;                                                   \
+            TYPENAME val = input_values[orig_idx];                                                 \
+                                                                                                   \
+            if (i == 0) {                                                                          \
+                values[unique_count] = val;                                                        \
+                current_count = 1;                                                                 \
+            } else {                                                                               \
+                size_t prev_orig_idx = pairs[i - 1].orig_idx;                                      \
+                TYPENAME prev_val = input_values[prev_orig_idx];                                   \
+                if (val != prev_val) {                                                             \
+                    counts[unique_count] = current_count;                                          \
+                    unique_count++;                                                                \
+                    values[unique_count] = val;                                                    \
+                    current_count = 1;                                                             \
+                } else {                                                                           \
+                    current_count++;                                                               \
+                }                                                                                  \
+            }                                                                                      \
+            inverse[orig_idx] = (int32_t)unique_count;                                             \
+        }                                                                                          \
+        counts[unique_count] = current_count;                                                      \
+        unique_count++;                                                                            \
+                                                                                                   \
+        free(pairs);                                                                               \
+        free(input_values);                                                                        \
+        return unique_count;                                                                       \
+    }
+
+/// Macro to implement unique operation for float types
+#define UNIQUE_OP_FLOAT(TYPENAME, FN_NAME, TO_DOUBLE)                                              \
+    size_t hodu_cpu_##FN_NAME(const void *input_ptr, void *values_ptr, int32_t *inverse,           \
+                              int32_t *counts, const size_t *metadata) {                           \
+        const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
+        TYPENAME *values = (TYPENAME *)values_ptr;                                                 \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t num_dims = metadata[1];                                                       \
+        const size_t *input_shape = metadata + 2;                                                  \
+        const size_t *input_strides = metadata + 2 + num_dims;                                     \
+        const size_t input_offset = metadata[2 + 2 * num_dims];                                    \
+                                                                                                   \
+        if (num_els == 0)                                                                          \
+            return 0;                                                                              \
+                                                                                                   \
+        /* Allocate temp array for sorting */                                                      \
+        IndexPairFloat *pairs = (IndexPairFloat *)malloc(num_els * sizeof(IndexPairFloat));        \
+        TYPENAME *input_values = (TYPENAME *)malloc(num_els * sizeof(TYPENAME));                   \
+                                                                                                   \
+        /* Read input values */                                                                    \
+        for (size_t id = 0; id < num_els; id++) {                                                  \
+            size_t flat_idx = input_offset;                                                        \
+            size_t temp = id;                                                                      \
+            for (int d = (int)num_dims - 1; d >= 0; d--) {                                         \
+                size_t idx = temp % input_shape[d];                                                \
+                temp /= input_shape[d];                                                            \
+                flat_idx += idx * input_strides[d];                                                \
+            }                                                                                      \
+            input_values[id] = input[flat_idx];                                                    \
+            pairs[id].orig_idx = id;                                                               \
+            pairs[id].sort_key = (double)(TO_DOUBLE);                                              \
+        }                                                                                          \
+                                                                                                   \
+        /* Sort by value */                                                                        \
+        qsort(pairs, num_els, sizeof(IndexPairFloat), compare_index_pairs_float);                  \
+                                                                                                   \
+        /* Build outputs */                                                                        \
+        size_t unique_count = 0;                                                                   \
+        int32_t current_count = 0;                                                                 \
+                                                                                                   \
+        for (size_t i = 0; i < num_els; i++) {                                                     \
+            size_t orig_idx = pairs[i].orig_idx;                                                   \
+            TYPENAME val = input_values[orig_idx];                                                 \
+            double val_d = pairs[i].sort_key;                                                      \
+                                                                                                   \
+            if (i == 0) {                                                                          \
+                values[unique_count] = val;                                                        \
+                current_count = 1;                                                                 \
+            } else {                                                                               \
+                double prev_val_d = pairs[i - 1].sort_key;                                         \
+                if (val_d != prev_val_d) {                                                         \
+                    counts[unique_count] = current_count;                                          \
+                    unique_count++;                                                                \
+                    values[unique_count] = val;                                                    \
+                    current_count = 1;                                                             \
+                } else {                                                                           \
+                    current_count++;                                                               \
+                }                                                                                  \
+            }                                                                                      \
+            inverse[orig_idx] = (int32_t)unique_count;                                             \
+        }                                                                                          \
+        counts[unique_count] = current_count;                                                      \
+        unique_count++;                                                                            \
+                                                                                                   \
+        free(pairs);                                                                               \
+        free(input_values);                                                                        \
+        return unique_count;                                                                       \
+    }
+
+// Bool unique
+UNIQUE_OP_INT(bool, unique_bool)
+
+// Float types
+UNIQUE_OP_FLOAT(f8e4m3_t, unique_f8e4m3, f8e4m3_to_float(input[flat_idx]))
+UNIQUE_OP_FLOAT(f8e5m2_t, unique_f8e5m2, f8e5m2_to_float(input[flat_idx]))
+UNIQUE_OP_FLOAT(bf16_t, unique_bf16, bf16_to_float(input[flat_idx]))
+UNIQUE_OP_FLOAT(f16_t, unique_f16, f16_to_float(input[flat_idx]))
+UNIQUE_OP_FLOAT(float, unique_f32, input[flat_idx])
+UNIQUE_OP_FLOAT(double, unique_f64, input[flat_idx])
+
+// Integer types
+UNIQUE_OP_INT(int8_t, unique_i8)
+UNIQUE_OP_INT(int16_t, unique_i16)
+UNIQUE_OP_INT(int32_t, unique_i32)
+UNIQUE_OP_INT(int64_t, unique_i64)
+UNIQUE_OP_INT(uint8_t, unique_u8)
+UNIQUE_OP_INT(uint16_t, unique_u16)
+UNIQUE_OP_INT(uint32_t, unique_u32)
+UNIQUE_OP_INT(uint64_t, unique_u64)

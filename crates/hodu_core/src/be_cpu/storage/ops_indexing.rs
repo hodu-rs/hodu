@@ -724,3 +724,114 @@ pub fn call_nonzero(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuSto
 
     Ok((output, count))
 }
+
+/// Returns unique elements, inverse indices, and counts.
+/// - values: sorted unique values [unique_count], same dtype as input
+/// - inverse: indices into values for each input element [num_els], i32
+/// - counts: count of each unique value [unique_count], i32
+pub fn call_unique(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuStorage, CpuStorage, CpuStorage, usize)> {
+    use hodu_cpu_kernels::ops_indexing::unique;
+    use std::ffi::c_void;
+
+    let dtype = storage.dtype();
+    let num_els = layout.size();
+    let ndim = layout.ndim();
+
+    if num_els == 0 {
+        let values = CpuDevice::allocate(0, dtype)?;
+        let inverse = CpuDevice::allocate(0, DType::I32)?;
+        let counts = CpuDevice::allocate(0, DType::I32)?;
+        return Ok((values, inverse, counts, 0));
+    }
+
+    // Build metadata
+    let shape = layout.shape();
+    let strides = layout.strides();
+    let offset = layout.offset();
+
+    let mut metadata = Vec::with_capacity(2 + 2 * ndim + 1);
+    metadata.push(num_els);
+    metadata.push(ndim);
+    metadata.extend(shape.dims());
+    metadata.extend(strides);
+    metadata.push(offset);
+
+    // Get kernel name based on dtype
+    let kernel = match dtype {
+        DType::BOOL => unique::BOOL,
+        DType::F8E4M3 => unique::F8E4M3,
+        #[cfg(feature = "f8e5m2")]
+        DType::F8E5M2 => unique::F8E5M2,
+        DType::BF16 => unique::BF16,
+        DType::F16 => unique::F16,
+        DType::F32 => unique::F32,
+        #[cfg(feature = "f64")]
+        DType::F64 => unique::F64,
+        DType::U8 => unique::U8,
+        #[cfg(feature = "u16")]
+        DType::U16 => unique::U16,
+        DType::U32 => unique::U32,
+        #[cfg(feature = "u64")]
+        DType::U64 => unique::U64,
+        DType::I8 => unique::I8,
+        #[cfg(feature = "i16")]
+        DType::I16 => unique::I16,
+        DType::I32 => unique::I32,
+        #[cfg(feature = "i64")]
+        DType::I64 => unique::I64,
+    };
+
+    // Allocate output buffers (max size = num_els)
+    let mut values_storage = CpuDevice::allocate(num_els, dtype)?;
+    let mut inverse_storage = CpuDevice::allocate(num_els, DType::I32)?;
+    let mut counts_storage = CpuDevice::allocate(num_els, DType::I32)?;
+
+    let input_ptr = storage.as_ptr() as *const c_void;
+    let values_ptr = values_storage.as_mut_ptr() as *mut c_void;
+    let inverse_ptr = inverse_storage.as_mut_ptr() as *mut i32;
+    let counts_ptr = counts_storage.as_mut_ptr() as *mut i32;
+
+    let unique_count = hodu_cpu_kernels::call_unique(kernel, input_ptr, values_ptr, inverse_ptr, counts_ptr, &metadata);
+
+    // Create new storages with correct sizes
+    // For values and counts, we need to copy only unique_count elements
+    macro_rules! truncate_storage {
+        ($storage:expr, $variant:ident, $count:expr) => {{
+            match $storage {
+                CpuStorage::$variant(data) => {
+                    let truncated: Vec<_> = data.iter().take($count).copied().collect();
+                    CpuStorage::$variant(truncated.into())
+                },
+                _ => unreachable!(),
+            }
+        }};
+    }
+
+    let values = match dtype {
+        DType::BOOL => truncate_storage!(values_storage, BOOL, unique_count),
+        DType::F8E4M3 => truncate_storage!(values_storage, F8E4M3, unique_count),
+        #[cfg(feature = "f8e5m2")]
+        DType::F8E5M2 => truncate_storage!(values_storage, F8E5M2, unique_count),
+        DType::BF16 => truncate_storage!(values_storage, BF16, unique_count),
+        DType::F16 => truncate_storage!(values_storage, F16, unique_count),
+        DType::F32 => truncate_storage!(values_storage, F32, unique_count),
+        #[cfg(feature = "f64")]
+        DType::F64 => truncate_storage!(values_storage, F64, unique_count),
+        DType::U8 => truncate_storage!(values_storage, U8, unique_count),
+        #[cfg(feature = "u16")]
+        DType::U16 => truncate_storage!(values_storage, U16, unique_count),
+        DType::U32 => truncate_storage!(values_storage, U32, unique_count),
+        #[cfg(feature = "u64")]
+        DType::U64 => truncate_storage!(values_storage, U64, unique_count),
+        DType::I8 => truncate_storage!(values_storage, I8, unique_count),
+        #[cfg(feature = "i16")]
+        DType::I16 => truncate_storage!(values_storage, I16, unique_count),
+        DType::I32 => truncate_storage!(values_storage, I32, unique_count),
+        #[cfg(feature = "i64")]
+        DType::I64 => truncate_storage!(values_storage, I64, unique_count),
+    };
+
+    let counts = truncate_storage!(counts_storage, I32, unique_count);
+
+    Ok((values, inverse_storage, counts, unique_count))
+}

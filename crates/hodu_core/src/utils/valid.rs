@@ -297,8 +297,8 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
-            IndexingOp::Nonzero => {
-                // All types supported for nonzero
+            IndexingOp::Nonzero | IndexingOp::Unique => {
+                // All types supported for nonzero and unique
             },
         },
 

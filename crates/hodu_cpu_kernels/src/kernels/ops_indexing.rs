@@ -24,7 +24,8 @@ ops!(
     scatter_min,
     onehot,
     nonzero_count,
-    nonzero_fill
+    nonzero_fill,
+    unique
 );
 
 macro_rules! declare_and_dispatch_index_select {
@@ -755,4 +756,96 @@ pub fn call_nonzero_fill(
         dispatch_nonzero_fill(kernel_name.0, input, output, metadata.as_ptr());
     }
     Ok(())
+}
+
+// ============================================================================
+// UNIQUE OPERATIONS
+// ============================================================================
+
+macro_rules! declare_and_dispatch_unique {
+    ($($op:ident),* $(,)?) => {
+        paste::paste! {
+            extern "C" {
+                $(
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, values: *mut c_void, inverse: *mut i32, counts: *mut i32, metadata: *const usize) -> usize;
+                )*
+            }
+
+            unsafe fn dispatch_unique(
+                name: &str,
+                input: *const c_void,
+                values: *mut c_void,
+                inverse: *mut i32,
+                counts: *mut i32,
+                metadata: *const usize,
+            ) -> usize {
+                match name {
+                    $(
+                        concat!("hodu_cpu_", stringify!($op), "_bool") => [<hodu_cpu_ $op _bool>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e4m3") => [<hodu_cpu_ $op _f8e4m3>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f8e5m2") => [<hodu_cpu_ $op _f8e5m2>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_bf16") => [<hodu_cpu_ $op _bf16>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f16") => [<hodu_cpu_ $op _f16>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f32") => [<hodu_cpu_ $op _f32>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_f64") => [<hodu_cpu_ $op _f64>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i8") => [<hodu_cpu_ $op _i8>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i16") => [<hodu_cpu_ $op _i16>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i32") => [<hodu_cpu_ $op _i32>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_i64") => [<hodu_cpu_ $op _i64>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u8") => [<hodu_cpu_ $op _u8>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u16") => [<hodu_cpu_ $op _u16>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u32") => [<hodu_cpu_ $op _u32>](input, values, inverse, counts, metadata),
+                        concat!("hodu_cpu_", stringify!($op), "_u64") => [<hodu_cpu_ $op _u64>](input, values, inverse, counts, metadata),
+                    )*
+                    _ => panic!("Unknown unique operation: {}", name),
+                }
+            }
+        }
+    };
+}
+
+declare_and_dispatch_unique!(unique);
+
+/// Execute unique operation to find unique elements, inverse indices, and counts
+///
+/// # Arguments
+/// * `kernel_name` - The unique kernel to execute (e.g., unique::F32)
+/// * `input` - Pointer to input tensor data
+/// * `values` - Pointer to output values buffer (pre-allocated with num_els size)
+/// * `inverse` - Pointer to output inverse indices (pre-allocated with num_els size)
+/// * `counts` - Pointer to output counts buffer (pre-allocated with num_els size)
+/// * `metadata` - Tensor metadata array
+///
+/// # Metadata layout
+/// - metadata[0]: num_els (total number of elements in input)
+/// - metadata[1]: num_dims (number of dimensions)
+/// - metadata[2..2+num_dims]: input_shape
+/// - metadata[2+num_dims..2+2*num_dims]: input_strides
+/// - metadata[2+2*num_dims]: input_offset
+///
+/// # Returns
+/// Returns the count of unique elements.
+pub fn call_unique(
+    kernel_name: crate::kernels::macros::Kernel,
+    input: *const c_void,
+    values: *mut c_void,
+    inverse: *mut i32,
+    counts: *mut i32,
+    metadata: &[usize],
+) -> usize {
+    unsafe { dispatch_unique(kernel_name.0, input, values, inverse, counts, metadata.as_ptr()) }
 }

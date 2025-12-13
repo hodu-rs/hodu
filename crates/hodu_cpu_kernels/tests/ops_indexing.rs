@@ -1180,3 +1180,191 @@ fn test_nonzero_all_nonzero() {
 
     assert_eq!(output, vec![0, 1, 2]);
 }
+
+#[test]
+fn test_unique_i32_basic() {
+    // Input: [3, 1, 2, 1, 3, 2, 4]
+    // Expected values (sorted): [1, 2, 3, 4]
+    // Expected inverse: [2, 0, 1, 0, 2, 1, 3]
+    // Expected counts: [2, 2, 2, 1]
+    let input = [3i32, 1, 2, 1, 3, 2, 4];
+    let num_els = input.len();
+
+    // Allocate max size for values (could be all unique)
+    let mut values = vec![0i32; num_els];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; num_els];
+
+    // Metadata: [num_els, num_dims, shape..., strides..., offset]
+    let metadata = vec![
+        num_els, // num_els
+        1,       // num_dims
+        num_els, // shape[0]
+        1,       // strides[0]
+        0,       // offset
+    ];
+
+    let unique_count = call_unique(
+        unique::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        values.as_mut_ptr() as *mut core::ffi::c_void,
+        inverse.as_mut_ptr(),
+        counts.as_mut_ptr(),
+        &metadata,
+    );
+
+    assert_eq!(unique_count, 4);
+    assert_eq!(&values[..unique_count], &[1, 2, 3, 4]);
+    assert_eq!(inverse, vec![2, 0, 1, 0, 2, 1, 3]);
+    assert_eq!(&counts[..unique_count], &[2, 2, 2, 1]);
+}
+
+#[test]
+fn test_unique_f32_basic() {
+    // Input: [3.0, 1.0, 2.0, 1.0, 3.0]
+    // Expected values (sorted): [1.0, 2.0, 3.0]
+    // Expected inverse: [2, 0, 1, 0, 2]
+    // Expected counts: [2, 1, 2]
+    let input = [3.0f32, 1.0, 2.0, 1.0, 3.0];
+    let num_els = input.len();
+
+    let mut values = vec![0.0f32; num_els];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; num_els];
+
+    let metadata = vec![num_els, 1, num_els, 1, 0];
+
+    let unique_count = call_unique(
+        unique::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        values.as_mut_ptr() as *mut core::ffi::c_void,
+        inverse.as_mut_ptr(),
+        counts.as_mut_ptr(),
+        &metadata,
+    );
+
+    assert_eq!(unique_count, 3);
+    assert_eq!(&values[..unique_count], &[1.0, 2.0, 3.0]);
+    assert_eq!(inverse, vec![2, 0, 1, 0, 2]);
+    assert_eq!(&counts[..unique_count], &[2, 1, 2]);
+}
+
+#[test]
+fn test_unique_i32_all_same() {
+    // Input: [5, 5, 5, 5]
+    // Expected values: [5]
+    // Expected inverse: [0, 0, 0, 0]
+    // Expected counts: [4]
+    let input = [5i32, 5, 5, 5];
+    let num_els = input.len();
+
+    let mut values = vec![0i32; num_els];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; num_els];
+
+    let metadata = vec![num_els, 1, num_els, 1, 0];
+
+    let unique_count = call_unique(
+        unique::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        values.as_mut_ptr() as *mut core::ffi::c_void,
+        inverse.as_mut_ptr(),
+        counts.as_mut_ptr(),
+        &metadata,
+    );
+
+    assert_eq!(unique_count, 1);
+    assert_eq!(&values[..unique_count], &[5]);
+    assert_eq!(inverse, vec![0, 0, 0, 0]);
+    assert_eq!(&counts[..unique_count], &[4]);
+}
+
+#[test]
+fn test_unique_i32_all_unique() {
+    // Input: [4, 2, 1, 3]
+    // Expected values (sorted): [1, 2, 3, 4]
+    // Expected inverse: [3, 1, 0, 2]
+    // Expected counts: [1, 1, 1, 1]
+    let input = [4i32, 2, 1, 3];
+    let num_els = input.len();
+
+    let mut values = vec![0i32; num_els];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; num_els];
+
+    let metadata = vec![num_els, 1, num_els, 1, 0];
+
+    let unique_count = call_unique(
+        unique::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        values.as_mut_ptr() as *mut core::ffi::c_void,
+        inverse.as_mut_ptr(),
+        counts.as_mut_ptr(),
+        &metadata,
+    );
+
+    assert_eq!(unique_count, 4);
+    assert_eq!(&values[..unique_count], &[1, 2, 3, 4]);
+    assert_eq!(inverse, vec![3, 1, 0, 2]);
+    assert_eq!(&counts[..unique_count], &[1, 1, 1, 1]);
+}
+
+#[test]
+fn test_unique_i32_single_element() {
+    // Input: [42]
+    // Expected values: [42]
+    // Expected inverse: [0]
+    // Expected counts: [1]
+    let input = [42i32];
+    let num_els = input.len();
+
+    let mut values = vec![0i32; num_els];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; num_els];
+
+    let metadata = vec![num_els, 1, num_els, 1, 0];
+
+    let unique_count = call_unique(
+        unique::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        values.as_mut_ptr() as *mut core::ffi::c_void,
+        inverse.as_mut_ptr(),
+        counts.as_mut_ptr(),
+        &metadata,
+    );
+
+    assert_eq!(unique_count, 1);
+    assert_eq!(&values[..unique_count], &[42]);
+    assert_eq!(inverse, vec![0]);
+    assert_eq!(&counts[..unique_count], &[1]);
+}
+
+#[test]
+fn test_unique_u8() {
+    // Input: [10, 5, 10, 5, 15]
+    // Expected values (sorted): [5, 10, 15]
+    // Expected inverse: [1, 0, 1, 0, 2]
+    // Expected counts: [2, 2, 1]
+    let input = [10u8, 5, 10, 5, 15];
+    let num_els = input.len();
+
+    let mut values = vec![0u8; num_els];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; num_els];
+
+    let metadata = vec![num_els, 1, num_els, 1, 0];
+
+    let unique_count = call_unique(
+        unique::U8,
+        input.as_ptr() as *const core::ffi::c_void,
+        values.as_mut_ptr() as *mut core::ffi::c_void,
+        inverse.as_mut_ptr(),
+        counts.as_mut_ptr(),
+        &metadata,
+    );
+
+    assert_eq!(unique_count, 3);
+    assert_eq!(&values[..unique_count], &[5, 10, 15]);
+    assert_eq!(inverse, vec![1, 0, 1, 0, 2]);
+    assert_eq!(&counts[..unique_count], &[2, 2, 1]);
+}

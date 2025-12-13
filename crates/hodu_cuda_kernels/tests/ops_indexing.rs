@@ -752,3 +752,189 @@ fn test_nonzero_all_nonzero() {
     assert_eq!(count, 3);
     assert_eq!(indices, vec![0i32, 1, 2]);
 }
+
+// ============================================================================
+// UNIQUE TESTS
+// ============================================================================
+
+fn run_unique_i32(input: &[i32]) -> (usize, Vec<i32>, Vec<i32>, Vec<i32>) {
+    let kernels = kernels();
+    let device = device();
+    let stream = device.default_stream();
+
+    let num_els = input.len();
+    let padded_size = num_els.next_power_of_two();
+    let input_dev = stream.memcpy_stod(input).unwrap();
+    let metadata = vec![num_els, 0, padded_size]; // num_els, offset, padded_size
+
+    // Step 1: Copy input and initialize indices (with padding)
+    let mut sorted_values: CudaSlice<i32> = unsafe { stream.alloc(padded_size).unwrap() };
+    let mut sorted_indices: CudaSlice<i32> = unsafe { stream.alloc(padded_size).unwrap() };
+
+    call_unique_sort(
+        unique_sort::I32,
+        &kernels,
+        &device,
+        &input_dev,
+        &mut sorted_values,
+        &mut sorted_indices,
+        &metadata,
+    )
+    .unwrap();
+    stream.synchronize().unwrap();
+
+    // Step 2: Bitonic sort
+    let mut k = 2;
+    while k <= padded_size {
+        let mut j = k / 2;
+        while j >= 1 {
+            let bitonic_metadata = vec![num_els, 0, padded_size, k, j];
+            call_unique_bitonic_step(
+                unique_bitonic_step::I32,
+                &kernels,
+                &device,
+                &mut sorted_values,
+                &mut sorted_indices,
+                &bitonic_metadata,
+            )
+            .unwrap();
+            stream.synchronize().unwrap();
+            j /= 2;
+        }
+        k *= 2;
+    }
+
+    // Step 3: Count unique elements
+    let mut count_buffer: CudaSlice<u32> = stream.memcpy_stod(&[0u32]).unwrap();
+    call_unique_count(
+        unique_count::I32,
+        &kernels,
+        &device,
+        &sorted_values,
+        &mut count_buffer,
+        &metadata,
+    )
+    .unwrap();
+    stream.synchronize().unwrap();
+
+    let mut count_host = [0u32];
+    stream.memcpy_dtoh(&count_buffer, &mut count_host).unwrap();
+    let unique_count = count_host[0] as usize;
+
+    if unique_count == 0 {
+        return (0, vec![], vec![], vec![]);
+    }
+
+    // Step 4: Mark unique boundaries
+    let mut marks: CudaSlice<u32> = unsafe { stream.alloc(num_els).unwrap() };
+    call_unique_mark(
+        unique_mark::I32,
+        &kernels,
+        &device,
+        &sorted_values,
+        &mut marks,
+        &metadata,
+    )
+    .unwrap();
+    stream.synchronize().unwrap();
+
+    // Step 5: Prefix sum
+    let mut unique_idx: CudaSlice<i32> = unsafe { stream.alloc(num_els).unwrap() };
+    call_unique_prefix_sum(&kernels, &device, &marks, &mut unique_idx, &metadata).unwrap();
+    stream.synchronize().unwrap();
+
+    // Step 6: Build outputs
+    let mut values_buffer: CudaSlice<i32> = unsafe { stream.alloc(unique_count).unwrap() };
+    let mut inverse_buffer: CudaSlice<i32> = unsafe { stream.alloc(num_els).unwrap() };
+    let mut counts_buffer: CudaSlice<i32> = stream.memcpy_stod(&vec![0i32; unique_count]).unwrap();
+
+    call_unique_build(
+        unique_build::I32,
+        &kernels,
+        &device,
+        &sorted_values,
+        &sorted_indices,
+        &marks,
+        &unique_idx,
+        &mut values_buffer,
+        &mut inverse_buffer,
+        &mut counts_buffer,
+        &metadata,
+    )
+    .unwrap();
+    stream.synchronize().unwrap();
+
+    let mut values = vec![0i32; unique_count];
+    let mut inverse = vec![0i32; num_els];
+    let mut counts = vec![0i32; unique_count];
+
+    stream.memcpy_dtoh(&values_buffer, &mut values).unwrap();
+    stream.memcpy_dtoh(&inverse_buffer, &mut inverse).unwrap();
+    stream.memcpy_dtoh(&counts_buffer, &mut counts).unwrap();
+
+    (unique_count, values, inverse, counts)
+}
+
+#[test]
+fn test_unique_i32_basic() {
+    // Input: [3, 1, 2, 1, 3, 2, 4]
+    // Expected values (sorted): [1, 2, 3, 4]
+    // Expected inverse: [2, 0, 1, 0, 2, 1, 3]
+    // Expected counts: [2, 2, 2, 1]
+    let input = vec![3i32, 1, 2, 1, 3, 2, 4];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 4);
+    assert_eq!(values, vec![1, 2, 3, 4]);
+    assert_eq!(inverse, vec![2, 0, 1, 0, 2, 1, 3]);
+    assert_eq!(counts, vec![2, 2, 2, 1]);
+}
+
+#[test]
+fn test_unique_i32_all_same() {
+    // Input: [5, 5, 5, 5]
+    // Expected values: [5]
+    // Expected inverse: [0, 0, 0, 0]
+    // Expected counts: [4]
+    let input = vec![5i32, 5, 5, 5];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 1);
+    assert_eq!(values, vec![5]);
+    assert_eq!(inverse, vec![0, 0, 0, 0]);
+    assert_eq!(counts, vec![4]);
+}
+
+#[test]
+fn test_unique_i32_all_unique() {
+    // Input: [4, 2, 1, 3]
+    // Expected values (sorted): [1, 2, 3, 4]
+    // Expected inverse: [3, 1, 0, 2]
+    // Expected counts: [1, 1, 1, 1]
+    let input = vec![4i32, 2, 1, 3];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 4);
+    assert_eq!(values, vec![1, 2, 3, 4]);
+    assert_eq!(inverse, vec![3, 1, 0, 2]);
+    assert_eq!(counts, vec![1, 1, 1, 1]);
+}
+
+#[test]
+fn test_unique_i32_single_element() {
+    // Input: [42]
+    // Expected values: [42]
+    // Expected inverse: [0]
+    // Expected counts: [1]
+    let input = vec![42i32];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 1);
+    assert_eq!(values, vec![42]);
+    assert_eq!(inverse, vec![0]);
+    assert_eq!(counts, vec![1]);
+}

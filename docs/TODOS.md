@@ -45,7 +45,7 @@
 - [x] Implement rem (ONNX: Mod)
 - [x] Implement isnan (ONNX: IsNaN) - check for NaN values
 - [x] Implement isinf (ONNX: IsInf) - check for Inf values
-- [ ] Implement unique (ONNX: Unique) - find unique elements
+- [x] Implement unique (ONNX: Unique) - find unique elements
 - [x] Implement reduce_logsumexp (ONNX: ReduceLogSumExp) - numerically stable log(sum(exp(x)))
 
 **ONNX Compatibility - Matrix Operations:** (🟢 Nice-to-have)

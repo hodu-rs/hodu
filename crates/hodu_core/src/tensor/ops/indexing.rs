@@ -699,4 +699,50 @@ impl Tensor {
 
         Ok(result)
     }
+
+    /// Returns unique elements, inverse indices, and counts.
+    ///
+    /// The input tensor is flattened before finding unique elements.
+    /// Returns a tuple of (values, inverse, counts):
+    /// - values: 1D tensor of sorted unique values, same dtype as input
+    /// - inverse: 1D tensor where input.flatten() = values[inverse]
+    /// - counts: 1D tensor with count of each unique value
+    ///
+    /// This operation does not support gradients.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let x = Tensor::from_slice(&[1, 2, 2, 3, 1, 4, 3], &[7])?;
+    /// let (values, inverse, counts) = x.unique()?;
+    /// // values: [1, 2, 3, 4]
+    /// // inverse: [0, 1, 1, 2, 0, 3, 2]
+    /// // counts: [2, 2, 2, 1]
+    /// ```
+    pub fn unique(&self) -> HoduResult<(Self, Self, Self)> {
+        validate_dtype_for_device(self.dtype(), self.device())?;
+        validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Unique))?;
+
+        let self_layout = self.layout();
+
+        if crate::snapshot::capture::is_active() {
+            return Err(crate::error::HoduError::UnsupportedOperation(
+                "Unique operation has dynamic output shape and cannot be captured in snapshot mode".to_string(),
+            ));
+        }
+
+        let (values_storage, inverse_storage, counts_storage, unique_count) =
+            self.with_storage(|storage| storage.call_unique(&self_layout))?;
+
+        let num_els = self_layout.size();
+        let values_layout = Layout::from_shape(&Shape::from(vec![unique_count]));
+        let inverse_layout = Layout::from_shape(&Shape::from(vec![num_els]));
+        let counts_layout = Layout::from_shape(&Shape::from(vec![unique_count]));
+
+        // Unique is non-differentiable
+        let values = from_storage_with_context(values_storage, values_layout, true, false);
+        let inverse = from_storage_with_context(inverse_storage, inverse_layout, true, false);
+        let counts = from_storage_with_context(counts_storage, counts_layout, true, false);
+
+        Ok((values, inverse, counts))
+    }
 }

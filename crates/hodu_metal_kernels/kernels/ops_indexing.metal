@@ -872,3 +872,223 @@ NONZERO_FILL_OP(uint8_t, u8, val != 0)
 NONZERO_FILL_OP(uint16_t, u16, val != 0)
 NONZERO_FILL_OP(uint32_t, u32, val != 0)
 NONZERO_FILL_OP(uint64_t, u64, val != 0)
+
+// ============================================================================
+// UNIQUE OPERATION
+// ============================================================================
+//
+// Returns unique elements from input tensor (sorted).
+// This is a multi-pass operation:
+//   1. unique_sort - sorts input with original indices
+//   2. unique_count - counts unique elements using atomic
+//   3. unique_build - builds values, inverse, and counts arrays
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in input)
+// - metadata[1]: offset (input offset)
+
+// Sort kernel using bitonic sort within threadgroup
+// Outputs: sorted_values, sorted_indices (original positions)
+// Metadata layout:
+// - metadata[0]: num_els (actual number of elements)
+// - metadata[1]: offset (input offset)
+// - metadata[2]: padded_size (next power of 2 for bitonic sort)
+#define UNIQUE_SORT_OP(TYPE, FN_SUFFIX, COMPARE_LESS, MAX_VAL)                                     \
+    kernel void hodu_metal_unique_sort_##FN_SUFFIX(                                                \
+        device const TYPE *input [[buffer(0)]], device TYPE *sorted_values [[buffer(1)]],          \
+        device int32_t *sorted_indices [[buffer(2)]], constant size_t *metadata [[buffer(3)]],     \
+        uint tid [[thread_position_in_grid]], uint threads_per_grid [[threads_per_grid]]) {        \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        const size_t offset = metadata[1];                                                         \
+        const size_t padded_size = metadata[2];                                                    \
+                                                                                                   \
+        if (tid >= padded_size)                                                                    \
+            return;                                                                                \
+                                                                                                   \
+        if (tid < num_els) {                                                                       \
+            TYPE val = input[offset + tid];                                                        \
+            sorted_values[tid] = val;                                                              \
+            sorted_indices[tid] = (int32_t)tid;                                                    \
+        } else {                                                                                   \
+            /* Padding elements with max value for proper bitonic sort */                          \
+            sorted_values[tid] = MAX_VAL;                                                          \
+            sorted_indices[tid] = (int32_t)tid;                                                    \
+        }                                                                                          \
+    }                                                                                              \
+                                                                                                   \
+    /* Bitonic sort step kernel */                                                                 \
+    kernel void hodu_metal_unique_bitonic_step_##FN_SUFFIX(                                        \
+        device TYPE *values [[buffer(0)]], device int32_t *indices [[buffer(1)]],                  \
+        constant size_t *metadata [[buffer(2)]], uint tid [[thread_position_in_grid]]) {           \
+                                                                                                   \
+        const size_t padded_size = metadata[2];                                                    \
+        const size_t k = metadata[3]; /* block size */                                             \
+        const size_t j = metadata[4]; /* step size */                                              \
+                                                                                                   \
+        size_t i = tid;                                                                            \
+        size_t ixj = i ^ j;                                                                        \
+                                                                                                   \
+        if (ixj > i && i < padded_size && ixj < padded_size) {                                     \
+            bool ascending = ((i & k) == 0);                                                       \
+            TYPE vi = values[i];                                                                   \
+            TYPE vj = values[ixj];                                                                 \
+            bool less = COMPARE_LESS;                                                              \
+            bool should_swap = ascending ? !less : less;                                           \
+                                                                                                   \
+            if (should_swap) {                                                                     \
+                values[i] = vj;                                                                    \
+                values[ixj] = vi;                                                                  \
+                int32_t ti = indices[i];                                                           \
+                int32_t tj = indices[ixj];                                                         \
+                indices[i] = tj;                                                                   \
+                indices[ixj] = ti;                                                                 \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+// Count unique elements
+#define UNIQUE_COUNT_OP(TYPE, FN_SUFFIX, COMPARE_EQ)                                               \
+    kernel void hodu_metal_unique_count_##FN_SUFFIX(                                               \
+        device const TYPE *sorted_values [[buffer(0)]], device atomic_uint *count [[buffer(1)]],   \
+        constant size_t *metadata [[buffer(2)]], uint tid [[thread_position_in_grid]]) {           \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        if (tid >= num_els)                                                                        \
+            return;                                                                                \
+                                                                                                   \
+        /* First element is always unique, or if different from previous */                        \
+        if (tid == 0) {                                                                            \
+            atomic_fetch_add_explicit(count, 1, memory_order_relaxed);                             \
+        } else {                                                                                   \
+            TYPE curr = sorted_values[tid];                                                        \
+            TYPE prev = sorted_values[tid - 1];                                                    \
+            if (!(COMPARE_EQ)) {                                                                   \
+                atomic_fetch_add_explicit(count, 1, memory_order_relaxed);                         \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+// Mark unique boundaries (1 if start of new unique value, 0 otherwise)
+#define UNIQUE_MARK_OP(TYPE, FN_SUFFIX, COMPARE_EQ)                                                \
+    kernel void hodu_metal_unique_mark_##FN_SUFFIX(                                                \
+        device const TYPE *sorted_values [[buffer(0)]], device uint32_t *marks [[buffer(1)]],      \
+        constant size_t *metadata [[buffer(2)]], uint tid [[thread_position_in_grid]]) {           \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        if (tid >= num_els)                                                                        \
+            return;                                                                                \
+                                                                                                   \
+        if (tid == 0) {                                                                            \
+            marks[tid] = 1;                                                                        \
+        } else {                                                                                   \
+            TYPE curr = sorted_values[tid];                                                        \
+            TYPE prev = sorted_values[tid - 1];                                                    \
+            marks[tid] = (COMPARE_EQ) ? 0 : 1;                                                     \
+        }                                                                                          \
+    }
+
+// Prefix sum for unique indices (sequential for correctness)
+kernel void hodu_metal_unique_prefix_sum(device const uint32_t *marks [[buffer(0)]],
+                                         device int32_t *unique_idx [[buffer(1)]],
+                                         constant size_t *metadata [[buffer(2)]],
+                                         uint tid [[thread_position_in_grid]]) {
+    if (tid != 0)
+        return;
+
+    const size_t num_els = metadata[0];
+    int32_t sum = 0;
+    for (size_t i = 0; i < num_els; i++) {
+        if (marks[i]) {
+            unique_idx[i] = sum;
+            sum++;
+        } else {
+            unique_idx[i] = sum - 1;
+        }
+    }
+}
+
+// Build output arrays
+#define UNIQUE_BUILD_OP(TYPE, FN_SUFFIX)                                                           \
+    kernel void hodu_metal_unique_build_##FN_SUFFIX(                                               \
+        device const TYPE *sorted_values [[buffer(0)]],                                            \
+        device const int32_t *sorted_indices [[buffer(1)]],                                        \
+        device const uint32_t *marks [[buffer(2)]],                                                \
+        device const int32_t *unique_idx [[buffer(3)]], device TYPE *values [[buffer(4)]],         \
+        device int32_t *inverse [[buffer(5)]], device int32_t *counts [[buffer(6)]],               \
+        constant size_t *metadata [[buffer(7)]], uint tid [[thread_position_in_grid]]) {           \
+                                                                                                   \
+        const size_t num_els = metadata[0];                                                        \
+        if (tid >= num_els)                                                                        \
+            return;                                                                                \
+                                                                                                   \
+        int32_t uid = unique_idx[tid];                                                             \
+        int32_t orig_idx = sorted_indices[tid];                                                    \
+                                                                                                   \
+        /* Set inverse: original position -> unique index */                                       \
+        inverse[orig_idx] = uid;                                                                   \
+                                                                                                   \
+        /* If this is start of unique value, set the value */                                      \
+        if (marks[tid]) {                                                                          \
+            values[uid] = sorted_values[tid];                                                      \
+        }                                                                                          \
+                                                                                                   \
+        /* Increment count atomically */                                                           \
+        atomic_fetch_add_explicit((device atomic_int *)&counts[uid], 1, memory_order_relaxed);     \
+    }
+
+// Define unique operations for integer types
+// Using Metal numeric limits
+UNIQUE_SORT_OP(int8_t, i8, vi < vj, 127)
+UNIQUE_SORT_OP(int16_t, i16, vi < vj, 32767)
+UNIQUE_SORT_OP(int32_t, i32, vi < vj, 2147483647)
+UNIQUE_SORT_OP(int64_t, i64, vi < vj, 9223372036854775807LL)
+UNIQUE_SORT_OP(uint8_t, u8, vi < vj, 255)
+UNIQUE_SORT_OP(uint16_t, u16, vi < vj, 65535)
+UNIQUE_SORT_OP(uint32_t, u32, vi < vj, 4294967295u)
+UNIQUE_SORT_OP(uint64_t, u64, vi < vj, 18446744073709551615uLL)
+
+UNIQUE_COUNT_OP(int8_t, i8, curr == prev)
+UNIQUE_COUNT_OP(int16_t, i16, curr == prev)
+UNIQUE_COUNT_OP(int32_t, i32, curr == prev)
+UNIQUE_COUNT_OP(int64_t, i64, curr == prev)
+UNIQUE_COUNT_OP(uint8_t, u8, curr == prev)
+UNIQUE_COUNT_OP(uint16_t, u16, curr == prev)
+UNIQUE_COUNT_OP(uint32_t, u32, curr == prev)
+UNIQUE_COUNT_OP(uint64_t, u64, curr == prev)
+
+UNIQUE_MARK_OP(int8_t, i8, curr == prev)
+UNIQUE_MARK_OP(int16_t, i16, curr == prev)
+UNIQUE_MARK_OP(int32_t, i32, curr == prev)
+UNIQUE_MARK_OP(int64_t, i64, curr == prev)
+UNIQUE_MARK_OP(uint8_t, u8, curr == prev)
+UNIQUE_MARK_OP(uint16_t, u16, curr == prev)
+UNIQUE_MARK_OP(uint32_t, u32, curr == prev)
+UNIQUE_MARK_OP(uint64_t, u64, curr == prev)
+
+UNIQUE_BUILD_OP(int8_t, i8)
+UNIQUE_BUILD_OP(int16_t, i16)
+UNIQUE_BUILD_OP(int32_t, i32)
+UNIQUE_BUILD_OP(int64_t, i64)
+UNIQUE_BUILD_OP(uint8_t, u8)
+UNIQUE_BUILD_OP(uint16_t, u16)
+UNIQUE_BUILD_OP(uint32_t, u32)
+UNIQUE_BUILD_OP(uint64_t, u64)
+
+// Float types - use tolerance for comparison
+// Using float max value for padding
+UNIQUE_SORT_OP(bfloat, bf16, float(vi) < float(vj), bfloat(3.4e38f))
+UNIQUE_SORT_OP(half, f16, float(vi) < float(vj), half(65504.0f))
+UNIQUE_SORT_OP(float, f32, vi < vj, 3.4e38f)
+
+UNIQUE_COUNT_OP(bfloat, bf16, float(curr) == float(prev))
+UNIQUE_COUNT_OP(half, f16, float(curr) == float(prev))
+UNIQUE_COUNT_OP(float, f32, curr == prev)
+
+UNIQUE_MARK_OP(bfloat, bf16, float(curr) == float(prev))
+UNIQUE_MARK_OP(half, f16, float(curr) == float(prev))
+UNIQUE_MARK_OP(float, f32, curr == prev)
+
+UNIQUE_BUILD_OP(bfloat, bf16)
+UNIQUE_BUILD_OP(half, f16)
+UNIQUE_BUILD_OP(float, f32)

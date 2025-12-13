@@ -418,6 +418,7 @@ pub enum IndexingOp {
     ScatterMin,
     Onehot,
     Nonzero,
+    Unique, // no-backprop
 }
 
 impl fmt::Display for IndexingOp {
@@ -432,6 +433,7 @@ impl fmt::Display for IndexingOp {
             Self::ScatterMin => write!(f, "scatter_min"),
             Self::Onehot => write!(f, "onehot"),
             Self::Nonzero => write!(f, "nonzero"),
+            Self::Unique => write!(f, "unique"),
         }
     }
 }

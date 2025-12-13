@@ -76,6 +76,16 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_onehot(&self, _: &Layout, _: usize, _: usize, _: DType, _: Op) -> HoduResult<Self>;
 
+    /// Returns indices of non-zero elements.
+    /// Output shape is [N, ndim] where N is the count of non-zero elements.
+    fn call_nonzero(&self, _: &Layout) -> HoduResult<(Self, usize)>; // (indices, count)
+
+    /// Returns unique elements, inverse indices, and counts.
+    /// - values: sorted unique values [unique_count], same dtype as input
+    /// - inverse: indices into values for each input element [num_els], i32
+    /// - counts: count of each unique value [unique_count], i32
+    fn call_unique(&self, _: &Layout) -> HoduResult<(Self, Self, Self, usize)>; // (values, inverse, counts, unique_count)
+
     fn call_ops_conv(
         &self,
         _: &Layout,
@@ -101,8 +111,6 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_reduce_window(&self, _: &Layout, _: &[usize], _: &[usize], _: &[usize], _: Op) -> HoduResult<Self>;
 
-    fn call_ops_pad(&self, _: &Layout, _: &[usize], _: &[usize], _: Scalar, _: Op) -> HoduResult<Self>;
-
     fn call_ops_resize(
         &self,
         _: &Layout,
@@ -112,16 +120,9 @@ pub trait BackendStorageT: Sized {
         _: crate::op_params::ResizeNearestMode,
     ) -> HoduResult<Self>;
 
+    fn call_ops_pad(&self, _: &Layout, _: &[usize], _: &[usize], _: Scalar, _: Op) -> HoduResult<Self>;
+
     fn call_ops_cumsum(&self, _: &Layout, _: usize) -> HoduResult<Self>;
-
-    fn call_ops_einsum(
-        &self,
-        inputs: &[&Self],
-        input_layouts: &[&Layout],
-        parsed: &crate::einsum::ParsedEinsum,
-    ) -> HoduResult<Self>;
-
-    fn call_ops_flip(&self, _: &Layout, _: &[usize]) -> HoduResult<Self>;
 
     fn call_topk(
         &self,
@@ -133,9 +134,14 @@ pub trait BackendStorageT: Sized {
         _: bool,  // sorted
     ) -> HoduResult<(Self, Self)>; // (values, indices)
 
-    /// Returns indices of non-zero elements.
-    /// Output shape is [N, ndim] where N is the count of non-zero elements.
-    fn call_nonzero(&self, _: &Layout) -> HoduResult<(Self, usize)>; // (indices, count)
+    fn call_ops_einsum(
+        &self,
+        inputs: &[&Self],
+        input_layouts: &[&Layout],
+        parsed: &crate::einsum::ParsedEinsum,
+    ) -> HoduResult<Self>;
+
+    fn call_ops_flip(&self, _: &Layout, _: &[usize]) -> HoduResult<Self>;
 
     fn to_dtype(&self, _: &Layout, _: DType) -> HoduResult<Self>;
 
@@ -819,6 +825,54 @@ impl BackendStorage {
         }
     }
 
+    pub(crate) fn call_nonzero(&self, layout: &Layout) -> HoduResult<(Self, usize)> {
+        match self {
+            Self::CPU(storage) => {
+                let (indices, count) = storage.call_nonzero(layout)?;
+                Ok((Self::CPU(indices), count))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let (indices, count) = storage.call_nonzero(layout)?;
+                Ok((Self::CUDA(indices), count))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let (indices, count) = storage.call_nonzero(layout)?;
+                Ok((Self::Metal(indices), count))
+            },
+        }
+    }
+
+    pub(crate) fn call_unique(&self, layout: &Layout) -> HoduResult<(Self, Self, Self, usize)> {
+        match self {
+            Self::CPU(storage) => {
+                let (values, inverse, counts, unique_count) = storage.call_unique(layout)?;
+                Ok((Self::CPU(values), Self::CPU(inverse), Self::CPU(counts), unique_count))
+            },
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => {
+                let (values, inverse, counts, unique_count) = storage.call_unique(layout)?;
+                Ok((
+                    Self::CUDA(values),
+                    Self::CUDA(inverse),
+                    Self::CUDA(counts),
+                    unique_count,
+                ))
+            },
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => {
+                let (values, inverse, counts, unique_count) = storage.call_unique(layout)?;
+                Ok((
+                    Self::Metal(values),
+                    Self::Metal(inverse),
+                    Self::Metal(counts),
+                    unique_count,
+                ))
+            },
+        }
+    }
+
     pub(crate) fn call_ops_conv(
         &self,
         layout: &Layout,
@@ -1139,25 +1193,6 @@ impl BackendStorage {
             Self::Metal(storage) => {
                 let (values, indices) = storage.call_topk(layout, k, last_dim_size, outer_size, largest, sorted)?;
                 Ok((Self::Metal(values), Self::Metal(indices)))
-            },
-        }
-    }
-
-    pub(crate) fn call_nonzero(&self, layout: &Layout) -> HoduResult<(Self, usize)> {
-        match self {
-            Self::CPU(storage) => {
-                let (indices, count) = storage.call_nonzero(layout)?;
-                Ok((Self::CPU(indices), count))
-            },
-            #[cfg(feature = "cuda")]
-            Self::CUDA(storage) => {
-                let (indices, count) = storage.call_nonzero(layout)?;
-                Ok((Self::CUDA(indices), count))
-            },
-            #[cfg(feature = "metal")]
-            Self::Metal(storage) => {
-                let (indices, count) = storage.call_nonzero(layout)?;
-                Ok((Self::Metal(indices), count))
             },
         }
     }

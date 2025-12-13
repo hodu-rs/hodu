@@ -548,6 +548,10 @@ impl BackendStorageT for CudaStorage {
         ops_indexing::call_nonzero(self, layout)
     }
 
+    fn call_unique(&self, layout: &Layout) -> HoduResult<(Self, Self, Self, usize)> {
+        ops_indexing::call_unique(self, layout)
+    }
+
     fn to_dtype(&self, layout: &Layout, target_dtype: DType) -> HoduResult<Self> {
         if self.dtype() == target_dtype {
             return self.contiguous(layout);

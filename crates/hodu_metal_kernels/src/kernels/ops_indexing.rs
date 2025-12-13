@@ -19,7 +19,12 @@ ops!(
     scatter_min,
     onehot,
     nonzero_count,
-    nonzero_fill
+    nonzero_fill,
+    unique_sort,
+    unique_bitonic_step,
+    unique_count,
+    unique_mark,
+    unique_build
 );
 
 /// Executes an index_select operation to extract elements along a dimension using indices.
@@ -400,6 +405,220 @@ pub fn call_nonzero_fill(
     encoder.use_resource(input.buffer, MTLResourceUsage::Read);
     encoder.use_resource(output, MTLResourceUsage::Write);
     encoder.use_resource(counter_buffer, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes unique sort operation to copy and initialize indices.
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_sort(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    input: BufferOffset,
+    sorted_values: &Buffer,
+    sorted_indices: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    // metadata[2] is padded_size (next power of 2 for bitonic sort)
+    let padded_size = metadata[2];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (&input, sorted_values, sorted_indices, metadata));
+
+    encoder.use_resource(input.buffer, MTLResourceUsage::Read);
+    encoder.use_resource(sorted_values, MTLResourceUsage::Write);
+    encoder.use_resource(sorted_indices, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, padded_size);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes bitonic sort step for unique operation.
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_bitonic_step(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    values: &Buffer,
+    indices: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    // metadata layout: [num_els, offset, padded_size, k, j]
+    let padded_size = metadata[2];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (values, indices, metadata));
+
+    encoder.use_resource(values, MTLResourceUsage::Read | MTLResourceUsage::Write);
+    encoder.use_resource(indices, MTLResourceUsage::Read | MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, padded_size);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes unique count operation to count unique elements.
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_count(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    sorted_values: &Buffer,
+    count_buffer: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    let num_els = metadata[0];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (sorted_values, count_buffer, metadata));
+
+    encoder.use_resource(sorted_values, MTLResourceUsage::Read);
+    encoder.use_resource(count_buffer, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes unique mark operation to mark unique boundaries.
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_mark(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    sorted_values: &Buffer,
+    marks: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    let num_els = metadata[0];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (sorted_values, marks, metadata));
+
+    encoder.use_resource(sorted_values, MTLResourceUsage::Read);
+    encoder.use_resource(marks, MTLResourceUsage::Write);
+
+    let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
+    encoder.dispatch_thread_groups(thread_group_count, thread_group_size);
+
+    Ok(())
+}
+
+/// Executes unique prefix sum operation (single threaded).
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_prefix_sum(
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    marks: &Buffer,
+    unique_idx: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, "hodu_metal_unique_prefix_sum")?;
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(encoder, (marks, unique_idx, metadata));
+
+    encoder.use_resource(marks, MTLResourceUsage::Read);
+    encoder.use_resource(unique_idx, MTLResourceUsage::Write);
+
+    // Single thread for sequential prefix sum
+    encoder.dispatch_thread_groups(
+        objc2_metal::MTLSize {
+            width: 1,
+            height: 1,
+            depth: 1,
+        },
+        objc2_metal::MTLSize {
+            width: 1,
+            height: 1,
+            depth: 1,
+        },
+    );
+
+    Ok(())
+}
+
+/// Executes unique build operation to construct output arrays.
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_build(
+    kernel: Kernel,
+    kernels: &Kernels,
+    device: &Device,
+    ep: impl EncoderProvider,
+    sorted_values: &Buffer,
+    sorted_indices: &Buffer,
+    marks: &Buffer,
+    unique_idx: &Buffer,
+    values: &Buffer,
+    inverse: &Buffer,
+    counts: &Buffer,
+    metadata: &[usize],
+) -> Result<(), MetalKernelError> {
+    let pipeline = kernels.load_pipeline(device, Source::Indexing, kernel.0)?;
+
+    let num_els = metadata[0];
+
+    let encoder = ep.encoder();
+    let encoder: &ComputeCommandEncoder = encoder.as_ref();
+    encoder.set_compute_pipeline_state(&pipeline);
+
+    set_params!(
+        encoder,
+        (
+            sorted_values,
+            sorted_indices,
+            marks,
+            unique_idx,
+            values,
+            inverse,
+            counts,
+            metadata
+        )
+    );
+
+    encoder.use_resource(sorted_values, MTLResourceUsage::Read);
+    encoder.use_resource(sorted_indices, MTLResourceUsage::Read);
+    encoder.use_resource(marks, MTLResourceUsage::Read);
+    encoder.use_resource(unique_idx, MTLResourceUsage::Read);
+    encoder.use_resource(values, MTLResourceUsage::Write);
+    encoder.use_resource(inverse, MTLResourceUsage::Write);
+    encoder.use_resource(counts, MTLResourceUsage::Write);
 
     let (thread_group_count, thread_group_size) = linear_split(&pipeline, num_els);
     encoder.dispatch_thread_groups(thread_group_count, thread_group_size);

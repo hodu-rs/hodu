@@ -16,7 +16,12 @@ ops!(
     scatter_min,
     onehot,
     nonzero_count,
-    nonzero_fill
+    nonzero_fill,
+    unique_sort,
+    unique_bitonic_step,
+    unique_count,
+    unique_mark,
+    unique_build
 );
 
 /// Execute an index_select operation
@@ -403,6 +408,253 @@ where
     unsafe {
         func.launch(&stream, cfg, |args| {
             args.arg(input).arg(output).arg(counter).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Copy input to sorted buffer and initialize indices for unique operation.
+/// metadata layout: [num_els, offset, padded_size]
+pub fn call_unique_sort<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    input: &CudaSlice<T>,
+    sorted_values: &mut CudaSlice<T>,
+    sorted_indices: &mut CudaSlice<i32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    // Use padded_size (metadata[2]) for thread count
+    let padded_size = metadata[2];
+    let block_size = 256u32;
+    let grid_size = (padded_size as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(input)
+                .arg(sorted_values)
+                .arg(sorted_indices)
+                .arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Execute bitonic sort step for unique operation.
+/// metadata layout: [num_els, offset, padded_size, k, j]
+pub fn call_unique_bitonic_step<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    values: &mut CudaSlice<T>,
+    indices: &mut CudaSlice<i32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    // Use padded_size (metadata[2]) for thread count
+    let padded_size = metadata[2];
+    let block_size = 256u32;
+    let grid_size = (padded_size as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(values).arg(indices).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Count unique elements.
+pub fn call_unique_count<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    sorted_values: &CudaSlice<T>,
+    count: &mut CudaSlice<u32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    let num_els = metadata[0];
+    let block_size = 256u32;
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(sorted_values).arg(count).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Mark unique boundaries.
+pub fn call_unique_mark<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    sorted_values: &CudaSlice<T>,
+    marks: &mut CudaSlice<u32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    let num_els = metadata[0];
+    let block_size = 256u32;
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(sorted_values).arg(marks).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Compute prefix sum for unique indices (single thread).
+pub fn call_unique_prefix_sum(
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    marks: &CudaSlice<u32>,
+    unique_idx: &mut CudaSlice<i32>,
+    metadata: &[usize],
+) -> Result<()> {
+    let func = kernels.load_function(context, Source::OpsIndexing, "hodu_cuda_unique_prefix_sum")?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    let cfg = LaunchConfig {
+        grid_dim: (1, 1, 1),
+        block_dim: (1, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(marks).arg(unique_idx).arg(&metadata_dev);
+        })
+        .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
+    }
+
+    Ok(())
+}
+
+/// Build output arrays for unique operation.
+#[allow(clippy::too_many_arguments)]
+pub fn call_unique_build<T>(
+    kernel: Kernel,
+    kernels: &crate::kernel::Kernels,
+    context: &crate::cuda::CudaContext,
+    sorted_values: &CudaSlice<T>,
+    sorted_indices: &CudaSlice<i32>,
+    marks: &CudaSlice<u32>,
+    unique_idx: &CudaSlice<i32>,
+    values: &mut CudaSlice<T>,
+    inverse: &mut CudaSlice<i32>,
+    counts: &mut CudaSlice<i32>,
+    metadata: &[usize],
+) -> Result<()>
+where
+    T: cudarc::driver::DeviceRepr,
+{
+    let func = kernels.load_function(context, Source::OpsIndexing, kernel.0)?;
+
+    let stream = context.default_stream();
+    let metadata_dev = stream
+        .memcpy_stod(metadata)
+        .map_err(|e| CudaKernelError::MemoryError(format!("Failed to copy metadata: {:?}", e)))?;
+
+    let num_els = metadata[0];
+    let block_size = 256u32;
+    let grid_size = (num_els as u32).div_ceil(block_size).max(1);
+
+    let cfg = LaunchConfig {
+        grid_dim: (grid_size, 1, 1),
+        block_dim: (block_size, 1, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe {
+        func.launch(&stream, cfg, |args| {
+            args.arg(sorted_values)
+                .arg(sorted_indices)
+                .arg(marks)
+                .arg(unique_idx)
+                .arg(values)
+                .arg(inverse)
+                .arg(counts)
+                .arg(&metadata_dev);
         })
         .map_err(|e| CudaKernelError::LaunchError(format!("Failed to launch kernel: {:?}", e)))?;
     }

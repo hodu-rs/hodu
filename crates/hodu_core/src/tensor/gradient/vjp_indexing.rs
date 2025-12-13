@@ -228,6 +228,12 @@ impl VjpCompute for IndexingOp {
                     "Nonzero operation does not support gradients".to_string(),
                 ))
             },
+            IndexingOp::Unique => {
+                // Unique returns unique values/indices/counts, which are not differentiable
+                Err(HoduError::VjpFunctionNotFound(
+                    "Unique operation does not support gradients".to_string(),
+                ))
+            },
         }
     }
 }

@@ -437,3 +437,217 @@ pub fn call_nonzero(input_storage: &MetalStorage, input_layout: &Layout) -> Hodu
         count,
     ))
 }
+
+/// Unique operation - uses GPU kernels for sorting and finding unique elements
+pub fn call_unique(
+    input_storage: &MetalStorage,
+    input_layout: &Layout,
+) -> HoduResult<(MetalStorage, MetalStorage, MetalStorage, usize)> {
+    let dtype = input_storage.dtype();
+    let shape = input_layout.shape();
+    let num_els = shape.size();
+
+    if num_els == 0 {
+        let device = input_storage.backend_device();
+        let empty_values = device.new_buffer(0, dtype, "unique_values")?;
+        let empty_inverse = device.new_buffer(0, DType::I32, "unique_inverse")?;
+        let empty_counts = device.new_buffer(0, DType::I32, "unique_counts")?;
+        return Ok((
+            MetalStorage::new(empty_values, device.clone(), 0, dtype),
+            MetalStorage::new(empty_inverse, device.clone(), 0, DType::I32),
+            MetalStorage::new(empty_counts, device.clone(), 0, DType::I32),
+            0,
+        ));
+    }
+
+    let device = input_storage.backend_device();
+
+    // Compute next power of 2 for bitonic sort
+    let padded_size = num_els.next_power_of_two();
+
+    // Metadata: [num_els, offset, padded_size]
+    let metadata = vec![num_els, input_layout.offset(), padded_size];
+
+    // Step 1: Copy input to sorted_values and initialize sorted_indices (with padding)
+    let sorted_values = device.new_buffer(padded_size, dtype, "unique_sorted_values")?;
+    let sorted_indices = device.new_buffer(padded_size, DType::I32, "unique_sorted_indices")?;
+
+    let sort_kernel_name = format!("hodu_metal_unique_sort_{}", dtype);
+    let sort_kernel_name_static = crate::cache::kernel::get_kernel_name(sort_kernel_name);
+    let sort_kernel = kernels::Kernel(sort_kernel_name_static);
+
+    let input_offset = BufferOffset::zero_offset(input_storage.buffer());
+    let command_buffer = device.command_buffer()?;
+
+    kernels::call_unique_sort(
+        sort_kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        input_offset,
+        &sorted_values,
+        &sorted_indices,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Step 2: Bitonic sort
+    let bitonic_kernel_name = format!("hodu_metal_unique_bitonic_step_{}", dtype);
+    let bitonic_kernel_name_static = crate::cache::kernel::get_kernel_name(bitonic_kernel_name);
+    let bitonic_kernel = kernels::Kernel(bitonic_kernel_name_static);
+
+    let mut k = 2;
+    while k <= padded_size {
+        let mut j = k / 2;
+        while j >= 1 {
+            // Bitonic metadata: [num_els, offset, padded_size, k, j]
+            let bitonic_metadata = vec![num_els, input_layout.offset(), padded_size, k, j];
+            let command_buffer = device.command_buffer()?;
+
+            kernels::call_unique_bitonic_step(
+                bitonic_kernel,
+                device.kernels(),
+                device.device(),
+                &command_buffer,
+                &sorted_values,
+                &sorted_indices,
+                &bitonic_metadata,
+            )?;
+
+            command_buffer.commit();
+            command_buffer.wait_until_completed();
+
+            j /= 2;
+        }
+        k *= 2;
+    }
+
+    // Step 3: Count unique elements
+    let count_buffer = device.new_buffer(1, DType::U32, "unique_count")?;
+
+    let count_kernel_name = format!("hodu_metal_unique_count_{}", dtype);
+    let count_kernel_name_static = crate::cache::kernel::get_kernel_name(count_kernel_name);
+    let count_kernel = kernels::Kernel(count_kernel_name_static);
+
+    let command_buffer = device.command_buffer()?;
+    kernels::call_unique_count(
+        count_kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        &sorted_values,
+        &count_buffer,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Read unique count
+    let count_ptr = count_buffer.contents() as *const u32;
+    let unique_count = unsafe { *count_ptr } as usize;
+
+    if unique_count == 0 {
+        let empty_values = device.new_buffer(0, dtype, "unique_values")?;
+        let empty_inverse = device.new_buffer(0, DType::I32, "unique_inverse")?;
+        let empty_counts = device.new_buffer(0, DType::I32, "unique_counts")?;
+        return Ok((
+            MetalStorage::new(empty_values, device.clone(), 0, dtype),
+            MetalStorage::new(empty_inverse, device.clone(), 0, DType::I32),
+            MetalStorage::new(empty_counts, device.clone(), 0, DType::I32),
+            0,
+        ));
+    }
+
+    // Step 4: Mark unique boundaries
+    let marks = device.new_buffer(num_els, DType::U32, "unique_marks")?;
+
+    let mark_kernel_name = format!("hodu_metal_unique_mark_{}", dtype);
+    let mark_kernel_name_static = crate::cache::kernel::get_kernel_name(mark_kernel_name);
+    let mark_kernel = kernels::Kernel(mark_kernel_name_static);
+
+    let command_buffer = device.command_buffer()?;
+    kernels::call_unique_mark(
+        mark_kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        &sorted_values,
+        &marks,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Step 5: Prefix sum to get unique indices
+    let unique_idx = device.new_buffer(num_els, DType::I32, "unique_idx")?;
+
+    let command_buffer = device.command_buffer()?;
+    kernels::call_unique_prefix_sum(
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        &marks,
+        &unique_idx,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Step 6: Build output arrays
+    let values_buffer = device.new_buffer(unique_count, dtype, "unique_values")?;
+    let inverse_buffer = device.new_buffer(num_els, DType::I32, "unique_inverse")?;
+    let counts_buffer = device.new_buffer(unique_count, DType::I32, "unique_counts")?;
+
+    // Initialize counts to 0
+    {
+        let zeros = vec![0i32; unique_count];
+        let command_buffer = device.command_buffer()?;
+        let blit = command_buffer.blit_command_encoder();
+        let temp_buffer = device.new_buffer_with_data(&zeros)?;
+        blit.copy_from_buffer(
+            &temp_buffer,
+            0,
+            &counts_buffer,
+            0,
+            unique_count * DType::I32.size_in_bytes(),
+        );
+        blit.end_encoding();
+        command_buffer.commit();
+        command_buffer.wait_until_completed();
+    }
+
+    let build_kernel_name = format!("hodu_metal_unique_build_{}", dtype);
+    let build_kernel_name_static = crate::cache::kernel::get_kernel_name(build_kernel_name);
+    let build_kernel = kernels::Kernel(build_kernel_name_static);
+
+    let command_buffer = device.command_buffer()?;
+    kernels::call_unique_build(
+        build_kernel,
+        device.kernels(),
+        device.device(),
+        &command_buffer,
+        &sorted_values,
+        &sorted_indices,
+        &marks,
+        &unique_idx,
+        &values_buffer,
+        &inverse_buffer,
+        &counts_buffer,
+        &metadata,
+    )?;
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    Ok((
+        MetalStorage::new(values_buffer, device.clone(), unique_count, dtype),
+        MetalStorage::new(inverse_buffer, device.clone(), num_els, DType::I32),
+        MetalStorage::new(counts_buffer, device.clone(), unique_count, DType::I32),
+        unique_count,
+    ))
+}

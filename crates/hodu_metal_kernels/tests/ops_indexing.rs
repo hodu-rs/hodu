@@ -1,6 +1,10 @@
 use hodu_metal_kernels::{
     kernel::Kernels,
-    kernels::{call_nonzero_count, call_nonzero_fill, call_ops_onehot, nonzero_count, nonzero_fill, onehot, Kernel},
+    kernels::{
+        call_nonzero_count, call_nonzero_fill, call_ops_onehot, call_unique_bitonic_step, call_unique_build,
+        call_unique_count, call_unique_mark, call_unique_prefix_sum, call_unique_sort, nonzero_count, nonzero_fill,
+        onehot, unique_bitonic_step, unique_build, unique_count, unique_mark, unique_sort, Kernel,
+    },
     metal::{create_command_buffer, Buffer, Device},
     utils::BufferOffset,
     RESOURCE_OPTIONS,
@@ -308,4 +312,231 @@ fn test_nonzero_all_nonzero() {
 
     assert_eq!(count, 3);
     assert_eq!(indices, vec![0i32, 1, 2]);
+}
+
+// ============================================================================
+// UNIQUE TESTS
+// ============================================================================
+
+fn run_unique_i32(input: &[i32]) -> (usize, Vec<i32>, Vec<i32>, Vec<i32>) {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let options = RESOURCE_OPTIONS;
+
+    let num_els = input.len();
+    let padded_size = num_els.next_power_of_two();
+    let input_buffer = new_buffer(&device, input);
+    let metadata = vec![num_els, 0, padded_size]; // num_els, offset, padded_size
+
+    // Step 1: Copy input and initialize indices (with padding)
+    let sorted_values = device
+        .new_buffer(padded_size * std::mem::size_of::<i32>(), options)
+        .unwrap();
+    let sorted_indices = device
+        .new_buffer(padded_size * std::mem::size_of::<i32>(), options)
+        .unwrap();
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_unique_sort(
+        unique_sort::I32,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &sorted_values,
+        &sorted_indices,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Step 2: Bitonic sort
+    let mut k = 2;
+    while k <= padded_size {
+        let mut j = k / 2;
+        while j >= 1 {
+            let bitonic_metadata = vec![num_els, 0, padded_size, k, j];
+            let command_buffer = create_command_buffer(&command_queue).unwrap();
+            call_unique_bitonic_step(
+                unique_bitonic_step::I32,
+                &kernels,
+                &device,
+                &command_buffer,
+                &sorted_values,
+                &sorted_indices,
+                &bitonic_metadata,
+            )
+            .unwrap();
+            command_buffer.commit();
+            command_buffer.wait_until_completed();
+            j /= 2;
+        }
+        k *= 2;
+    }
+
+    // Step 3: Count unique elements
+    let count_buffer = device.new_buffer(std::mem::size_of::<u32>(), options).unwrap();
+    unsafe {
+        let ptr = count_buffer.contents() as *mut u32;
+        *ptr = 0;
+    }
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_unique_count(
+        unique_count::I32,
+        &kernels,
+        &device,
+        &command_buffer,
+        &sorted_values,
+        &count_buffer,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let unique_count = unsafe { *(count_buffer.contents() as *const u32) } as usize;
+
+    if unique_count == 0 {
+        return (0, vec![], vec![], vec![]);
+    }
+
+    // Step 4: Mark unique boundaries
+    let marks = device
+        .new_buffer(num_els * std::mem::size_of::<u32>(), options)
+        .unwrap();
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_unique_mark(
+        unique_mark::I32,
+        &kernels,
+        &device,
+        &command_buffer,
+        &sorted_values,
+        &marks,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Step 5: Prefix sum
+    let unique_idx = device
+        .new_buffer(num_els * std::mem::size_of::<i32>(), options)
+        .unwrap();
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_unique_prefix_sum(&kernels, &device, &command_buffer, &marks, &unique_idx, &metadata).unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    // Step 6: Build outputs
+    let values_buffer = device
+        .new_buffer(unique_count * std::mem::size_of::<i32>(), options)
+        .unwrap();
+    let inverse_buffer = device
+        .new_buffer(num_els * std::mem::size_of::<i32>(), options)
+        .unwrap();
+    let counts_buffer = device
+        .new_buffer(unique_count * std::mem::size_of::<i32>(), options)
+        .unwrap();
+
+    // Initialize counts to 0
+    unsafe {
+        let ptr = counts_buffer.contents() as *mut i32;
+        for i in 0..unique_count {
+            *ptr.add(i) = 0;
+        }
+    }
+
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+    call_unique_build(
+        unique_build::I32,
+        &kernels,
+        &device,
+        &command_buffer,
+        &sorted_values,
+        &sorted_indices,
+        &marks,
+        &unique_idx,
+        &values_buffer,
+        &inverse_buffer,
+        &counts_buffer,
+        &metadata,
+    )
+    .unwrap();
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let values = read_to_vec(&values_buffer, unique_count);
+    let inverse = read_to_vec(&inverse_buffer, num_els);
+    let counts = read_to_vec(&counts_buffer, unique_count);
+
+    (unique_count, values, inverse, counts)
+}
+
+#[test]
+fn test_unique_i32_basic() {
+    // Input: [3, 1, 2, 1, 3, 2, 4]
+    // Expected values (sorted): [1, 2, 3, 4]
+    // Expected inverse: [2, 0, 1, 0, 2, 1, 3]
+    // Expected counts: [2, 2, 2, 1]
+    let input = vec![3i32, 1, 2, 1, 3, 2, 4];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 4);
+    assert_eq!(values, vec![1, 2, 3, 4]);
+    assert_eq!(inverse, vec![2, 0, 1, 0, 2, 1, 3]);
+    assert_eq!(counts, vec![2, 2, 2, 1]);
+}
+
+#[test]
+fn test_unique_i32_all_same() {
+    // Input: [5, 5, 5, 5]
+    // Expected values: [5]
+    // Expected inverse: [0, 0, 0, 0]
+    // Expected counts: [4]
+    let input = vec![5i32, 5, 5, 5];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 1);
+    assert_eq!(values, vec![5]);
+    assert_eq!(inverse, vec![0, 0, 0, 0]);
+    assert_eq!(counts, vec![4]);
+}
+
+#[test]
+fn test_unique_i32_all_unique() {
+    // Input: [4, 2, 1, 3]
+    // Expected values (sorted): [1, 2, 3, 4]
+    // Expected inverse: [3, 1, 0, 2]
+    // Expected counts: [1, 1, 1, 1]
+    let input = vec![4i32, 2, 1, 3];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 4);
+    assert_eq!(values, vec![1, 2, 3, 4]);
+    assert_eq!(inverse, vec![3, 1, 0, 2]);
+    assert_eq!(counts, vec![1, 1, 1, 1]);
+}
+
+#[test]
+fn test_unique_i32_single_element() {
+    // Input: [42]
+    // Expected values: [42]
+    // Expected inverse: [0]
+    // Expected counts: [1]
+    let input = vec![42i32];
+
+    let (unique_count, values, inverse, counts) = run_unique_i32(&input);
+
+    assert_eq!(unique_count, 1);
+    assert_eq!(values, vec![42]);
+    assert_eq!(inverse, vec![0]);
+    assert_eq!(counts, vec![1]);
 }

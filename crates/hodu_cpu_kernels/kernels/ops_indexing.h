@@ -463,6 +463,64 @@ void hodu_cpu_nonzero_fill_u16(const void *input, int32_t *output, const size_t 
 void hodu_cpu_nonzero_fill_u32(const void *input, int32_t *output, const size_t *metadata);
 void hodu_cpu_nonzero_fill_u64(const void *input, int32_t *output, const size_t *metadata);
 
+// ============================================================================
+// UNIQUE OPERATIONS
+// ============================================================================
+//
+// Returns unique elements, inverse indices, and counts.
+//
+// Signature:
+//   size_t hodu_cpu_unique_type(const void *input, void *values,
+//                               int32_t *inverse, int32_t *counts,
+//                               const size_t *metadata)
+//
+// Parameters:
+//   input    - Pointer to input tensor data
+//   values   - Pointer to output values buffer (pre-allocated with num_els size)
+//   inverse  - Pointer to output inverse indices (pre-allocated with num_els size)
+//   counts   - Pointer to output counts buffer (pre-allocated with num_els size)
+//   metadata - Array describing operation (same as nonzero)
+//
+// Returns: unique_count (number of unique values)
+//
+// Metadata layout:
+// - metadata[0]: num_els (total number of elements in input)
+// - metadata[1]: num_dims (number of dimensions)
+// - metadata[2..2+num_dims]: input_shape
+// - metadata[2+num_dims..2+2*num_dims]: input_strides
+// - metadata[2+2*num_dims]: input_offset
+
+size_t hodu_cpu_unique_bool(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                            const size_t *metadata);
+size_t hodu_cpu_unique_f8e4m3(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                              const size_t *metadata);
+size_t hodu_cpu_unique_f8e5m2(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                              const size_t *metadata);
+size_t hodu_cpu_unique_bf16(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                            const size_t *metadata);
+size_t hodu_cpu_unique_f16(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_f32(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_f64(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_i8(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                          const size_t *metadata);
+size_t hodu_cpu_unique_i16(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_i32(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_i64(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_u8(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                          const size_t *metadata);
+size_t hodu_cpu_unique_u16(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_u32(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+size_t hodu_cpu_unique_u64(const void *input, void *values, int32_t *inverse, int32_t *counts,
+                           const size_t *metadata);
+
 #ifdef __cplusplus
 }
 #endif

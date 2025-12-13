@@ -727,3 +727,272 @@ pub fn call_nonzero(input_storage: &CudaStorage, input_layout: &Layout) -> HoduR
         count,
     ))
 }
+
+/// Unique operation - uses GPU kernels for sorting and finding unique elements
+pub fn call_unique(
+    input_storage: &CudaStorage,
+    input_layout: &Layout,
+) -> HoduResult<(CudaStorage, CudaStorage, CudaStorage, usize)> {
+    let dtype = input_storage.dtype();
+    let shape = input_layout.shape();
+    let num_els = shape.size();
+    let device_id = input_storage.device_id();
+    let device_arc = input_storage.device_arc().clone();
+    let context = input_storage.context();
+    let kernels = input_storage.kernels();
+
+    if num_els == 0 {
+        let stream = context.default_stream();
+        let empty_values: CudaSlice<u8> = stream.alloc_zeros(0).map_err(cuda_err)?;
+        let empty_inverse: CudaSlice<i32> = stream.alloc_zeros(0).map_err(cuda_err)?;
+        let empty_counts: CudaSlice<i32> = stream.alloc_zeros(0).map_err(cuda_err)?;
+        return Ok((
+            CudaStorage::new(
+                device_id,
+                device_arc.clone(),
+                CudaStorageData::from_slice_u8(empty_values, dtype)?,
+            ),
+            CudaStorage::new(device_id, device_arc.clone(), CudaStorageData::I32(empty_inverse)),
+            CudaStorage::new(device_id, device_arc, CudaStorageData::I32(empty_counts)),
+            0,
+        ));
+    }
+
+    let stream = context.default_stream();
+    // Compute next power of 2 for bitonic sort
+    let padded_size = num_els.next_power_of_two();
+    let metadata = vec![num_els, input_layout.offset(), padded_size];
+
+    macro_rules! call_unique_kernel {
+        ($input:expr, $variant:ident, $sort_kernel:expr, $bitonic_kernel:expr, $count_kernel:expr, $mark_kernel:expr, $build_kernel:expr) => {{
+            // Step 1: Copy input to sorted_values and initialize sorted_indices (with padding)
+            let mut sorted_values: CudaSlice<_> = stream.alloc_zeros(padded_size).map_err(cuda_err)?;
+            let mut sorted_indices: CudaSlice<i32> = stream.alloc_zeros(padded_size).map_err(cuda_err)?;
+
+            kernels::call_unique_sort(
+                $sort_kernel,
+                kernels,
+                context,
+                $input,
+                &mut sorted_values,
+                &mut sorted_indices,
+                &metadata,
+            )?;
+            stream.synchronize().map_err(cuda_err)?;
+
+            // Step 2: Bitonic sort
+            let mut k = 2;
+            while k <= padded_size {
+                let mut j = k / 2;
+                while j >= 1 {
+                    // Bitonic metadata: [num_els, offset, padded_size, k, j]
+                    let bitonic_metadata = vec![num_els, input_layout.offset(), padded_size, k, j];
+                    kernels::call_unique_bitonic_step(
+                        $bitonic_kernel,
+                        kernels,
+                        context,
+                        &mut sorted_values,
+                        &mut sorted_indices,
+                        &bitonic_metadata,
+                    )?;
+                    stream.synchronize().map_err(cuda_err)?;
+                    j /= 2;
+                }
+                k *= 2;
+            }
+
+            // Step 3: Count unique elements
+            let mut count_buffer: CudaSlice<u32> = stream.alloc_zeros(1).map_err(cuda_err)?;
+            kernels::call_unique_count(
+                $count_kernel,
+                kernels,
+                context,
+                &sorted_values,
+                &mut count_buffer,
+                &metadata,
+            )?;
+            stream.synchronize().map_err(cuda_err)?;
+
+            let mut count_host = [0u32; 1];
+            stream.memcpy_dtoh(&count_buffer, &mut count_host).map_err(cuda_err)?;
+            let unique_count = count_host[0] as usize;
+
+            if unique_count == 0 {
+                let empty_values: CudaSlice<u8> = stream.alloc_zeros(0).map_err(cuda_err)?;
+                let empty_inverse: CudaSlice<i32> = stream.alloc_zeros(0).map_err(cuda_err)?;
+                let empty_counts: CudaSlice<i32> = stream.alloc_zeros(0).map_err(cuda_err)?;
+                return Ok((
+                    CudaStorage::new(
+                        device_id,
+                        device_arc.clone(),
+                        CudaStorageData::from_slice_u8(empty_values, dtype)?,
+                    ),
+                    CudaStorage::new(device_id, device_arc.clone(), CudaStorageData::I32(empty_inverse)),
+                    CudaStorage::new(device_id, device_arc, CudaStorageData::I32(empty_counts)),
+                    0,
+                ));
+            }
+
+            // Step 4: Mark unique boundaries
+            let mut marks: CudaSlice<u32> = stream.alloc_zeros(num_els).map_err(cuda_err)?;
+            kernels::call_unique_mark($mark_kernel, kernels, context, &sorted_values, &mut marks, &metadata)?;
+            stream.synchronize().map_err(cuda_err)?;
+
+            // Step 5: Prefix sum to get unique indices
+            let mut unique_idx: CudaSlice<i32> = stream.alloc_zeros(num_els).map_err(cuda_err)?;
+            kernels::call_unique_prefix_sum(kernels, context, &marks, &mut unique_idx, &metadata)?;
+            stream.synchronize().map_err(cuda_err)?;
+
+            // Step 6: Build output arrays
+            let mut values_buffer: CudaSlice<_> = stream.alloc_zeros(unique_count).map_err(cuda_err)?;
+            let mut inverse_buffer: CudaSlice<i32> = stream.alloc_zeros(num_els).map_err(cuda_err)?;
+            let mut counts_buffer: CudaSlice<i32> = stream.alloc_zeros(unique_count).map_err(cuda_err)?;
+
+            kernels::call_unique_build(
+                $build_kernel,
+                kernels,
+                context,
+                &sorted_values,
+                &sorted_indices,
+                &marks,
+                &unique_idx,
+                &mut values_buffer,
+                &mut inverse_buffer,
+                &mut counts_buffer,
+                &metadata,
+            )?;
+            stream.synchronize().map_err(cuda_err)?;
+
+            (
+                CudaStorage::new(device_id, device_arc.clone(), CudaStorageData::$variant(values_buffer)),
+                CudaStorage::new(device_id, device_arc.clone(), CudaStorageData::I32(inverse_buffer)),
+                CudaStorage::new(device_id, device_arc, CudaStorageData::I32(counts_buffer)),
+                unique_count,
+            )
+        }};
+    }
+
+    let result = match &input_storage.data {
+        CudaStorageData::I8(input) => call_unique_kernel!(
+            input,
+            I8,
+            kernels::unique_sort::I8,
+            kernels::unique_bitonic_step::I8,
+            kernels::unique_count::I8,
+            kernels::unique_mark::I8,
+            kernels::unique_build::I8
+        ),
+        #[cfg(feature = "i16")]
+        CudaStorageData::I16(input) => call_unique_kernel!(
+            input,
+            I16,
+            kernels::unique_sort::I16,
+            kernels::unique_bitonic_step::I16,
+            kernels::unique_count::I16,
+            kernels::unique_mark::I16,
+            kernels::unique_build::I16
+        ),
+        CudaStorageData::I32(input) => call_unique_kernel!(
+            input,
+            I32,
+            kernels::unique_sort::I32,
+            kernels::unique_bitonic_step::I32,
+            kernels::unique_count::I32,
+            kernels::unique_mark::I32,
+            kernels::unique_build::I32
+        ),
+        #[cfg(feature = "i64")]
+        CudaStorageData::I64(input) => call_unique_kernel!(
+            input,
+            I64,
+            kernels::unique_sort::I64,
+            kernels::unique_bitonic_step::I64,
+            kernels::unique_count::I64,
+            kernels::unique_mark::I64,
+            kernels::unique_build::I64
+        ),
+        CudaStorageData::U8(input) => call_unique_kernel!(
+            input,
+            U8,
+            kernels::unique_sort::U8,
+            kernels::unique_bitonic_step::U8,
+            kernels::unique_count::U8,
+            kernels::unique_mark::U8,
+            kernels::unique_build::U8
+        ),
+        #[cfg(feature = "u16")]
+        CudaStorageData::U16(input) => call_unique_kernel!(
+            input,
+            U16,
+            kernels::unique_sort::U16,
+            kernels::unique_bitonic_step::U16,
+            kernels::unique_count::U16,
+            kernels::unique_mark::U16,
+            kernels::unique_build::U16
+        ),
+        CudaStorageData::U32(input) => call_unique_kernel!(
+            input,
+            U32,
+            kernels::unique_sort::U32,
+            kernels::unique_bitonic_step::U32,
+            kernels::unique_count::U32,
+            kernels::unique_mark::U32,
+            kernels::unique_build::U32
+        ),
+        #[cfg(feature = "u64")]
+        CudaStorageData::U64(input) => call_unique_kernel!(
+            input,
+            U64,
+            kernels::unique_sort::U64,
+            kernels::unique_bitonic_step::U64,
+            kernels::unique_count::U64,
+            kernels::unique_mark::U64,
+            kernels::unique_build::U64
+        ),
+        CudaStorageData::BF16(input) => call_unique_kernel!(
+            input,
+            BF16,
+            kernels::unique_sort::BF16,
+            kernels::unique_bitonic_step::BF16,
+            kernels::unique_count::BF16,
+            kernels::unique_mark::BF16,
+            kernels::unique_build::BF16
+        ),
+        CudaStorageData::F16(input) => call_unique_kernel!(
+            input,
+            F16,
+            kernels::unique_sort::F16,
+            kernels::unique_bitonic_step::F16,
+            kernels::unique_count::F16,
+            kernels::unique_mark::F16,
+            kernels::unique_build::F16
+        ),
+        CudaStorageData::F32(input) => call_unique_kernel!(
+            input,
+            F32,
+            kernels::unique_sort::F32,
+            kernels::unique_bitonic_step::F32,
+            kernels::unique_count::F32,
+            kernels::unique_mark::F32,
+            kernels::unique_build::F32
+        ),
+        #[cfg(feature = "f64")]
+        CudaStorageData::F64(input) => call_unique_kernel!(
+            input,
+            F64,
+            kernels::unique_sort::F64,
+            kernels::unique_bitonic_step::F64,
+            kernels::unique_count::F64,
+            kernels::unique_mark::F64,
+            kernels::unique_build::F64
+        ),
+        _ => {
+            return Err(HoduError::UnsupportedDType {
+                dtype: dtype.to_string(),
+                op: "unique".to_string(),
+            })
+        },
+    };
+
+    Ok(result)
+}
