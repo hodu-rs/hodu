@@ -322,6 +322,27 @@ impl fmt::Debug for MatrixOp {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum LinalgOp {
+    Det, // Determinant of square matrix
+         // Future: Inv, Solve, Svd, Eig, Cholesky, Qr, Lu, etc.
+}
+
+impl fmt::Display for LinalgOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Det => write!(f, "det"),
+        }
+    }
+}
+
+impl fmt::Debug for LinalgOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self, f)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ReduceOp {
     Sum,
     Mean,
@@ -741,6 +762,7 @@ pub enum Op {
     UnaryLogical(UnaryLogicalOp),
     UnaryScalar(UnaryScalarOp),
     Matrix(MatrixOp),
+    Linalg(LinalgOp),
     Reduce(ReduceOp),
     Concat(ConcatOp),
     Split(SplitOp),
@@ -771,6 +793,7 @@ impl fmt::Display for Op {
             Self::UnaryLogical(op) => write!(f, "{}", op),
             Self::UnaryScalar(op) => write!(f, "{}", op),
             Self::Matrix(op) => write!(f, "{}", op),
+            Self::Linalg(op) => write!(f, "{}", op),
             Self::Reduce(op) => write!(f, "{}", op),
             Self::Concat(op) => write!(f, "{}", op),
             Self::Split(op) => write!(f, "{}", op),
@@ -803,6 +826,7 @@ impl fmt::Debug for Op {
             Self::UnaryLogical(op) => write!(f, "UnaryLogical[{}]", op),
             Self::UnaryScalar(op) => write!(f, "UnaryScalar[{}]", op),
             Self::Matrix(op) => write!(f, "Matrix[{}]", op),
+            Self::Linalg(op) => write!(f, "Linalg[{}]", op),
             Self::Reduce(op) => write!(f, "Reduce[{}]", op),
             Self::Scan(op) => write!(f, "Scan[{}]", op),
             Self::Sort(op) => write!(f, "Sort[{}]", op),

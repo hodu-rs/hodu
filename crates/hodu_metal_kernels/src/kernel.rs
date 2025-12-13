@@ -82,6 +82,7 @@ impl Kernels {
             Source::Conv => crate::source::get_conv(),
             Source::Einsum => crate::source::get_einsum(),
             Source::Indexing => crate::source::get_indexing(),
+            Source::Linalg => crate::source::get_linalg(),
             Source::Matrix => crate::source::get_matrix(),
             Source::Memory => crate::source::get_memory(),
             Source::Padding => crate::source::get_padding(),

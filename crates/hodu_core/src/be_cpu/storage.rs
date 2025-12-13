@@ -5,6 +5,7 @@ mod ops_concat_split;
 mod ops_conv;
 mod ops_einsum;
 mod ops_indexing;
+mod ops_linalg;
 mod ops_matrix;
 mod ops_padding;
 mod ops_reduce;
@@ -441,6 +442,10 @@ impl BackendStorageT for CpuStorage {
 
     fn call_ops_dot(&self, rhs_storage: &Self, lhs_layout: &Layout, rhs_layout: &Layout, op: Op) -> HoduResult<Self> {
         ops_matrix::call_ops_dot(self, rhs_storage, lhs_layout, rhs_layout, op)
+    }
+
+    fn call_ops_det(&self, layout: &Layout) -> HoduResult<Self> {
+        ops_linalg::call_ops_det(self, layout)
     }
 
     fn call_ops_reduce(&self, layout: &Layout, dims: &[usize], keep_dim: bool, op: Op) -> HoduResult<Self> {

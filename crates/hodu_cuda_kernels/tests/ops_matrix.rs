@@ -1,4 +1,5 @@
-use hodu_cuda_kernels::{kernel::Kernels, kernels::*};
+use hodu_cuda_kernels::{cuda::CudaSlice, kernel::Kernels, kernels::*};
+use std::sync::Arc;
 
 fn device() -> Arc<cudarc::driver::CudaContext> {
     cudarc::driver::CudaContext::new(0).unwrap()

@@ -22,6 +22,7 @@ mod vjp_concat_split;
 mod vjp_conv;
 mod vjp_einsum;
 mod vjp_indexing;
+mod vjp_linalg;
 mod vjp_matrix;
 mod vjp_padding;
 mod vjp_reduce;

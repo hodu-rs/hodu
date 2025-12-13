@@ -11,6 +11,7 @@ pub enum Source {
     OpsConv,
     OpsEinsum,
     OpsIndexing,
+    OpsLinalg,
     OpsMatrix,
     OpsMemory,
     OpsPadding,

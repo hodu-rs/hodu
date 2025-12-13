@@ -49,7 +49,20 @@
 - [x] Implement reduce_logsumexp (ONNX: ReduceLogSumExp) - numerically stable log(sum(exp(x)))
 
 **ONNX Compatibility - Matrix Operations:** (🟢 Nice-to-have)
-- [ ] Implement det (ONNX: Det) - matrix determinant
+- [x] Implement det (ONNX: Det) - matrix determinant
+
+**Linear Algebra Operations:** (🟢 Nice-to-have)
+- [ ] Implement inv - matrix inverse
+- [ ] Implement solve - linear system solver (Ax = b)
+- [ ] Implement svd - singular value decomposition
+- [ ] Implement eig/eigvals - eigenvalue decomposition
+- [ ] Implement cholesky - Cholesky decomposition
+- [ ] Implement qr - QR decomposition
+- [ ] Implement lu - LU decomposition (factorization)
+- [ ] Implement trace - matrix trace (sum of diagonal)
+- [ ] Implement slogdet - sign and log of determinant (numerically stable)
+- [ ] Implement matrix_rank - rank of matrix
+- [ ] Implement pinv - Moore-Penrose pseudo-inverse
 
 **ONNX Compatibility - Low Priority:** (🟢 Nice-to-have)
 - [ ] Implement compress (ONNX: Compress) - select elements based on condition

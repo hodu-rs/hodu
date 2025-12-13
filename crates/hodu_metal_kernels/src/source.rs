@@ -12,6 +12,7 @@ const CONCAT_SPLIT_SRC: &str = include_str!("../kernels/ops_concat_split.metal")
 const CONV_SRC: &str = include_str!("../kernels/ops_conv.metal");
 const EINSUM_SRC: &str = include_str!("../kernels/ops_einsum.metal");
 const INDEXING_SRC: &str = include_str!("../kernels/ops_indexing.metal");
+const LINALG_SRC: &str = include_str!("../kernels/ops_linalg.metal");
 const MATRIX_SRC: &str = include_str!("../kernels/ops_matrix.metal");
 const MEMORY_SRC: &str = include_str!("../kernels/ops_memory.metal");
 const PADDING_SRC: &str = include_str!("../kernels/ops_padding.metal");
@@ -42,6 +43,7 @@ static CONCAT_SPLIT: OnceLock<String> = OnceLock::new();
 static CONV: OnceLock<String> = OnceLock::new();
 static EINSUM: OnceLock<String> = OnceLock::new();
 static INDEXING: OnceLock<String> = OnceLock::new();
+static LINALG: OnceLock<String> = OnceLock::new();
 static MATRIX: OnceLock<String> = OnceLock::new();
 static MEMORY: OnceLock<String> = OnceLock::new();
 static PADDING: OnceLock<String> = OnceLock::new();
@@ -75,6 +77,10 @@ pub fn get_einsum() -> &'static str {
 
 pub fn get_indexing() -> &'static str {
     INDEXING.get_or_init(|| combine_source(INDEXING_SRC))
+}
+
+pub fn get_linalg() -> &'static str {
+    LINALG.get_or_init(|| combine_source(LINALG_SRC))
 }
 
 pub fn get_matrix() -> &'static str {
@@ -125,6 +131,7 @@ pub enum Source {
     Conv,
     Einsum,
     Indexing,
+    Linalg,
     Matrix,
     Memory,
     Padding,

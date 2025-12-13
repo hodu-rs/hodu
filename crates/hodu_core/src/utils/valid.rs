@@ -1,6 +1,6 @@
 use crate::{
     error::{HoduError, HoduResult},
-    ops::{BinaryOp, CmpOp, CmpScalarOp, IndexingOp, Op, ReduceOp, UnaryOp, UnaryScalarOp, WindowingOp},
+    ops::{BinaryOp, CmpOp, CmpScalarOp, IndexingOp, LinalgOp, Op, ReduceOp, UnaryOp, UnaryScalarOp, WindowingOp},
     tensor::Tensor,
     types::{DType, Device},
 };
@@ -242,11 +242,21 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             },
         },
 
-        // Matrix operations
+        // Matrix operations - all support float and integer (integer: forward only)
         Op::Matrix(_) => {
-            if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
+            if dtype == DType::BOOL {
                 return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
             }
+        },
+
+        // Linear algebra operations - float types only for gradient support
+        Op::Linalg(inner_op) => match inner_op {
+            LinalgOp::Det => {
+                // Det supports float and integer (integer: forward only, no gradient)
+                if dtype == DType::BOOL {
+                    return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
+                }
+            },
         },
 
         // Reduce operations
@@ -409,6 +419,11 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
 
         // Matrix operations
         Op::Matrix(_) => true,
+
+        // Linear algebra operations
+        Op::Linalg(inner_op) => match inner_op {
+            LinalgOp::Det => true, // TODO: gradient requires matrix inverse
+        },
 
         // Reduce operations
         Op::Reduce(inner_op) => match inner_op {

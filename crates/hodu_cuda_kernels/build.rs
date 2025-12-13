@@ -19,6 +19,7 @@ fn main() {
         "ops_conv.cu",
         "ops_einsum.cu",
         "ops_indexing.cu",
+        "ops_linalg.cu",
         "ops_matrix.cu",
         "ops_memory.cu",
         "ops_padding.cu",

@@ -136,6 +136,7 @@ impl Kernels {
             Source::OpsConv => crate::source::get_ops_conv(),
             Source::OpsEinsum => crate::source::get_ops_einsum(),
             Source::OpsIndexing => crate::source::get_ops_indexing(),
+            Source::OpsLinalg => crate::source::get_ops_linalg(),
             Source::OpsMatrix => crate::source::get_ops_matrix(),
             Source::OpsMemory => crate::source::get_ops_memory(),
             Source::OpsPadding => crate::source::get_ops_padding(),

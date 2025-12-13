@@ -5,6 +5,7 @@ mod concat_split;
 mod conv;
 mod einsum;
 mod indexing;
+mod linalg;
 mod matrix;
 mod normalization;
 mod padding;

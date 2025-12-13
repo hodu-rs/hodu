@@ -170,6 +170,7 @@ fn compute_vjp_for_op(
         Op::UnaryLogical(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::UnaryScalar(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Matrix(op) => op.compute_vjp(inputs, output, grad_output, op_params),
+        Op::Linalg(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Reduce(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Concat(op) => op.compute_vjp(inputs, output, grad_output, op_params),
         Op::Split(op) => op.compute_vjp(inputs, output, grad_output, op_params),

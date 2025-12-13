@@ -448,6 +448,7 @@ fn get_op_category(op: &Op) -> &'static str {
         Op::UnaryLogical(_) => "UnaryLogical",
         Op::UnaryScalar(_) => "UnaryScalar",
         Op::Matrix(_) => "Matrix",
+        Op::Linalg(_) => "Linalg",
         Op::Reduce(_) => "Reduce",
         Op::Concat(_) => "Concat",
         Op::Split(_) => "Split",
