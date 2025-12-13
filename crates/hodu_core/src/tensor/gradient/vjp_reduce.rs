@@ -129,6 +129,31 @@ impl VjpCompute for ReduceOp {
 
                 Ok(vec![result.id()])
             },
+            ReduceOp::LogSum => {
+                // d/dx log(sum(x)) = 1 / sum(x)
+                // output = log(sum(x)), so sum(x) = exp(output)
+                let output_tensor = tensor_from_id(output);
+                let sum_x = output_tensor.exp()?;
+                let broadcasted_sum = sum_x.broadcast(&input_shape)?;
+                let derivative = broadcasted_sum.recip()?;
+                let grad_tensor = tensor_from_id(grad_output);
+                let broadcasted_grad = grad_tensor.broadcast(&input_shape)?;
+                let result = derivative.mul(&broadcasted_grad)?;
+                Ok(vec![result.id()])
+            },
+            ReduceOp::LogSumExp => {
+                // d/dx log(sum(exp(x))) = exp(x) / sum(exp(x)) = softmax(x)
+                // output = log(sum(exp(x))), so sum(exp(x)) = exp(output)
+                let output_tensor = tensor_from_id(output);
+                let exp_x = input_tensor.exp()?;
+                let sum_exp = output_tensor.exp()?;
+                let broadcasted_sum = sum_exp.broadcast(&input_shape)?;
+                let softmax = exp_x.div(&broadcasted_sum)?;
+                let grad_tensor = tensor_from_id(grad_output);
+                let broadcasted_grad = grad_tensor.broadcast(&input_shape)?;
+                let result = softmax.mul(&broadcasted_grad)?;
+                Ok(vec![result.id()])
+            },
             _ => Err(HoduError::GradientComputationFailed(format!(
                 "{:?} is not differentiable - cannot compute gradients for discrete index operations",
                 self

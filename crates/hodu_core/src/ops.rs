@@ -325,10 +325,12 @@ pub enum ReduceOp {
     Std,
     Var,
     Norm,
-    ArgMax, // no-backprop
-    ArgMin, // no-backprop
-    Any,    // no-backprop
-    All,    // no-backprop
+    LogSum,    // log(sum(x))
+    LogSumExp, // log(sum(exp(x)))
+    ArgMax,    // no-backprop
+    ArgMin,    // no-backprop
+    Any,       // no-backprop
+    All,       // no-backprop
 }
 
 impl fmt::Display for ReduceOp {
@@ -342,6 +344,8 @@ impl fmt::Display for ReduceOp {
             Self::Std => write!(f, "std"),
             Self::Var => write!(f, "var"),
             Self::Norm => write!(f, "norm"),
+            Self::LogSum => write!(f, "logsum"),
+            Self::LogSumExp => write!(f, "logsumexp"),
             Self::ArgMax => write!(f, "argmax"),
             Self::ArgMin => write!(f, "argmin"),
             Self::Any => write!(f, "any"),

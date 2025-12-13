@@ -148,6 +148,24 @@ void hodu_cpu_norm_f16(const void *input, void *output, const size_t *metadata);
 void hodu_cpu_norm_f32(const void *input, void *output, const size_t *metadata);
 void hodu_cpu_norm_f64(const void *input, void *output, const size_t *metadata);
 
+// LogSum operations (float types only)
+// Computes: log(sum(X))
+void hodu_cpu_logsum_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsum_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsum_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsum_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsum_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsum_f64(const void *input, void *output, const size_t *metadata);
+
+// LogSumExp operations (float types only)
+// Computes: log(sum(exp(X)))
+void hodu_cpu_logsumexp_f8e4m3(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsumexp_f8e5m2(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsumexp_bf16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsumexp_f16(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsumexp_f32(const void *input, void *output, const size_t *metadata);
+void hodu_cpu_logsumexp_f64(const void *input, void *output, const size_t *metadata);
+
 // ArgMax operations (returns int32 indices, all types including bool)
 void hodu_cpu_argmax_bool(const void *input, void *output, const size_t *metadata);
 void hodu_cpu_argmax_f8e4m3(const void *input, void *output, const size_t *metadata);

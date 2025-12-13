@@ -796,3 +796,193 @@ fn test_reduce_all_i32() {
     // [[1, 2, 3], [4, 5, 6]] -> all along dim 1 -> [true, true]
     assert_eq!(output, vec![1, 1]);
 }
+
+// reduce - logsum
+#[test]
+fn test_reduce_logsum_f32() {
+    let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let shape = vec![2, 3];
+    let reduce_dims = vec![1];
+    let keep_dim = false;
+    let strides = calculate_strides(&shape);
+    let output_shape = calculate_output_shape(&shape, &reduce_dims, keep_dim);
+    let output_size: usize = output_shape.iter().product();
+    let reduce_size: usize = reduce_dims.iter().map(|&d| shape[d]).product();
+    let mut output = vec![0.0f32; output_size];
+
+    let mut metadata = vec![shape.len()];
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape.len());
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(
+        logsum::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    // [[1, 2, 3], [4, 5, 6]] -> logsum along dim 1 -> [log(6), log(15)]
+    let expected = vec![(6.0f32).ln(), (15.0f32).ln()];
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsum_f32_dim0() {
+    let input = [1.0f32, 2.0, 3.0, 4.0];
+    let shape = vec![2, 2];
+    let reduce_dims = vec![0];
+    let keep_dim = false;
+    let strides = calculate_strides(&shape);
+    let output_shape = calculate_output_shape(&shape, &reduce_dims, keep_dim);
+    let output_size: usize = output_shape.iter().product();
+    let reduce_size: usize = reduce_dims.iter().map(|&d| shape[d]).product();
+    let mut output = vec![0.0f32; output_size];
+
+    let mut metadata = vec![shape.len()];
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape.len());
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(
+        logsum::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    // [[1, 2], [3, 4]] -> logsum along dim 0 -> [log(4), log(6)]
+    let expected = vec![(4.0f32).ln(), (6.0f32).ln()];
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
+// reduce - logsumexp
+#[test]
+fn test_reduce_logsumexp_f32() {
+    let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let shape = vec![2, 3];
+    let reduce_dims = vec![1];
+    let keep_dim = false;
+    let strides = calculate_strides(&shape);
+    let output_shape = calculate_output_shape(&shape, &reduce_dims, keep_dim);
+    let output_size: usize = output_shape.iter().product();
+    let reduce_size: usize = reduce_dims.iter().map(|&d| shape[d]).product();
+    let mut output = vec![0.0f32; output_size];
+
+    let mut metadata = vec![shape.len()];
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape.len());
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(
+        logsumexp::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    // [[1, 2, 3], [4, 5, 6]] -> logsumexp along dim 1
+    // log(exp(1) + exp(2) + exp(3)) and log(exp(4) + exp(5) + exp(6))
+    let expected = vec![
+        (1.0f32.exp() + 2.0f32.exp() + 3.0f32.exp()).ln(),
+        (4.0f32.exp() + 5.0f32.exp() + 6.0f32.exp()).ln(),
+    ];
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsumexp_f32_dim0() {
+    let input = [1.0f32, 2.0, 3.0, 4.0];
+    let shape = vec![2, 2];
+    let reduce_dims = vec![0];
+    let keep_dim = false;
+    let strides = calculate_strides(&shape);
+    let output_shape = calculate_output_shape(&shape, &reduce_dims, keep_dim);
+    let output_size: usize = output_shape.iter().product();
+    let reduce_size: usize = reduce_dims.iter().map(|&d| shape[d]).product();
+    let mut output = vec![0.0f32; output_size];
+
+    let mut metadata = vec![shape.len()];
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape.len());
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(
+        logsumexp::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    // [[1, 2], [3, 4]] -> logsumexp along dim 0
+    // [log(exp(1) + exp(3)), log(exp(2) + exp(4))]
+    let expected = vec![(1.0f32.exp() + 3.0f32.exp()).ln(), (2.0f32.exp() + 4.0f32.exp()).ln()];
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsumexp_f32_large_values() {
+    // Test numerical stability with large values
+    let input = [100.0f32, 101.0, 102.0];
+    let shape = vec![3];
+    let reduce_dims = vec![0];
+    let keep_dim = false;
+    let strides = calculate_strides(&shape);
+    let output_shape = calculate_output_shape(&shape, &reduce_dims, keep_dim);
+    let output_size: usize = output_shape.iter().product();
+    let reduce_size: usize = reduce_dims.iter().map(|&d| shape[d]).product();
+    let mut output = vec![0.0f32; output_size];
+
+    let mut metadata = vec![shape.len()];
+    metadata.extend(&shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape.len());
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(
+        logsumexp::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    // Numerically stable formula: max + log(sum(exp(x - max)))
+    // = 102 + log(exp(-2) + exp(-1) + exp(0))
+    // = 102 + log(exp(-2) + exp(-1) + 1)
+    let expected = vec![102.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln()];
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}

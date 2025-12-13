@@ -14,7 +14,7 @@ use crate::{error::Result, kernels::macros::ops};
 use core::ffi::c_void;
 
 // Define all reduce operations using the macro
-ops!(sum, mean, max, min, prod, std, var, norm, argmax, argmin, any, all);
+ops!(sum, mean, max, min, prod, std, var, norm, logsum, logsumexp, argmax, argmin, any, all);
 
 /// Execute a reduction operation
 ///
@@ -143,7 +143,7 @@ macro_rules! declare_reduce_ops {
 
 // Declare all reduce operations
 declare_reduce_ops!(all_types: sum, max, min, prod);
-declare_reduce_ops!(float_types: std, var, mean, norm);
+declare_reduce_ops!(float_types: std, var, mean, norm, logsum, logsumexp);
 declare_reduce_ops!(all_and_bool_types: argmax, argmin, any, all);
 
 // Macro to generate dispatch match arms
@@ -222,7 +222,7 @@ macro_rules! dispatch_all_and_bool_types {
 unsafe fn dispatch_reduce(name: &str, input: *const c_void, output: *mut c_void, metadata: *const usize) {
     dispatch_all_types!(name, input, output, metadata, sum, max, min, prod);
 
-    dispatch_float_types!(name, input, output, metadata, std, var, mean, norm);
+    dispatch_float_types!(name, input, output, metadata, std, var, mean, norm, logsum, logsumexp);
 
     dispatch_all_and_bool_types!(name, input, output, metadata, argmax, argmin, any, all);
 
@@ -309,6 +309,18 @@ unsafe fn dispatch_reduce(name: &str, input: *const c_void, output: *mut c_void,
             | "hodu_cpu_norm_f16"
             | "hodu_cpu_norm_f32"
             | "hodu_cpu_norm_f64"
+            | "hodu_cpu_logsum_f8e4m3"
+            | "hodu_cpu_logsum_f8e5m2"
+            | "hodu_cpu_logsum_bf16"
+            | "hodu_cpu_logsum_f16"
+            | "hodu_cpu_logsum_f32"
+            | "hodu_cpu_logsum_f64"
+            | "hodu_cpu_logsumexp_f8e4m3"
+            | "hodu_cpu_logsumexp_f8e5m2"
+            | "hodu_cpu_logsumexp_bf16"
+            | "hodu_cpu_logsumexp_f16"
+            | "hodu_cpu_logsumexp_f32"
+            | "hodu_cpu_logsumexp_f64"
             | "hodu_cpu_argmax_bool"
             | "hodu_cpu_argmax_f8e4m3"
             | "hodu_cpu_argmax_f8e5m2"

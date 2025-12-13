@@ -246,7 +246,12 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
             },
-            ReduceOp::Mean | ReduceOp::Std | ReduceOp::Var | ReduceOp::Norm => {
+            ReduceOp::Mean
+            | ReduceOp::Std
+            | ReduceOp::Var
+            | ReduceOp::Norm
+            | ReduceOp::LogSum
+            | ReduceOp::LogSumExp => {
                 if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
@@ -397,7 +402,14 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
 
         // Reduce operations
         Op::Reduce(inner_op) => match inner_op {
-            ReduceOp::Sum | ReduceOp::Mean | ReduceOp::Prod | ReduceOp::Std | ReduceOp::Var | ReduceOp::Norm => true,
+            ReduceOp::Sum
+            | ReduceOp::Mean
+            | ReduceOp::Prod
+            | ReduceOp::Std
+            | ReduceOp::Var
+            | ReduceOp::Norm
+            | ReduceOp::LogSum
+            | ReduceOp::LogSumExp => true,
             ReduceOp::Max | ReduceOp::Min => true,
             ReduceOp::ArgMax | ReduceOp::ArgMin => false, // !
             ReduceOp::Any | ReduceOp::All => false,       // !

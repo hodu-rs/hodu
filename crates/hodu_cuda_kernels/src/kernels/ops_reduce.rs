@@ -6,7 +6,7 @@ use crate::{
     source::Source,
 };
 
-ops!(sum, max, min, prod, mean, norm, argmax, argmin, all, any);
+ops!(sum, max, min, prod, mean, norm, logsum, logsumexp, argmax, argmin, all, any);
 
 /// Execute a reduce operation on a tensor
 ///

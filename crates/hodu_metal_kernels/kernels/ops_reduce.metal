@@ -348,6 +348,199 @@ REDUCE_NORM_OP(half, half, norm_f16)
 REDUCE_NORM_OP(float, float, norm_f32)
 
 // ============================================================================
+// LOGSUM OPERATIONS (log of sum)
+// ============================================================================
+
+#define REDUCE_LOGSUM_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                       \
+    kernel void hodu_metal_##FN_NAME(                                                              \
+        const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
+        uint threads_per_grid [[threads_per_grid]]) {                                              \
+        const size_t num_dims = metadata[0];                                                       \
+        const constant size_t *dims = metadata + 1;                                                \
+        const constant size_t *strides = metadata + 1 + num_dims;                                  \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const constant size_t *output_shape = metadata + 3 + 2 * num_dims;                         \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const constant size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;       \
+        const bool keep_dim =                                                                      \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims] != 0;                  \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (uint output_idx = thread_index; output_idx < num_els;                                 \
+             output_idx += threads_per_grid) {                                                     \
+                                                                                                   \
+            OUT_TYPENAME sum_val = 0;                                                              \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                                                                                                   \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                                                                                                   \
+                IN_TYPENAME val = input[flat_index];                                               \
+                sum_val += (OUT_TYPENAME)val;                                                      \
+            }                                                                                      \
+                                                                                                   \
+            output[output_idx] = (OUT_TYPENAME)log((float)sum_val);                                \
+        }                                                                                          \
+    }
+
+REDUCE_LOGSUM_OP(bfloat, bfloat, logsum_bf16)
+REDUCE_LOGSUM_OP(half, half, logsum_f16)
+REDUCE_LOGSUM_OP(float, float, logsum_f32)
+
+// ============================================================================
+// LOGSUMEXP OPERATIONS (log of sum of exp, numerically stable)
+// ============================================================================
+
+#define REDUCE_LOGSUMEXP_OP(IN_TYPENAME, OUT_TYPENAME, FN_NAME)                                    \
+    kernel void hodu_metal_##FN_NAME(                                                              \
+        const device IN_TYPENAME *input [[buffer(0)]], device OUT_TYPENAME *output [[buffer(1)]],  \
+        constant size_t *metadata [[buffer(2)]], uint thread_index [[thread_position_in_grid]],    \
+        uint threads_per_grid [[threads_per_grid]]) {                                              \
+        const size_t num_dims = metadata[0];                                                       \
+        const constant size_t *dims = metadata + 1;                                                \
+        const constant size_t *strides = metadata + 1 + num_dims;                                  \
+        const size_t offset = metadata[1 + 2 * num_dims];                                          \
+        const size_t output_shape_len = metadata[2 + 2 * num_dims];                                \
+        const constant size_t *output_shape = metadata + 3 + 2 * num_dims;                         \
+        const size_t num_reduce_dims = metadata[3 + 2 * num_dims + output_shape_len];              \
+        const constant size_t *reduce_dims = metadata + 4 + 2 * num_dims + output_shape_len;       \
+        const bool keep_dim =                                                                      \
+            metadata[4 + 2 * num_dims + output_shape_len + num_reduce_dims] != 0;                  \
+        const size_t reduce_size =                                                                 \
+            metadata[5 + 2 * num_dims + output_shape_len + num_reduce_dims];                       \
+        size_t num_els = 1;                                                                        \
+        for (size_t i = 0; i < output_shape_len; i++) {                                            \
+            num_els *= output_shape[i];                                                            \
+        }                                                                                          \
+                                                                                                   \
+        for (uint output_idx = thread_index; output_idx < num_els;                                 \
+             output_idx += threads_per_grid) {                                                     \
+                                                                                                   \
+            size_t output_indices[16];                                                             \
+            size_t temp = output_idx;                                                              \
+            for (int d = (int)output_shape_len - 1; d >= 0; d--) {                                 \
+                output_indices[d] = temp % output_shape[d];                                        \
+                temp /= output_shape[d];                                                           \
+            }                                                                                      \
+                                                                                                   \
+            size_t input_indices[16];                                                              \
+            if (keep_dim) {                                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    input_indices[i] = output_indices[i];                                          \
+                }                                                                                  \
+            } else {                                                                               \
+                size_t out_idx = 0;                                                                \
+                for (size_t in_dim = 0; in_dim < num_dims; in_dim++) {                             \
+                    bool is_reduced = false;                                                       \
+                    for (size_t r = 0; r < num_reduce_dims; r++) {                                 \
+                        if (reduce_dims[r] == in_dim) {                                            \
+                            is_reduced = true;                                                     \
+                            break;                                                                 \
+                        }                                                                          \
+                    }                                                                              \
+                    if (is_reduced) {                                                              \
+                        input_indices[in_dim] = 0;                                                 \
+                    } else {                                                                       \
+                        input_indices[in_dim] =                                                    \
+                            (out_idx < output_shape_len) ? output_indices[out_idx] : 0;            \
+                        out_idx++;                                                                 \
+                    }                                                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            /* First pass: find max for numerical stability */                                     \
+            float max_val = -FLT_MAX;                                                              \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                float val = (float)input[flat_index];                                              \
+                if (val > max_val) {                                                               \
+                    max_val = val;                                                                 \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            /* Second pass: sum exp(x - max) */                                                    \
+            float sum_exp = 0.0f;                                                                  \
+            for (size_t reduced_idx = 0; reduced_idx < reduce_size; reduced_idx++) {               \
+                size_t temp_reduced = reduced_idx;                                                 \
+                for (int i = (int)num_reduce_dims - 1; i >= 0; i--) {                              \
+                    size_t dim = reduce_dims[i];                                                   \
+                    input_indices[dim] = temp_reduced % dims[dim];                                 \
+                    temp_reduced /= dims[dim];                                                     \
+                }                                                                                  \
+                size_t flat_index = offset;                                                        \
+                for (size_t i = 0; i < num_dims; i++) {                                            \
+                    flat_index += input_indices[i] * strides[i];                                   \
+                }                                                                                  \
+                float val = (float)input[flat_index];                                              \
+                sum_exp += exp(val - max_val);                                                     \
+            }                                                                                      \
+                                                                                                   \
+            output[output_idx] = (OUT_TYPENAME)(max_val + log(sum_exp));                           \
+        }                                                                                          \
+    }
+
+REDUCE_LOGSUMEXP_OP(bfloat, bfloat, logsumexp_bf16)
+REDUCE_LOGSUMEXP_OP(half, half, logsumexp_f16)
+REDUCE_LOGSUMEXP_OP(float, float, logsumexp_f32)
+
+// ============================================================================
 // ARGMAX / ARGMIN OPERATIONS (return index of max/min value)
 // ============================================================================
 

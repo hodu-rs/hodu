@@ -108,6 +108,14 @@ impl Tensor {
         self.abs()?.sum(dims, keep_dim)
     }
 
+    pub fn logsum<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
+        self.reduce_operation(ReduceOp::LogSum, dims, keep_dim)
+    }
+
+    pub fn logsumexp<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
+        self.reduce_operation(ReduceOp::LogSumExp, dims, keep_dim)
+    }
+
     pub fn argmax<D: Into<Scalar> + Copy>(&self, dims: &[D], keep_dim: bool) -> HoduResult<Self> {
         self.reduce_operation(ReduceOp::ArgMax, dims, keep_dim)
     }

@@ -1,6 +1,6 @@
 use hodu_metal_kernels::{
     kernel::Kernels,
-    kernels::{argmax, argmin, call_ops_reduce, max, mean, min, sum, Kernel},
+    kernels::{argmax, argmin, call_ops_reduce, logsum, logsumexp, max, mean, min, sum, Kernel},
     metal::{create_command_buffer, Buffer, Device},
     utils::BufferOffset,
     RESOURCE_OPTIONS,
@@ -281,4 +281,73 @@ fn test_reduce_max_f32_keep_dim() {
     let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, true, max::F32);
     // [[1, 5, 3], [2, 8, 1]] -> max along dim 1 with keep_dim -> [[5], [8]]
     assert_eq!(result, vec![5.0, 8.0]);
+}
+
+fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
+    let b = 10f32.powi(digits);
+    v.iter().map(|t| f32::round(t * b) / b).collect()
+}
+
+#[test]
+fn test_reduce_logsum_f32() {
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let shape = vec![2, 3];
+    let reduce_dims = vec![1];
+
+    let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, false, logsum::F32);
+    // [[1, 2, 3], [4, 5, 6]] -> logsum along dim 1 -> [log(6), log(15)]
+    let expected = vec![(6.0f32).ln(), (15.0f32).ln()];
+    assert_eq!(approx(result, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsum_f32_dim0() {
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+    let shape = vec![2, 2];
+    let reduce_dims = vec![0];
+
+    let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, false, logsum::F32);
+    // [[1, 2], [3, 4]] -> logsum along dim 0 -> [log(4), log(6)]
+    let expected = vec![(4.0f32).ln(), (6.0f32).ln()];
+    assert_eq!(approx(result, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsumexp_f32() {
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let shape = vec![2, 3];
+    let reduce_dims = vec![1];
+
+    let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, false, logsumexp::F32);
+    // [[1, 2, 3], [4, 5, 6]] -> logsumexp along dim 1
+    let expected = vec![
+        (1.0f32.exp() + 2.0f32.exp() + 3.0f32.exp()).ln(),
+        (4.0f32.exp() + 5.0f32.exp() + 6.0f32.exp()).ln(),
+    ];
+    assert_eq!(approx(result, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsumexp_f32_dim0() {
+    let input: Vec<f32> = vec![1.0, 2.0, 3.0, 4.0];
+    let shape = vec![2, 2];
+    let reduce_dims = vec![0];
+
+    let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, false, logsumexp::F32);
+    // [[1, 2], [3, 4]] -> logsumexp along dim 0
+    let expected = vec![(1.0f32.exp() + 3.0f32.exp()).ln(), (2.0f32.exp() + 4.0f32.exp()).ln()];
+    assert_eq!(approx(result, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_reduce_logsumexp_f32_large_values() {
+    // Test numerical stability with large values
+    let input: Vec<f32> = vec![100.0, 101.0, 102.0];
+    let shape = vec![3];
+    let reduce_dims = vec![0];
+
+    let result: Vec<f32> = run_reduce(&input, &shape, &reduce_dims, false, logsumexp::F32);
+    // Numerically stable: 102 + log(exp(-2) + exp(-1) + 1)
+    let expected = vec![102.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln()];
+    assert_eq!(approx(result, 4), approx(expected, 4));
 }

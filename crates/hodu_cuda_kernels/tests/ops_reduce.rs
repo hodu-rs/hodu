@@ -544,3 +544,155 @@ fn reduce_all_f32() {
     // Expected: true (all values are non-zero)
     assert_eq!(results, vec![true]);
 }
+
+#[test]
+fn reduce_logsum_f32() {
+    let kernels = kernels();
+    let device = device();
+    let stream = device.default_stream();
+
+    let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let input_dev = stream.memcpy_stod(&input).unwrap();
+
+    let input_shape = vec![2, 3];
+    let reduce_dims = vec![1];
+    let keep_dim = false;
+
+    let output_size = 2;
+    let mut output: cudarc::driver::CudaSlice<f32> = unsafe { stream.alloc(output_size).unwrap() };
+
+    let mut strides = vec![1; input_shape.len()];
+    for i in (0..input_shape.len() - 1).rev() {
+        strides[i] = strides[i + 1] * input_shape[i + 1];
+    }
+    let reduce_size: usize = reduce_dims.iter().map(|&d| input_shape[d]).product();
+
+    let num_dims = input_shape.len();
+    let output_shape: Vec<usize> = input_shape
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !reduce_dims.contains(i))
+        .map(|(_, &size)| size)
+        .collect();
+    let output_shape_len = output_shape.len();
+
+    let mut metadata = Vec::new();
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape_len);
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(logsum::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
+
+    let mut results = vec![0.0f32; output_size];
+    stream.memcpy_dtoh(&output, &mut results).unwrap();
+    // [[1, 2, 3], [4, 5, 6]] -> logsum along dim 1 -> [log(6), log(15)]
+    let expected = vec![(6.0f32).ln(), (15.0f32).ln()];
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn reduce_logsumexp_f32() {
+    let kernels = kernels();
+    let device = device();
+    let stream = device.default_stream();
+
+    let input = vec![1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0];
+    let input_dev = stream.memcpy_stod(&input).unwrap();
+
+    let input_shape = vec![2, 3];
+    let reduce_dims = vec![1];
+    let keep_dim = false;
+
+    let output_size = 2;
+    let mut output: cudarc::driver::CudaSlice<f32> = unsafe { stream.alloc(output_size).unwrap() };
+
+    let mut strides = vec![1; input_shape.len()];
+    for i in (0..input_shape.len() - 1).rev() {
+        strides[i] = strides[i + 1] * input_shape[i + 1];
+    }
+    let reduce_size: usize = reduce_dims.iter().map(|&d| input_shape[d]).product();
+
+    let num_dims = input_shape.len();
+    let output_shape: Vec<usize> = input_shape
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !reduce_dims.contains(i))
+        .map(|(_, &size)| size)
+        .collect();
+    let output_shape_len = output_shape.len();
+
+    let mut metadata = Vec::new();
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape_len);
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(logsumexp::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
+
+    let mut results = vec![0.0f32; output_size];
+    stream.memcpy_dtoh(&output, &mut results).unwrap();
+    // [[1, 2, 3], [4, 5, 6]] -> logsumexp along dim 1
+    let expected = vec![
+        (1.0f32.exp() + 2.0f32.exp() + 3.0f32.exp()).ln(),
+        (4.0f32.exp() + 5.0f32.exp() + 6.0f32.exp()).ln(),
+    ];
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn reduce_logsumexp_f32_large_values() {
+    let kernels = kernels();
+    let device = device();
+    let stream = device.default_stream();
+
+    // Test numerical stability with large values
+    let input = vec![100.0f32, 101.0, 102.0];
+    let input_dev = stream.memcpy_stod(&input).unwrap();
+
+    let input_shape = vec![3];
+    let reduce_dims = vec![0];
+    let keep_dim = false;
+
+    let output_size = 1;
+    let mut output: cudarc::driver::CudaSlice<f32> = unsafe { stream.alloc(output_size).unwrap() };
+
+    let strides = vec![1];
+    let reduce_size: usize = reduce_dims.iter().map(|&d| input_shape[d]).product();
+
+    let num_dims = input_shape.len();
+    let output_shape = vec![1usize];
+    let output_shape_len = output_shape.len();
+
+    let mut metadata = Vec::new();
+    metadata.push(num_dims);
+    metadata.extend(&input_shape);
+    metadata.extend(&strides);
+    metadata.push(0);
+    metadata.push(output_shape_len);
+    metadata.extend(&output_shape);
+    metadata.push(reduce_dims.len());
+    metadata.extend(&reduce_dims);
+    metadata.push(if keep_dim { 1 } else { 0 });
+    metadata.push(reduce_size);
+
+    call_ops_reduce(logsumexp::F32, &kernels, &device, &input_dev, &mut output, &metadata).unwrap();
+
+    let mut results = vec![0.0f32; output_size];
+    stream.memcpy_dtoh(&output, &mut results).unwrap();
+    // Numerically stable: 102 + log(exp(-2) + exp(-1) + 1)
+    let expected = vec![102.0 + ((-2.0f32).exp() + (-1.0f32).exp() + 1.0).ln()];
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}

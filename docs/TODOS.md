@@ -46,14 +46,14 @@
 - [ ] Implement isnan (ONNX: IsNaN) - check for NaN values
 - [ ] Implement isinf (ONNX: IsInf) - check for Inf values
 - [ ] Implement unique (ONNX: Unique) - find unique elements
-- [ ] Implement reduce_logsumexp (ONNX: ReduceLogSumExp) - numerically stable log(sum(exp(x)))
+- [x] Implement reduce_logsumexp (ONNX: ReduceLogSumExp) - numerically stable log(sum(exp(x)))
 
 **ONNX Compatibility - Matrix Operations:** (🟢 Nice-to-have)
 - [ ] Implement det (ONNX: Det) - matrix determinant
 
 **ONNX Compatibility - Low Priority:** (🟢 Nice-to-have)
 - [ ] Implement compress (ONNX: Compress) - select elements based on condition
-- [ ] Implement reduce_logsum (ONNX: ReduceLogSum) - log(sum(x))
+- [x] Implement reduce_logsum (ONNX: ReduceLogSum) - log(sum(x))
 - [ ] Implement bitshift (ONNX: BitShift) - bit shift operations
 - [ ] Implement lrn (ONNX: LRN) - Local Response Normalization (deprecated, rarely used)
 

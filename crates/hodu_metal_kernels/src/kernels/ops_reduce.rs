@@ -9,7 +9,7 @@ use crate::{
 };
 use objc2_metal::MTLResourceUsage;
 
-ops!(sum, max, min, prod, mean, norm, argmax, argmin, any, all);
+ops!(sum, max, min, prod, mean, norm, logsum, logsumexp, argmax, argmin, any, all);
 
 /// Executes a reduction operation along specified dimensions using Metal compute pipeline.
 ///
