@@ -1,4 +1,8 @@
-use crate::{scalar::Scalar, tensor::TensorId, types::DType};
+use crate::{
+    scalar::Scalar,
+    tensor::TensorId,
+    types::{DType, DynamicDimId},
+};
 
 // Binary Operations
 
@@ -133,6 +137,22 @@ pub struct OnehotoParams {
     pub num_classes: Scalar,
     pub axis: Scalar,
     pub dtype: DType,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct NonzeroParams {
+    /// Dynamic dimension ID for the count of nonzero elements (N in [N, ndim])
+    pub dynamic_count_dim: Option<DynamicDimId>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct UniqueParams {
+    pub inverse_id: TensorId,
+    pub counts_id: TensorId,
+    /// Dynamic dimension ID for the count of unique elements (M in values[M], counts[M])
+    pub dynamic_count_dim: Option<DynamicDimId>,
 }
 
 // Conv Operations
@@ -507,6 +527,8 @@ pub enum OpParams {
     ScatterMax(ScatterMaxParams),
     ScatterMin(ScatterMinParams),
     Onehoto(OnehotoParams),
+    Nonzero(NonzeroParams),
+    Unique(UniqueParams),
 
     // Conv
     Conv1d(Conv1dParams),

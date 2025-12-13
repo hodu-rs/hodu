@@ -1,18 +1,26 @@
 mod compiler;
 mod device;
+mod dim;
 mod dtype;
+mod dynamic_registry;
 #[cfg(feature = "serde")]
 mod format;
 mod layout;
 mod shape;
+mod symbolic_layout;
+mod symbolic_shape;
 
 pub use compiler::Compiler;
 pub use device::Device;
+pub use dim::{Dim, DynamicDimId};
 pub use dtype::DType;
+pub use dynamic_registry::{clear_resolved_dimensions, get_resolved_dimension, resolve_dimension};
 #[cfg(feature = "serde")]
 pub use format::Format;
 pub use layout::Layout;
 pub use shape::Shape;
+pub use symbolic_layout::SymbolicLayout;
+pub use symbolic_shape::SymbolicShape;
 
 mod dtypes {
     #![allow(non_upper_case_globals)]

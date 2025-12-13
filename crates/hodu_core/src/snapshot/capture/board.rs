@@ -3,7 +3,7 @@ use crate::{
     ops::{Op, OpParams},
     snapshot::{Snapshot, SnapshotInput, SnapshotNode, SnapshotTarget, SnapshotTensorId},
     tensor::{Tensor, TensorId},
-    types::{DType, Layout, Shape},
+    types::{DType, Layout, Shape, SymbolicLayout},
 };
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -43,6 +43,8 @@ pub struct CapturedOp {
     pub output_id: TensorId,
     pub input_layouts: Vec<Layout>,
     pub output_layout: Layout,
+    /// Symbolic output layout for operations with data-dependent output shapes
+    pub symbolic_output_layout: Option<SymbolicLayout>,
 }
 
 /// Internal board data structure stored in global storage
@@ -179,6 +181,7 @@ impl CaptureBoard {
                     input_layouts: op.input_layouts,
                     output_layout: op.output_layout,
                     output_dtype,
+                    symbolic_output_layout: op.symbolic_output_layout,
                 }
             })
             .collect();

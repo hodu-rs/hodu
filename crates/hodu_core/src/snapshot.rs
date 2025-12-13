@@ -4,7 +4,7 @@ pub use capture::{CaptureBoard, CaptureBoardId};
 
 use crate::{
     ops::{Op, OpParams},
-    types::{DType, Layout, Shape},
+    types::{DType, Layout, Shape, SymbolicLayout},
 };
 
 /// Snapshot-local tensor ID (normalized from runtime TensorId)
@@ -53,6 +53,8 @@ pub struct SnapshotNode {
     pub input_layouts: Vec<Layout>,
     pub output_layout: Layout,
     pub output_dtype: DType,
+    /// Symbolic output layout for operations with data-dependent output shapes
+    pub symbolic_output_layout: Option<SymbolicLayout>,
 }
 
 /// Hodu Snapshot - serializable IR representation

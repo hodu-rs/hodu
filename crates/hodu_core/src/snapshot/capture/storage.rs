@@ -3,7 +3,7 @@ use crate::{
     error::{HoduError, HoduResult},
     ops::{Op, OpParams},
     tensor::{Tensor, TensorId},
-    types::Layout,
+    types::{Layout, SymbolicLayout},
 };
 use dashmap::DashMap;
 use std::sync::LazyLock;
@@ -84,6 +84,19 @@ pub fn capture_operation(
     input_layouts: Vec<Layout>,
     output_layout: Layout,
 ) -> HoduResult<()> {
+    capture_operation_with_symbolic(op, params, input_ids, output_id, input_layouts, output_layout, None)
+}
+
+/// Capture an operation with symbolic output layout to the currently active board
+pub fn capture_operation_with_symbolic(
+    op: Op,
+    params: Option<OpParams>,
+    input_ids: Vec<TensorId>,
+    output_id: TensorId,
+    input_layouts: Vec<Layout>,
+    output_layout: Layout,
+    symbolic_output_layout: Option<SymbolicLayout>,
+) -> HoduResult<()> {
     let board_id = match active_board_id() {
         Some(id) => id,
         None => return Ok(()), // No active board, silently skip
@@ -96,6 +109,7 @@ pub fn capture_operation(
         output_id,
         input_layouts,
         output_layout,
+        symbolic_output_layout,
     };
 
     if let Some(mut board) = BOARDS.get_mut(&board_id) {

@@ -1,12 +1,12 @@
 use crate::{
     error::HoduResult,
     ops::{
-        GatherParams, IndexPutParams, IndexSelectParams, IndexingOp, OnehotoParams, Op, OpParams, ScatterAddParams,
-        ScatterMaxParams, ScatterMinParams, ScatterParams,
+        GatherParams, IndexPutParams, IndexSelectParams, IndexingOp, NonzeroParams, OnehotoParams, Op, OpParams,
+        ScatterAddParams, ScatterMaxParams, ScatterMinParams, ScatterParams, UniqueParams,
     },
     scalar::Scalar,
     tensor::{create_builder_tensor, from_storage_with_context, gradient, Tensor},
-    types::{DType, Layout, Shape},
+    types::{DType, Dim, DynamicDimId, Layout, Shape, SymbolicLayout, SymbolicShape},
     utils::valid::{
         validate_dtype_for_device, validate_dtype_for_op, validate_indices_dtype, validate_requires_grad_for_op,
         validate_same_device, validate_same_dtype,
@@ -666,7 +666,8 @@ impl Tensor {
     /// and ndim is the number of dimensions in the input tensor. Each row contains
     /// the multi-dimensional index of a non-zero element.
     ///
-    /// Note: The output size is data-dependent and cannot be determined at compile time.
+    /// Note: The output size is data-dependent. In capture mode, the maximum possible
+    /// size is allocated (num_elements * ndim).
     /// This operation does not support gradients.
     ///
     /// # Example
@@ -681,23 +682,55 @@ impl Tensor {
         validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Nonzero))?;
 
         let self_layout = self.layout();
+        let ndim = self.ndim();
+        let num_els = self_layout.size();
 
         if crate::snapshot::capture::is_active() {
-            // Nonzero has dynamic output shape, cannot be captured in snapshot mode
-            return Err(crate::error::HoduError::UnsupportedOperation(
-                "Nonzero operation has dynamic output shape and cannot be captured in snapshot mode".to_string(),
-            ));
+            // In capture mode, use symbolic shape for data-dependent output
+            // Output shape: [N, ndim] where N is dynamic (0 to num_els)
+            let dynamic_dim_id = DynamicDimId::new();
+            let symbolic_shape = SymbolicShape::new(vec![
+                Dim::dynamic_with_id(dynamic_dim_id, Some(num_els)),
+                Dim::Concrete(ndim),
+            ]);
+            let symbolic_layout = SymbolicLayout::from_shape(&symbolic_shape)
+                .expect("Symbolic shape with max_bound should create valid layout");
+
+            // Allocate using max bounds
+            let max_result_layout = symbolic_layout
+                .to_max_layout()
+                .expect("Symbolic layout with max_bound should produce max layout");
+
+            // Nonzero is non-differentiable
+            let requires_grad = false;
+            let (result_id, result_tensor) =
+                create_builder_tensor(max_result_layout.clone(), DType::I32, requires_grad);
+
+            let op_params = OpParams::Nonzero(NonzeroParams {
+                dynamic_count_dim: Some(dynamic_dim_id),
+            });
+
+            crate::snapshot::capture::capture_operation_with_symbolic(
+                Op::Indexing(IndexingOp::Nonzero),
+                Some(op_params),
+                vec![self.id()],
+                result_id,
+                vec![self_layout],
+                max_result_layout,
+                Some(symbolic_layout),
+            )?;
+
+            Ok(result_tensor)
+        } else {
+            let (storage, count) = self.with_storage(|storage| storage.call_nonzero(&self_layout))?;
+
+            let result_layout = Layout::from_shape(&Shape::from(vec![count, ndim]));
+
+            // Nonzero is non-differentiable
+            let result = from_storage_with_context(storage, result_layout, true, false);
+
+            Ok(result)
         }
-
-        let (storage, count) = self.with_storage(|storage| storage.call_nonzero(&self_layout))?;
-
-        let ndim = self.ndim();
-        let result_layout = Layout::from_shape(&Shape::from(vec![count, ndim]));
-
-        // Nonzero is non-differentiable
-        let result = from_storage_with_context(storage, result_layout, true, false);
-
-        Ok(result)
     }
 
     /// Returns unique elements, inverse indices, and counts.
@@ -708,6 +741,8 @@ impl Tensor {
     /// - inverse: 1D tensor where input.flatten() = values[inverse]
     /// - counts: 1D tensor with count of each unique value
     ///
+    /// Note: The output size is data-dependent. In capture mode, the maximum possible
+    /// size is allocated (num_elements for values and counts).
     /// This operation does not support gradients.
     ///
     /// # Example
@@ -723,26 +758,67 @@ impl Tensor {
         validate_dtype_for_op(self.dtype(), Op::Indexing(IndexingOp::Unique))?;
 
         let self_layout = self.layout();
+        let num_els = self_layout.size();
 
         if crate::snapshot::capture::is_active() {
-            return Err(crate::error::HoduError::UnsupportedOperation(
-                "Unique operation has dynamic output shape and cannot be captured in snapshot mode".to_string(),
-            ));
+            // In capture mode, use symbolic shape for data-dependent outputs
+            // values shape: [M] where M is dynamic (0 to num_els)
+            // inverse shape: [num_els] - concrete
+            // counts shape: [M] where M is dynamic (same as values)
+            let dynamic_dim_id = DynamicDimId::new();
+
+            let values_symbolic_shape = SymbolicShape::new(vec![Dim::dynamic_with_id(dynamic_dim_id, Some(num_els))]);
+            let values_symbolic_layout = SymbolicLayout::from_shape(&values_symbolic_shape)
+                .expect("Symbolic shape with max_bound should create valid layout");
+
+            // Allocate using max bounds
+            let max_values_layout = values_symbolic_layout
+                .to_max_layout()
+                .expect("Symbolic layout with max_bound should produce max layout");
+            let inverse_layout = Layout::from_shape(&Shape::from(vec![num_els]));
+            let max_counts_layout = max_values_layout.clone();
+
+            // Unique is non-differentiable
+            let requires_grad = false;
+
+            // Create builder tensors for all three outputs
+            let (values_id, values_tensor) =
+                create_builder_tensor(max_values_layout.clone(), self.dtype(), requires_grad);
+            let (inverse_id, inverse_tensor) = create_builder_tensor(inverse_layout.clone(), DType::I32, requires_grad);
+            let (counts_id, counts_tensor) =
+                create_builder_tensor(max_counts_layout.clone(), DType::I32, requires_grad);
+
+            let op_params = OpParams::Unique(UniqueParams {
+                inverse_id,
+                counts_id,
+                dynamic_count_dim: Some(dynamic_dim_id),
+            });
+
+            crate::snapshot::capture::capture_operation_with_symbolic(
+                Op::Indexing(IndexingOp::Unique),
+                Some(op_params),
+                vec![self.id()],
+                values_id,
+                vec![self_layout],
+                max_values_layout,
+                Some(values_symbolic_layout),
+            )?;
+
+            Ok((values_tensor, inverse_tensor, counts_tensor))
+        } else {
+            let (values_storage, inverse_storage, counts_storage, unique_count) =
+                self.with_storage(|storage| storage.call_unique(&self_layout))?;
+
+            let values_layout = Layout::from_shape(&Shape::from(vec![unique_count]));
+            let inverse_layout = Layout::from_shape(&Shape::from(vec![num_els]));
+            let counts_layout = Layout::from_shape(&Shape::from(vec![unique_count]));
+
+            // Unique is non-differentiable
+            let values = from_storage_with_context(values_storage, values_layout, true, false);
+            let inverse = from_storage_with_context(inverse_storage, inverse_layout, true, false);
+            let counts = from_storage_with_context(counts_storage, counts_layout, true, false);
+
+            Ok((values, inverse, counts))
         }
-
-        let (values_storage, inverse_storage, counts_storage, unique_count) =
-            self.with_storage(|storage| storage.call_unique(&self_layout))?;
-
-        let num_els = self_layout.size();
-        let values_layout = Layout::from_shape(&Shape::from(vec![unique_count]));
-        let inverse_layout = Layout::from_shape(&Shape::from(vec![num_els]));
-        let counts_layout = Layout::from_shape(&Shape::from(vec![unique_count]));
-
-        // Unique is non-differentiable
-        let values = from_storage_with_context(values_storage, values_layout, true, false);
-        let inverse = from_storage_with_context(inverse_storage, inverse_layout, true, false);
-        let counts = from_storage_with_context(counts_storage, counts_layout, true, false);
-
-        Ok((values, inverse, counts))
     }
 }
