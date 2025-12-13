@@ -396,6 +396,59 @@ pub fn inv_metadata(layout: &Layout) -> HoduResult<Vec<usize>> {
     Ok(metadata)
 }
 
+/// Generate metadata for trace operation (sum of diagonal elements)
+///
+/// Format:
+/// - metadata[0]: batch_size
+/// - metadata[1]: n (matrix dimension, N×N)
+/// - metadata[2]: ndim
+/// - metadata[3..3+ndim]: shape
+/// - metadata[3+ndim..3+2*ndim]: strides
+/// - metadata[3+2*ndim]: offset
+pub fn trace_metadata(layout: &Layout) -> HoduResult<Vec<usize>> {
+    let shape = layout.shape();
+    let ndim = shape.ndim();
+
+    if ndim < 2 {
+        return Err(HoduError::InvalidArgument("trace requires at least 2D tensor".into()));
+    }
+
+    let n = shape.dims()[ndim - 1];
+    let m = shape.dims()[ndim - 2];
+
+    if n != m {
+        return Err(HoduError::InvalidArgument(format!(
+            "trace requires square matrix, got {}×{}",
+            m, n
+        )));
+    }
+
+    // Compute batch size
+    let batch_size: usize = shape.dims()[..ndim - 2].iter().product();
+    let batch_size = if batch_size == 0 { 1 } else { batch_size };
+
+    let mut metadata = Vec::with_capacity(3 + 2 * ndim + 1);
+
+    metadata.push(batch_size);
+    metadata.push(n);
+    metadata.push(ndim);
+
+    // shape
+    for &dim in shape.dims() {
+        metadata.push(dim);
+    }
+
+    // strides
+    for &stride in layout.strides() {
+        metadata.push(stride);
+    }
+
+    // offset
+    metadata.push(layout.offset());
+
+    Ok(metadata)
+}
+
 /// Generate metadata for dot operation (2D matrix multiplication)
 ///
 /// Format:

@@ -66,6 +66,36 @@ impl VjpCompute for LinalgOp {
 
                 Ok(vec![grad_input.id()])
             },
+            LinalgOp::Trace => {
+                // Gradient of trace:
+                // trace(A) = sum of diagonal elements = A[0,0] + A[1,1] + ... + A[n-1,n-1]
+                // d trace(A) / dA_ij = 1 if i == j, 0 otherwise
+                // dL/dA = grad_output * I (identity matrix)
+                //
+                // For batched case:
+                // grad_output: [...] (scalar per batch)
+                // input A: [..., N, N]
+                // result: [..., N, N]
+
+                let input = Tensor::from_id(inputs[0]);
+                let grad = Tensor::from_id(grad_output);
+
+                // Get the matrix size from input shape
+                let shape = input.shape();
+                let ndim = shape.ndim();
+                let n = shape.dims()[ndim - 1];
+
+                // Create identity matrix with same batch dimensions
+                let eye = Tensor::eye(n, input.dtype())?;
+
+                // Expand grad to [..., 1, 1] for broadcasting
+                let scale = grad.unsqueeze(-1)?.unsqueeze(-1)?;
+
+                // grad_input = scale * I
+                let grad_input = eye.mul(&scale)?;
+
+                Ok(vec![grad_input.id()])
+            },
         }
     }
 }

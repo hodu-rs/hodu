@@ -251,8 +251,8 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
 
         // Linear algebra operations - float types only for gradient support
         Op::Linalg(inner_op) => match inner_op {
-            LinalgOp::Det | LinalgOp::Inv => {
-                // Det/Inv support float and integer (integer: forward only, no gradient)
+            LinalgOp::Det | LinalgOp::Inv | LinalgOp::Trace => {
+                // Det/Inv/Trace support float and integer (integer: forward only, no gradient)
                 if dtype == DType::BOOL {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
@@ -422,7 +422,7 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
 
         // Linear algebra operations
         Op::Linalg(inner_op) => match inner_op {
-            LinalgOp::Det | LinalgOp::Inv => true,
+            LinalgOp::Det | LinalgOp::Inv | LinalgOp::Trace => true,
         },
 
         // Reduce operations

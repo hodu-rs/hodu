@@ -3,12 +3,13 @@
 //! This module provides:
 //! - `det`: Matrix determinant computation using LU decomposition
 //! - `inv`: Matrix inverse computation using Gauss-Jordan elimination
+//! - `trace`: Matrix trace computation (sum of diagonal)
 
 use crate::{error::Result, kernels::macros::ops};
 use core::ffi::c_void;
 
 // Define all linalg operations using the macro
-ops!(det, inv);
+ops!(det, inv, trace);
 
 /// Execute a matrix determinant operation
 ///
@@ -92,6 +93,46 @@ pub fn call_ops_inv(
     Ok(())
 }
 
+/// Execute a matrix trace operation
+///
+/// Computes the trace (sum of diagonal elements) of square matrices with optional batch dimensions.
+///
+/// # Arguments
+/// * `kernel_name` - The trace kernel to execute (e.g., trace::F32)
+/// * `input` - Pointer to input tensor
+/// * `output` - Pointer to output tensor buffer
+/// * `metadata` - Tensor metadata array (see layout below)
+///
+/// # Metadata layout (same as det/inv)
+/// - metadata[0]: batch_size (product of batch dimensions)
+/// - metadata[1]: n (matrix size, N×N)
+/// - metadata[2]: ndim (total number of dimensions)
+/// - metadata[3..3+ndim]: shape
+/// - metadata[3+ndim..3+2*ndim]: strides
+/// - metadata[3+2*ndim]: offset
+///
+/// # Safety
+/// This function uses unsafe FFI calls to C kernels. Caller must ensure:
+/// - All pointers are valid and properly aligned
+/// - Metadata accurately describes tensor layout
+/// - Output buffer has sufficient capacity (batch_size elements)
+/// - Input is a square matrix: [..., N, N] -> [...]
+///
+/// # Returns
+/// Returns `Ok(())` on success.
+pub fn call_ops_trace(
+    kernel_name: crate::kernels::macros::Kernel,
+    input: *const c_void,
+    output: *mut c_void,
+    metadata: &[usize],
+) -> Result<()> {
+    unsafe {
+        dispatch_trace(kernel_name.0, input, output, metadata.as_ptr());
+    }
+
+    Ok(())
+}
+
 // Det extern C declarations
 extern "C" {
     fn hodu_cpu_det_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
@@ -165,5 +206,43 @@ unsafe fn dispatch_inv(name: &str, input: *const c_void, output: *mut c_void, me
         "hodu_cpu_inv_i32" => hodu_cpu_inv_i32(input, output, metadata),
         "hodu_cpu_inv_i64" => hodu_cpu_inv_i64(input, output, metadata),
         _ => panic!("Unsupported inv kernel: {}", name),
+    }
+}
+
+// Trace extern C declarations
+extern "C" {
+    fn hodu_cpu_trace_f8e4m3(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_f8e5m2(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_bf16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_f16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_f32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_f64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_u8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_u16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_u32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_u64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_i8(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_i16(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_i32(input: *const c_void, output: *mut c_void, metadata: *const usize);
+    fn hodu_cpu_trace_i64(input: *const c_void, output: *mut c_void, metadata: *const usize);
+}
+
+unsafe fn dispatch_trace(name: &str, input: *const c_void, output: *mut c_void, metadata: *const usize) {
+    match name {
+        "hodu_cpu_trace_f8e4m3" => hodu_cpu_trace_f8e4m3(input, output, metadata),
+        "hodu_cpu_trace_f8e5m2" => hodu_cpu_trace_f8e5m2(input, output, metadata),
+        "hodu_cpu_trace_bf16" => hodu_cpu_trace_bf16(input, output, metadata),
+        "hodu_cpu_trace_f16" => hodu_cpu_trace_f16(input, output, metadata),
+        "hodu_cpu_trace_f32" => hodu_cpu_trace_f32(input, output, metadata),
+        "hodu_cpu_trace_f64" => hodu_cpu_trace_f64(input, output, metadata),
+        "hodu_cpu_trace_u8" => hodu_cpu_trace_u8(input, output, metadata),
+        "hodu_cpu_trace_u16" => hodu_cpu_trace_u16(input, output, metadata),
+        "hodu_cpu_trace_u32" => hodu_cpu_trace_u32(input, output, metadata),
+        "hodu_cpu_trace_u64" => hodu_cpu_trace_u64(input, output, metadata),
+        "hodu_cpu_trace_i8" => hodu_cpu_trace_i8(input, output, metadata),
+        "hodu_cpu_trace_i16" => hodu_cpu_trace_i16(input, output, metadata),
+        "hodu_cpu_trace_i32" => hodu_cpu_trace_i32(input, output, metadata),
+        "hodu_cpu_trace_i64" => hodu_cpu_trace_i64(input, output, metadata),
+        _ => panic!("Unsupported trace kernel: {}", name),
     }
 }

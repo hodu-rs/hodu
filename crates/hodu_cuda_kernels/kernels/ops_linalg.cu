@@ -334,3 +334,71 @@ INV_OP(uint8_t, inv_u8)
 INV_OP(uint16_t, inv_u16)
 INV_OP(uint32_t, inv_u32)
 INV_OP(uint64_t, inv_u64)
+
+// ============================================================================
+// MATRIX TRACE
+// ============================================================================
+//
+// Computes the trace (sum of diagonal elements) of square matrices with batch support.
+// Input: [..., N, N] -> Output: [...]
+//
+// Metadata layout (same as det/inv):
+// - metadata[0]: batch_size (product of batch dimensions)
+// - metadata[1]: n (matrix size, N×N)
+// - metadata[2]: ndim (total number of dimensions)
+// - metadata[3..3+ndim]: shape
+// - metadata[3+ndim..3+2*ndim]: strides
+// - metadata[3+2*ndim]: offset
+
+#define TRACE_OP(TYPENAME, FN_NAME)                                                                \
+    extern "C" __global__ void hodu_cuda_##FN_NAME(const TYPENAME *input, TYPENAME *output,        \
+                                                   const size_t *metadata, size_t batch_size) {    \
+                                                                                                   \
+        const size_t tid = blockIdx.x * blockDim.x + threadIdx.x;                                  \
+        if (tid >= batch_size)                                                                     \
+            return;                                                                                \
+                                                                                                   \
+        const size_t n = metadata[1];                                                              \
+        const size_t ndim = metadata[2];                                                           \
+        const size_t *shape = metadata + 3;                                                        \
+        const size_t *strides = metadata + 3 + ndim;                                               \
+        const size_t offset = metadata[3 + 2 * ndim];                                              \
+                                                                                                   \
+        const size_t row_stride = (ndim >= 2) ? strides[ndim - 2] : n;                             \
+        const size_t col_stride = (ndim >= 1) ? strides[ndim - 1] : 1;                             \
+                                                                                                   \
+        /* Calculate batch offset */                                                               \
+        size_t batch_offset = offset;                                                              \
+        if (ndim > 2) {                                                                            \
+            size_t temp = tid;                                                                     \
+            for (int d = (int)ndim - 3; d >= 0; d--) {                                             \
+                size_t dim_size = shape[d];                                                        \
+                size_t idx = temp % dim_size;                                                      \
+                temp /= dim_size;                                                                  \
+                batch_offset += idx * strides[d];                                                  \
+            }                                                                                      \
+        }                                                                                          \
+                                                                                                   \
+        /* Sum diagonal elements */                                                                \
+        float trace = 0;                                                                           \
+        for (size_t i = 0; i < n; i++) {                                                           \
+            trace += to_float(DET_GET(input, batch_offset, i, i, row_stride, col_stride));         \
+        }                                                                                          \
+                                                                                                   \
+        output[tid] = from_float<TYPENAME>(trace);                                                 \
+    }
+
+TRACE_OP(__nv_fp8_e4m3, trace_f8e4m3)
+TRACE_OP(__nv_fp8_e5m2, trace_f8e5m2)
+TRACE_OP(__nv_bfloat16, trace_bf16)
+TRACE_OP(__half, trace_f16)
+TRACE_OP(float, trace_f32)
+TRACE_OP(double, trace_f64)
+TRACE_OP(int8_t, trace_i8)
+TRACE_OP(int16_t, trace_i16)
+TRACE_OP(int32_t, trace_i32)
+TRACE_OP(int64_t, trace_i64)
+TRACE_OP(uint8_t, trace_u8)
+TRACE_OP(uint16_t, trace_u16)
+TRACE_OP(uint32_t, trace_u32)
+TRACE_OP(uint64_t, trace_u64)

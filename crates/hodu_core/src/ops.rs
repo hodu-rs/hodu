@@ -325,7 +325,8 @@ impl fmt::Debug for MatrixOp {
 pub enum LinalgOp {
     Det, // Determinant of square matrix
     Inv, // Matrix inverse
-         // Future: Solve, Svd, Eig, Cholesky, Qr, Lu, etc.
+    Trace, // Matrix trace (sum of diagonal)
+         // Future: Svd, Eig, Cholesky, Qr, Lu, etc.
 }
 
 impl fmt::Display for LinalgOp {
@@ -333,6 +334,7 @@ impl fmt::Display for LinalgOp {
         match self {
             Self::Det => write!(f, "det"),
             Self::Inv => write!(f, "inv"),
+            Self::Trace => write!(f, "trace"),
         }
     }
 }

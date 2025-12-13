@@ -5,6 +5,98 @@ fn approx(v: Vec<f32>, digits: i32) -> Vec<f32> {
     v.iter().map(|t| f32::round(t * b) / b).collect()
 }
 
+fn approx_i32(v: Vec<i32>, _digits: i32) -> Vec<i32> {
+    v // integers don't need approximation
+}
+
+// ============================================================================
+// TRACE Tests
+// ============================================================================
+
+#[test]
+fn test_trace_f32_2x2() {
+    // 2x2 matrix: [[1, 2], [3, 4]]
+    // trace = 1 + 4 = 5
+    let input = [1.0f32, 2.0, 3.0, 4.0];
+    let mut output = [0.0f32; 1];
+
+    let metadata = vec![1, 2, 2, 2, 2, 2, 1, 0];
+
+    call_ops_trace(
+        trace::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(approx(output.to_vec(), 4), vec![5.0]);
+}
+
+#[test]
+fn test_trace_f32_3x3() {
+    // 3x3 identity matrix: trace(I) = 3
+    let input = [1.0f32, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    let mut output = [0.0f32; 1];
+
+    let metadata = vec![1, 3, 2, 3, 3, 3, 1, 0];
+
+    call_ops_trace(
+        trace::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(approx(output.to_vec(), 4), vec![3.0]);
+}
+
+#[test]
+fn test_trace_f32_batch() {
+    // Batch of 2 matrices:
+    // Matrix 0: [[1, 2], [3, 4]], trace = 5
+    // Matrix 1: [[5, 6], [7, 8]], trace = 13
+    let input = [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+    let mut output = [0.0f32; 2];
+
+    let metadata = vec![2, 2, 3, 2, 2, 2, 4, 2, 1, 0];
+
+    call_ops_trace(
+        trace::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(approx(output.to_vec(), 4), vec![5.0, 13.0]);
+}
+
+#[test]
+fn test_trace_i32_2x2() {
+    // 2x2 integer matrix: [[1, 2], [3, 4]]
+    // trace = 1 + 4 = 5
+    let input = [1i32, 2, 3, 4];
+    let mut output = [0i32; 1];
+
+    let metadata = vec![1, 2, 2, 2, 2, 2, 1, 0];
+
+    call_ops_trace(
+        trace::I32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(output[0], 5);
+}
+
+// ============================================================================
+// DET Tests
+// ============================================================================
+
 #[test]
 fn test_det_f32_1x1() {
     // 1x1 matrix: det([[5]]) = 5

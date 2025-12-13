@@ -68,6 +68,10 @@ pub struct DetParams;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct InvParams;
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct TraceParams;
+
 // Reduce Operations
 
 #[derive(Debug, Clone)]
@@ -520,6 +524,7 @@ pub enum OpParams {
     // Linalg
     Det(DetParams),
     Inv(InvParams),
+    Trace(TraceParams),
 
     // Reduce
     Reduce(ReduceParams),

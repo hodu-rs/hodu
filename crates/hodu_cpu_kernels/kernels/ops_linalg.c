@@ -616,3 +616,113 @@ INV_OP(uint8_t, u8)
 INV_OP(uint16_t, u16)
 INV_OP(uint32_t, u32)
 INV_OP(uint64_t, u64)
+
+// ============================================================================
+// MATRIX TRACE
+// ============================================================================
+//
+// Computes the trace (sum of diagonal elements) of square matrices with batch support.
+// Input: [..., N, N] -> Output: [...]
+//
+// Metadata layout (same as det/inv):
+// - metadata[0]: batch_size
+// - metadata[1]: n (matrix size, N×N)
+// - metadata[2]: ndim
+// - metadata[3..3+ndim]: shape
+// - metadata[3+ndim..3+2*ndim]: strides
+// - metadata[3+2*ndim]: offset
+
+/// Macro for trace operation
+#define TRACE_OP(TYPE, TYPE_SUFFIX)                                                                \
+    void hodu_cpu_trace_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                     \
+                                      const size_t *metadata) {                                    \
+        const TYPE *input = (const TYPE *)input_ptr;                                               \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t batch_size = metadata[0];                                                     \
+        const size_t n = metadata[1];                                                              \
+        const size_t ndim = metadata[2];                                                           \
+        const size_t *strides = metadata + 3 + ndim;                                               \
+        const size_t offset = metadata[3 + 2 * ndim];                                              \
+                                                                                                   \
+        /* Get row and column strides (last two dimensions) */                                     \
+        const size_t row_stride = (ndim >= 2) ? strides[ndim - 2] : n;                             \
+        const size_t col_stride = (ndim >= 1) ? strides[ndim - 1] : 1;                             \
+                                                                                                   \
+        for (size_t batch = 0; batch < batch_size; batch++) {                                      \
+            /* Calculate batch offset using strides */                                             \
+            size_t batch_offset = offset;                                                          \
+            if (ndim > 2) {                                                                        \
+                size_t temp = batch;                                                               \
+                const size_t *shape = metadata + 3;                                                \
+                for (int d = (int)ndim - 3; d >= 0; d--) {                                         \
+                    size_t dim_size = shape[d];                                                    \
+                    size_t idx = temp % dim_size;                                                  \
+                    temp /= dim_size;                                                              \
+                    batch_offset += idx * strides[d];                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            /* Sum diagonal elements */                                                            \
+            TYPE trace = 0;                                                                        \
+            for (size_t i = 0; i < n; i++) {                                                       \
+                trace += DET_GET(input, batch_offset, i, i, row_stride, col_stride);               \
+            }                                                                                      \
+                                                                                                   \
+            output[batch] = trace;                                                                 \
+        }                                                                                          \
+    }
+
+/// Macro for trace operation with exotic types
+#define TRACE_OP_EXOTIC(TYPE, TYPE_SUFFIX, ZERO, ADD_FN)                                           \
+    void hodu_cpu_trace_##TYPE_SUFFIX(const void *input_ptr, void *output_ptr,                     \
+                                      const size_t *metadata) {                                    \
+        const TYPE *input = (const TYPE *)input_ptr;                                               \
+        TYPE *output = (TYPE *)output_ptr;                                                         \
+                                                                                                   \
+        const size_t batch_size = metadata[0];                                                     \
+        const size_t n = metadata[1];                                                              \
+        const size_t ndim = metadata[2];                                                           \
+        const size_t *strides = metadata + 3 + ndim;                                               \
+        const size_t offset = metadata[3 + 2 * ndim];                                              \
+                                                                                                   \
+        const size_t row_stride = (ndim >= 2) ? strides[ndim - 2] : n;                             \
+        const size_t col_stride = (ndim >= 1) ? strides[ndim - 1] : 1;                             \
+                                                                                                   \
+        for (size_t batch = 0; batch < batch_size; batch++) {                                      \
+            size_t batch_offset = offset;                                                          \
+            if (ndim > 2) {                                                                        \
+                size_t temp = batch;                                                               \
+                const size_t *shape = metadata + 3;                                                \
+                for (int d = (int)ndim - 3; d >= 0; d--) {                                         \
+                    size_t dim_size = shape[d];                                                    \
+                    size_t idx = temp % dim_size;                                                  \
+                    temp /= dim_size;                                                              \
+                    batch_offset += idx * strides[d];                                              \
+                }                                                                                  \
+            }                                                                                      \
+                                                                                                   \
+            TYPE trace = ZERO;                                                                     \
+            for (size_t i = 0; i < n; i++) {                                                       \
+                trace = ADD_FN(trace, DET_GET(input, batch_offset, i, i, row_stride, col_stride)); \
+            }                                                                                      \
+                                                                                                   \
+            output[batch] = trace;                                                                 \
+        }                                                                                          \
+    }
+
+// Generate trace implementations
+TRACE_OP(f32_t, f32)
+TRACE_OP(f64_t, f64)
+TRACE_OP_EXOTIC(f8e4m3_t, f8e4m3, F8E4M3_ZERO, f8e4m3_add)
+TRACE_OP_EXOTIC(f8e5m2_t, f8e5m2, F8E5M2_ZERO, f8e5m2_add)
+TRACE_OP_EXOTIC(bf16_t, bf16, BF16_ZERO, bf16_add)
+TRACE_OP_EXOTIC(f16_t, f16, F16_ZERO, f16_add)
+TRACE_OP(int8_t, i8)
+TRACE_OP(int16_t, i16)
+TRACE_OP(int32_t, i32)
+TRACE_OP(int64_t, i64)
+TRACE_OP(uint8_t, u8)
+TRACE_OP(uint16_t, u16)
+TRACE_OP(uint32_t, u32)
+TRACE_OP(uint64_t, u64)

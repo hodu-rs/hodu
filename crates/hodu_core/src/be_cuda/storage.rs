@@ -383,6 +383,10 @@ impl BackendStorageT for CudaStorage {
         ops_linalg::call_ops_inv(self, layout)
     }
 
+    fn call_ops_trace(&self, layout: &Layout) -> HoduResult<Self> {
+        ops_linalg::call_ops_trace(self, layout)
+    }
+
     fn call_ops_reduce(&self, layout: &Layout, dims: &[usize], keep_dim: bool, op: Op) -> HoduResult<Self> {
         ops_reduce::call_ops_reduce(self, layout, dims, keep_dim, op)
     }

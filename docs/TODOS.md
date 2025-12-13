@@ -53,13 +53,13 @@
 
 **Linear Algebra Operations:** (🟢 Nice-to-have)
 - [x] Implement inv - matrix inverse
-- [ ] Implement solve - linear system solver (Ax = b)
+- [x] Implement solve - linear system solver (Ax = b)
 - [ ] Implement svd - singular value decomposition
 - [ ] Implement eig/eigvals - eigenvalue decomposition
 - [ ] Implement cholesky - Cholesky decomposition
 - [ ] Implement qr - QR decomposition
 - [ ] Implement lu - LU decomposition (factorization)
-- [ ] Implement trace - matrix trace (sum of diagonal)
+- [x] Implement trace - matrix trace (sum of diagonal)
 - [ ] Implement slogdet - sign and log of determinant (numerically stable)
 - [ ] Implement matrix_rank - rank of matrix
 - [ ] Implement pinv - Moore-Penrose pseudo-inverse
