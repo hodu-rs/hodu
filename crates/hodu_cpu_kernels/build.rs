@@ -12,6 +12,7 @@ fn main() {
         .file("kernels/ops_conv.c")
         .file("kernels/ops_einsum.c")
         .file("kernels/ops_indexing.c")
+        .file("kernels/ops_linalg.c")
         .file("kernels/ops_matrix.c")
         .file("kernels/ops_memory.c")
         .file("kernels/ops_padding.c")
@@ -97,6 +98,8 @@ fn main() {
         "ops_einsum.c",
         "ops_indexing.h",
         "ops_indexing.c",
+        "ops_linalg.h",
+        "ops_linalg.c",
         "ops_matrix.h",
         "ops_matrix.c",
         "ops_matrix_openblas.c",

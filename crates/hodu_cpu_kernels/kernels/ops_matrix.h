@@ -109,43 +109,6 @@ void hodu_cpu_dot_u16(const void *lhs, const void *rhs, void *output, const size
 void hodu_cpu_dot_u32(const void *lhs, const void *rhs, void *output, const size_t *metadata);
 void hodu_cpu_dot_u64(const void *lhs, const void *rhs, void *output, const size_t *metadata);
 
-// ============================================================================
-// MATRIX DETERMINANT (DET)
-// ============================================================================
-//
-// Computes the determinant of square matrices with optional batch dimensions.
-//
-// All det operations follow this signature:
-//   void hodu_cpu_det_type(const void *input, void *output, const size_t *metadata)
-//
-// Parameters:
-//   input    - Pointer to input tensor data (square matrix)
-//   output   - Pointer to output tensor buffer (scalar per batch)
-//   metadata - Array describing operation (see below)
-//
-// Metadata layout:
-// - metadata[0]: batch_size (product of batch dimensions)
-// - metadata[1]: n (matrix size, N×N)
-// - metadata[2]: ndim (total number of dimensions)
-// - metadata[3..3+ndim]: shape
-// - metadata[3+ndim..3+2*ndim]: strides
-// - metadata[3+2*ndim]: offset
-
-void hodu_cpu_det_f8e4m3(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_f8e5m2(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_bf16(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_f16(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_f32(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_f64(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_i8(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_i16(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_i32(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_i64(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_u8(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_u16(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_u32(const void *input, void *output, const size_t *metadata);
-void hodu_cpu_det_u64(const void *input, void *output, const size_t *metadata);
-
 #ifdef __cplusplus
 }
 #endif

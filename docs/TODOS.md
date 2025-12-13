@@ -52,7 +52,7 @@
 - [x] Implement det (ONNX: Det) - matrix determinant
 
 **Linear Algebra Operations:** (🟢 Nice-to-have)
-- [ ] Implement inv - matrix inverse
+- [x] Implement inv - matrix inverse
 - [ ] Implement solve - linear system solver (Ax = b)
 - [ ] Implement svd - singular value decomposition
 - [ ] Implement eig/eigvals - eigenvalue decomposition

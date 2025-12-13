@@ -324,13 +324,15 @@ impl fmt::Debug for MatrixOp {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum LinalgOp {
     Det, // Determinant of square matrix
-         // Future: Inv, Solve, Svd, Eig, Cholesky, Qr, Lu, etc.
+    Inv, // Matrix inverse
+         // Future: Solve, Svd, Eig, Cholesky, Qr, Lu, etc.
 }
 
 impl fmt::Display for LinalgOp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Det => write!(f, "det"),
+            Self::Inv => write!(f, "inv"),
         }
     }
 }

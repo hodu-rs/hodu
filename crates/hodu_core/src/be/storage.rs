@@ -44,6 +44,8 @@ pub trait BackendStorageT: Sized {
 
     fn call_ops_det(&self, _: &Layout) -> HoduResult<Self>;
 
+    fn call_ops_inv(&self, _: &Layout) -> HoduResult<Self>;
+
     fn call_ops_reduce(&self, _: &Layout, _: &[usize], _: bool, _: Op) -> HoduResult<Self>;
 
     fn call_ops_concat(&self, _: &[&Self], _: &[&Layout], _: usize, _: Op) -> HoduResult<Self>;
@@ -484,6 +486,16 @@ impl BackendStorage {
             Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_det(layout)?)),
             #[cfg(feature = "metal")]
             Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_det(layout)?)),
+        }
+    }
+
+    pub(crate) fn call_ops_inv(&self, layout: &Layout) -> HoduResult<Self> {
+        match self {
+            Self::CPU(storage) => Ok(Self::CPU(storage.call_ops_inv(layout)?)),
+            #[cfg(feature = "cuda")]
+            Self::CUDA(storage) => Ok(Self::CUDA(storage.call_ops_inv(layout)?)),
+            #[cfg(feature = "metal")]
+            Self::Metal(storage) => Ok(Self::Metal(storage.call_ops_inv(layout)?)),
         }
     }
 

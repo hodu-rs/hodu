@@ -64,6 +64,10 @@ pub struct DotParams;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DetParams;
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct InvParams;
+
 // Reduce Operations
 
 #[derive(Debug, Clone)]
@@ -512,7 +516,10 @@ pub enum OpParams {
     // Matrix
     Matmul(MatmulParams),
     Dot(DotParams),
+
+    // Linalg
     Det(DetParams),
+    Inv(InvParams),
 
     // Reduce
     Reduce(ReduceParams),

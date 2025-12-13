@@ -1,6 +1,6 @@
 use hodu_metal_kernels::{
     kernel::Kernels,
-    kernels::{call_ops_det, det},
+    kernels::{call_ops_det, call_ops_inv, det, inv},
     metal::{create_command_buffer, Buffer, Device},
     utils::BufferOffset,
     RESOURCE_OPTIONS,
@@ -175,4 +175,156 @@ fn det_f32_batch() {
 
     let results: Vec<f32> = read_to_vec(&output, 2);
     assert_eq!(approx(results, 4), vec![-2.0, -2.0]);
+}
+
+// ============================================================================
+// INV (Matrix Inverse) Tests
+// ============================================================================
+
+#[test]
+fn inv_f32_1x1() {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    // 1x1 matrix: inv([[5]]) = [[0.2]]
+    let input = vec![5.0f32];
+    let input_buffer = new_buffer(&device, &input);
+
+    let output = device.new_buffer(std::mem::size_of::<f32>(), RESOURCE_OPTIONS).unwrap();
+
+    let metadata = vec![1, 1, 2, 1, 1, 1, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &output,
+        1,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let results: Vec<f32> = read_to_vec(&output, 1);
+    assert_eq!(approx(results, 4), vec![0.2]);
+}
+
+#[test]
+fn inv_f32_2x2() {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    // 2x2 matrix: [[4, 7], [2, 6]]
+    // inv = [[0.6, -0.7], [-0.2, 0.4]]
+    let input = vec![4.0f32, 7.0, 2.0, 6.0];
+    let input_buffer = new_buffer(&device, &input);
+
+    let output = device
+        .new_buffer(4 * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
+        .unwrap();
+
+    let metadata = vec![1, 2, 2, 2, 2, 2, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &output,
+        1,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let results: Vec<f32> = read_to_vec(&output, 4);
+    assert_eq!(approx(results, 4), vec![0.6, -0.7, -0.2, 0.4]);
+}
+
+#[test]
+fn inv_f32_4x4_identity() {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    // 4x4 identity matrix: inv(I) = I
+    let input = vec![
+        1.0f32, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ];
+    let input_buffer = new_buffer(&device, &input);
+
+    let output = device
+        .new_buffer(16 * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
+        .unwrap();
+
+    let metadata = vec![1, 4, 2, 4, 4, 4, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &output,
+        1,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let results: Vec<f32> = read_to_vec(&output, 16);
+    assert_eq!(approx(results, 4), input);
+}
+
+#[test]
+fn inv_f32_batch() {
+    let device = device();
+    let kernels = Kernels::new();
+    let command_queue = device.new_command_queue().unwrap();
+    let command_buffer = create_command_buffer(&command_queue).unwrap();
+
+    // Batch of 2 matrices:
+    // Matrix 0: [[2, 0], [0, 2]], inv = [[0.5, 0], [0, 0.5]]
+    // Matrix 1: [[1, 1], [0, 1]], inv = [[1, -1], [0, 1]]
+    let input = vec![2.0f32, 0.0, 0.0, 2.0, 1.0, 1.0, 0.0, 1.0];
+    let input_buffer = new_buffer(&device, &input);
+
+    let output = device
+        .new_buffer(8 * std::mem::size_of::<f32>(), RESOURCE_OPTIONS)
+        .unwrap();
+
+    let metadata = vec![2, 2, 3, 2, 2, 2, 4, 2, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        &kernels,
+        &device,
+        &command_buffer,
+        BufferOffset::zero_offset(&input_buffer),
+        &output,
+        2,
+        &metadata,
+    )
+    .unwrap();
+
+    command_buffer.commit();
+    command_buffer.wait_until_completed();
+
+    let results: Vec<f32> = read_to_vec(&output, 8);
+    let expected = vec![0.5, 0.0, 0.0, 0.5, 1.0, -1.0, 0.0, 1.0];
+    assert_eq!(approx(results, 4), expected);
 }

@@ -157,3 +157,127 @@ fn test_det_i32_2x2() {
 
     assert_eq!(output[0], -2);
 }
+
+// ============================================================================
+// INV (Matrix Inverse) Tests
+// ============================================================================
+
+#[test]
+fn test_inv_f32_1x1() {
+    // 1x1 matrix: inv([[5]]) = [[0.2]]
+    let input = [5.0f32];
+    let mut output = [0.0f32; 1];
+
+    // Metadata: [batch_size, n, ndim, shape..., strides..., offset]
+    let metadata = vec![1, 1, 2, 1, 1, 1, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(approx(output.to_vec(), 4), vec![0.2]);
+}
+
+#[test]
+fn test_inv_f32_2x2() {
+    // 2x2 matrix: [[4, 7], [2, 6]]
+    // det = 4*6 - 7*2 = 24 - 14 = 10
+    // inv = 1/10 * [[6, -7], [-2, 4]]
+    //     = [[0.6, -0.7], [-0.2, 0.4]]
+    let input = [4.0f32, 7.0, 2.0, 6.0];
+    let mut output = [0.0f32; 4];
+
+    let metadata = vec![1, 2, 2, 2, 2, 2, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(approx(output.to_vec(), 4), vec![0.6, -0.7, -0.2, 0.4]);
+}
+
+#[test]
+fn test_inv_f32_3x3() {
+    // 3x3 matrix: [[1, 2, 3], [0, 1, 4], [5, 6, 0]]
+    // Using an invertible matrix
+    let input = [1.0f32, 2.0, 3.0, 0.0, 1.0, 4.0, 5.0, 6.0, 0.0];
+    let mut output = [0.0f32; 9];
+
+    let metadata = vec![1, 3, 2, 3, 3, 3, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    // Verify A * A^{-1} = I by checking multiplication
+    let a = input;
+    let a_inv = output;
+    let mut result = [0.0f32; 9];
+    for i in 0..3 {
+        for j in 0..3 {
+            for k in 0..3 {
+                result[i * 3 + j] += a[i * 3 + k] * a_inv[k * 3 + j];
+            }
+        }
+    }
+    // Should be identity matrix
+    let identity = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0];
+    assert_eq!(approx(result.to_vec(), 4), identity.to_vec());
+}
+
+#[test]
+fn test_inv_f32_identity() {
+    // Identity matrix: inv(I) = I
+    let input = [
+        1.0f32, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    ];
+    let mut output = [0.0f32; 16];
+
+    let metadata = vec![1, 4, 2, 4, 4, 4, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    assert_eq!(approx(output.to_vec(), 4), input.to_vec());
+}
+
+#[test]
+fn test_inv_f32_batch() {
+    // Batch of 2 matrices:
+    // Matrix 0: [[2, 0], [0, 2]], inv = [[0.5, 0], [0, 0.5]]
+    // Matrix 1: [[1, 1], [0, 1]], inv = [[1, -1], [0, 1]]
+    let input = [2.0f32, 0.0, 0.0, 2.0, 1.0, 1.0, 0.0, 1.0];
+    let mut output = [0.0f32; 8];
+
+    // Metadata: [batch_size, n, ndim, shape..., strides..., offset]
+    // shape = [2, 2, 2], strides = [4, 2, 1], offset = 0
+    let metadata = vec![2, 2, 3, 2, 2, 2, 4, 2, 1, 0];
+
+    call_ops_inv(
+        inv::F32,
+        input.as_ptr() as *const core::ffi::c_void,
+        output.as_mut_ptr() as *mut core::ffi::c_void,
+        &metadata,
+    )
+    .unwrap();
+
+    let expected = [0.5, 0.0, 0.0, 0.5, 1.0, -1.0, 0.0, 1.0];
+    assert_eq!(approx(output.to_vec(), 4), expected.to_vec());
+}

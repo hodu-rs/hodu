@@ -89,3 +89,85 @@ pub fn call_ops_det(storage: &CudaStorage, layout: &Layout) -> HoduResult<CudaSt
         ))),
     }
 }
+
+pub fn call_ops_inv(storage: &CudaStorage, layout: &Layout) -> HoduResult<CudaStorage> {
+    let shape = layout.shape();
+    let ndim = shape.ndim();
+
+    if ndim < 2 {
+        return Err(HoduError::BackendError("inv requires at least 2D tensor".to_string()));
+    }
+
+    let n = shape.dims()[ndim - 1];
+    let m = shape.dims()[ndim - 2];
+
+    if n != m {
+        return Err(HoduError::BackendError(format!(
+            "inv requires square matrix, got {}×{}",
+            m, n
+        )));
+    }
+
+    // Output shape is same as input
+    let output_shape = shape.clone();
+    let batch_size = if ndim == 2 {
+        1
+    } else {
+        shape.dims()[..ndim - 2].iter().product()
+    };
+    let metadata = crate::op_metadatas::inv_metadata(layout)?;
+
+    let dtype = storage.dtype();
+    let device = storage.get_device();
+
+    let kernel_name = format!("hodu_cuda_inv_{}", dtype);
+    let kernel_name_static = crate::cache::kernel::get_kernel_name(kernel_name);
+    let kernel = kernels::Kernel(kernel_name_static);
+
+    macro_rules! call_inv {
+        ($input:expr, $ty:ty) => {{
+            let mut output: CudaSlice<$ty> = device.new_buffer(output_shape.size())?;
+            kernels::call_ops_inv(
+                kernel,
+                device.kernels(),
+                device.context(),
+                $input,
+                &mut output,
+                batch_size,
+                &metadata,
+            )?;
+            output
+        }};
+    }
+
+    let device_id = storage.device_id();
+    let device_arc = Arc::clone(&storage.device);
+
+    match &storage.data {
+        CudaStorageData::F32(input) => Ok(CudaStorage::new(
+            device_id,
+            Arc::clone(&device_arc),
+            CudaStorageData::F32(call_inv!(input, f32)),
+        )),
+        #[cfg(feature = "f64")]
+        CudaStorageData::F64(input) => Ok(CudaStorage::new(
+            device_id,
+            Arc::clone(&device_arc),
+            CudaStorageData::F64(call_inv!(input, f64)),
+        )),
+        CudaStorageData::F16(input) => Ok(CudaStorage::new(
+            device_id,
+            Arc::clone(&device_arc),
+            CudaStorageData::F16(call_inv!(input, half::f16)),
+        )),
+        CudaStorageData::BF16(input) => Ok(CudaStorage::new(
+            device_id,
+            Arc::clone(&device_arc),
+            CudaStorageData::BF16(call_inv!(input, half::bf16)),
+        )),
+        _ => Err(HoduError::BackendError(format!(
+            "inv not supported for dtype {}",
+            storage.dtype()
+        ))),
+    }
+}
