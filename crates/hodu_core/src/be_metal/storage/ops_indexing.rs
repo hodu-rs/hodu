@@ -399,13 +399,13 @@ pub fn call_nonzero(input_storage: &MetalStorage, input_layout: &Layout) -> Hodu
 
     // Handle empty case
     if count == 0 {
-        let output_buffer = device.new_buffer(0, DType::I64, "nonzero_output")?;
-        return Ok((MetalStorage::new(output_buffer, device.clone(), 0, DType::I64), 0));
+        let output_buffer = device.new_buffer(0, DType::I32, "nonzero_output")?;
+        return Ok((MetalStorage::new(output_buffer, device.clone(), 0, DType::I32), 0));
     }
 
     // Allocate output buffer for [count, ndim] indices
     let output_size = count * ndim;
-    let output_buffer = device.new_buffer(output_size, DType::I64, "nonzero_output")?;
+    let output_buffer = device.new_buffer(output_size, DType::I32, "nonzero_output")?;
 
     // Create a new counter buffer for fill (reset to 0)
     let counter_buffer = device.new_buffer(1, DType::U32, "nonzero_counter")?;
@@ -433,7 +433,7 @@ pub fn call_nonzero(input_storage: &MetalStorage, input_layout: &Layout) -> Hodu
     command_buffer.wait_until_completed();
 
     Ok((
-        MetalStorage::new(output_buffer, device.clone(), output_size, DType::I64),
+        MetalStorage::new(output_buffer, device.clone(), output_size, DType::I32),
         count,
     ))
 }

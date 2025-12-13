@@ -127,8 +127,9 @@ impl fmt::Debug for CmpScalarOp {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum UnaryOp {
     Neg,
-    Abs,  // no-backprop
-    Sign, // no-backprop
+    Abs,      // no-backprop
+    Sign,     // no-backprop
+    Softsign, // x / (1 + |x|)
     Square,
     Sqrt,
     Recip,
@@ -142,6 +143,8 @@ pub enum UnaryOp {
     Silu,
     HardSilu,
     Mish,
+    Selu, // scale * (max(0,x) + min(0, alpha*(exp(x)-1)))
+    Celu, // max(0,x) + min(0, alpha*(exp(x/alpha)-1))
 
     // Trigonometric
     Sin,
@@ -182,6 +185,7 @@ impl fmt::Display for UnaryOp {
             Self::Neg => write!(f, "neg"),
             Self::Abs => write!(f, "abs"),
             Self::Sign => write!(f, "sign"),
+            Self::Softsign => write!(f, "softsign"),
             Self::Square => write!(f, "square"),
             Self::Sqrt => write!(f, "sqrt"),
             Self::Recip => write!(f, "recip"),
@@ -193,6 +197,8 @@ impl fmt::Display for UnaryOp {
             Self::Silu => write!(f, "silu"),
             Self::HardSilu => write!(f, "hardsilu"),
             Self::Mish => write!(f, "mish"),
+            Self::Selu => write!(f, "selu"),
+            Self::Celu => write!(f, "celu"),
             Self::Sin => write!(f, "sin"),
             Self::Cos => write!(f, "cos"),
             Self::Tan => write!(f, "tan"),

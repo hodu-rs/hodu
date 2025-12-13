@@ -168,6 +168,7 @@ impl Tensor {
     unary_op!(neg, Neg);
     unary_op!(abs, Abs);
     unary_op!(sign, Sign);
+    unary_op!(softsign, Softsign);
     unary_op!(square, Square);
     unary_op!(sqrt, Sqrt);
     unary_op!(recip, Recip);
@@ -186,6 +187,8 @@ impl Tensor {
         self.hardsilu()
     }
     unary_op!(mish, Mish);
+    unary_op!(selu, Selu);
+    unary_op!(celu, Celu);
 
     unary_op!(sin, Sin);
     unary_op!(cos, Cos);

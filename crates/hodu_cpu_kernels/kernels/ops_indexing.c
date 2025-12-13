@@ -1035,7 +1035,7 @@ ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
 /// @param FN_NAME Function name
 /// @param IS_NONZERO Expression to check if value is non-zero
 #define NONZERO_FILL_OP(TYPENAME, FN_NAME, IS_NONZERO)                                             \
-    void hodu_cpu_##FN_NAME(const void *input_ptr, int64_t *output, const size_t *metadata) {      \
+    void hodu_cpu_##FN_NAME(const void *input_ptr, int32_t *output, const size_t *metadata) {      \
         const TYPENAME *input = (const TYPENAME *)input_ptr;                                       \
                                                                                                    \
         const size_t num_els = metadata[0];                                                        \
@@ -1059,7 +1059,7 @@ ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
             if (IS_NONZERO) {                                                                      \
                 /* Write multi-dimensional indices to output */                                    \
                 for (size_t d = 0; d < num_dims; d++) {                                            \
-                    output[out_idx * num_dims + d] = (int64_t)multi_idx[d];                        \
+                    output[out_idx * num_dims + d] = (int32_t)multi_idx[d];                        \
                 }                                                                                  \
                 out_idx++;                                                                         \
             }                                                                                      \

@@ -583,7 +583,7 @@ ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
 // Fill kernel - uses atomic counter to fill indices
 #define NONZERO_FILL_OP(TYPE, FN_SUFFIX, IS_NONZERO)                                               \
     extern "C" __global__ void hodu_cuda_nonzero_fill_##FN_SUFFIX(                                 \
-        const TYPE *input, int64_t *output, unsigned int *counter, const size_t *metadata) {       \
+        const TYPE *input, int32_t *output, unsigned int *counter, const size_t *metadata) {       \
                                                                                                    \
         const size_t num_els = metadata[0];                                                        \
         const size_t num_dims = metadata[1];                                                       \
@@ -608,7 +608,7 @@ ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
             if (IS_NONZERO) {                                                                      \
                 unsigned int out_idx = atomicAdd(counter, 1);                                      \
                 for (size_t d = 0; d < num_dims; d++) {                                            \
-                    output[out_idx * num_dims + d] = (int64_t)multi_idx[d];                        \
+                    output[out_idx * num_dims + d] = (int32_t)multi_idx[d];                        \
                 }                                                                                  \
             }                                                                                      \
         }                                                                                          \

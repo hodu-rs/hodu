@@ -255,6 +255,44 @@ fn mish_f32() {
     assert_eq!(approx(results, 4), approx(expected, 4));
 }
 
+#[test]
+fn softsign_f32() {
+    let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let results = run(&v, softsign::F32);
+    // softsign(x) = x / (1 + |x|)
+    let expected: Vec<_> = v.iter().map(|x| x / (1.0 + x.abs())).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn selu_f32() {
+    let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let results = run(&v, selu::F32);
+    // selu(x) = scale * (max(0,x) + min(0, alpha*(exp(x)-1)))
+    let alpha = 1.6732632423543772848170429916717f32;
+    let scale = 1.0507009873554804934193349852946f32;
+    let expected: Vec<_> = v
+        .iter()
+        .map(|&x| {
+            if x > 0.0 {
+                scale * x
+            } else {
+                scale * alpha * (x.exp() - 1.0)
+            }
+        })
+        .collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
+#[test]
+fn celu_f32() {
+    let v = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let results = run(&v, celu::F32);
+    // celu(x) = max(0,x) + min(0, exp(x)-1)
+    let expected: Vec<_> = v.iter().map(|&x| x.max(0.0) + (x.exp() - 1.0).min(0.0)).collect();
+    assert_eq!(approx(results, 4), approx(expected, 4));
+}
+
 // Trigonometric functions
 #[test]
 fn sin_f32() {

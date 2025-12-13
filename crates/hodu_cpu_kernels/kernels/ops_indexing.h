@@ -415,7 +415,7 @@ void hodu_cpu_onehot_u64(const int32_t *indices, void *output, const size_t *met
 //   size_t hodu_cpu_nonzero_count_type(const void *input, const size_t *metadata)
 //
 // All nonzero_fill operations follow this signature:
-//   void hodu_cpu_nonzero_fill_type(const void *input, int64_t *output, const size_t *metadata)
+//   void hodu_cpu_nonzero_fill_type(const void *input, int32_t *output, const size_t *metadata)
 //
 // Parameters:
 //   input    - Pointer to input tensor data
@@ -447,21 +447,21 @@ size_t hodu_cpu_nonzero_count_u32(const void *input, const size_t *metadata);
 size_t hodu_cpu_nonzero_count_u64(const void *input, const size_t *metadata);
 
 // Fill operations - write indices of non-zero elements to output
-void hodu_cpu_nonzero_fill_bool(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_f8e4m3(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_f8e5m2(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_bf16(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_f16(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_f32(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_f64(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_i8(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_i16(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_i32(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_i64(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_u8(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_u16(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_u32(const void *input, int64_t *output, const size_t *metadata);
-void hodu_cpu_nonzero_fill_u64(const void *input, int64_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_bool(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f8e4m3(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f8e5m2(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_bf16(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f16(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f32(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_f64(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i8(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i16(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i32(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_i64(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u8(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u16(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u32(const void *input, int32_t *output, const size_t *metadata);
+void hodu_cpu_nonzero_fill_u64(const void *input, int32_t *output, const size_t *metadata);
 
 #ifdef __cplusplus
 }

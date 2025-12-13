@@ -657,13 +657,13 @@ pub fn call_nonzero(input_storage: &CudaStorage, input_layout: &Layout) -> HoduR
 
     // Handle empty case
     if count == 0 {
-        let output = device.new_buffer::<i64>(0)?;
-        return Ok((CudaStorage::new(device_id, device_arc, CudaStorageData::I64(output)), 0));
+        let output = device.new_buffer::<i32>(0)?;
+        return Ok((CudaStorage::new(device_id, device_arc, CudaStorageData::I32(output)), 0));
     }
 
     // Allocate output buffer for [count, ndim] indices
     let output_size = count * ndim;
-    let mut output = device.new_buffer::<i64>(output_size)?;
+    let mut output = device.new_buffer::<i32>(output_size)?;
 
     // Create counter buffer for fill (initialized to 0)
     let mut counter_buffer = device.new_buffer::<u32>(1)?;
@@ -723,7 +723,7 @@ pub fn call_nonzero(input_storage: &CudaStorage, input_layout: &Layout) -> HoduR
     }
 
     Ok((
-        CudaStorage::new(device_id, device_arc, CudaStorageData::I64(output)),
+        CudaStorage::new(device_id, device_arc, CudaStorageData::I32(output)),
         count,
     ))
 }

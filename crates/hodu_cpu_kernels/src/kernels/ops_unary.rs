@@ -18,6 +18,7 @@ ops!(
     neg,
     abs,
     sign,
+    softsign,
     square,
     sqrt,
     recip,
@@ -29,6 +30,8 @@ ops!(
     silu,
     hardsilu,
     mish,
+    selu,
+    celu,
     sin,
     cos,
     tan,
@@ -300,13 +303,13 @@ macro_rules! declare_and_dispatch_unary {
 // Declare all operations
 declare_and_dispatch_unary!(
     all_types: [
-        abs, sign, square, sqrt, recip, logical_not
+        abs, sign, softsign, square, sqrt, recip, logical_not
     ],
     signed_types: [
         neg
     ],
     float_types: [
-        relu, sigmoid, hardsigmoid, gelu, softplus, silu, hardsilu, mish,
+        relu, sigmoid, hardsigmoid, gelu, softplus, silu, hardsilu, mish, selu, celu,
         sin, cos, tan, asin, acos, atan,
         sinh, cosh, tanh, asinh, acosh, atanh,
         exp, exp2, exp10, ln, log2, log10,

@@ -201,6 +201,33 @@ static inline float mish_helper_f32(float x) { return x * tanhf(softplus_helper_
 
 static inline double mish_helper_f64(double x) { return x * tanh(softplus_helper_f64(x)); }
 
+// SELU: scale * (max(0,x) + min(0, alpha*(exp(x)-1)))
+// Constants from the original SELU paper
+#define SELU_ALPHA_F32 1.6732632423543772848170429916717f
+#define SELU_SCALE_F32 1.0507009873554804934193349852946f
+#define SELU_ALPHA_F64 1.6732632423543772848170429916717
+#define SELU_SCALE_F64 1.0507009873554804934193349852946
+
+static inline float selu_helper_f32(float x) {
+    return SELU_SCALE_F32 * (x > 0.0f ? x : SELU_ALPHA_F32 * (expf(x) - 1.0f));
+}
+
+static inline double selu_helper_f64(double x) {
+    return SELU_SCALE_F64 * (x > 0.0 ? x : SELU_ALPHA_F64 * (exp(x) - 1.0));
+}
+
+// CELU: max(0,x) + min(0, alpha*(exp(x/alpha)-1)) with alpha=1.0
+static inline float celu_helper_f32(float x) {
+    return fmaxf(0.0f, x) + fminf(0.0f, expf(x) - 1.0f);
+}
+
+static inline double celu_helper_f64(double x) { return fmax(0.0, x) + fmin(0.0, exp(x) - 1.0); }
+
+// Softsign: x / (1 + |x|)
+static inline float softsign_helper_f32(float x) { return x / (1.0f + fabsf(x)); }
+
+static inline double softsign_helper_f64(double x) { return x / (1.0 + fabs(x)); }
+
 #ifdef __cplusplus
 }
 #endif

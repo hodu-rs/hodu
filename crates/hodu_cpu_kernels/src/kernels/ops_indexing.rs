@@ -659,28 +659,28 @@ macro_rules! declare_and_dispatch_nonzero_fill {
         paste::paste! {
             extern "C" {
                 $(
-                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, output: *mut i64, metadata: *const usize);
-                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, output: *mut i64, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bool>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e4m3>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f8e5m2>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _bf16>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f16>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f32>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _f64>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i8>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i16>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i32>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _i64>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u8>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u16>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u32>](input: *const c_void, output: *mut i32, metadata: *const usize);
+                    fn [<hodu_cpu_ $op _u64>](input: *const c_void, output: *mut i32, metadata: *const usize);
                 )*
             }
 
             unsafe fn dispatch_nonzero_fill(
                 name: &str,
                 input: *const c_void,
-                output: *mut i64,
+                output: *mut i32,
                 metadata: *const usize,
             ) {
                 match name {
@@ -740,15 +740,15 @@ pub fn call_nonzero_count(
 /// # Arguments
 /// * `kernel_name` - The nonzero_fill kernel to execute (e.g., nonzero_fill::F32)
 /// * `input` - Pointer to input tensor data
-/// * `output` - Pointer to output buffer (shape [N, ndim], i64 type)
+/// * `output` - Pointer to output buffer (shape [N, ndim], i32 type)
 /// * `metadata` - Tensor metadata array (same as nonzero_count)
 ///
 /// # Safety
-/// Caller must ensure output buffer has capacity for count * ndim i64 values.
+/// Caller must ensure output buffer has capacity for count * ndim i32 values.
 pub fn call_nonzero_fill(
     kernel_name: crate::kernels::macros::Kernel,
     input: *const c_void,
-    output: *mut i64,
+    output: *mut i32,
     metadata: &[usize],
 ) -> Result<()> {
     unsafe {

@@ -140,7 +140,7 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
 
         // Unary operations
         Op::Unary(inner_op) => match inner_op {
-            UnaryOp::Neg | UnaryOp::Abs | UnaryOp::Sign => {
+            UnaryOp::Neg | UnaryOp::Abs | UnaryOp::Sign | UnaryOp::Softsign => {
                 if dtype == DType::BOOL || dtype.is_uint() {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
@@ -166,7 +166,9 @@ pub fn validate_dtype_for_op(dtype: DType, op: Op) -> HoduResult<()> {
             | UnaryOp::Softplus
             | UnaryOp::Silu
             | UnaryOp::HardSilu
-            | UnaryOp::Mish => {
+            | UnaryOp::Mish
+            | UnaryOp::Selu
+            | UnaryOp::Celu => {
                 if dtype == DType::BOOL || dtype.is_uint() || dtype.is_int() {
                     return Err(HoduError::UnsupportedDTypeForOp { dtype, op });
                 }
@@ -366,6 +368,7 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
         Op::Unary(inner_op) => match inner_op {
             UnaryOp::Neg | UnaryOp::Square | UnaryOp::Sqrt | UnaryOp::Recip => true,
             UnaryOp::Abs | UnaryOp::Sign => false, // !
+            UnaryOp::Softsign => true,
             UnaryOp::Relu
             | UnaryOp::Sigmoid
             | UnaryOp::HardSigmoid
@@ -373,7 +376,9 @@ pub fn validate_requires_grad_for_op(op: Op) -> bool {
             | UnaryOp::Softplus
             | UnaryOp::Silu
             | UnaryOp::HardSilu
-            | UnaryOp::Mish => true,
+            | UnaryOp::Mish
+            | UnaryOp::Selu
+            | UnaryOp::Celu => true,
             UnaryOp::Sin | UnaryOp::Cos | UnaryOp::Tan | UnaryOp::Asin | UnaryOp::Acos | UnaryOp::Atan => true,
             UnaryOp::Sinh | UnaryOp::Cosh | UnaryOp::Tanh | UnaryOp::Asinh | UnaryOp::Acosh | UnaryOp::Atanh => true,
             UnaryOp::Exp | UnaryOp::Exp2 | UnaryOp::Exp10 | UnaryOp::Ln | UnaryOp::Log2 | UnaryOp::Log10 => true,

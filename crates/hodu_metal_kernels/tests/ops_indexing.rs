@@ -167,7 +167,7 @@ fn test_onehot_f32_2d_input() {
     );
 }
 
-fn run_nonzero<T: Clone>(input: &[T], shape: &[usize], count_kernel: Kernel, fill_kernel: Kernel) -> (usize, Vec<i64>) {
+fn run_nonzero<T: Clone>(input: &[T], shape: &[usize], count_kernel: Kernel, fill_kernel: Kernel) -> (usize, Vec<i32>) {
     let device = device();
     let kernels = Kernels::new();
     let command_queue = device.new_command_queue().unwrap();
@@ -222,7 +222,7 @@ fn run_nonzero<T: Clone>(input: &[T], shape: &[usize], count_kernel: Kernel, fil
 
     // Fill pass
     let output_buffer = device
-        .new_buffer(count * num_dims * std::mem::size_of::<i64>(), options)
+        .new_buffer(count * num_dims * std::mem::size_of::<i32>(), options)
         .unwrap();
     let counter_buffer = device.new_buffer(std::mem::size_of::<u32>(), options).unwrap();
     // Initialize counter to 0
@@ -260,7 +260,7 @@ fn test_nonzero_f32_1d() {
     let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
 
     assert_eq!(count, 3);
-    assert_eq!(indices, vec![1i64, 3, 5]);
+    assert_eq!(indices, vec![1i32, 3, 5]);
 }
 
 #[test]
@@ -274,7 +274,7 @@ fn test_nonzero_f32_2d() {
 
     assert_eq!(count, 3);
     // Output shape is [3, 2]: 3 non-zero elements, 2 dimensions
-    assert_eq!(indices, vec![0i64, 1, 1, 0, 1, 2]);
+    assert_eq!(indices, vec![0i32, 1, 1, 0, 1, 2]);
 }
 
 #[test]
@@ -285,7 +285,7 @@ fn test_nonzero_i32() {
     let (count, indices) = run_nonzero(&input, &shape, nonzero_count::I32, nonzero_fill::I32);
 
     assert_eq!(count, 3);
-    assert_eq!(indices, vec![1i64, 4, 5]);
+    assert_eq!(indices, vec![1i32, 4, 5]);
 }
 
 #[test]
@@ -307,5 +307,5 @@ fn test_nonzero_all_nonzero() {
     let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
 
     assert_eq!(count, 3);
-    assert_eq!(indices, vec![0i64, 1, 2]);
+    assert_eq!(indices, vec![0i32, 1, 2]);
 }

@@ -27,6 +27,16 @@ impl VjpCompute for UnaryOp {
                 // d/dx sign(x) = 0 (discontinuous)
                 Ok(vec![create_zeros_like_tensor(input)?])
             },
+            UnaryOp::Softsign => {
+                // softsign(x) = x / (1 + |x|)
+                // d/dx softsign(x) = 1 / (1 + |x|)^2
+                let abs_x = create_abs_tensor(input)?;
+                let ones = create_ones_like_tensor(input)?;
+                let one_plus_abs_x = create_add_tensor(ones, abs_x)?;
+                let denominator = create_mul_tensor(one_plus_abs_x, one_plus_abs_x)?;
+                let derivative = create_recip_tensor(denominator)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
             UnaryOp::Square => {
                 // d/dx x^2 = 2x
                 let two_x = create_add_tensor(input, input)?;
@@ -182,6 +192,58 @@ impl VjpCompute for UnaryOp {
 
                 // Total derivative = tanh(softplus(x)) + x * sech²(softplus(x)) * sigmoid(x)
                 let derivative = create_add_tensor(tanh_softplus, x_times_term)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Selu => {
+                // selu(x) = scale * (x if x > 0 else alpha * (exp(x) - 1))
+                // d/dx selu(x) = scale * (1 if x > 0 else alpha * exp(x))
+                // SELU_ALPHA = 1.6732632423543772848170429916717
+                // SELU_SCALE = 1.0507009873554804934193349852946
+                let input_tensor = tensor_from_id(input);
+                let grad_tensor = tensor_from_id(grad_output);
+                let dtype = input_tensor.dtype();
+                let zero = Scalar::zero(dtype);
+                let selu_alpha = Scalar::from_f32(1.673_263_2, dtype);
+                let selu_scale = Scalar::from_f32(1.050_701, dtype);
+
+                // mask_pos = x > 0
+                let mask_pos = create_gt_scalar_tensor(input, zero)?;
+                let mask_neg = create_le_scalar_tensor(input, zero)?;
+                let mask_pos_f = tensor_from_id(mask_pos).to_dtype(grad_tensor.dtype())?;
+                let mask_neg_f = tensor_from_id(mask_neg).to_dtype(grad_tensor.dtype())?;
+
+                // For x > 0: derivative = scale * 1 = scale
+                let pos_deriv = create_mul_scalar_tensor(mask_pos_f.id(), selu_scale)?;
+
+                // For x <= 0: derivative = scale * alpha * exp(x)
+                let exp_x = create_exp_tensor(input)?;
+                let alpha_exp_x = create_mul_scalar_tensor(exp_x, selu_alpha)?;
+                let scale_alpha_exp_x = create_mul_scalar_tensor(alpha_exp_x, selu_scale)?;
+                let neg_deriv = create_mul_tensor(mask_neg_f.id(), scale_alpha_exp_x)?;
+
+                let derivative = create_add_tensor(pos_deriv, neg_deriv)?;
+                Ok(vec![create_mul_tensor(grad_output, derivative)?])
+            },
+            UnaryOp::Celu => {
+                // celu(x) = max(0, x) + min(0, exp(x) - 1)
+                // d/dx celu(x) = 1 if x > 0 else exp(x)
+                let input_tensor = tensor_from_id(input);
+                let grad_tensor = tensor_from_id(grad_output);
+                let dtype = input_tensor.dtype();
+                let zero = Scalar::zero(dtype);
+
+                // mask_pos = x > 0
+                let mask_pos = create_gt_scalar_tensor(input, zero)?;
+                let mask_neg = create_le_scalar_tensor(input, zero)?;
+                let mask_pos_f = tensor_from_id(mask_pos).to_dtype(grad_tensor.dtype())?;
+                let mask_neg_f = tensor_from_id(mask_neg).to_dtype(grad_tensor.dtype())?;
+
+                // For x > 0: derivative = 1
+                // For x <= 0: derivative = exp(x)
+                let exp_x = create_exp_tensor(input)?;
+                let neg_deriv = create_mul_tensor(mask_neg_f.id(), exp_x)?;
+
+                let derivative = create_add_tensor(mask_pos_f.id(), neg_deriv)?;
                 Ok(vec![create_mul_tensor(grad_output, derivative)?])
             },
             UnaryOp::Sin => {

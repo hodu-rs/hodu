@@ -633,7 +633,7 @@ fn test_onehot_f32_2d_input() {
     );
 }
 
-fn run_nonzero<T>(input: &[T], shape: &[usize], count_kernel: Kernel, fill_kernel: Kernel) -> (usize, Vec<i64>)
+fn run_nonzero<T>(input: &[T], shape: &[usize], count_kernel: Kernel, fill_kernel: Kernel) -> (usize, Vec<i32>)
 where
     T: cudarc::driver::DeviceRepr + Clone,
 {
@@ -674,7 +674,7 @@ where
     }
 
     // Fill pass
-    let mut output_dev: CudaSlice<i64> = unsafe { stream.alloc(count * num_dims).unwrap() };
+    let mut output_dev: CudaSlice<i32> = unsafe { stream.alloc(count * num_dims).unwrap() };
     let mut counter_dev: CudaSlice<u32> = stream.memcpy_stod(&[0u32]).unwrap();
 
     call_nonzero_fill(
@@ -688,7 +688,7 @@ where
     )
     .unwrap();
 
-    let mut results = vec![0i64; count * num_dims];
+    let mut results = vec![0i32; count * num_dims];
     stream.memcpy_dtoh(&output_dev, &mut results).unwrap();
     (count, results)
 }
@@ -703,7 +703,7 @@ fn test_nonzero_f32_1d() {
     let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
 
     assert_eq!(count, 3);
-    assert_eq!(indices, vec![1i64, 3, 5]);
+    assert_eq!(indices, vec![1i32, 3, 5]);
 }
 
 #[test]
@@ -717,7 +717,7 @@ fn test_nonzero_f32_2d() {
 
     assert_eq!(count, 3);
     // Output shape is [3, 2]: 3 non-zero elements, 2 dimensions
-    assert_eq!(indices, vec![0i64, 1, 1, 0, 1, 2]);
+    assert_eq!(indices, vec![0i32, 1, 1, 0, 1, 2]);
 }
 
 #[test]
@@ -728,7 +728,7 @@ fn test_nonzero_i32() {
     let (count, indices) = run_nonzero(&input, &shape, nonzero_count::I32, nonzero_fill::I32);
 
     assert_eq!(count, 3);
-    assert_eq!(indices, vec![1i64, 4, 5]);
+    assert_eq!(indices, vec![1i32, 4, 5]);
 }
 
 #[test]
@@ -750,5 +750,5 @@ fn test_nonzero_all_nonzero() {
     let (count, indices) = run_nonzero(&input, &shape, nonzero_count::F32, nonzero_fill::F32);
 
     assert_eq!(count, 3);
-    assert_eq!(indices, vec![0i64, 1, 2]);
+    assert_eq!(indices, vec![0i32, 1, 2]);
 }

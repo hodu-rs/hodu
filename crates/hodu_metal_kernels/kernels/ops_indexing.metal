@@ -813,7 +813,7 @@ ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
 // Fill kernel - sequential fill to maintain order
 #define NONZERO_FILL_OP(TYPE, FN_SUFFIX, IS_NONZERO)                                               \
     kernel void hodu_metal_nonzero_fill_##FN_SUFFIX(                                               \
-        device const TYPE *input [[buffer(0)]], device int64_t *output [[buffer(1)]],              \
+        device const TYPE *input [[buffer(0)]], device int32_t *output [[buffer(1)]],              \
         device atomic_uint *counter [[buffer(2)]], constant size_t *metadata [[buffer(3)]],        \
         uint id [[thread_position_in_grid]]) {                                                     \
                                                                                                    \
@@ -840,7 +840,7 @@ ONEHOT_OP(uint64_t, onehot_u64, 1, 0)
         if (IS_NONZERO) {                                                                          \
             uint out_idx = atomic_fetch_add_explicit(counter, 1, memory_order_relaxed);            \
             for (size_t d = 0; d < num_dims; d++) {                                                \
-                output[out_idx * num_dims + d] = (int64_t)multi_idx[d];                            \
+                output[out_idx * num_dims + d] = (int32_t)multi_idx[d];                            \
             }                                                                                      \
         }                                                                                          \
     }

@@ -60,6 +60,7 @@ extern "C" {
  * - neg: Negate elements (-x)
  * - abs: Absolute value (|x|)
  * - sign: Sign function (-1, 0, or 1)
+ * - softsign: Softsign function (x / (1 + |x|))
  * - square: Square elements (x²)
  * - sqrt: Square root (√x)
  * - recip: Reciprocal (1/x)
@@ -68,6 +69,7 @@ extern "C" {
     void hodu_cpu_neg_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
     void hodu_cpu_abs_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);      \
     void hodu_cpu_sign_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_softsign_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata); \
     void hodu_cpu_square_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);   \
     void hodu_cpu_sqrt_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
     void hodu_cpu_recip_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
@@ -83,6 +85,8 @@ extern "C" {
  * - softplus: Softplus function (ln(1 + e^x))
  * - silu: Sigmoid Linear Unit (x * sigmoid(x))
  * - mish: Mish activation (x * tanh(softplus(x)))
+ * - selu: Scaled ELU (scale * (max(0,x) + min(0, alpha*(exp(x)-1))))
+ * - celu: Continuous ELU (max(0,x) + min(0, alpha*(exp(x/alpha)-1)))
  *
  * Note: Only available for float types (f8e4m3, f8e5m2, bf16, f16, f32, f64)
  */
@@ -93,7 +97,9 @@ extern "C" {
     void hodu_cpu_gelu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
     void hodu_cpu_softplus_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata); \
     void hodu_cpu_silu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
-    void hodu_cpu_mish_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
+    void hodu_cpu_mish_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_selu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);     \
+    void hodu_cpu_celu_##TYPE_SUFFIX(const void *input, void *output, const size_t *metadata);
 
 /**
  * @brief Macro to declare trigonometric operations

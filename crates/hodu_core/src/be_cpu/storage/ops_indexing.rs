@@ -706,18 +706,18 @@ pub fn call_nonzero(storage: &CpuStorage, layout: &Layout) -> HoduResult<(CpuSto
 
     // Handle empty case
     if count == 0 {
-        let output = CpuDevice::allocate(0, DType::I64)?;
+        let output = CpuDevice::allocate(0, DType::I32)?;
         return Ok((output, 0));
     }
 
     // Allocate output buffer for [count, ndim] indices
     let output_size = count * ndim;
-    let mut output = CpuDevice::allocate(output_size, DType::I64)?;
+    let mut output = CpuDevice::allocate(output_size, DType::I32)?;
 
     // Second pass: fill indices
     let output_ptr = match &mut output {
-        CpuStorage::I64(data) => data.as_mut_ptr(),
-        _ => unreachable!("output should be I64"),
+        CpuStorage::I32(data) => data.as_mut_ptr(),
+        _ => unreachable!("output should be I32"),
     };
 
     hodu_cpu_kernels::call_nonzero_fill(fill_kernel, input_ptr, output_ptr, &metadata)?;

@@ -93,6 +93,11 @@ pub fn create_sign_tensor(a: TensorId) -> HoduResult<TensorId> {
     tensor_a.sign().map(|t| t.id())
 }
 
+pub fn create_abs_tensor(a: TensorId) -> HoduResult<TensorId> {
+    let tensor_a = tensor_from_id(a);
+    tensor_a.abs().map(|t| t.id())
+}
+
 pub fn create_sqrt_tensor(a: TensorId) -> HoduResult<TensorId> {
     let tensor_a = tensor_from_id(a);
     tensor_a.sqrt().map(|t| t.id())

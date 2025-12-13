@@ -243,3 +243,27 @@ template <typename T> __device__ __forceinline__ T mish(T x) {
     float fx = to_float(x);
     return from_float<T>(fx * tanhf(logf(1.0f + expf(fx))));
 }
+
+// Softsign: x / (1 + |x|)
+template <typename T> __device__ __forceinline__ T softsign(T x) {
+    float fx = to_float(x);
+    return from_float<T>(fx / (1.0f + fabsf(fx)));
+}
+
+// SELU constants (from the original paper)
+#define SELU_ALPHA 1.6732632423543772848170429916717f
+#define SELU_SCALE 1.0507009873554804934193349852946f
+
+// SELU: scale * (max(0,x) + min(0, alpha*(exp(x)-1)))
+template <typename T> __device__ __forceinline__ T selu(T x) {
+    float fx = to_float(x);
+    float result = SELU_SCALE * (fx > 0.0f ? fx : SELU_ALPHA * (expf(fx) - 1.0f));
+    return from_float<T>(result);
+}
+
+// CELU: max(0,x) + min(0, alpha*(exp(x/alpha)-1)) with alpha=1.0
+template <typename T> __device__ __forceinline__ T celu(T x) {
+    float fx = to_float(x);
+    float result = fmaxf(0.0f, fx) + fminf(0.0f, expf(fx) - 1.0f);
+    return from_float<T>(result);
+}

@@ -1023,7 +1023,7 @@ fn test_nonzero_f32_1d() {
     assert_eq!(count, 3);
 
     // Fill indices
-    let mut output = vec![0i64; count * num_dims];
+    let mut output = vec![0i32; count * num_dims];
     call_nonzero_fill(
         nonzero_fill::F32,
         input.as_ptr() as *const core::ffi::c_void,
@@ -1064,7 +1064,7 @@ fn test_nonzero_f32_2d() {
     assert_eq!(count, 3);
 
     // Fill indices
-    let mut output = vec![0i64; count * num_dims];
+    let mut output = vec![0i32; count * num_dims];
     call_nonzero_fill(
         nonzero_fill::F32,
         input.as_ptr() as *const core::ffi::c_void,
@@ -1104,7 +1104,7 @@ fn test_nonzero_i32() {
 
     assert_eq!(count, 3);
 
-    let mut output = vec![0i64; count * num_dims];
+    let mut output = vec![0i32; count * num_dims];
     call_nonzero_fill(
         nonzero_fill::I32,
         input.as_ptr() as *const core::ffi::c_void,
@@ -1169,7 +1169,7 @@ fn test_nonzero_all_nonzero() {
 
     assert_eq!(count, 3);
 
-    let mut output = vec![0i64; count * num_dims];
+    let mut output = vec![0i32; count * num_dims];
     call_nonzero_fill(
         nonzero_fill::F32,
         input.as_ptr() as *const core::ffi::c_void,

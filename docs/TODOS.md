@@ -32,6 +32,9 @@
 - [x] Implement hyperbolic (sinh, cosh, tanh)
 - [x] Implement inverse hyperbolic (asinh, acosh, atanh)
 - [x] Implement hardswish(hardsilu), hardsigmoid (ONNX: HardSwish, HardSigmoid)
+- [x] Implement selu (ONNX: Selu) - Scaled ELU activation
+- [x] Implement celu (ONNX: Celu) - Continuous ELU activation
+- [x] Implement softsign (ONNX: Softsign) - x/(1+|x|)
 
 **ONNX Compatibility - Other Operations:** (🟡 Important)
 - [x] Implement einsum (ONNX: Einsum)
@@ -40,6 +43,19 @@
 - [x] Implement nonzero (ONNX: NonZero)
 - [x] Implement onehot (ONNX: OneHot)
 - [x] Implement rem (ONNX: Mod)
+- [ ] Implement isnan (ONNX: IsNaN) - check for NaN values
+- [ ] Implement isinf (ONNX: IsInf) - check for Inf values
+- [ ] Implement unique (ONNX: Unique) - find unique elements
+- [ ] Implement reduce_logsumexp (ONNX: ReduceLogSumExp) - numerically stable log(sum(exp(x)))
+
+**ONNX Compatibility - Matrix Operations:** (🟢 Nice-to-have)
+- [ ] Implement det (ONNX: Det) - matrix determinant
+
+**ONNX Compatibility - Low Priority:** (🟢 Nice-to-have)
+- [ ] Implement compress (ONNX: Compress) - select elements based on condition
+- [ ] Implement reduce_logsum (ONNX: ReduceLogSum) - log(sum(x))
+- [ ] Implement bitshift (ONNX: BitShift) - bit shift operations
+- [ ] Implement lrn (ONNX: LRN) - Local Response Normalization (deprecated, rarely used)
 
 **Recurrent Layers:** (🔴 Critical)
 - [x] Implement RNN

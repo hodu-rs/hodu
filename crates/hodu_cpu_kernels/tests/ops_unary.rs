@@ -226,6 +226,46 @@ fn test_mish_f32() {
     assert_eq!(approx(output, 2), approx(expected, 2));
 }
 
+#[test]
+fn test_softsign_f32() {
+    let input = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let output = run_unary(&input, softsign::F32);
+    // softsign(x) = x / (1 + |x|)
+    let expected: Vec<f32> = input.iter().map(|&x| x / (1.0 + x.abs())).collect();
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_selu_f32() {
+    let input = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let output = run_unary(&input, selu::F32);
+    // selu(x) = scale * (max(0,x) + min(0, alpha*(exp(x)-1)))
+    // SELU_ALPHA = 1.6732632423543772848170429916717
+    // SELU_SCALE = 1.0507009873554804934193349852946
+    let alpha = 1.6732632423543772848170429916717f32;
+    let scale = 1.0507009873554804934193349852946f32;
+    let expected: Vec<f32> = input
+        .iter()
+        .map(|&x| {
+            if x > 0.0 {
+                scale * x
+            } else {
+                scale * alpha * (x.exp() - 1.0)
+            }
+        })
+        .collect();
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
+#[test]
+fn test_celu_f32() {
+    let input = vec![-2.0f32, -1.0, 0.0, 1.0, 2.0];
+    let output = run_unary(&input, celu::F32);
+    // celu(x) = max(0,x) + min(0, exp(x)-1)
+    let expected: Vec<f32> = input.iter().map(|&x| x.max(0.0) + (x.exp() - 1.0).min(0.0)).collect();
+    assert_eq!(approx(output, 4), approx(expected, 4));
+}
+
 // unary - trigonometric
 #[test]
 fn test_sin_f32() {

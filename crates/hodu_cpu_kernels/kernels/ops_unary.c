@@ -543,6 +543,7 @@ void hodu_cpu_abs_f32(const void *input, void *output, const size_t *metadata) {
 }
 
 IMPL_UNARY_OP(f32_t, f32, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f))
+IMPL_UNARY_OP(f32_t, f32, softsign, softsign_helper_f32(x))
 
 // SIMD-optimized square_f32
 void hodu_cpu_square_f32(const void *input, void *output, const size_t *metadata) {
@@ -703,6 +704,8 @@ IMPL_UNARY_OP(f32_t, f32, softplus, softplus_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, silu, silu_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, hardsilu, hardsilu_helper_f32(x))
 IMPL_UNARY_OP(f32_t, f32, mish, mish_helper_f32(x))
+IMPL_UNARY_OP(f32_t, f32, selu, selu_helper_f32(x))
+IMPL_UNARY_OP(f32_t, f32, celu, celu_helper_f32(x))
 
 // Trigonometric functions
 IMPL_UNARY_OP(f32_t, f32, sin, sinf(x))
@@ -902,6 +905,7 @@ void hodu_cpu_abs_f64(const void *input, void *output, const size_t *metadata) {
 }
 
 IMPL_UNARY_OP(f64_t, f64, sign, (x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0))
+IMPL_UNARY_OP(f64_t, f64, softsign, softsign_helper_f64(x))
 
 // square_f64: SIMD-optimized version
 void hodu_cpu_square_f64(const void *input, void *output, const size_t *metadata) {
@@ -1066,6 +1070,8 @@ IMPL_UNARY_OP(f64_t, f64, softplus, softplus_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, silu, silu_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, hardsilu, hardsilu_helper_f64(x))
 IMPL_UNARY_OP(f64_t, f64, mish, mish_helper_f64(x))
+IMPL_UNARY_OP(f64_t, f64, selu, selu_helper_f64(x))
+IMPL_UNARY_OP(f64_t, f64, celu, celu_helper_f64(x))
 
 IMPL_UNARY_OP(f64_t, f64, sin, sin(x))
 IMPL_UNARY_OP(f64_t, f64, cos, cos(x))
@@ -1161,6 +1167,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(f64_t, f64, ge_scalar, x >= const_val)
 IMPL_UNARY_OP(uint8_t, bool, neg, !x)
 IMPL_UNARY_OP(uint8_t, bool, abs, x)
 IMPL_UNARY_OP(uint8_t, bool, sign, x ? 1 : 0)
+IMPL_UNARY_OP(uint8_t, bool, softsign, x)
 IMPL_UNARY_OP(uint8_t, bool, square, x)
 IMPL_UNARY_OP(uint8_t, bool, sqrt, x)
 IMPL_UNARY_OP(uint8_t, bool, recip, x)
@@ -1173,6 +1180,8 @@ IMPL_UNARY_OP(uint8_t, bool, softplus, x)
 IMPL_UNARY_OP(uint8_t, bool, silu, x)
 IMPL_UNARY_OP(uint8_t, bool, hardsilu, x)
 IMPL_UNARY_OP(uint8_t, bool, mish, x)
+IMPL_UNARY_OP(uint8_t, bool, selu, x)
+IMPL_UNARY_OP(uint8_t, bool, celu, x)
 
 IMPL_UNARY_OP(uint8_t, bool, ceil, x)
 IMPL_UNARY_OP(uint8_t, bool, floor, x)
@@ -1205,6 +1214,8 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, neg, -x, f8e4m3_to_float, float_to_f8e4m
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, abs, fabsf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
                       f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, softsign, softsign_helper_f32(x), f8e4m3_to_float,
+                      float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, square, x *x, f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sqrt, sqrtf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, recip, 1.0f / x, f8e4m3_to_float, float_to_f8e4m3)
@@ -1222,6 +1233,8 @@ IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, silu, silu_helper_f32(x), f8e4m3_to_floa
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, hardsilu, hardsilu_helper_f32(x), f8e4m3_to_float,
                       float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, mish, mish_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, selu, selu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
+IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, celu, celu_helper_f32(x), f8e4m3_to_float, float_to_f8e4m3)
 
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, sin, sinf(x), f8e4m3_to_float, float_to_f8e4m3)
 IMPL_UNARY_OP_CONVERT(f8e4m3_t, f8e4m3, cos, cosf(x), f8e4m3_to_float, float_to_f8e4m3)
@@ -1282,6 +1295,8 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, neg, -x, f8e5m2_to_float, float_to_f8e5m
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, abs, fabsf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
                       f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, softsign, softsign_helper_f32(x), f8e5m2_to_float,
+                      float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, square, x *x, f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sqrt, sqrtf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, recip, 1.0f / x, f8e5m2_to_float, float_to_f8e5m2)
@@ -1299,6 +1314,8 @@ IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, silu, silu_helper_f32(x), f8e5m2_to_floa
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, hardsilu, hardsilu_helper_f32(x), f8e5m2_to_float,
                       float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, mish, mish_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, selu, selu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
+IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, celu, celu_helper_f32(x), f8e5m2_to_float, float_to_f8e5m2)
 
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, sin, sinf(x), f8e5m2_to_float, float_to_f8e5m2)
 IMPL_UNARY_OP_CONVERT(f8e5m2_t, f8e5m2, cos, cosf(x), f8e5m2_to_float, float_to_f8e5m2)
@@ -1359,6 +1376,7 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, neg, -x, bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, abs, fabsf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
                       bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, softsign, softsign_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, square, x *x, bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sqrt, sqrtf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, recip, 1.0f / x, bf16_to_float, float_to_bf16)
@@ -1372,6 +1390,8 @@ IMPL_UNARY_OP_CONVERT(bf16_t, bf16, softplus, softplus_helper_f32(x), bf16_to_fl
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, silu, silu_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, hardsilu, hardsilu_helper_f32(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, mish, mish_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, selu, selu_helper_f32(x), bf16_to_float, float_to_bf16)
+IMPL_UNARY_OP_CONVERT(bf16_t, bf16, celu, celu_helper_f32(x), bf16_to_float, float_to_bf16)
 
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, sin, sinf(x), bf16_to_float, float_to_bf16)
 IMPL_UNARY_OP_CONVERT(bf16_t, bf16, cos, cosf(x), bf16_to_float, float_to_bf16)
@@ -1431,6 +1451,7 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, neg, -x, f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, abs, fabsf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sign, (x > 0.0f) ? 1.0f : ((x < 0.0f) ? -1.0f : 0.0f),
                       f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, softsign, softsign_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, square, x *x, f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sqrt, sqrtf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, recip, 1.0f / x, f16_to_float, float_to_f16)
@@ -1444,6 +1465,8 @@ IMPL_UNARY_OP_CONVERT(f16_t, f16, softplus, softplus_helper_f32(x), f16_to_float
 IMPL_UNARY_OP_CONVERT(f16_t, f16, silu, silu_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, hardsilu, hardsilu_helper_f32(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, mish, mish_helper_f32(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, selu, selu_helper_f32(x), f16_to_float, float_to_f16)
+IMPL_UNARY_OP_CONVERT(f16_t, f16, celu, celu_helper_f32(x), f16_to_float, float_to_f16)
 
 IMPL_UNARY_OP_CONVERT(f16_t, f16, sin, sinf(x), f16_to_float, float_to_f16)
 IMPL_UNARY_OP_CONVERT(f16_t, f16, cos, cosf(x), f16_to_float, float_to_f16)
@@ -1498,6 +1521,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL_CONVERT(f16_t, f16, ge_scalar, x >= const_val, f16
 
 // U8 (already defined in original code)
 IMPL_UNARY_OP(u8_t, u8, sign, (x > 0) ? 1 : 0)
+IMPL_UNARY_OP(u8_t, u8, softsign, (u8_t)(x / (1.0f + (float)x)))
 IMPL_UNARY_OP(u8_t, u8, square, x *x)
 IMPL_UNARY_OP(u8_t, u8, sqrt, (u8_t)sqrtf((float)x))
 IMPL_UNARY_OP(u8_t, u8, abs, x)
@@ -1520,6 +1544,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(u8_t, u8, ge_scalar, x >= const_val)
 
 // U16
 IMPL_UNARY_OP(u16_t, u16, sign, (x > 0) ? 1 : 0)
+IMPL_UNARY_OP(u16_t, u16, softsign, (u16_t)(x / (1.0f + (float)x)))
 IMPL_UNARY_OP(u16_t, u16, square, x *x)
 IMPL_UNARY_OP(u16_t, u16, sqrt, (u16_t)sqrtf((float)x))
 IMPL_UNARY_OP(u16_t, u16, abs, x)
@@ -1542,6 +1567,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(u16_t, u16, ge_scalar, x >= const_val)
 
 // U32
 IMPL_UNARY_OP(u32_t, u32, sign, (x > 0) ? 1 : 0)
+IMPL_UNARY_OP(u32_t, u32, softsign, (u32_t)(x / (1.0f + (float)x)))
 IMPL_UNARY_OP(u32_t, u32, square, x *x)
 IMPL_UNARY_OP(u32_t, u32, sqrt, (u32_t)sqrtf((float)x))
 IMPL_UNARY_OP(u32_t, u32, abs, x)
@@ -1564,6 +1590,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(u32_t, u32, ge_scalar, x >= const_val)
 
 // U64
 IMPL_UNARY_OP(u64_t, u64, sign, (x > 0) ? 1 : 0)
+IMPL_UNARY_OP(u64_t, u64, softsign, (u64_t)(x / (1.0 + (double)x)))
 IMPL_UNARY_OP(u64_t, u64, square, x *x)
 IMPL_UNARY_OP(u64_t, u64, sqrt, (u64_t)sqrt((double)x))
 IMPL_UNARY_OP(u64_t, u64, abs, x)
@@ -1592,6 +1619,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(u64_t, u64, ge_scalar, x >= const_val)
 IMPL_UNARY_OP(i8_t, i8, neg, -x)
 IMPL_UNARY_OP(i8_t, i8, abs, (x < 0) ? -x : x)
 IMPL_UNARY_OP(i8_t, i8, sign, (x > 0) ? 1 : ((x < 0) ? -1 : 0))
+IMPL_UNARY_OP(i8_t, i8, softsign, (i8_t)((float)x / (1.0f + fabsf((float)x))))
 IMPL_UNARY_OP(i8_t, i8, square, x *x)
 IMPL_UNARY_OP(i8_t, i8, sqrt, (i8_t)sqrtf((float)((x < 0) ? -x : x)))
 IMPL_UNARY_OP(i8_t, i8, recip, (x != 0) ? (i8_t)(1.0f / (float)x) : 0)
@@ -1615,6 +1643,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(i8_t, i8, ge_scalar, x >= const_val)
 IMPL_UNARY_OP(i16_t, i16, neg, -x)
 IMPL_UNARY_OP(i16_t, i16, abs, (x < 0) ? -x : x)
 IMPL_UNARY_OP(i16_t, i16, sign, (x > 0) ? 1 : ((x < 0) ? -1 : 0))
+IMPL_UNARY_OP(i16_t, i16, softsign, (i16_t)((float)x / (1.0f + fabsf((float)x))))
 IMPL_UNARY_OP(i16_t, i16, square, x *x)
 IMPL_UNARY_OP(i16_t, i16, sqrt, (i16_t)sqrtf((float)((x < 0) ? -x : x)))
 IMPL_UNARY_OP(i16_t, i16, recip, (x != 0) ? (i16_t)(1.0f / (float)x) : 0)
@@ -1638,6 +1667,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(i16_t, i16, ge_scalar, x >= const_val)
 IMPL_UNARY_OP(i32_t, i32, neg, -x)
 IMPL_UNARY_OP(i32_t, i32, abs, (x < 0) ? -x : x)
 IMPL_UNARY_OP(i32_t, i32, sign, (x > 0) ? 1 : ((x < 0) ? -1 : 0))
+IMPL_UNARY_OP(i32_t, i32, softsign, (i32_t)((float)x / (1.0f + fabsf((float)x))))
 IMPL_UNARY_OP(i32_t, i32, square, x *x)
 IMPL_UNARY_OP(i32_t, i32, sqrt, (i32_t)sqrtf((float)((x < 0) ? -x : x)))
 IMPL_UNARY_OP(i32_t, i32, recip, (x != 0) ? (i32_t)(1.0f / (float)x) : 0)
@@ -1661,6 +1691,7 @@ IMPL_UNARY_CMP_SCALAR_TO_BOOL(i32_t, i32, ge_scalar, x >= const_val)
 IMPL_UNARY_OP(i64_t, i64, neg, -x)
 IMPL_UNARY_OP(i64_t, i64, abs, (x < 0) ? -x : x)
 IMPL_UNARY_OP(i64_t, i64, sign, (x > 0) ? 1 : ((x < 0) ? -1 : 0))
+IMPL_UNARY_OP(i64_t, i64, softsign, (i64_t)((double)x / (1.0 + fabs((double)x))))
 IMPL_UNARY_OP(i64_t, i64, square, x *x)
 IMPL_UNARY_OP(i64_t, i64, sqrt, (i64_t)sqrt((double)((x < 0) ? -x : x)))
 IMPL_UNARY_OP(i64_t, i64, recip, (x != 0) ? (i64_t)(1.0 / (double)x) : 0)

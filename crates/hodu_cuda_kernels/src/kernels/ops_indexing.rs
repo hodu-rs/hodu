@@ -367,7 +367,7 @@ where
 /// * `kernels` - Kernel cache
 /// * `context` - CUDA context
 /// * `input` - Input data slice
-/// * `output` - Output indices (i64, shape [N, ndim])
+/// * `output` - Output indices (i32, shape [N, ndim])
 /// * `counter` - Atomic counter (single u32, should be initialized to 0)
 /// * `metadata` - Metadata describing tensor layout
 pub fn call_nonzero_fill<T>(
@@ -375,7 +375,7 @@ pub fn call_nonzero_fill<T>(
     kernels: &crate::kernel::Kernels,
     context: &crate::cuda::CudaContext,
     input: &CudaSlice<T>,
-    output: &mut CudaSlice<i64>,
+    output: &mut CudaSlice<i32>,
     counter: &mut CudaSlice<u32>,
     metadata: &[usize],
 ) -> Result<()>

@@ -99,6 +99,19 @@ float m_hardsigmoid(float x) { return fmax(0.0f, fmin(1.0f, (x + 3.0f) / 6.0f));
 
 float m_hardsilu(float x) { return x * m_hardsigmoid(x); }
 
+// Softsign: x / (1 + |x|)
+float m_softsign(float x) { return x / (1.0f + abs(x)); }
+
+// SELU constants (from the original paper)
+constant float SELU_ALPHA = 1.6732632423543772848170429916717f;
+constant float SELU_SCALE = 1.0507009873554804934193349852946f;
+
+// SELU: scale * (max(0,x) + min(0, alpha*(exp(x)-1)))
+float m_selu(float x) { return SELU_SCALE * (x > 0.0f ? x : SELU_ALPHA * (exp(x) - 1.0f)); }
+
+// CELU: max(0,x) + min(0, alpha*(exp(x/alpha)-1)) with alpha=1.0
+float m_celu(float x) { return fmax(0.0f, x) + fmin(0.0f, exp(x) - 1.0f); }
+
 // Metadata layout:
 // - metadata[0]: num_els (total number of elements)
 // - metadata[1]: num_dims (number of dimensions)
@@ -181,12 +194,15 @@ UNARY_OP_WITH_CONSTANT(bool, bool, ge_scalar_bool, x || !const_val);
 UNARY_OP(bool, neg_bool, !x);
 UNARY_OP(bool, abs_bool, x);
 UNARY_OP(bool, sign_bool, x ? 1 : 0);
+UNARY_OP(bool, softsign_bool, x);
 UNARY_OP(bool, square_bool, x);
 UNARY_OP(bool, sqrt_bool, x);
 
 // unary - activation
 UNARY_OP(bool, relu_bool, x);
 UNARY_OP(bool, sigmoid_bool, x);
+UNARY_OP(bool, selu_bool, x);
+UNARY_OP(bool, celu_bool, x);
 
 // unary logical
 UNARY_OP_OUTPUT(bool, bool, logical_not_bool, !x);
@@ -219,6 +235,7 @@ UNARY_OP_WITH_CONSTANT(bfloat, bool, ge_scalar_bf16, float(x) >= float(const_val
 UNARY_OP(bfloat, neg_bf16, -x);
 UNARY_OP(bfloat, abs_bf16, bfloat(abs(float(x))));
 UNARY_OP(bfloat, sign_bf16, (x > 0.0bf) ? 1.0bf : ((x < 0.0bf) ? -1.0bf : 0.0bf));
+UNARY_OP(bfloat, softsign_bf16, bfloat(m_softsign(float(x))));
 UNARY_OP(bfloat, square_bf16, x *x);
 UNARY_OP(bfloat, sqrt_bf16, bfloat(sqrt(float(x))));
 UNARY_OP(bfloat, recip_bf16, bfloat(1.0f / float(x)));
@@ -235,6 +252,8 @@ UNARY_OP(bfloat, softplus_bf16, bfloat(log(1.0f + exp(float(x)))));
 UNARY_OP(bfloat, silu_bf16, bfloat(float(x) / (1.0f + exp(-float(x)))));
 UNARY_OP(bfloat, hardsilu_bf16, bfloat(m_hardsilu(float(x))));
 UNARY_OP(bfloat, mish_bf16, bfloat(float(x) * tanh(log(1.0f + exp(float(x))))));
+UNARY_OP(bfloat, selu_bf16, bfloat(m_selu(float(x))));
+UNARY_OP(bfloat, celu_bf16, bfloat(m_celu(float(x))));
 
 // unary - trigonometric
 UNARY_OP(bfloat, sin_bf16, bfloat(sin(float(x))));
@@ -306,6 +325,7 @@ UNARY_OP_WITH_CONSTANT(half, bool, ge_scalar_f16, float(x) >= float(const_val));
 UNARY_OP(half, neg_f16, -x);
 UNARY_OP(half, abs_f16, abs(x));
 UNARY_OP(half, sign_f16, (x > 0.0h) ? 1.0h : ((x < 0.0h) ? -1.0h : 0.0h));
+UNARY_OP(half, softsign_f16, half(m_softsign(float(x))));
 UNARY_OP(half, square_f16, x *x);
 UNARY_OP(half, sqrt_f16, sqrt(x));
 UNARY_OP(half, recip_f16, half(1.0f / float(x)));
@@ -322,6 +342,8 @@ UNARY_OP(half, softplus_f16, half(log(1.0f + exp(float(x)))));
 UNARY_OP(half, silu_f16, half(float(x) / (1.0f + exp(-float(x)))));
 UNARY_OP(half, hardsilu_f16, half(m_hardsilu(float(x))));
 UNARY_OP(half, mish_f16, half(float(x) * tanh(log(1.0f + exp(float(x))))));
+UNARY_OP(half, selu_f16, half(m_selu(float(x))));
+UNARY_OP(half, celu_f16, half(m_celu(float(x))));
 
 // unary - trigonometric
 UNARY_OP(half, sin_f16, half(sin(float(x))));
@@ -389,6 +411,7 @@ UNARY_OP_WITH_CONSTANT(float, bool, ge_scalar_f32, x >= const_val);
 UNARY_OP(float, neg_f32, -x);
 UNARY_OP(float, abs_f32, abs(x));
 UNARY_OP(float, sign_f32, (x > 0) ? 1.0f : ((x < 0) ? -1.0f : 0.0f));
+UNARY_OP(float, softsign_f32, m_softsign(x));
 UNARY_OP(float, square_f32, x *x);
 UNARY_OP(float, sqrt_f32, sqrt(x));
 UNARY_OP(float, recip_f32, 1.0f / x);
@@ -403,6 +426,8 @@ UNARY_OP(float, softplus_f32, log(1.0f + exp(x)));
 UNARY_OP(float, silu_f32, x / (1.0f + exp(-x)));
 UNARY_OP(float, hardsilu_f32, m_hardsilu(x));
 UNARY_OP(float, mish_f32, x *tanh(log(1.0f + exp(x))));
+UNARY_OP(float, selu_f32, m_selu(x));
+UNARY_OP(float, celu_f32, m_celu(x));
 
 // unary - trigonometric
 UNARY_OP(float, sin_f32, sin(x));
@@ -465,6 +490,7 @@ UNARY_OP_WITH_CONSTANT(uint8_t, bool, ge_scalar_u8, x >= const_val);
 
 // unary - basic
 UNARY_OP(uint8_t, sign_u8, (x > 0) ? 1 : 0);
+UNARY_OP(uint8_t, softsign_u8, (uint8_t)(float(x) / (1.0f + float(x))));
 UNARY_OP(uint8_t, square_u8, x *x);
 UNARY_OP(uint8_t, sqrt_u8, (uint8_t)sqrt(float(x)));
 
@@ -499,6 +525,7 @@ UNARY_OP_WITH_CONSTANT(uint16_t, bool, ge_scalar_u16, x >= const_val);
 
 // unary - basic
 UNARY_OP(uint16_t, sign_u16, (x > 0) ? 1 : 0);
+UNARY_OP(uint16_t, softsign_u16, (uint16_t)(float(x) / (1.0f + float(x))));
 UNARY_OP(uint16_t, square_u16, x *x);
 UNARY_OP(uint16_t, sqrt_u16, (uint16_t)sqrt(float(x)));
 
@@ -533,6 +560,7 @@ UNARY_OP_WITH_CONSTANT(uint32_t, bool, ge_scalar_u32, x >= const_val);
 
 // unary - basic
 UNARY_OP(uint32_t, sign_u32, (x > 0) ? 1 : 0);
+UNARY_OP(uint32_t, softsign_u32, (uint32_t)(float(x) / (1.0f + float(x))));
 UNARY_OP(uint32_t, square_u32, x *x);
 UNARY_OP(uint32_t, sqrt_u32, (uint32_t)sqrt(float(x)));
 
@@ -567,6 +595,7 @@ UNARY_OP_WITH_CONSTANT(uint64_t, bool, ge_scalar_u64, x >= const_val);
 
 // unary - basic
 UNARY_OP(uint64_t, sign_u64, (x > 0) ? 1 : 0);
+UNARY_OP(uint64_t, softsign_u64, (uint64_t)(float(x) / (1.0f + float(x))));
 UNARY_OP(uint64_t, square_u64, x *x);
 UNARY_OP(uint64_t, sqrt_u64, (uint64_t)sqrt(float(x)));
 
@@ -603,6 +632,7 @@ UNARY_OP_WITH_CONSTANT(int8_t, bool, ge_scalar_i8, x >= const_val);
 UNARY_OP(int8_t, neg_i8, -x);
 UNARY_OP(int8_t, abs_i8, abs(x));
 UNARY_OP(int8_t, sign_i8, (x > 0) ? 1 : ((x < 0) ? -1 : 0));
+UNARY_OP(int8_t, softsign_i8, (int8_t)m_softsign(float(x)));
 UNARY_OP(int8_t, square_i8, x *x);
 UNARY_OP(int8_t, sqrt_i8, (int8_t)sqrt(float(abs(x))));
 
@@ -639,6 +669,7 @@ UNARY_OP_WITH_CONSTANT(int16_t, bool, ge_scalar_i16, x >= const_val);
 UNARY_OP(int16_t, neg_i16, -x);
 UNARY_OP(int16_t, abs_i16, abs(x));
 UNARY_OP(int16_t, sign_i16, (x > 0) ? 1 : ((x < 0) ? -1 : 0));
+UNARY_OP(int16_t, softsign_i16, (int16_t)m_softsign(float(x)));
 UNARY_OP(int16_t, square_i16, x *x);
 UNARY_OP(int16_t, sqrt_i16, (int16_t)sqrt(float(abs(x))));
 
@@ -675,6 +706,7 @@ UNARY_OP_WITH_CONSTANT(int32_t, bool, ge_scalar_i32, x >= const_val);
 UNARY_OP(int32_t, neg_i32, -x);
 UNARY_OP(int32_t, abs_i32, abs(x));
 UNARY_OP(int32_t, sign_i32, (x > 0) ? 1 : ((x < 0) ? -1 : 0));
+UNARY_OP(int32_t, softsign_i32, (int32_t)m_softsign(float(x)));
 UNARY_OP(int32_t, square_i32, x *x);
 UNARY_OP(int32_t, sqrt_i32, (int32_t)sqrt(float(abs(x))));
 
@@ -711,6 +743,7 @@ UNARY_OP_WITH_CONSTANT(int64_t, bool, ge_scalar_i64, x >= const_val);
 UNARY_OP(int64_t, neg_i64, -x);
 UNARY_OP(int64_t, abs_i64, abs(x));
 UNARY_OP(int64_t, sign_i64, (x > 0) ? 1 : ((x < 0) ? -1 : 0));
+UNARY_OP(int64_t, softsign_i64, (int64_t)m_softsign(float(x)));
 UNARY_OP(int64_t, square_i64, x *x);
 UNARY_OP(int64_t, sqrt_i64, (int64_t)sqrt(float(abs(x))));
 
